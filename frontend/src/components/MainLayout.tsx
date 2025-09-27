@@ -1,6 +1,6 @@
 // Main Fusion 360-inspired layout for Pictorigo
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useProject } from '../hooks/useProject'
 import { useSelection, useSelectionKeyboard } from '../hooks/useSelection'
 import { useConstraints } from '../hooks/useConstraints'
@@ -8,7 +8,7 @@ import ConstraintToolbar from './ConstraintToolbar'
 import ConstraintPropertyPanel from './ConstraintPropertyPanel'
 import ImageNavigationToolbar from './ImageNavigationToolbar'
 import ConstraintTimeline from './ConstraintTimeline'
-import ImageViewer from './ImageViewer'
+import ImageViewer, { ImageViewerRef } from './ImageViewer'
 import WorldPointPanel from './WorldPointPanel'
 
 export const MainLayout: React.FC = () => {
@@ -18,6 +18,9 @@ export const MainLayout: React.FC = () => {
     active: boolean
     worldPointId: string | null
   }>({ active: false, worldPointId: null })
+  const [currentScale, setCurrentScale] = useState(1)
+
+  const imageViewerRef = useRef<ImageViewerRef>(null)
 
   const {
     project,
@@ -130,6 +133,19 @@ export const MainLayout: React.FC = () => {
     }
   }
 
+  // Zoom control handlers
+  const handleZoomFit = () => {
+    imageViewerRef.current?.zoomFit()
+  }
+
+  const handleZoomSelection = () => {
+    imageViewerRef.current?.zoomSelection()
+  }
+
+  const handleScaleChange = (scale: number) => {
+    setCurrentScale(scale)
+  }
+
   // Check which world points are missing from current image
   const getMissingWorldPoints = () => {
     if (!currentImage) return []
@@ -225,8 +241,34 @@ export const MainLayout: React.FC = () => {
         />
 
         <div className="toolbar-section">
-          <button className="btn-tool">🔍 Zoom Fit</button>
-          <button className="btn-tool">🎯 Zoom Selection</button>
+          <button className="btn-tool" onClick={handleZoomFit} title="Zoom to fit entire image">
+            🔍 Zoom Fit
+          </button>
+          <button
+            className="btn-tool"
+            onClick={handleZoomSelection}
+            title={selectedPoints.length > 0 ? "Zoom to selected points" : "Zoom to all points"}
+          >
+            🎯 Zoom Selection
+          </button>
+          <div className="zoom-controls">
+            <input
+              type="range"
+              min="10"
+              max="500"
+              step="5"
+              value={Math.round(currentScale * 100)}
+              onChange={(e) => {
+                const newScale = parseInt(e.target.value) / 100
+                imageViewerRef.current?.setScale?.(newScale)
+              }}
+              className="zoom-slider"
+              title="Zoom level"
+            />
+            <div className="zoom-info" title={`Current zoom: ${Math.round(currentScale * 100)}%`}>
+              {Math.round(currentScale * 100)}%
+            </div>
+          </div>
           <label className="toolbar-toggle">
             <input
               type="checkbox"
@@ -265,6 +307,7 @@ export const MainLayout: React.FC = () => {
             {currentImage ? (
               <>
                 <ImageViewer
+                  ref={imageViewerRef}
                   image={currentImage}
                   worldPoints={worldPoints}
                   selectedPoints={selectedPoints}
@@ -276,6 +319,7 @@ export const MainLayout: React.FC = () => {
                   onPointClick={handleEnhancedPointClick}
                   onCreatePoint={handleImageClick}
                   onMovePoint={handleMovePoint}
+                  onScaleChange={handleScaleChange}
                 />
                 {/* Selection and constraint overlays will be part of ImageViewer */}
               </>
@@ -336,7 +380,7 @@ export const MainLayout: React.FC = () => {
         <span>WP: {Object.keys(worldPoints).length}</span>
         <span>Constraints: {constraints.length}</span>
         <span>{getSelectionSummary()}</span>
-        <span>Scale: 1.00x</span> {/* TODO: Get actual scale from ImageViewer */}
+        <span>Scale: {(currentScale).toFixed(2)}x</span>
       </div>
     </div>
   )
