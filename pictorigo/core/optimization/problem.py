@@ -11,6 +11,11 @@ from .residuals import (
     AxisAlignmentResidual,
     CoplanarityResidual,
     EqualityResidual,
+    CollinearResidual,
+    PerpendicularResidual,
+    ParallelResidual,
+    AngleResidual,
+    DistanceRatioResidual,
 )
 from ..models.project import Project
 from ..models.constraints import (
@@ -22,6 +27,11 @@ from ..models.constraints import (
     PlaneFromThreeConstraint,
     EqualityConstraint,
     GaugeFixConstraint,
+    CollinearConstraint,
+    PerpendicularConstraint,
+    ParallelConstraint,
+    AngleConstraint,
+    FixedDistanceRatioConstraint,
 )
 
 
@@ -130,6 +140,16 @@ class OptimizationProblem:
             self._add_equality_factor(constraint)
         elif constraint_type == "gauge_fix":
             self._add_gauge_fix_factor(constraint)
+        elif constraint_type == "collinear":
+            self._add_collinear_factor(constraint)
+        elif constraint_type == "perpendicular":
+            self._add_perpendicular_factor(constraint)
+        elif constraint_type == "parallel":
+            self._add_parallel_factor(constraint)
+        elif constraint_type == "angle":
+            self._add_angle_factor(constraint)
+        elif constraint_type == "distance_ratio":
+            self._add_distance_ratio_factor(constraint)
         else:
             raise ValueError(f"Unknown constraint type: {constraint_type}")
 
@@ -293,6 +313,83 @@ class OptimizationProblem:
         )
         self.factor_graph.add_factor(distance_factor)
         self._constraint_counter += 1
+
+    def _add_collinear_factor(self, constraint: CollinearConstraint) -> None:
+        """Add collinear factor."""
+        factor_id = f"collinear_{self._constraint_counter}"
+        self._constraint_counter += 1
+
+        factor = CollinearResidual(
+            factor_id=factor_id,
+            world_point_ids=constraint.wp_ids
+        )
+
+        self.factor_graph.add_factor(factor)
+
+    def _add_perpendicular_factor(self, constraint: PerpendicularConstraint) -> None:
+        """Add perpendicular factor."""
+        factor_id = f"perpendicular_{self._constraint_counter}"
+        self._constraint_counter += 1
+
+        factor = PerpendicularResidual(
+            factor_id=factor_id,
+            line1_wp_a_id=constraint.line1_wp_a,
+            line1_wp_b_id=constraint.line1_wp_b,
+            line2_wp_a_id=constraint.line2_wp_a,
+            line2_wp_b_id=constraint.line2_wp_b
+        )
+
+        self.factor_graph.add_factor(factor)
+
+    def _add_parallel_factor(self, constraint: ParallelConstraint) -> None:
+        """Add parallel factor."""
+        factor_id = f"parallel_{self._constraint_counter}"
+        self._constraint_counter += 1
+
+        factor = ParallelResidual(
+            factor_id=factor_id,
+            line1_wp_a_id=constraint.line1_wp_a,
+            line1_wp_b_id=constraint.line1_wp_b,
+            line2_wp_a_id=constraint.line2_wp_a,
+            line2_wp_b_id=constraint.line2_wp_b
+        )
+
+        self.factor_graph.add_factor(factor)
+
+    def _add_angle_factor(self, constraint: AngleConstraint) -> None:
+        """Add angle factor."""
+        factor_id = f"angle_{self._constraint_counter}"
+        self._constraint_counter += 1
+
+        # Convert degrees to radians
+        target_angle_radians = np.radians(constraint.angle_degrees)
+
+        factor = AngleResidual(
+            factor_id=factor_id,
+            line1_wp_a_id=constraint.line1_wp_a,
+            line1_wp_b_id=constraint.line1_wp_b,
+            line2_wp_a_id=constraint.line2_wp_a,
+            line2_wp_b_id=constraint.line2_wp_b,
+            target_angle_radians=target_angle_radians
+        )
+
+        self.factor_graph.add_factor(factor)
+
+    def _add_distance_ratio_factor(self, constraint: FixedDistanceRatioConstraint) -> None:
+        """Add distance ratio factor."""
+        factor_id = f"distance_ratio_{self._constraint_counter}"
+        self._constraint_counter += 1
+
+        factor = DistanceRatioResidual(
+            factor_id=factor_id,
+            line1_wp_a_id=constraint.line1_wp_a,
+            line1_wp_b_id=constraint.line1_wp_b,
+            line2_wp_a_id=constraint.line2_wp_a,
+            line2_wp_b_id=constraint.line2_wp_b,
+            target_ratio=constraint.ratio
+        )
+
+        self.factor_graph.add_factor(factor)
 
     def set_robust_loss_for_constraint_type(
         self,

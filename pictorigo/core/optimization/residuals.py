@@ -518,6 +518,440 @@ class EqualityResidual(ResidualFunctor):
         return 3
 
 
+class CollinearResidual(ResidualFunctor):
+    """Residual for collinear constraints."""
+
+    def __init__(
+        self,
+        factor_id: str,
+        world_point_ids: List[str]
+    ):
+        """Initialize collinear residual.
+
+        Args:
+            factor_id: Unique factor identifier
+            world_point_ids: List of world point variable IDs (minimum 3)
+        """
+        if len(world_point_ids) < 3:
+            raise ValueError("Collinear constraint requires at least 3 points")
+
+        super().__init__(factor_id, world_point_ids)
+        self.world_point_ids = world_point_ids
+        self.n_points = len(world_point_ids)
+
+    def compute_residual(self, variables: Dict[str, np.ndarray]) -> np.ndarray:
+        """Compute collinear residual."""
+        # Get all points
+        points = np.array([variables[wp_id] for wp_id in self.world_point_ids])
+
+        # Use first two points to define line direction
+        p0, p1 = points[:2]
+        line_dir = p1 - p0
+        line_dir_norm = np.linalg.norm(line_dir)
+
+        if line_dir_norm < 1e-12:
+            # First two points are identical - cannot define line
+            return np.ones(self.n_points - 2)
+
+        line_dir = line_dir / line_dir_norm
+
+        # For each additional point, compute distance to line
+        residuals = []
+        for i in range(2, self.n_points):
+            point = points[i]
+            # Vector from p0 to point
+            vec_to_point = point - p0
+            # Project onto line direction
+            proj_length = np.dot(vec_to_point, line_dir)
+            # Projection point on line
+            proj_point = p0 + proj_length * line_dir
+            # Distance from point to line
+            distance_to_line = np.linalg.norm(point - proj_point)
+            residuals.append(distance_to_line)
+
+        return np.array(residuals)
+
+    def compute_jacobian(self, variables: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+        """Compute Jacobian using finite differences."""
+        from ..math.jacobians import finite_difference_jacobian
+
+        def residual_func(params):
+            var_dict = {}
+            offset = 0
+            for wp_id in self.world_point_ids:
+                var_dict[wp_id] = params[offset:offset+3]
+                offset += 3
+            return self.compute_residual(var_dict)
+
+        # Pack all points
+        all_points = np.concatenate([variables[wp_id] for wp_id in self.world_point_ids])
+
+        # Compute Jacobian
+        J_full = finite_difference_jacobian(residual_func, all_points)
+
+        # Split Jacobian by variables
+        jacobians = {}
+        for i, wp_id in enumerate(self.world_point_ids):
+            jacobians[wp_id] = J_full[:, i*3:(i+1)*3]
+
+        return jacobians
+
+    def residual_dimension(self) -> int:
+        """Get residual dimension."""
+        return self.n_points - 2
+
+
+class PerpendicularResidual(ResidualFunctor):
+    """Residual for perpendicular line constraints."""
+
+    def __init__(
+        self,
+        factor_id: str,
+        line1_wp_a_id: str,
+        line1_wp_b_id: str,
+        line2_wp_a_id: str,
+        line2_wp_b_id: str
+    ):
+        """Initialize perpendicular residual."""
+        super().__init__(factor_id, [line1_wp_a_id, line1_wp_b_id, line2_wp_a_id, line2_wp_b_id])
+
+        self.line1_wp_a_id = line1_wp_a_id
+        self.line1_wp_b_id = line1_wp_b_id
+        self.line2_wp_a_id = line2_wp_a_id
+        self.line2_wp_b_id = line2_wp_b_id
+
+    def compute_residual(self, variables: Dict[str, np.ndarray]) -> np.ndarray:
+        """Compute perpendicular residual."""
+        # Get line points
+        line1_a = variables[self.line1_wp_a_id]
+        line1_b = variables[self.line1_wp_b_id]
+        line2_a = variables[self.line2_wp_a_id]
+        line2_b = variables[self.line2_wp_b_id]
+
+        # Compute line directions
+        dir1 = line1_b - line1_a
+        dir2 = line2_b - line2_a
+
+        # Normalize directions
+        dir1_norm = np.linalg.norm(dir1)
+        dir2_norm = np.linalg.norm(dir2)
+
+        if dir1_norm < 1e-12 or dir2_norm < 1e-12:
+            return np.array([1.0])  # Large residual for degenerate lines
+
+        dir1 = dir1 / dir1_norm
+        dir2 = dir2 / dir2_norm
+
+        # Dot product should be 0 for perpendicular lines
+        dot_product = np.dot(dir1, dir2)
+
+        return np.array([dot_product])
+
+    def compute_jacobian(self, variables: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+        """Compute Jacobian using finite differences."""
+        from ..math.jacobians import finite_difference_jacobian
+
+        def residual_func(params):
+            var_dict = {
+                self.line1_wp_a_id: params[0:3],
+                self.line1_wp_b_id: params[3:6],
+                self.line2_wp_a_id: params[6:9],
+                self.line2_wp_b_id: params[9:12]
+            }
+            return self.compute_residual(var_dict)
+
+        # Pack variables
+        all_points = np.concatenate([
+            variables[self.line1_wp_a_id],
+            variables[self.line1_wp_b_id],
+            variables[self.line2_wp_a_id],
+            variables[self.line2_wp_b_id]
+        ])
+
+        # Compute Jacobian
+        J_full = finite_difference_jacobian(residual_func, all_points)
+
+        # Split Jacobian by variables
+        jacobians = {
+            self.line1_wp_a_id: J_full[:, 0:3],
+            self.line1_wp_b_id: J_full[:, 3:6],
+            self.line2_wp_a_id: J_full[:, 6:9],
+            self.line2_wp_b_id: J_full[:, 9:12]
+        }
+
+        return jacobians
+
+    def residual_dimension(self) -> int:
+        """Get residual dimension."""
+        return 1
+
+
+class ParallelResidual(ResidualFunctor):
+    """Residual for parallel line constraints."""
+
+    def __init__(
+        self,
+        factor_id: str,
+        line1_wp_a_id: str,
+        line1_wp_b_id: str,
+        line2_wp_a_id: str,
+        line2_wp_b_id: str
+    ):
+        """Initialize parallel residual."""
+        super().__init__(factor_id, [line1_wp_a_id, line1_wp_b_id, line2_wp_a_id, line2_wp_b_id])
+
+        self.line1_wp_a_id = line1_wp_a_id
+        self.line1_wp_b_id = line1_wp_b_id
+        self.line2_wp_a_id = line2_wp_a_id
+        self.line2_wp_b_id = line2_wp_b_id
+
+    def compute_residual(self, variables: Dict[str, np.ndarray]) -> np.ndarray:
+        """Compute parallel residual."""
+        # Get line points
+        line1_a = variables[self.line1_wp_a_id]
+        line1_b = variables[self.line1_wp_b_id]
+        line2_a = variables[self.line2_wp_a_id]
+        line2_b = variables[self.line2_wp_b_id]
+
+        # Compute line directions
+        dir1 = line1_b - line1_a
+        dir2 = line2_b - line2_a
+
+        # Normalize directions
+        dir1_norm = np.linalg.norm(dir1)
+        dir2_norm = np.linalg.norm(dir2)
+
+        if dir1_norm < 1e-12 or dir2_norm < 1e-12:
+            return np.array([0.0, 1.0])  # Large residual for degenerate lines
+
+        dir1 = dir1 / dir1_norm
+        dir2 = dir2 / dir2_norm
+
+        # Cross product should be 0 for parallel lines
+        cross_product = np.cross(dir1, dir2)
+
+        # For parallel lines in 3D, cross product magnitude should be 0
+        cross_magnitude = np.linalg.norm(cross_product)
+
+        # Also ensure they point in same direction (not opposite)
+        dot_product = np.dot(dir1, dir2)
+        direction_residual = 1.0 - abs(dot_product)  # Should be 0 when parallel
+
+        return np.array([cross_magnitude, direction_residual])
+
+    def compute_jacobian(self, variables: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+        """Compute Jacobian using finite differences."""
+        from ..math.jacobians import finite_difference_jacobian
+
+        def residual_func(params):
+            var_dict = {
+                self.line1_wp_a_id: params[0:3],
+                self.line1_wp_b_id: params[3:6],
+                self.line2_wp_a_id: params[6:9],
+                self.line2_wp_b_id: params[9:12]
+            }
+            return self.compute_residual(var_dict)
+
+        # Pack variables
+        all_points = np.concatenate([
+            variables[self.line1_wp_a_id],
+            variables[self.line1_wp_b_id],
+            variables[self.line2_wp_a_id],
+            variables[self.line2_wp_b_id]
+        ])
+
+        # Compute Jacobian
+        J_full = finite_difference_jacobian(residual_func, all_points)
+
+        # Split Jacobian by variables
+        jacobians = {
+            self.line1_wp_a_id: J_full[:, 0:3],
+            self.line1_wp_b_id: J_full[:, 3:6],
+            self.line2_wp_a_id: J_full[:, 6:9],
+            self.line2_wp_b_id: J_full[:, 9:12]
+        }
+
+        return jacobians
+
+    def residual_dimension(self) -> int:
+        """Get residual dimension."""
+        return 2
+
+
+class AngleResidual(ResidualFunctor):
+    """Residual for angle constraints between lines."""
+
+    def __init__(
+        self,
+        factor_id: str,
+        line1_wp_a_id: str,
+        line1_wp_b_id: str,
+        line2_wp_a_id: str,
+        line2_wp_b_id: str,
+        target_angle_radians: float
+    ):
+        """Initialize angle residual."""
+        super().__init__(factor_id, [line1_wp_a_id, line1_wp_b_id, line2_wp_a_id, line2_wp_b_id])
+
+        self.line1_wp_a_id = line1_wp_a_id
+        self.line1_wp_b_id = line1_wp_b_id
+        self.line2_wp_a_id = line2_wp_a_id
+        self.line2_wp_b_id = line2_wp_b_id
+        self.target_angle_radians = target_angle_radians
+
+    def compute_residual(self, variables: Dict[str, np.ndarray]) -> np.ndarray:
+        """Compute angle residual."""
+        # Get line points
+        line1_a = variables[self.line1_wp_a_id]
+        line1_b = variables[self.line1_wp_b_id]
+        line2_a = variables[self.line2_wp_a_id]
+        line2_b = variables[self.line2_wp_b_id]
+
+        # Compute line directions
+        dir1 = line1_b - line1_a
+        dir2 = line2_b - line2_a
+
+        # Normalize directions
+        dir1_norm = np.linalg.norm(dir1)
+        dir2_norm = np.linalg.norm(dir2)
+
+        if dir1_norm < 1e-12 or dir2_norm < 1e-12:
+            return np.array([1.0])  # Large residual for degenerate lines
+
+        dir1 = dir1 / dir1_norm
+        dir2 = dir2 / dir2_norm
+
+        # Compute angle between directions
+        dot_product = np.clip(np.dot(dir1, dir2), -1.0, 1.0)
+        current_angle = np.arccos(abs(dot_product))  # Take absolute for acute angle
+
+        # Residual is difference from target angle
+        angle_residual = current_angle - self.target_angle_radians
+
+        return np.array([angle_residual])
+
+    def compute_jacobian(self, variables: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+        """Compute Jacobian using finite differences."""
+        from ..math.jacobians import finite_difference_jacobian
+
+        def residual_func(params):
+            var_dict = {
+                self.line1_wp_a_id: params[0:3],
+                self.line1_wp_b_id: params[3:6],
+                self.line2_wp_a_id: params[6:9],
+                self.line2_wp_b_id: params[9:12]
+            }
+            return self.compute_residual(var_dict)
+
+        # Pack variables
+        all_points = np.concatenate([
+            variables[self.line1_wp_a_id],
+            variables[self.line1_wp_b_id],
+            variables[self.line2_wp_a_id],
+            variables[self.line2_wp_b_id]
+        ])
+
+        # Compute Jacobian
+        J_full = finite_difference_jacobian(residual_func, all_points)
+
+        # Split Jacobian by variables
+        jacobians = {
+            self.line1_wp_a_id: J_full[:, 0:3],
+            self.line1_wp_b_id: J_full[:, 3:6],
+            self.line2_wp_a_id: J_full[:, 6:9],
+            self.line2_wp_b_id: J_full[:, 9:12]
+        }
+
+        return jacobians
+
+    def residual_dimension(self) -> int:
+        """Get residual dimension."""
+        return 1
+
+
+class DistanceRatioResidual(ResidualFunctor):
+    """Residual for distance ratio constraints."""
+
+    def __init__(
+        self,
+        factor_id: str,
+        line1_wp_a_id: str,
+        line1_wp_b_id: str,
+        line2_wp_a_id: str,
+        line2_wp_b_id: str,
+        target_ratio: float
+    ):
+        """Initialize distance ratio residual."""
+        super().__init__(factor_id, [line1_wp_a_id, line1_wp_b_id, line2_wp_a_id, line2_wp_b_id])
+
+        self.line1_wp_a_id = line1_wp_a_id
+        self.line1_wp_b_id = line1_wp_b_id
+        self.line2_wp_a_id = line2_wp_a_id
+        self.line2_wp_b_id = line2_wp_b_id
+        self.target_ratio = target_ratio
+
+    def compute_residual(self, variables: Dict[str, np.ndarray]) -> np.ndarray:
+        """Compute distance ratio residual."""
+        # Get line points
+        line1_a = variables[self.line1_wp_a_id]
+        line1_b = variables[self.line1_wp_b_id]
+        line2_a = variables[self.line2_wp_a_id]
+        line2_b = variables[self.line2_wp_b_id]
+
+        # Compute distances
+        dist1 = np.linalg.norm(line1_b - line1_a)
+        dist2 = np.linalg.norm(line2_b - line2_a)
+
+        if dist2 < 1e-12:
+            return np.array([1.0])  # Large residual for degenerate second distance
+
+        # Current ratio
+        current_ratio = dist1 / dist2
+
+        # Residual is difference from target ratio
+        ratio_residual = current_ratio - self.target_ratio
+
+        return np.array([ratio_residual])
+
+    def compute_jacobian(self, variables: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+        """Compute Jacobian using finite differences."""
+        from ..math.jacobians import finite_difference_jacobian
+
+        def residual_func(params):
+            var_dict = {
+                self.line1_wp_a_id: params[0:3],
+                self.line1_wp_b_id: params[3:6],
+                self.line2_wp_a_id: params[6:9],
+                self.line2_wp_b_id: params[9:12]
+            }
+            return self.compute_residual(var_dict)
+
+        # Pack variables
+        all_points = np.concatenate([
+            variables[self.line1_wp_a_id],
+            variables[self.line1_wp_b_id],
+            variables[self.line2_wp_a_id],
+            variables[self.line2_wp_b_id]
+        ])
+
+        # Compute Jacobian
+        J_full = finite_difference_jacobian(residual_func, all_points)
+
+        # Split Jacobian by variables
+        jacobians = {
+            self.line1_wp_a_id: J_full[:, 0:3],
+            self.line1_wp_b_id: J_full[:, 3:6],
+            self.line2_wp_a_id: J_full[:, 6:9],
+            self.line2_wp_b_id: J_full[:, 9:12]
+        }
+
+        return jacobians
+
+    def residual_dimension(self) -> int:
+        """Get residual dimension."""
+        return 1
+
+
 class ResidualRegistry:
     """Registry for residual functor types."""
 
@@ -528,6 +962,11 @@ class ResidualRegistry:
         "axis_alignment": AxisAlignmentResidual,
         "coplanarity": CoplanarityResidual,
         "equality": EqualityResidual,
+        "collinear": CollinearResidual,
+        "perpendicular": PerpendicularResidual,
+        "parallel": ParallelResidual,
+        "angle": AngleResidual,
+        "distance_ratio": DistanceRatioResidual,
     }
 
     @classmethod
