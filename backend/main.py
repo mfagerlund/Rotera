@@ -44,5 +44,21 @@ async def get_version() -> dict[str, str]:
 
 
 if __name__ == "__main__":
+    import argparse
     import uvicorn
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+    import time
+
+    parser = argparse.ArgumentParser(description="Run Pictorigo backend server")
+    parser.add_argument("--test", action="store_true", help="Run in test mode with slow startup")
+    parser.add_argument("--port", type=int, default=8000, help="Port to run server on")
+    args = parser.parse_args()
+
+    if args.test:
+        print("Running in test mode - slow startup (10 seconds delay)")
+        print("Press Ctrl+C to cancel...")
+        for i in range(10, 0, -1):
+            print(f"Starting in {i}...")
+            time.sleep(1)
+        print("Starting server...")
+
+    uvicorn.run("main:app", host="127.0.0.1", port=args.port, reload=True)

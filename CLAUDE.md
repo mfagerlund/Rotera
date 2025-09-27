@@ -1,0 +1,1 @@
+- Before we're done with a task, make sure that the tests ALL pass and that npm type-check passes without issue.

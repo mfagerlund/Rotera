@@ -3,6 +3,8 @@
 from fastapi import APIRouter, HTTPException
 from typing import Dict, Any, Optional
 from pydantic import BaseModel
+import time
+import asyncio
 
 from pictorigo.core.models.project import SolveResult
 from pictorigo.core.optimization.problem import OptimizationProblem
@@ -22,6 +24,8 @@ class SolveRequest(BaseModel):
     use_incremental: bool = False
     robust_loss: str = "none"  # "none", "huber", "cauchy"
     robust_loss_params: Dict[str, float] = {}
+    test_mode: bool = False  # Add artificial delays for testing cancellation
+    test_delay_seconds: float = 10.0  # How long to delay in test mode
 
 
 @router.post("/{project_id}")
@@ -31,6 +35,12 @@ async def solve_project(project_id: str, request: SolveRequest) -> SolveResult:
         raise HTTPException(status_code=404, detail="Project not found")
 
     project = projects_store[project_id]
+
+    # Add artificial delay for testing cancellation
+    if request.test_mode:
+        print(f"Test mode: Adding {request.test_delay_seconds} second delay...")
+        await asyncio.sleep(request.test_delay_seconds)
+        print("Test delay complete, starting optimization...")
 
     try:
         if request.use_incremental:
@@ -119,6 +129,12 @@ async def solve_incremental(project_id: str, request: SolveRequest) -> Dict[str,
         raise HTTPException(status_code=404, detail="Project not found")
 
     project = projects_store[project_id]
+
+    # Add artificial delay for testing cancellation
+    if request.test_mode:
+        print(f"Test mode (incremental): Adding {request.test_delay_seconds} second delay...")
+        await asyncio.sleep(request.test_delay_seconds)
+        print("Test delay complete, starting incremental reconstruction...")
 
     try:
         solver_options = SolverOptions(
