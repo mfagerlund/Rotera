@@ -7,7 +7,11 @@ interface ImageViewerProps {
   image: ProjectImage
   worldPoints: Record<string, WorldPoint>
   selectedPoints: string[]
+  selectedWorldPointIds?: string[]
+  highlightedWorldPointId?: string | null
   hoveredConstraintId: string | null
+  placementMode?: { active: boolean; worldPointId: string | null }
+  activeConstraintType?: string | null
   onPointClick: (pointId: string, ctrlKey: boolean, shiftKey: boolean) => void
   onCreatePoint?: (u: number, v: number) => void
 }
@@ -16,7 +20,11 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
   image,
   worldPoints,
   selectedPoints,
+  selectedWorldPointIds = [],
+  highlightedWorldPointId = null,
   hoveredConstraintId,
+  placementMode = { active: false, worldPointId: null },
+  activeConstraintType = null,
   onPointClick,
   onCreatePoint
 }) => {
@@ -78,7 +86,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
     return () => window.removeEventListener('resize', handleResize)
   }, [imageLoaded, fitImageToCanvas])
 
-  // Render canvas
+  // Render canvas with animation frame
   useEffect(() => {
     const canvas = canvasRef.current
     const ctx = canvas?.getContext('2d')
@@ -86,25 +94,38 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
 
     if (!canvas || !ctx || !img || !imageLoaded) return
 
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    let animationId: number
 
-    // Draw image
-    ctx.drawImage(
-      img,
-      offset.x,
-      offset.y,
-      img.width * scale,
-      img.height * scale
-    )
+    const render = () => {
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-    // Draw world points
-    renderWorldPoints(ctx)
+      // Draw image
+      ctx.drawImage(
+        img,
+        offset.x,
+        offset.y,
+        img.width * scale,
+        img.height * scale
+      )
 
-    // Draw selection overlays
-    renderSelectionOverlay(ctx)
+      // Draw world points
+      renderWorldPoints(ctx)
 
-  }, [imageLoaded, scale, offset, worldPoints, selectedPoints, hoveredConstraintId])
+      // Draw selection overlays with animation
+      renderSelectionOverlay(ctx)
+
+      animationId = requestAnimationFrame(render)
+    }
+
+    render()
+
+    return () => {
+      if (animationId) {
+        cancelAnimationFrame(animationId)
+      }
+    }
+  }, [imageLoaded, scale, offset, worldPoints, selectedPoints, selectedWorldPointIds, highlightedWorldPointId, hoveredConstraintId, placementMode])
 
   const renderWorldPoints = (ctx: CanvasRenderingContext2D) => {
     Object.values(worldPoints).forEach(wp => {
@@ -114,8 +135,20 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
       const x = imagePoint.u * scale + offset.x
       const y = imagePoint.v * scale + offset.y
 
-      // Check if point is selected
+      // Check point states
       const isSelected = selectedPoints.includes(wp.id)
+      const isWorldPointSelected = selectedWorldPointIds.includes(wp.id)
+      const isHighlighted = highlightedWorldPointId === wp.id
+
+      // Draw highlight ring for world point selection/highlighting
+      // Only show world point selection ring if not also constraint-selected (to avoid double rings)
+      if ((isWorldPointSelected || isHighlighted) && !isSelected) {
+        ctx.strokeStyle = isHighlighted ? '#ff8c00' : '#27ae60'
+        ctx.lineWidth = 3
+        ctx.beginPath()
+        ctx.arc(x, y, 12, 0, 2 * Math.PI)
+        ctx.stroke()
+      }
 
       // Draw point
       ctx.fillStyle = wp.color || '#ff6b6b'
@@ -152,18 +185,30 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
       const x = imagePoint.u * scale + offset.x
       const y = imagePoint.v * scale + offset.y
 
-      // Draw selection ring
+      // Draw selection ring with animation
+      const time = Date.now() * 0.003
+      const pulseRadius = 12 + Math.sin(time) * 2
+
       ctx.strokeStyle = '#0696d7'
       ctx.lineWidth = 2
       ctx.beginPath()
-      ctx.arc(x, y, 12, 0, 2 * Math.PI)
+      ctx.arc(x, y, pulseRadius, 0, 2 * Math.PI)
       ctx.stroke()
 
-      // Draw selection number
+      // Draw secondary ring for multi-selection
+      if (selectedPoints.length > 1) {
+        ctx.strokeStyle = 'rgba(6, 150, 215, 0.3)'
+        ctx.lineWidth = 1
+        ctx.beginPath()
+        ctx.arc(x, y, pulseRadius + 5, 0, 2 * Math.PI)
+        ctx.stroke()
+      }
+
+      // Draw selection number badge
       ctx.fillStyle = '#0696d7'
       ctx.strokeStyle = '#ffffff'
       ctx.lineWidth = 2
-      ctx.font = '10px Arial'
+      ctx.font = 'bold 10px Arial'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
 
@@ -178,6 +223,84 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
       ctx.fillStyle = '#ffffff'
       ctx.fillText((index + 1).toString(), numberX, numberY)
     })
+
+    // Draw constraint preview lines when constraints are available (not just when actively creating)
+    const lineBasedConstraints = ['distance', 'horizontal', 'vertical', 'parallel', 'perpendicular']
+    const angleBasedConstraints = ['angle']
+    const shapeBasedConstraints = ['rectangle']
+
+    // Show line preview when 2 points selected (line-based constraints available)
+    if (selectedPoints.length === 2) {
+      const wp1 = worldPoints[selectedPoints[0]]
+      const wp2 = worldPoints[selectedPoints[1]]
+      const ip1 = wp1?.imagePoints.find(ip => ip.imageId === image.id)
+      const ip2 = wp2?.imagePoints.find(ip => ip.imageId === image.id)
+
+      if (ip1 && ip2) {
+        const x1 = ip1.u * scale + offset.x
+        const y1 = ip1.v * scale + offset.y
+        const x2 = ip2.u * scale + offset.x
+        const y2 = ip2.v * scale + offset.y
+
+        ctx.strokeStyle = 'rgba(6, 150, 215, 0.5)'
+        ctx.lineWidth = 2
+        ctx.setLineDash([5, 5])
+        ctx.beginPath()
+        ctx.moveTo(x1, y1)
+        ctx.lineTo(x2, y2)
+        ctx.stroke()
+        ctx.setLineDash([])
+      }
+    } else if (selectedPoints.length === 3) {
+      // Draw angle visualization for 3 points (angle/collinear/plane constraints available)
+      const wps = selectedPoints.map(id => worldPoints[id])
+      const ips = wps.map(wp => wp?.imagePoints.find(ip => ip.imageId === image.id))
+
+      if (ips.every(ip => ip)) {
+        ctx.strokeStyle = 'rgba(6, 150, 215, 0.5)'
+        ctx.lineWidth = 2
+        ctx.setLineDash([5, 5])
+
+        // Draw lines forming the angle (vertex is middle point)
+        const coords = ips.map(ip => ({
+          x: ip!.u * scale + offset.x,
+          y: ip!.v * scale + offset.y
+        }))
+
+        ctx.beginPath()
+        ctx.moveTo(coords[0].x, coords[0].y)
+        ctx.lineTo(coords[1].x, coords[1].y)
+        ctx.moveTo(coords[1].x, coords[1].y)
+        ctx.lineTo(coords[2].x, coords[2].y)
+        ctx.stroke()
+        ctx.setLineDash([])
+      }
+    } else if (selectedPoints.length === 4) {
+      // Draw rectangle preview for 4 points (rectangle/plane constraints available)
+      const wps = selectedPoints.map(id => worldPoints[id])
+      const ips = wps.map(wp => wp?.imagePoints.find(ip => ip.imageId === image.id))
+
+      if (ips.every(ip => ip)) {
+        ctx.strokeStyle = 'rgba(6, 150, 215, 0.5)'
+        ctx.lineWidth = 2
+        ctx.setLineDash([5, 5])
+
+        const coords = ips.map(ip => ({
+          x: ip!.u * scale + offset.x,
+          y: ip!.v * scale + offset.y
+        }))
+
+        // Draw quad outline
+        ctx.beginPath()
+        ctx.moveTo(coords[0].x, coords[0].y)
+        ctx.lineTo(coords[1].x, coords[1].y)
+        ctx.lineTo(coords[2].x, coords[2].y)
+        ctx.lineTo(coords[3].x, coords[3].y)
+        ctx.closePath()
+        ctx.stroke()
+        ctx.setLineDash([])
+      }
+    }
   }
 
   // Convert canvas coordinates to image coordinates
@@ -229,16 +352,26 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
       event.preventDefault()
     } else if (event.button === 0) {
       // Left click for point interaction
-      const nearbyPoint = findNearbyPoint(x, y)
 
-      if (nearbyPoint) {
-        // Click on existing point
-        onPointClick(nearbyPoint.id, event.ctrlKey, event.shiftKey)
-      } else if (onCreatePoint) {
-        // Click on empty space - create new point
+      if (placementMode.active && onCreatePoint) {
+        // In placement mode, always create/place point regardless of nearby points
         const imageCoords = canvasToImageCoords(x, y)
         if (imageCoords) {
           onCreatePoint(imageCoords.u, imageCoords.v)
+        }
+      } else {
+        // Normal mode - check for nearby points first
+        const nearbyPoint = findNearbyPoint(x, y)
+
+        if (nearbyPoint) {
+          // Click on existing point
+          onPointClick(nearbyPoint.id, event.ctrlKey, event.shiftKey)
+        } else if (onCreatePoint) {
+          // Click on empty space - create new point
+          const imageCoords = canvasToImageCoords(x, y)
+          if (imageCoords) {
+            onCreatePoint(imageCoords.u, imageCoords.v)
+          }
         }
       }
     }
@@ -306,7 +439,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
         onMouseLeave={handleMouseUp}
         onWheel={handleWheel}
         style={{
-          cursor: isDragging ? 'grabbing' : 'crosshair',
+          cursor: isDragging ? 'grabbing' : placementMode.active ? 'copy' : 'crosshair',
           display: 'block',
           width: '100%',
           height: '100%'
@@ -316,6 +449,20 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
       {!imageLoaded && (
         <div className="image-loading">
           <span>Loading image...</span>
+        </div>
+      )}
+
+      {/* Placement mode overlay */}
+      {placementMode.active && placementMode.worldPointId && (
+        <div className="placement-mode-overlay">
+          <div className="placement-instructions">
+            <div className="placement-icon">📍</div>
+            <div className="placement-text">
+              <strong>Placing: {worldPoints[placementMode.worldPointId]?.name}</strong>
+              <div className="placement-hint">Click anywhere on the image to place this world point</div>
+              <div className="placement-escape">Press Esc to cancel</div>
+            </div>
+          </div>
         </div>
       )}
     </div>

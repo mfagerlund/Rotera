@@ -1,0 +1,425 @@
+/* Ground Plane Panel Styles */
+.ground-plane-panel {
+  background: var(--panel-bg);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.ground-plane-panel .panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.ground-plane-panel .panel-header h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.plane-count {
+  background: var(--accent-color);
+  color: white;
+  padding: 4px 8px;
+  border-radius: var(--border-radius-sm);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.ground-plane-overview {
+  text-align: center;
+  padding: 20px;
+}
+
+.overview-text {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin-bottom: 20px;
+}
+
+.btn-define-plane {
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: var(--border-radius);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-define-plane:hover:not(:disabled) {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+.btn-define-plane:disabled {
+  background: var(--button-disabled);
+  color: var(--text-disabled);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.requirement-notice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-color);
+  border-radius: var(--border-radius);
+  padding: 12px;
+  margin-top: 16px;
+}
+
+.notice-icon {
+  font-size: 16px;
+}
+
+.notice-text {
+  font-size: 13px;
+  color: var(--warning-color);
+}
+
+.plane-definition {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.definition-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.definition-header h4 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.step-indicator {
+  background: var(--accent-color);
+  color: white;
+  padding: 4px 8px;
+  border-radius: var(--border-radius-sm);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.step-instructions {
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-color);
+  border-radius: var(--border-radius);
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.instruction-text {
+  font-size: 13px;
+  color: var(--accent-color);
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.selection-status {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.definition-settings {
+  background: var(--bg-primary);
+  border-radius: var(--border-radius);
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.settings-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.settings-row:last-child {
+  margin-bottom: 0;
+}
+
+.settings-row label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.settings-row input,
+.settings-row select {
+  padding: 6px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.definition-preview {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.definition-preview h5 {
+  margin: 0 0 8px 0;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.preview-details {
+  display: grid;
+  gap: 4px;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+}
+
+.detail-item span:first-child {
+  color: var(--text-secondary);
+}
+
+.detail-item span:last-child {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.definition-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.btn-next {
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--border-radius);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-next:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.btn-next:disabled {
+  background: var(--button-disabled);
+  color: var(--text-disabled);
+  cursor: not-allowed;
+}
+
+.btn-create {
+  background: var(--success-color);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--border-radius);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-create:hover:not(:disabled) {
+  background: var(--success-hover);
+}
+
+.btn-create:disabled {
+  background: var(--button-disabled);
+  color: var(--text-disabled);
+  cursor: not-allowed;
+}
+
+.btn-back {
+  background: var(--button-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  padding: 8px 16px;
+  border-radius: var(--border-radius);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-back:hover {
+  background: var(--button-hover);
+}
+
+.btn-cancel {
+  background: var(--error-color);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--border-radius);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-cancel:hover {
+  background: var(--error-hover);
+}
+
+.existing-planes {
+  border-top: 1px solid var(--border-color);
+  padding-top: 16px;
+}
+
+.existing-planes h4 {
+  margin: 0 0 12px 0;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.planes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.plane-item {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 12px;
+  transition: all 0.2s ease;
+}
+
+.plane-item:hover {
+  border-color: var(--accent-color);
+}
+
+.plane-item.active {
+  border-color: var(--success-color);
+  background: var(--success-bg);
+}
+
+.plane-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.plane-info {
+  flex: 1;
+}
+
+.plane-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.plane-details {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.plane-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.activate-btn {
+  background: var(--button-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  width: 24px;
+  height: 24px;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.activate-btn:hover {
+  background: var(--button-hover);
+  border-color: var(--success-color);
+}
+
+.activate-btn.active {
+  background: var(--success-color);
+  border-color: var(--success-color);
+  color: white;
+}
+
+.delete-plane-btn {
+  background: none;
+  border: none;
+  color: var(--error-color);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--border-radius-sm);
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.delete-plane-btn:hover {
+  background: var(--error-bg);
+}
+
+.plane-stats {
+  display: grid;
+  gap: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color);
+}
+
+.plane-stats .stat-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+}
+
+.plane-stats .stat-item span:first-child {
+  color: var(--text-secondary);
+}
+
+.plane-stats .stat-item span:last-child {
+  color: var(--text-primary);
+  font-weight: 500;
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.orthogonal {
+  color: var(--success-color) !important;
+}
+
+.non-orthogonal {
+  color: var(--warning-color) !important;
+}

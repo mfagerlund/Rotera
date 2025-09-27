@@ -174,10 +174,8 @@ export const useProject = () => {
       }
     }))
 
-    // Set as current image if it's the first one
-    if (Object.keys(project.images).length === 0) {
-      setCurrentImageId(projectImage.id)
-    }
+    // Always set newly added image as current
+    setCurrentImageId(projectImage.id)
   }, [project, updateProject])
 
   const renameImage = useCallback((id: string, newName: string) => {

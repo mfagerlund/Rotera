@@ -14,6 +14,81 @@ export const useConstraints = (
   const [constraintParameters, setConstraintParameters] = useState<Record<string, any>>({})
   const [hoveredConstraintId, setHoveredConstraintId] = useState<string | null>(null)
 
+  // Get all constraints with enabled/disabled status
+  const getAllConstraints = useCallback((selectedPoints: string[], selectedLines: Line[]): AvailableConstraint[] => {
+    const pointCount = selectedPoints.length
+    const lineCount = selectedLines.length
+
+    return [
+      {
+        type: 'fixed',
+        icon: '📌',
+        tooltip: 'Fix point position in 3D space',
+        enabled: pointCount === 1 && lineCount === 0
+      },
+      {
+        type: 'distance',
+        icon: '↔',
+        tooltip: 'Set distance between points',
+        enabled: pointCount === 2 && lineCount === 0
+      },
+      {
+        type: 'horizontal',
+        icon: '⟷',
+        tooltip: 'Make points horizontally aligned',
+        enabled: pointCount === 2 && lineCount === 0
+      },
+      {
+        type: 'vertical',
+        icon: '↕',
+        tooltip: 'Make points vertically aligned',
+        enabled: pointCount === 2 && lineCount === 0
+      },
+      {
+        type: 'collinear',
+        icon: '─',
+        tooltip: 'Make points lie on same line',
+        enabled: pointCount === 3 && lineCount === 0
+      },
+      {
+        type: 'angle',
+        icon: '∠',
+        tooltip: 'Set angle between points/lines',
+        enabled: (pointCount === 3 && lineCount === 0) || lineCount === 2
+      },
+      {
+        type: 'rectangle',
+        icon: '▭',
+        tooltip: 'Form rectangle with four corners',
+        enabled: pointCount === 4 && lineCount === 0
+      },
+      {
+        type: 'plane',
+        icon: '◱',
+        tooltip: 'Make points coplanar',
+        enabled: pointCount >= 3 && lineCount === 0
+      },
+      {
+        type: 'parallel',
+        icon: '∥',
+        tooltip: 'Make lines parallel',
+        enabled: lineCount === 2
+      },
+      {
+        type: 'perpendicular',
+        icon: '⊥',
+        tooltip: 'Make lines perpendicular',
+        enabled: lineCount === 2
+      },
+      {
+        type: 'circle',
+        icon: '○',
+        tooltip: `Make points lie on circle`,
+        enabled: pointCount >= 3
+      }
+    ]
+  }, [])
+
   // Get available constraints based on current selection
   const getAvailableConstraints = useCallback((selectedPoints: string[], selectedLines: Line[]): AvailableConstraint[] => {
     const constraints: AvailableConstraint[] = []
@@ -68,6 +143,12 @@ export const useConstraints = (
           icon: '∠',
           tooltip: 'Set angle between three points',
           enabled: true
+        },
+        {
+          type: 'plane',
+          icon: '◱',
+          tooltip: 'Make points coplanar',
+          enabled: true
         }
       )
     }
@@ -81,6 +162,18 @@ export const useConstraints = (
           tooltip: 'Form rectangle with four corners',
           enabled: true
         },
+        {
+          type: 'plane',
+          icon: '◱',
+          tooltip: 'Make points coplanar',
+          enabled: true
+        }
+      )
+    }
+
+    // 5+ points selected
+    if (pointCount >= 5 && lineCount === 0) {
+      constraints.push(
         {
           type: 'plane',
           icon: '◱',
@@ -274,6 +367,7 @@ export const useConstraints = (
 
     // Actions
     getAvailableConstraints,
+    getAllConstraints,
     startConstraintCreation,
     updateParameter,
     applyConstraint,

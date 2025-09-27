@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Camera body -->
+  <rect x="6" y="10" width="20" height="14" rx="2" fill="#2c3e50" stroke="#34495e" stroke-width="0.5"/>
+
+  <!-- Camera lens -->
+  <circle cx="16" cy="17" r="5" fill="#34495e" stroke="#2c3e50" stroke-width="0.5"/>
+  <circle cx="16" cy="17" r="3.5" fill="#7f8c8d"/>
+  <circle cx="16" cy="17" r="2" fill="#2c3e50"/>
+
+  <!-- Lens reflection -->
+  <circle cx="14.5" cy="15.5" r="1" fill="#ecf0f1" opacity="0.6"/>
+
+  <!-- Camera viewfinder -->
+  <rect x="12" y="8" width="8" height="3" rx="1" fill="#34495e"/>
+
+  <!-- Projection lines -->
+  <g stroke="#e74c3c" stroke-width="1" fill="none" opacity="0.8">
+    <!-- Top projection lines -->
+    <line x1="11" y1="12" x2="4" y2="4"/>
+    <line x1="21" y1="12" x2="28" y2="4"/>
+
+    <!-- Bottom projection lines -->
+    <line x1="11" y1="22" x2="4" y2="28"/>
+    <line x1="21" y1="22" x2="28" y2="28"/>
+  </g>
+
+  <!-- Projected points -->
+  <g fill="#e74c3c">
+    <circle cx="4" cy="4" r="1.5"/>
+    <circle cx="28" cy="4" r="1.5"/>
+    <circle cx="4" cy="28" r="1.5"/>
+    <circle cx="28" cy="28" r="1.5"/>
+  </g>
+
+  <!-- 3D world point (center) -->
+  <circle cx="16" cy="2" r="1.5" fill="#f39c12"/>
+
+  <!-- Constraint indicator -->
+  <g stroke="#27ae60" stroke-width="1.5" fill="none" opacity="0.7">
+    <line x1="4" y1="4" x2="28" y2="4"/>
+    <line x1="4" y1="28" x2="28" y2="28"/>
+  </g>
+
+  <!-- Small constraint markers -->
+  <g fill="#27ae60">
+    <rect x="15" y="3" width="2" height="2" rx="0.5"/>
+    <rect x="15" y="27" width="2" height="2" rx="0.5"/>
+  </g>
+</svg>

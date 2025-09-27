@@ -1,0 +1,446 @@
+/* Constraint Templates Panel Styles */
+.constraint-templates-panel {
+  background: var(--panel-bg);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.constraint-templates-panel .panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.constraint-templates-panel .panel-header h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-create-template {
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-create-template:hover {
+  background: var(--accent-hover);
+}
+
+.templates-search {
+  position: relative;
+  margin-bottom: 16px;
+}
+
+.templates-search .search-input {
+  width: 100%;
+  padding: 8px 35px 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.templates-search .search-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+  pointer-events: none;
+  font-size: 14px;
+}
+
+.category-tabs {
+  display: flex;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+  overflow-x: auto;
+}
+
+.category-tab {
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-secondary);
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.category-tab:hover {
+  color: var(--text-primary);
+  background: var(--button-hover);
+}
+
+.category-tab.active {
+  color: var(--accent-color);
+  border-bottom-color: var(--accent-color);
+}
+
+.category-name {
+  font-weight: 500;
+}
+
+.category-count {
+  opacity: 0.7;
+  font-size: 10px;
+}
+
+.selection-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-color);
+  border-radius: var(--border-radius);
+  padding: 8px 12px;
+  margin-bottom: 16px;
+}
+
+.selection-text {
+  font-size: 13px;
+  color: var(--accent-color);
+  font-weight: 500;
+}
+
+.clear-selection-btn {
+  background: var(--error-color);
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: var(--border-radius-sm);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clear-selection-btn:hover {
+  background: var(--error-hover);
+}
+
+.templates-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.template-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 16px;
+  transition: all 0.2s ease;
+}
+
+.template-card:hover:not(.disabled) {
+  border-color: var(--accent-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.template-card.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.template-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.template-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.template-info {
+  flex: 1;
+}
+
+.template-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.template-category {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.template-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.usage-count {
+  background: var(--accent-color);
+  color: white;
+  padding: 2px 6px;
+  border-radius: var(--border-radius-sm);
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.delete-template-btn {
+  background: none;
+  border: none;
+  color: var(--error-color);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: var(--border-radius-sm);
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.delete-template-btn:hover {
+  background: var(--error-bg);
+}
+
+.template-description {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin-bottom: 12px;
+}
+
+.template-requirements {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 8px;
+  background: var(--bg-primary);
+  border-radius: var(--border-radius-sm);
+}
+
+.requirement-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.requirement-item span:first-child {
+  font-size: 10px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.requirement-item span:last-child {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.requirement-item .satisfied {
+  color: var(--success-color);
+}
+
+.requirement-item .unsatisfied {
+  color: var(--error-color);
+}
+
+.complexity-simple {
+  color: var(--success-color);
+}
+
+.complexity-medium {
+  color: var(--warning-color);
+}
+
+.complexity-complex {
+  color: var(--error-color);
+}
+
+.template-details {
+  margin-bottom: 12px;
+}
+
+.point-labels {
+  margin-bottom: 8px;
+}
+
+.point-label {
+  font-size: 11px;
+  padding: 2px 6px;
+  margin: 2px 4px 2px 0;
+  border-radius: var(--border-radius-sm);
+  display: inline-block;
+}
+
+.point-label.assigned {
+  background: var(--success-bg);
+  color: var(--success-color);
+  border: 1px solid var(--success-color);
+}
+
+.point-label.unassigned {
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.constraint-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.constraint-type-badge {
+  background: var(--accent-bg);
+  color: var(--accent-color);
+  padding: 2px 6px;
+  border-radius: var(--border-radius-sm);
+  font-size: 9px;
+  font-weight: 500;
+  text-transform: uppercase;
+  border: 1px solid var(--accent-color);
+}
+
+.template-footer {
+  border-top: 1px solid var(--border-color);
+  padding-top: 12px;
+}
+
+.apply-template-btn {
+  width: 100%;
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: var(--border-radius);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.apply-template-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.apply-template-btn:disabled {
+  background: var(--button-disabled);
+  color: var(--text-disabled);
+  cursor: not-allowed;
+}
+
+.no-templates {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-secondary);
+}
+
+.no-templates-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.no-templates-text {
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.clear-search-btn {
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: var(--border-radius);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clear-search-btn:hover {
+  background: var(--accent-hover);
+}
+
+.create-template-form {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.create-template-form h4 {
+  margin: 0 0 12px 0;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.create-template-form p {
+  margin: 0 0 12px 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-style: italic;
+}
+
+.btn-cancel {
+  background: var(--button-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  padding: 6px 12px;
+  border-radius: var(--border-radius-sm);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-cancel:hover {
+  background: var(--button-hover);
+}
+
+/* Scrollbar styling for templates grid */
+.templates-grid::-webkit-scrollbar {
+  width: 6px;
+}
+
+.templates-grid::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+  border-radius: 3px;
+}
+
+.templates-grid::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+.templates-grid::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}

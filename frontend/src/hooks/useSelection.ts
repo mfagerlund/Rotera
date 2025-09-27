@@ -66,15 +66,11 @@ export const useSelection = () => {
     setSelectedPoints(allPointIds)
   }, [])
 
-  // Auto-detect lines when points are selected
+  // Auto-detect lines when points are selected - DISABLED for manual constraint creation
   useEffect(() => {
-    if (selectionMode === 'auto' && selectedPoints.length >= 2) {
-      const detectedLines = detectLines(selectedPoints)
-      setSelectedLines(detectedLines)
-    } else if (selectionMode === 'points') {
-      setSelectedLines([])
-    }
-  }, [selectedPoints, selectionMode, detectLines])
+    // Always clear lines - no automatic line detection
+    setSelectedLines([])
+  }, [selectedPoints, selectionMode])
 
   // Computed values
   const hasSelection = selectedPoints.length > 0 || selectedLines.length > 0

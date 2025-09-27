@@ -1,12 +1,14 @@
 // Left sidebar image navigation toolbar
 
 import React, { useRef } from 'react'
-import { ProjectImage } from '../types/project'
+import { ProjectImage, WorldPoint } from '../types/project'
 import { ImageUtils } from '../utils/imageUtils'
 
 interface ImageNavigationToolbarProps {
   images: Record<string, ProjectImage>
   currentImageId: string | null
+  worldPoints: Record<string, WorldPoint>
+  selectedWorldPointIds: string[]
   isCreatingConstraint: boolean
   onImageSelect: (imageId: string) => void
   onImageAdd: (image: ProjectImage) => void
@@ -19,6 +21,8 @@ interface ImageNavigationToolbarProps {
 export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
   images,
   currentImageId,
+  worldPoints,
+  selectedWorldPointIds,
   isCreatingConstraint,
   onImageSelect,
   onImageAdd,
@@ -59,6 +63,14 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
 
   const imageList = Object.values(images)
 
+  // Count selected world points in an image
+  const getSelectedWorldPointsInImage = (imageId: string): number => {
+    return selectedWorldPointIds.filter(wpId => {
+      const wp = worldPoints[wpId]
+      return wp?.imagePoints.some(ip => ip.imageId === imageId)
+    }).length
+  }
+
   return (
     <div className="image-toolbar">
       <div className="image-toolbar-header">
@@ -68,7 +80,7 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
           title="Add Images"
           onClick={handleAddImage}
         >
-          ➕
+          +
         </button>
         <input
           ref={fileInputRef}
@@ -98,10 +110,13 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
             <ImageNavigationItem
               key={image.id}
               image={image}
+              worldPoints={worldPoints}
+              selectedWorldPointIds={selectedWorldPointIds}
               isActive={currentImageId === image.id}
               isConstraintMode={isCreatingConstraint}
               pointCount={getImagePointCount(image.id)}
               selectedPointCount={getSelectedPointsInImage(image.id)}
+              selectedWorldPointCount={getSelectedWorldPointsInImage(image.id)}
               onClick={() => onImageSelect(image.id)}
               onRename={(newName) => onImageRename(image.id, newName)}
               onDelete={() => {
@@ -113,7 +128,7 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
           ))
         ) : (
           <div className="empty-images-state">
-            <div className="empty-icon">📷</div>
+            <div className="empty-icon">□</div>
             <div className="empty-text">No images yet</div>
             <div className="empty-hint">Click ➕ to add images</div>
           </div>
@@ -125,7 +140,7 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
         <div className="constraint-instructions">
           <h4>Cross-Image Constraint Creation</h4>
           <ul>
-            <li>📍 Click points in any image</li>
+            <li>• Click points in any image</li>
             <li>🔄 Switch images anytime</li>
             <li>👁️ Selected points highlighted</li>
             <li>✅ Complete when enough points selected</li>
@@ -138,10 +153,13 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
 
 interface ImageNavigationItemProps {
   image: ProjectImage
+  worldPoints: Record<string, WorldPoint>
+  selectedWorldPointIds: string[]
   isActive: boolean
   isConstraintMode: boolean
   pointCount: number
   selectedPointCount: number
+  selectedWorldPointCount: number
   onClick: () => void
   onRename: (newName: string) => void
   onDelete: () => void
@@ -149,10 +167,13 @@ interface ImageNavigationItemProps {
 
 const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
   image,
+  worldPoints,
+  selectedWorldPointIds,
   isActive,
   isConstraintMode,
   pointCount,
   selectedPointCount,
+  selectedWorldPointCount,
   onClick,
   onRename,
   onDelete
@@ -179,8 +200,11 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
   }
 
   return (
-    <div className={`image-nav-item ${isActive ? 'active' : ''} ${isConstraintMode ? 'constraint-mode' : ''}`}>
-      <div className="image-thumbnail" onClick={onClick}>
+    <div
+      className={`image-nav-item ${isActive ? 'active' : ''} ${isConstraintMode ? 'constraint-mode' : ''}`}
+      onClick={onClick}
+    >
+      <div className="image-thumbnail">
         <img src={image.blob} alt={image.name} />
 
         {/* Constraint mode overlay */}
@@ -199,12 +223,47 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
           </div>
         )}
 
-        {/* Active image indicator */}
-        {isActive && (
-          <div className="active-indicator">
-            <div className="active-dot"></div>
+        {/* Selected world points indicator */}
+        {selectedWorldPointCount > 0 && !isConstraintMode && (
+          <div className="selected-wp-indicator">
+            <span className="selected-wp-count">{selectedWorldPointCount}</span>
           </div>
         )}
+
+        {/* World point locations overlay */}
+        {!isConstraintMode && (
+          <div className="wp-locations-overlay">
+            {Object.values(worldPoints).map(wp => {
+              const imagePoint = wp.imagePoints.find(ip => ip.imageId === image.id)
+              if (!imagePoint) return null
+
+              // Convert world point coordinates to thumbnail coordinates
+              // Calculate thumbnail dimensions maintaining aspect ratio with 100px height
+              const imageAspectRatio = image.width / image.height
+              const thumbnailHeight = 100
+              const thumbnailWidth = Math.min(150, Math.max(75, thumbnailHeight * imageAspectRatio))
+
+              const thumbnailX = (imagePoint.u / image.width) * thumbnailWidth
+              const thumbnailY = (imagePoint.v / image.height) * thumbnailHeight
+
+              const isSelected = selectedWorldPointIds.includes(wp.id)
+
+              return (
+                <div
+                  key={wp.id}
+                  className={`wp-location-dot ${isSelected ? 'selected' : ''}`}
+                  style={{
+                    left: `${thumbnailX}px`,
+                    top: `${thumbnailY}px`,
+                    backgroundColor: wp.color
+                  }}
+                  title={wp.name}
+                />
+              )
+            })}
+          </div>
+        )}
+
       </div>
 
       <div className="image-info">
@@ -214,13 +273,17 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
             onChange={(e) => setName(e.target.value)}
             onBlur={handleNameSubmit}
             onKeyDown={handleKeyDown}
+            onClick={(e) => e.stopPropagation()}
             autoFocus
             className="image-name-input"
           />
         ) : (
           <div
             className="image-name"
-            onDoubleClick={() => !isConstraintMode && setIsEditing(true)}
+            onDoubleClick={(e) => {
+              e.stopPropagation()
+              if (!isConstraintMode) setIsEditing(true)
+            }}
             title={isConstraintMode ? "Exit constraint mode to rename" : "Double-click to rename"}
           >
             {image.name}
@@ -229,11 +292,11 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
 
         <div className="image-stats">
           <div className="stat-item">
-            <span className="stat-icon">📍</span>
+            <span className="stat-icon">•</span>
             <span>{pointCount} points</span>
           </div>
           <div className="stat-item">
-            <span className="stat-icon">📐</span>
+            <span className="stat-icon">□</span>
             <span>{image.width}×{image.height}</span>
           </div>
           {isConstraintMode && selectedPointCount > 0 && (
@@ -254,7 +317,7 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
               }}
               title="Rename image"
             >
-              ✏️
+              ✎
             </button>
             <button
               className="btn-image-action"
@@ -264,7 +327,7 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
               }}
               title="Delete image"
             >
-              🗑️
+              ×
             </button>
           </div>
         )}

@@ -1,0 +1,485 @@
+/* Camera Calibration Panel Styles */
+.camera-calibration-panel {
+  background: var(--panel-bg);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.camera-calibration-panel .panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.camera-calibration-panel .panel-header h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.camera-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-indicator.calibrated {
+  background: var(--success-color);
+}
+
+.status-indicator.partial {
+  background: var(--warning-color);
+}
+
+.status-indicator.uncalibrated {
+  background: var(--error-color);
+}
+
+.status-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.camera-selection {
+  margin-bottom: 20px;
+}
+
+.camera-selection h4 {
+  margin: 0 0 8px 0;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.camera-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.camera-item {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.camera-item:hover {
+  border-color: var(--accent-color);
+}
+
+.camera-item.selected {
+  border-color: var(--success-color);
+  background: var(--success-bg);
+}
+
+.camera-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.camera-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.image-count {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.calibration-methods {
+  margin-bottom: 20px;
+}
+
+.calibration-methods h4 {
+  margin: 0 0 12px 0;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.methods-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.method-btn {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.method-btn:hover:not(:disabled) {
+  border-color: var(--accent-color);
+  background: var(--button-hover);
+}
+
+.method-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.method-btn.active {
+  border-color: var(--success-color);
+  background: var(--success-bg);
+}
+
+.method-icon {
+  font-size: 20px;
+  margin-bottom: 8px;
+}
+
+.method-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.method-description {
+  font-size: 10px;
+  color: var(--text-secondary);
+  line-height: 1.2;
+}
+
+.pattern-configuration {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.pattern-configuration h5 {
+  margin: 0 0 12px 0;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.config-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.config-field label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.config-field input,
+.config-field select {
+  padding: 6px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.pattern-preview {
+  background: var(--bg-primary);
+  border-radius: var(--border-radius);
+  padding: 12px;
+  text-align: center;
+}
+
+.pattern-preview-text {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.pattern-visualization {
+  width: 100px;
+  height: 60px;
+  background: linear-gradient(45deg, var(--text-primary) 25%, transparent 25%),
+              linear-gradient(-45deg, var(--text-primary) 25%, transparent 25%),
+              linear-gradient(45deg, transparent 75%, var(--text-primary) 75%),
+              linear-gradient(-45deg, transparent 75%, var(--text-primary) 75%);
+  background-size: 8px 8px;
+  background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+  border-radius: var(--border-radius-sm);
+  margin: 0 auto;
+}
+
+.calibration-progress {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.progress-header h5 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.progress-status {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--bg-primary);
+  border-radius: var(--border-radius-sm);
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent-color);
+  transition: width 0.3s ease;
+}
+
+.progress-details {
+  display: grid;
+  gap: 4px;
+}
+
+.progress-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+}
+
+.progress-item span:first-child {
+  color: var(--text-secondary);
+}
+
+.progress-item span:last-child {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.calibration-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.btn-calibrate {
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: var(--border-radius);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-calibrate:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.btn-calibrate:disabled {
+  background: var(--button-disabled);
+  color: var(--text-disabled);
+  cursor: not-allowed;
+}
+
+.btn-calibrate.intrinsic {
+  background: var(--success-color);
+}
+
+.btn-calibrate.intrinsic:hover:not(:disabled) {
+  background: var(--success-hover);
+}
+
+.btn-calibrate.extrinsic {
+  background: var(--warning-color);
+}
+
+.btn-calibrate.extrinsic:hover:not(:disabled) {
+  background: var(--warning-hover);
+}
+
+.btn-reset {
+  background: var(--error-color);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: var(--border-radius);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-reset:hover {
+  background: var(--error-hover);
+}
+
+.manual-parameters {
+  border-top: 1px solid var(--border-color);
+  padding-top: 16px;
+}
+
+.manual-parameters h4 {
+  margin: 0 0 12px 0;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.parameter-groups {
+  display: grid;
+  gap: 16px;
+}
+
+.parameter-group {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 12px;
+}
+
+.parameter-group h5 {
+  margin: 0 0 8px 0;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.parameter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 8px;
+}
+
+.parameter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.parameter-field label {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+.parameter-field input {
+  padding: 4px 6px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-size: 11px;
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.quality-metrics {
+  background: var(--bg-primary);
+  border-radius: var(--border-radius);
+  padding: 12px;
+  margin-top: 12px;
+}
+
+.quality-metrics h6 {
+  margin: 0 0 8px 0;
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.metrics-grid {
+  display: grid;
+  gap: 4px;
+}
+
+.metric-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+}
+
+.metric-item span:first-child {
+  color: var(--text-secondary);
+}
+
+.metric-item span:last-child {
+  color: var(--text-primary);
+  font-weight: 500;
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.good-quality {
+  color: var(--success-color) !important;
+}
+
+.fair-quality {
+  color: var(--warning-color) !important;
+}
+
+.poor-quality {
+  color: var(--error-color) !important;
+}
+
+.requirement-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--info-bg);
+  border: 1px solid var(--info-color);
+  border-radius: var(--border-radius);
+  padding: 12px;
+  margin-top: 12px;
+}
+
+.notice-icon {
+  font-size: 16px;
+  color: var(--info-color);
+}
+
+.notice-text {
+  font-size: 12px;
+  color: var(--info-color);
+  line-height: 1.3;
+}

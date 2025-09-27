@@ -1,0 +1,379 @@
+/* Symmetry Constraints Panel Styles */
+.symmetry-constraints-panel {
+  background: var(--panel-bg);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.symmetry-constraints-panel .panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.symmetry-constraints-panel .panel-header h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.symmetry-count {
+  background: var(--accent-color);
+  color: white;
+  padding: 4px 8px;
+  border-radius: var(--border-radius-sm);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.symmetry-types {
+  margin-bottom: 20px;
+}
+
+.symmetry-type-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.symmetry-type-btn {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+}
+
+.symmetry-type-btn:hover:not(:disabled) {
+  border-color: var(--accent-color);
+  background: var(--button-hover);
+}
+
+.symmetry-type-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.symmetry-type-btn.mirror:hover:not(:disabled) {
+  border-color: #4CAF50;
+}
+
+.symmetry-type-btn.rotational:hover:not(:disabled) {
+  border-color: #2196F3;
+}
+
+.symmetry-type-btn.translational:hover:not(:disabled) {
+  border-color: #FF9800;
+}
+
+.symmetry-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.symmetry-info {
+  flex: 1;
+}
+
+.symmetry-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.symmetry-description {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.3;
+}
+
+.requirement-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-color);
+  border-radius: var(--border-radius);
+  padding: 12px;
+}
+
+.notice-icon {
+  font-size: 16px;
+}
+
+.notice-text {
+  font-size: 13px;
+  color: var(--warning-color);
+}
+
+.symmetry-creation {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.creation-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.creation-header h4 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.step-indicator {
+  background: var(--accent-color);
+  color: white;
+  padding: 4px 8px;
+  border-radius: var(--border-radius-sm);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.step-instructions {
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-color);
+  border-radius: var(--border-radius);
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.instruction-text {
+  font-size: 13px;
+  color: var(--accent-color);
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.selection-status {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.symmetry-preview {
+  background: var(--bg-primary);
+  border-radius: var(--border-radius);
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.symmetry-preview h5 {
+  margin: 0 0 12px 0;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.preview-details {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.detail-item span:first-child {
+  color: var(--text-secondary);
+}
+
+.detail-item span:last-child {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.symmetric-pairs-list h6 {
+  margin: 0 0 8px 0;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pair-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius-sm);
+  margin-bottom: 4px;
+  font-size: 11px;
+}
+
+.pair-arrow {
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
+.creation-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.btn-next {
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--border-radius);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-next:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.btn-next:disabled {
+  background: var(--button-disabled);
+  color: var(--text-disabled);
+  cursor: not-allowed;
+}
+
+.btn-create {
+  background: var(--success-color);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--border-radius);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-create:hover:not(:disabled) {
+  background: var(--success-hover);
+}
+
+.btn-create:disabled {
+  background: var(--button-disabled);
+  color: var(--text-disabled);
+  cursor: not-allowed;
+}
+
+.btn-back {
+  background: var(--button-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  padding: 8px 16px;
+  border-radius: var(--border-radius);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-back:hover {
+  background: var(--button-hover);
+}
+
+.btn-cancel {
+  background: var(--error-color);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--border-radius);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-cancel:hover {
+  background: var(--error-hover);
+}
+
+.existing-symmetries {
+  border-top: 1px solid var(--border-color);
+  padding-top: 16px;
+}
+
+.existing-symmetries h4 {
+  margin: 0 0 12px 0;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.symmetries-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.symmetry-item {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 12px;
+  transition: all 0.2s ease;
+}
+
+.symmetry-item:hover {
+  border-color: var(--accent-color);
+}
+
+.symmetry-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.symmetry-type-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.symmetry-details {
+  flex: 1;
+}
+
+.symmetry-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.symmetry-info {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.delete-symmetry-btn {
+  background: none;
+  border: none;
+  color: var(--error-color);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--border-radius-sm);
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.delete-symmetry-btn:hover {
+  background: var(--error-bg);
+}
