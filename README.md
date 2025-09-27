@@ -1,9 +1,9 @@
 # Pictorigo
-Poor Man’s Photogrammetry
+Poor Man's Photogrammetry
 
 ## Goal
 
-Constraint-driven multi-image calibration and sparse 3D reconstruction. Like fSpy, but with multiple linked cameras, shared world points, and exportable geometry.
+Constraint-driven sparse Structure-from-Motion (SfM) with CAD-like geometric priors. Like fSpy, but with multiple linked cameras, shared world points, and exportable geometry. Distinct from full photogrammetry—focuses on parametric constraints and precise geometric relationships.
 
 ## Core concepts
 
@@ -30,14 +30,16 @@ Camera projections are solved from the full constraint graph. IPs cannot exist w
 ## Solver
 
 * Builds a factor/constraint graph over WPs and cameras.
-* Solves by nonlinear least squares with robust losses.
+* Solves by nonlinear least squares with robust losses (Huber/Cauchy).
+* Mandatory gauge fixing: origin, scale, and orientation anchoring.
 * Tracks:
 
   * Per-constraint residuals (to flag weak/inconsistent inputs).
-  * Per-WP uncertainty.
-  * Under-constrained variables (highlighted to the user).
+  * Per-WP uncertainty ellipsoids.
+  * Under-constrained variables (DoF accounting via Jacobian rank).
+  * Degeneracy detection (planar scenes, colinear points, tiny baselines).
 * Over-constraints are allowed and reduce variance.
-* Optional initialization: any photogrammetry heuristics (e.g., vanishing lines) to seed camera poses; solver remains the source of truth.
+* Initialization: EPnP from 3D-2D correspondences, then global bundle adjustment.
 
 ## Workflow (condensed example)
 
@@ -56,7 +58,7 @@ Camera projections are solved from the full constraint graph. IPs cannot exist w
   * Sparse WPs, planes/solids (if defined),
   * Camera poses and intrinsics,
   * Per-constraint residuals (optional).
-* Plugins for Blender and Fusion 360: switch cameras, render overlays, and use exported geometry as snapping guides.
+* Plugins: Blender (full camera/geometry support), Fusion 360 (construction geometry and snapping guides only).
 
 ## Editing & merge
 
@@ -65,7 +67,7 @@ Camera projections are solved from the full constraint graph. IPs cannot exist w
 ## Architecture
 
 * **Frontend:** React + Bootstrap. Fast image switching, point/constraint editing, residual/uncertainty indicators.
-* **Backend:** Python for numerics, constraint graph, and solver. API surfaces entities and solves incrementally.
+* **Backend:** Python (scipy.optimize.least_squares) for numerics, constraint graph, and solver. FastAPI surfaces entities and solves incrementally.
 
 ## Testing strategy (backend-first, TDD)
 

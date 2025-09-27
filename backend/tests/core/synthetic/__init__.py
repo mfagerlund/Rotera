@@ -1,0 +1,1 @@
+"""Tests for pictorigo.core.synthetic package."""

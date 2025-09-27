@@ -1,4 +1,26 @@
-Below is a **rock-solid** implementation plan for **Pictorigo**. It’s split into clear milestones with unambiguous deliverables, tasks, and acceptance tests. Keep prose minimal; let checklists rule.
+Below is a **rock-solid** implementation plan for **Pictorigo**. It's split into clear milestones with unambiguous deliverables, tasks, and acceptance tests. Keep prose minimal; let checklists rule.
+
+## 📊 Implementation Status
+
+**COMPLETED MILESTONES (8/13):**
+- ✅ M0: Repo & Scaffolding
+- ✅ M1: Core Math Primitives
+- ✅ M2: Data Model & Constraint Types
+- ✅ M3: Synthetic Scene Generator & TDD Harness
+- ✅ M4: Factor Graph & Residuals
+- ✅ M5: Solver v1 (SciPy) + DoF/Diagnostics
+- ✅ M6: Initializers (EPnP) & Incremental Solve
+- ✅ M7: Backend API v1
+- ✅ M8: Frontend MVP
+
+**REMAINING MILESTONES:**
+- 🔄 M9: Exporters & Plugins (Week 11–12)
+- 🔄 M10: Advanced Constraints & Stability (Week 13–14)
+- 🔄 M11: Performance & Quality (Week 15)
+- 🔄 M12: UX Polish & Guidance (Week 16)
+- 🔄 M13: Docs, Samples, Release 0.1 (Week 17)
+
+**Current Status:** Core system is complete and functional. Ready for advanced features and polish.
 
 ---
 
@@ -8,8 +30,9 @@ Below is a **rock-solid** implementation plan for **Pictorigo**. It’s split in
 
 * **Backend (solver/API):** Python 3.11+, FastAPI, NumPy, SciPy, OpenCV (EPnP), pydantic, uvicorn.
 * **Math:** double precision, meters, right-handed world frame, pinhole camera.
+* **Solver:** scipy.optimize.least_squares (initial), optional Ceres/GTSAM bridge later.
 * **Frontend:** React + TypeScript (strict), Vite, Bootstrap.
-* **Plugins:** Blender (Python), Fusion 360 (Python).
+* **Plugins:** Blender (full camera/geometry), Fusion 360 (construction geometry only).
 * **Project file:** `.pgo` (zip of JSON + thumbnails + originals).
 
 ## Global rules (“drunk-monkey guardrails”)
@@ -22,67 +45,67 @@ Below is a **rock-solid** implementation plan for **Pictorigo**. It’s split in
 
 ---
 
-## Milestone M0 — Repo & Scaffolding (Week 1)
+## Milestone M0 — Repo & Scaffolding (Week 1) ✅ COMPLETED
 
 **Goal:** Clean skeleton with CI, tests, packaging.
 
 **Deliverables**
 
-* `backend/` FastAPI app stub (`/healthz`), poetry/uv config.
-* `pictorigo/core/` package stub with `__init__`, versioning.
-* `frontend/` React + TS app (`/healthz` ping).
-* `.pgo` spec draft (JSON schemas).
-* CI pipeline (actions): lint/type/test/build.
+* ✅ `backend/` FastAPI app stub (`/healthz`), poetry/uv config.
+* ✅ `pictorigo/core/` package stub with `__init__`, versioning.
+* ✅ `frontend/` React + TS app (`/healthz` ping).
+* ✅ `.pgo` spec draft (JSON schemas).
+* ✅ CI pipeline (actions): lint/type/test/build.
 
 **Tasks**
 
-* Set up repo, pre-commit, issue templates.
-* Define coding standards doc.
-* Write JSON Schema for: WorldPoint, Image, Camera, Constraint, SolveResult.
-* Implement `/healthz`, `/version`.
+* ✅ Set up repo, pre-commit, issue templates.
+* ✅ Define coding standards doc.
+* ✅ Write JSON Schema for: WorldPoint, Image, Camera, Constraint, SolveResult.
+* ✅ Implement `/healthz`, `/version`.
 
 **Acceptance**
 
-* `git clone && make ci` passes.
-* Create/open/save empty project via API+frontend.
+* ✅ `git clone && make ci` passes.
+* ✅ Create/open/save empty project via API+frontend.
 
 ---
 
-## Milestone M1 — Core Math Primitives (Week 2)
+## Milestone M1 — Core Math Primitives (Week 2) ✅ COMPLETED
 
 **Goal:** Deterministic, well-tested geometry layer.
 
 **Deliverables**
 
-* SO(3) via axis-angle & quaternion; SE(3) transforms.
-* Camera intrinsics/extrinsics structs; projection/unprojection.
-* Robust losses: Huber, Cauchy.
-* Jacobian utilities (finite diff & analytic harness).
+* ✅ SO(3) via axis-angle & quaternion; SE(3) transforms.
+* ✅ Camera intrinsics/extrinsics structs; projection/unprojection.
+* ✅ Robust losses: Huber, Cauchy.
+* ✅ Jacobian utilities (finite diff & analytic harness).
 
 **Tasks**
 
-* Implement `se3_exp/log`, `quat_normalize`, `compose`, `invert`.
-* Implement `project(K, R, t, X) -> (u,v)` with radial k1 (k2 later).
-* Unit tests: round-trip, numeric vs analytic Jacobians (|Δ|<1e-6).
+* ✅ Implement `se3_exp/log`, `quat_normalize`, `compose`, `invert`.
+* ✅ Implement `project(K, R, t, X) -> (u,v)` with radial k1 (k2 later).
+* ✅ Unit tests: round-trip, numeric vs analytic Jacobians (|Δ|<1e-6).
 
 **Acceptance**
 
-* All math tests pass; relative errors <1e-6.
+* ✅ All math tests pass; relative errors <1e-6.
 
 ---
 
-## Milestone M2 — Data Model & Constraint Types (Week 3)
+## Milestone M2 — Data Model & Constraint Types (Week 3) ✅ COMPLETED
 
 **Goal:** Immutable IDs; serializable, typed constraints.
 
 **Deliverables**
 
-* Entities:
+* ✅ Entities:
 
   * **WorldPoint (WP):** `{id, xyz?}`
   * **Image:** `{id, path, width, height}`
   * **Camera:** `{id, image_id, K, R, t, lock_flags}`
-* **Constraints (v1 set):**
+* ✅ **Constraints (v1 set):**
 
   * `ImagePoint(ip)`: `(image_id, wp_id, u, v, sigma?)`
   * `KnownCoord`: `(wp_id, mask_xyz, values)`
@@ -92,18 +115,18 @@ Below is a **rock-solid** implementation plan for **Pictorigo**. It’s split in
   * `PlaneFromThree`: `(wp_a, wp_b, wp_c, set_members=[...])` (optional members)
   * `Equality`: `(wp_a, wp_b)` (merge)
   * `GaugeFix`: `(origin_wp, x_wp, xy_wp, scale_d)` (fixes origin/orientation/scale)
-* Schema-validated JSON; migration version tag.
+* ✅ Schema-validated JSON; migration version tag.
 
 **Tasks**
 
-* Pydantic models + JSON Schema.
-* Constraint registry with type ids.
-* Validation: id existence, image bounds for IPs.
+* ✅ Pydantic models + JSON Schema.
+* ✅ Constraint registry with type ids.
+* ✅ Validation: id existence, image bounds for IPs.
 
 **Acceptance**
 
-* Serialize/deserialize round-trip stable.
-* Invalid projects rejected with explicit errors.
+* ✅ Serialize/deserialize round-trip stable.
+* ✅ Invalid projects rejected with explicit errors.
 
 ---
 
@@ -288,7 +311,7 @@ Below is a **rock-solid** implementation plan for **Pictorigo**. It’s split in
 * **Fusion 360 script (Python):**
 
   * Import points as construction points; planes/axes from constraints.
-  * (Fusion cameras are limited; do not promise camera import.)
+  * Export reference geometry/axes and named points for snapping (cameras not supported).
 
 **Tasks**
 
@@ -309,8 +332,8 @@ Below is a **rock-solid** implementation plan for **Pictorigo**. It’s split in
 **Deliverables**
 
 * Add: MirrorSymmetry, Cylinder (two circles), Cone (two circles) constraints.
-* Intrinsics: enable k2 (optional); per-session shared K toggle.
-* Better degeneracy detection (colinear, coplanar pathologies).
+* Intrinsics: enable k2 (optional); per-session shared K (lock focal initially, add k1 when stable).
+* Better degeneracy detection (planar scenes, colinear points, tiny baselines, similar depth).
 
 **Tasks**
 
@@ -330,7 +353,7 @@ Below is a **rock-solid** implementation plan for **Pictorigo**. It’s split in
 
 **Deliverables**
 
-* Sparse structures; block-Jacobian; optional Schur complement for WPs.
+* Sparse structures; block-Jacobian; Schur complement to marginalize WPs for speed.
 * Solver profiling; hotspots documented.
 * Caching of projections/Jacobians between iterations when valid.
 
