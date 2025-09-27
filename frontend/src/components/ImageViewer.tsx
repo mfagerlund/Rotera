@@ -14,6 +14,7 @@ interface ImageViewerProps {
   activeConstraintType?: string | null
   onPointClick: (pointId: string, ctrlKey: boolean, shiftKey: boolean) => void
   onCreatePoint?: (u: number, v: number) => void
+  onMovePoint?: (worldPointId: string, u: number, v: number) => void
 }
 
 export const ImageViewer: React.FC<ImageViewerProps> = ({
@@ -26,7 +27,8 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
   placementMode = { active: false, worldPointId: null },
   activeConstraintType = null,
   onPointClick,
-  onCreatePoint
+  onCreatePoint,
+  onMovePoint
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -37,6 +39,12 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
   const [isDragging, setIsDragging] = useState(false)
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 })
   const [imageLoaded, setImageLoaded] = useState(false)
+
+  // Drag state for world points
+  const [isDraggingPoint, setIsDraggingPoint] = useState(false)
+  const [draggedPointId, setDraggedPointId] = useState<string | null>(null)
+  const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 })
+  const [hoveredPointId, setHoveredPointId] = useState<string | null>(null)
 
   // Load image
   useEffect(() => {
@@ -125,7 +133,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
         cancelAnimationFrame(animationId)
       }
     }
-  }, [imageLoaded, scale, offset, worldPoints, selectedPoints, selectedWorldPointIds, highlightedWorldPointId, hoveredConstraintId, placementMode])
+  }, [imageLoaded, scale, offset, worldPoints, selectedPoints, selectedWorldPointIds, highlightedWorldPointId, hoveredConstraintId, placementMode, isDraggingPoint, draggedPointId, hoveredPointId])
 
   const renderWorldPoints = (ctx: CanvasRenderingContext2D) => {
     Object.values(worldPoints).forEach(wp => {
@@ -139,6 +147,8 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
       const isSelected = selectedPoints.includes(wp.id)
       const isWorldPointSelected = selectedWorldPointIds.includes(wp.id)
       const isHighlighted = highlightedWorldPointId === wp.id
+      const isBeingDragged = isDraggingPoint && draggedPointId === wp.id
+      const isHovered = hoveredPointId === wp.id
 
       // Draw highlight ring for world point selection/highlighting
       // Only show world point selection ring if not also constraint-selected (to avoid double rings)
@@ -147,6 +157,26 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
         ctx.lineWidth = 3
         ctx.beginPath()
         ctx.arc(x, y, 12, 0, 2 * Math.PI)
+        ctx.stroke()
+      }
+
+      // Draw drag feedback for point being dragged
+      if (isBeingDragged) {
+        ctx.strokeStyle = 'rgba(255, 140, 0, 0.8)'
+        ctx.lineWidth = 2
+        ctx.setLineDash([4, 4])
+        ctx.beginPath()
+        ctx.arc(x, y, 18, 0, 2 * Math.PI)
+        ctx.stroke()
+        ctx.setLineDash([])
+      }
+
+      // Draw hover feedback for draggable points
+      if (isHovered && onMovePoint && !isBeingDragged) {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)'
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        ctx.arc(x, y, 10, 0, 2 * Math.PI)
         ctx.stroke()
       }
 
@@ -364,7 +394,10 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
         const nearbyPoint = findNearbyPoint(x, y)
 
         if (nearbyPoint) {
-          // Click on existing point
+          // Prepare for potential drag, but also allow click selection
+          setDragStartPos({ x, y })
+          setDraggedPointId(nearbyPoint.id)
+          // Don't start dragging immediately - wait for mouse movement
           onPointClick(nearbyPoint.id, event.ctrlKey, event.shiftKey)
         } else if (onCreatePoint) {
           // Click on empty space - create new point
@@ -378,8 +411,6 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
   }
 
   const handleMouseMove = (event: React.MouseEvent) => {
-    if (!isDragging) return
-
     const canvas = canvasRef.current
     if (!canvas) return
 
@@ -387,19 +418,61 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
     const x = event.clientX - rect.left
     const y = event.clientY - rect.top
 
-    const deltaX = x - lastMousePos.x
-    const deltaY = y - lastMousePos.y
+    if (isDragging) {
+      // Handle viewport panning
+      const deltaX = x - lastMousePos.x
+      const deltaY = y - lastMousePos.y
 
-    setOffset(prev => ({
-      x: prev.x + deltaX,
-      y: prev.y + deltaY
-    }))
+      setOffset(prev => ({
+        x: prev.x + deltaX,
+        y: prev.y + deltaY
+      }))
 
-    setLastMousePos({ x, y })
+      setLastMousePos({ x, y })
+    } else if (draggedPointId && onMovePoint) {
+      // Check if we should start dragging based on mouse movement distance
+      const dragDistance = Math.sqrt(
+        Math.pow(x - dragStartPos.x, 2) + Math.pow(y - dragStartPos.y, 2)
+      )
+
+      if (!isDraggingPoint && dragDistance > 5) {
+        // Start dragging when mouse moves more than 5 pixels
+        setIsDraggingPoint(true)
+      }
+
+      if (isDraggingPoint) {
+        // Handle point dragging - update point position in real-time
+        const imageCoords = canvasToImageCoords(x, y)
+        if (imageCoords) {
+          onMovePoint(draggedPointId, imageCoords.u, imageCoords.v)
+        }
+      }
+    } else {
+      // Check for nearby points to show hover cursor
+      const nearbyPoint = findNearbyPoint(x, y)
+      setHoveredPointId(nearbyPoint?.id || null)
+    }
   }
 
   const handleMouseUp = () => {
     setIsDragging(false)
+
+    // End point dragging
+    if (isDraggingPoint) {
+      setIsDraggingPoint(false)
+    }
+    setDraggedPointId(null)
+  }
+
+  const handleMouseLeave = () => {
+    setIsDragging(false)
+    setHoveredPointId(null)
+
+    // End point dragging
+    if (isDraggingPoint) {
+      setIsDraggingPoint(false)
+    }
+    setDraggedPointId(null)
   }
 
   const handleWheel = (event: React.WheelEvent) => {
@@ -436,10 +509,13 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
         onWheel={handleWheel}
         style={{
-          cursor: isDragging ? 'grabbing' : placementMode.active ? 'copy' : 'crosshair',
+          cursor: isDragging ? 'grabbing' :
+                  isDraggingPoint ? 'move' :
+                  hoveredPointId && onMovePoint ? 'move' :
+                  placementMode.active ? 'copy' : 'crosshair',
           display: 'block',
           width: '100%',
           height: '100%'

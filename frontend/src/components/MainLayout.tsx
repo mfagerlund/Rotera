@@ -123,6 +123,13 @@ export const MainLayout: React.FC = () => {
     }
   }
 
+  const handleMovePoint = (worldPointId: string, u: number, v: number) => {
+    if (currentImage) {
+      // Update the world point's position in the current image
+      addImagePointToWorldPoint(worldPointId, currentImage.id, u, v)
+    }
+  }
+
   // Check which world points are missing from current image
   const getMissingWorldPoints = () => {
     if (!currentImage) return []
@@ -268,6 +275,7 @@ export const MainLayout: React.FC = () => {
                   activeConstraintType={activeConstraintType}
                   onPointClick={handleEnhancedPointClick}
                   onCreatePoint={handleImageClick}
+                  onMovePoint={handleMovePoint}
                 />
                 {/* Selection and constraint overlays will be part of ImageViewer */}
               </>
