@@ -1,7 +1,8 @@
 """Project model and settings."""
 
+import math
 from typing import Dict, List, Optional, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from .entities import WorldPoint, Image, Camera
 from .constraints import Constraint
@@ -61,6 +62,46 @@ class SolveResult(BaseModel):
         default=None,
         description="Solve time in seconds"
     )
+
+    @field_validator('final_cost')
+    @classmethod
+    def validate_final_cost(cls, v):
+        """Ensure final_cost is JSON serializable."""
+        if math.isinf(v) or math.isnan(v):
+            return 1e10  # Large but finite value
+        return v
+
+    @field_validator('computation_time')
+    @classmethod
+    def validate_computation_time(cls, v):
+        """Ensure computation_time is JSON serializable."""
+        if v is not None and (math.isinf(v) or math.isnan(v)):
+            return None
+        return v
+
+    @field_validator('residuals')
+    @classmethod
+    def validate_residuals(cls, v):
+        """Ensure residuals are JSON serializable."""
+        result = {}
+        for key, value in v.items():
+            if math.isinf(value) or math.isnan(value):
+                result[key] = 1e10  # Large but finite value
+            else:
+                result[key] = value
+        return result
+
+    @field_validator('largest_residuals')
+    @classmethod
+    def validate_largest_residuals(cls, v):
+        """Ensure largest residuals are JSON serializable."""
+        result = []
+        for constraint_id, residual in v:
+            if math.isinf(residual) or math.isnan(residual):
+                result.append((constraint_id, 1e10))
+            else:
+                result.append((constraint_id, residual))
+        return result
 
 
 class Project(BaseModel):

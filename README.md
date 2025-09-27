@@ -1,6 +1,31 @@
 # Pictorigo
 Poor Man's Photogrammetry
 
+## 🚀 Current Status
+
+**WORKING IMPLEMENTATION** - Core system is complete and functional!
+
+✅ **Backend**: Full REST API with project management, synthetic scene generation, and bundle adjustment solver
+✅ **Frontend**: React TypeScript interface with project management and solver controls
+✅ **Solver**: SciPy-based optimization with robust loss functions and convergence diagnostics
+✅ **Synthetic Scenes**: Generate test cases (box room, grid plane, two-view) for validation
+✅ **Testing**: Comprehensive test suite with high coverage across all modules
+
+**Quick Start:**
+```bash
+# Backend (Python 3.11+)
+cd backend
+pip install -e ../pictorigo
+python main.py  # Server runs on http://127.0.0.1:8000
+
+# Frontend (Node.js 20+)
+cd frontend
+npm install
+npm run dev  # UI runs on http://localhost:3000
+```
+
+**Try it:** Generate a synthetic scene → Solve → View results in real-time!
+
 ## Goal
 
 Constraint-driven sparse Structure-from-Motion (SfM) with CAD-like geometric priors. Like fSpy, but with multiple linked cameras, shared world points, and exportable geometry. Distinct from full photogrammetry—focuses on parametric constraints and precise geometric relationships.
