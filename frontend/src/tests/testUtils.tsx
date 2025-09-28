@@ -8,60 +8,98 @@ export const mockProject: Project = {
   id: 'test-project-1',
   name: 'Test Project',
   createdAt: '2024-01-01T00:00:00.000Z',
-  modifiedAt: '2024-01-01T00:00:00.000Z',
+  updatedAt: '2024-01-01T00:00:00.000Z',
+  lines: {},
+  planes: {},
+  nextWpNumber: 4,
+  nextLineNumber: 1,
+  nextPlaneNumber: 1,
+  settings: {
+    showPointNames: true,
+    autoSave: false,
+    theme: 'dark',
+    measurementUnits: 'meters',
+    precisionDigits: 2,
+    showConstraintGlyphs: true,
+    showMeasurements: true,
+    autoOptimize: false,
+    gridVisible: true,
+    snapToGrid: false,
+    defaultWorkspace: 'image',
+    showConstructionGeometry: false,
+    enableSmartSnapping: true,
+    constraintPreview: true,
+    visualFeedbackLevel: 'standard'
+  },
+  history: [],
   worldPoints: {
     'point-1': {
       id: 'point-1',
       name: 'Test Point 1',
       xyz: [0, 0, 0],
-      imagePoints: {
-        'image-1': { x: 100, y: 100 }
-      }
+      imagePoints: [
+        { imageId: 'image-1', u: 100, v: 100, wpId: 'point-1' }
+      ],
+      isVisible: true,
+      color: '#2196F3'
     },
     'point-2': {
       id: 'point-2',
       name: 'Test Point 2',
       xyz: [1, 0, 0],
-      imagePoints: {
-        'image-1': { x: 150, y: 100 }
-      }
+      imagePoints: [
+        { imageId: 'image-1', u: 150, v: 100, wpId: 'point-2' }
+      ],
+      isVisible: true,
+      color: '#2196F3'
     },
     'point-3': {
       id: 'point-3',
       name: 'Test Point 3',
       xyz: [0, 1, 0],
-      imagePoints: {
-        'image-1': { x: 100, y: 150 }
-      }
+      imagePoints: [
+        { imageId: 'image-1', u: 100, v: 150, wpId: 'point-3' }
+      ],
+      isVisible: true,
+      color: '#2196F3'
     }
   },
   images: {
     'image-1': {
       id: 'image-1',
       name: 'test-image.jpg',
-      url: 'mock-image-url',
+      blob: 'data:image/jpeg;base64,mock-test-data',
       width: 1920,
       height: 1080,
-      camera: 'camera-1'
+      cameraId: 'camera-1'
     }
   },
   constraints: [
     {
       id: 'constraint-1',
       type: 'distance',
-      pointIds: ['point-1', 'point-2'],
-      distance: 1.0,
-      tolerance: 0.01,
+      enabled: true,
+      isDriving: true,
       weight: 1.0,
-      name: 'Test Distance'
+      status: 'satisfied',
+      entities: {
+        points: ['point-1', 'point-2']
+      },
+      parameters: { distance: 1.0, tolerance: 0.01 },
+      createdAt: new Date().toISOString()
     },
     {
       id: 'constraint-2',
       type: 'parallel',
-      pointIds: ['point-1', 'point-2'],
-      tolerance: 0.01,
+      enabled: true,
+      isDriving: true,
       weight: 1.0,
-      name: 'Test Parallel'
+      status: 'satisfied',
+      entities: {
+        points: ['point-1', 'point-2']
+      },
+      parameters: { tolerance: 0.01 },
+      createdAt: new Date().toISOString()
     }
   ],
   cameras: {
@@ -69,7 +107,6 @@ export const mockProject: Project = {
       id: 'camera-1',
       name: 'Test Camera',
       make: 'Test',
-      model: 'Camera',
       intrinsics: {
         fx: 1000,
         fy: 1000,
@@ -83,45 +120,51 @@ export const mockProject: Project = {
       }
     }
   },
-  optimizationResults: null,
+  optimization: undefined,
   groundPlanes: [],
-  pointGroups: [
-    {
+  pointGroups: {
+    'group-1': {
       id: 'group-1',
       name: 'Test Group',
       color: '#FF0000',
       visible: true,
-      pointIds: ['point-1', 'point-2']
+      points: ['point-1', 'point-2']
     }
-  ]
+  }
 }
 
 export const mockWorldPoint: WorldPoint = {
   id: 'test-point',
   name: 'Test Point',
   xyz: [1, 2, 3],
-  imagePoints: {
-    'image-1': { x: 100, y: 200 }
-  }
+  imagePoints: [
+    { imageId: 'image-1', u: 100, v: 200, wpId: 'test-point' }
+  ],
+  isVisible: true,
+  color: '#2196F3'
 }
 
 export const mockConstraint: Constraint = {
   id: 'test-constraint',
   type: 'distance',
-  pointIds: ['point-1', 'point-2'],
-  distance: 5.0,
-  tolerance: 0.1,
+  enabled: true,
+  isDriving: true,
   weight: 1.0,
-  name: 'Test Constraint'
+  status: 'satisfied',
+  entities: {
+    points: ['point-1', 'point-2']
+  },
+  parameters: { distance: 5.0, tolerance: 0.1 },
+  createdAt: new Date().toISOString()
 }
 
 export const mockImage: ProjectImage = {
   id: 'test-image',
   name: 'test.jpg',
-  url: 'mock-url',
+  blob: 'data:image/jpeg;base64,mock-data',
   width: 1920,
   height: 1080,
-  camera: 'test-camera'
+  cameraId: 'test-camera'
 }
 
 // Custom render function for components that need project context

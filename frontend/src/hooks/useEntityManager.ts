@@ -302,7 +302,7 @@ export const useEntityManager = (
   const getConstruction = useCallback((): GeometricEntity[] => {
     const all: GeometricEntity[] = []
     for (const collection of Object.values(entities)) {
-      all.push(...Object.values(collection).filter((entity: unknown): entity is GeometricEntity => (entity as GeometricEntity).isConstruction))
+      all.push(...Object.values(collection).filter((entity: unknown): entity is GeometricEntity => Boolean((entity as GeometricEntity).isConstruction)))
     }
     return all
   }, [entities])
@@ -312,7 +312,7 @@ export const useEntityManager = (
     for (const collection of Object.values(entities)) {
       all.push(...Object.values(collection).filter((entity: unknown): entity is GeometricEntity => {
         const geometricEntity = entity as GeometricEntity
-        return geometricEntity.type === 'point' && geometricEntity.tags?.includes(tag)
+        return geometricEntity.type === 'point' && Boolean(geometricEntity.tags?.includes(tag))
       }))
     }
     return all

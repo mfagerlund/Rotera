@@ -261,30 +261,6 @@ export interface ConstraintCreationState {
   isActive: boolean
 }
 
-// Template system
-export interface ConstraintTemplate {
-  id: string
-  name: string
-  description: string
-  constraints: Array<{
-    type: string
-    parameters: Record<string, any>
-    pointRoles: string[] // e.g., ['corner1', 'corner2', 'corner3', 'corner4']
-  }>
-  requiredPoints: number
-  category: string
-}
-
-export interface ProjectTemplate {
-  id: string
-  name: string
-  description: string
-  thumbnail?: string
-  constraints: Constraint[]
-  worldPoints: WorldPoint[]
-  settings: Partial<ProjectSettings>
-  category: string
-}
 
 // Available constraint definition
 export interface AvailableConstraint {

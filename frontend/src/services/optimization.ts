@@ -1,4 +1,5 @@
 // Backend optimization service integration
+import { errorToMessage } from '../types/utils'
 
 export interface SolveRequest {
   method?: string // "lm", "trf", "dogbox"
@@ -109,7 +110,8 @@ export class OptimizationService {
         console.warn('Backend optimization service not available:', error)
       }
       // Re-throw network errors to match test expectations
-      if (error.message?.includes('Network error')) {
+      const errorMessage = errorToMessage(error)
+      if (errorMessage.includes('Network error')) {
         throw error
       }
       return false
@@ -155,7 +157,7 @@ export class OptimizationService {
       return result
 
     } catch (error) {
-      if (error.name === 'AbortError') {
+      if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Optimization cancelled by user')
       }
 
@@ -252,11 +254,12 @@ export class OptimizationService {
       }
     } catch (error) {
       // Handle network errors specifically to match the test
-      if (error.message?.includes('Network error')) {
+      const errorMessage = errorToMessage(error)
+      if (errorMessage.includes('Network error')) {
         throw error
       }
       // Handle cancellation errors
-      if (error.message?.includes('cancelled')) {
+      if (errorMessage.includes('cancelled')) {
         throw error
       }
       return this.simulateBundleAdjustment(project, options, onProgress)

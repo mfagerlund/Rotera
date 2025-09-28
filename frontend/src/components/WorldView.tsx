@@ -7,7 +7,7 @@ interface WorldViewProps {
   selectedPoints: string[]
   selectedLines: string[]
   selectedPlanes: string[]
-  hoveredConstraintId?: string
+  hoveredConstraintId?: string | null
   onPointClick: (pointId: string, ctrlKey: boolean, shiftKey: boolean) => void
   onLineClick?: (lineId: string, ctrlKey: boolean, shiftKey: boolean) => void
   onPlaneClick?: (planeId: string, ctrlKey: boolean, shiftKey: boolean) => void

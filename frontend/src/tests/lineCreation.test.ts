@@ -32,9 +32,9 @@ describe('Line Creation', () => {
   it('should not create duplicate lines between same points', () => {
     const { result } = renderHook(() => useLines())
 
-    let lineId1: string | null
-    let lineId2: string | null
-    let lineId3: string | null
+    let lineId1: string | null = null
+    let lineId2: string | null = null
+    let lineId3: string | null = null
 
     act(() => {
       // Create first line
@@ -64,7 +64,7 @@ describe('Line Creation', () => {
   it('should create line with correct geometry type', () => {
     const { result } = renderHook(() => useLines())
 
-    let lineId: string | null
+    let lineId: string | null = null
 
     act(() => {
       lineId = result.current.createLine(['point1', 'point2'], 'infinite', 'TestLine')
@@ -83,7 +83,7 @@ describe('Line Creation', () => {
   it('should delete lines correctly', () => {
     const { result } = renderHook(() => useLines())
 
-    let lineId: string
+    let lineId: string = ''
 
     act(() => {
       lineId = result.current.createLine(['point1', 'point2'], 'segment')!
@@ -102,13 +102,13 @@ describe('Line Creation', () => {
   it('should update line properties', () => {
     const { result } = renderHook(() => useLines())
 
-    let lineId: string
+    let lineId: string = ''
 
     act(() => {
       lineId = result.current.createLine(['point1', 'point2'], 'segment')!
     })
 
-    let updated: boolean
+    let updated: boolean = false
 
     act(() => {
       updated = result.current.updateLine(lineId, {

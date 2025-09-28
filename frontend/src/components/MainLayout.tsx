@@ -645,7 +645,7 @@ export const MainLayout: React.FC = () => {
                   console.log('Create circle:', definition)
                 }}
                 onConstructionPreviewChange={setConstructionPreview}
-                currentImageId={currentImageId}
+                currentImageId={currentImageId || undefined}
               />
 
               <ConstraintPropertyPanel

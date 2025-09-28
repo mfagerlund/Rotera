@@ -320,25 +320,6 @@ export interface EntityLayer {
   order: number  // Layer ordering
 }
 
-// Project template system
-export interface ProjectTemplate {
-  id: string
-  name: string
-  description: string
-  category: string
-  thumbnail?: string
-
-  // Template content
-  entities: EntityCollection
-  constraints: EnhancedConstraint[]
-  settings: Partial<EnhancedProjectSettings>
-
-  // Usage metadata
-  usageCount: number
-  rating?: number
-  tags: string[]
-  createdAt: string
-}
 
 // Export/Import formats
 export interface ExportOptions {

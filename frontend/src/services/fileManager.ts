@@ -1,5 +1,6 @@
 // Project file management service
 import { Project } from '../types/project'
+import { errorToMessage } from '../types/utils'
 
 export interface ProjectFileMetadata {
   name: string
@@ -41,7 +42,7 @@ export class FileManagerService {
         },
         project: {
           ...project,
-          modifiedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString()
         }
       }
 
@@ -99,7 +100,7 @@ export class FileManagerService {
       }
     } catch (error) {
       console.error('Error loading project from file:', error)
-      throw new Error(`Failed to load project: ${error.message}`)
+      throw new Error(`Failed to load project: ${errorToMessage(error)}`)
     }
   }
 
@@ -176,7 +177,7 @@ export class FileManagerService {
       }
     } catch (error) {
       console.error('Error importing project data:', error)
-      throw new Error(`Failed to import project data: ${error.message}`)
+      throw new Error(`Failed to import project data: ${errorToMessage(error)}`)
     }
   }
 
