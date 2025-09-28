@@ -1,6 +1,6 @@
 // Context-aware constraint property panel
 
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Line } from '../types/project'
 
 interface ConstraintPropertyPanelProps {
@@ -27,6 +27,22 @@ export const ConstraintPropertyPanel: React.FC<ConstraintPropertyPanelProps> = (
   onCancel
 }) => {
   const getPointName = (pointId: string) => worldPointNames[pointId] || pointId
+
+  // Handle ESC key to cancel constraint creation
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && activeConstraintType) {
+        onCancel()
+      }
+    }
+
+    if (activeConstraintType) {
+      document.addEventListener('keydown', handleKeyDown)
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown)
+      }
+    }
+  }, [activeConstraintType, onCancel])
 
   if (!activeConstraintType) {
     return (
@@ -228,8 +244,8 @@ const ConstraintParameterForm: React.FC<ConstraintParameterFormProps> = ({
               <input
                 type="number"
                 step="0.001"
-                value={parameters.x || ''}
-                onChange={(e) => onParameterChange('x', parseFloat(e.target.value))}
+                value={parameters.x !== undefined ? parameters.x : ''}
+                onChange={(e) => onParameterChange('x', e.target.value === '' ? undefined : parseFloat(e.target.value))}
                 placeholder="X coordinate"
               />
             </div>
@@ -238,8 +254,8 @@ const ConstraintParameterForm: React.FC<ConstraintParameterFormProps> = ({
               <input
                 type="number"
                 step="0.001"
-                value={parameters.y || ''}
-                onChange={(e) => onParameterChange('y', parseFloat(e.target.value))}
+                value={parameters.y !== undefined ? parameters.y : ''}
+                onChange={(e) => onParameterChange('y', e.target.value === '' ? undefined : parseFloat(e.target.value))}
                 placeholder="Y coordinate"
               />
             </div>
@@ -248,8 +264,8 @@ const ConstraintParameterForm: React.FC<ConstraintParameterFormProps> = ({
               <input
                 type="number"
                 step="0.001"
-                value={parameters.z || ''}
-                onChange={(e) => onParameterChange('z', parseFloat(e.target.value))}
+                value={parameters.z !== undefined ? parameters.z : ''}
+                onChange={(e) => onParameterChange('z', e.target.value === '' ? undefined : parseFloat(e.target.value))}
                 placeholder="Z coordinate"
               />
             </div>

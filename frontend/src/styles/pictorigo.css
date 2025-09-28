@@ -23,7 +23,8 @@
   --spacing-xl: 32px;
 
   /* Layout */
-  --sidebar-width: 300px;
+  --sidebar-left-width: 210px;
+  --sidebar-right-width: 350px;
   --top-toolbar-height: 56px;
   --status-bar-height: 24px;
 
@@ -84,7 +85,7 @@ body {
 }
 
 .sidebar-left {
-  width: var(--sidebar-width);
+  width: var(--sidebar-left-width);
   background: var(--bg-panel);
   border-right: 1px solid #666;
   flex-shrink: 0;
@@ -99,7 +100,7 @@ body {
 }
 
 .sidebar-right {
-  width: var(--sidebar-width);
+  width: var(--sidebar-right-width);
   background: var(--bg-panel);
   border-left: 1px solid #666;
   flex-shrink: 0;

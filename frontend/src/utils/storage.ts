@@ -66,14 +66,38 @@ export class ProjectStorage {
       return data ? JSON.parse(data) : {
         showPointNames: true,
         autoSave: true,
-        theme: 'dark'
+        theme: 'dark',
+        measurementUnits: 'meters',
+        precisionDigits: 3,
+        showConstraintGlyphs: true,
+        showMeasurements: true,
+        autoOptimize: false,
+        gridVisible: true,
+        snapToGrid: true,
+        defaultWorkspace: 'image',
+        showConstructionGeometry: true,
+        enableSmartSnapping: true,
+        constraintPreview: true,
+        visualFeedbackLevel: 'standard'
       }
     } catch (error) {
       console.error('Failed to load settings:', error)
       return {
         showPointNames: true,
         autoSave: true,
-        theme: 'dark'
+        theme: 'dark',
+        measurementUnits: 'meters',
+        precisionDigits: 3,
+        showConstraintGlyphs: true,
+        showMeasurements: true,
+        autoOptimize: false,
+        gridVisible: true,
+        snapToGrid: true,
+        defaultWorkspace: 'image',
+        showConstructionGeometry: true,
+        enableSmartSnapping: true,
+        constraintPreview: true,
+        visualFeedbackLevel: 'standard'
       }
     }
   }
@@ -83,11 +107,17 @@ export class ProjectStorage {
       id: crypto.randomUUID(),
       name: 'New Project',
       worldPoints: {},
+      lines: {},
+      planes: {},
       images: {},
       cameras: {},
       constraints: [],
       nextWpNumber: 1,
+      nextLineNumber: 1,
+      nextPlaneNumber: 1,
       settings: this.loadSettings(),
+      pointGroups: {},
+      history: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }

@@ -9,7 +9,7 @@ interface WorldPointPanelProps {
   selectedWorldPointIds: string[]
   currentImageId: string | null
   placementMode: { active: boolean; worldPointId: string | null }
-  onSelectWorldPoint: (id: string, multiSelect: boolean) => void
+  onSelectWorldPoint: (id: string, ctrlKey: boolean, shiftKey: boolean) => void
   onRenameWorldPoint: (id: string, newName: string) => void
   onDeleteWorldPoint: (id: string) => void
   onHighlightWorldPoint: (id: string | null) => void
@@ -167,7 +167,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
                 isMissingFromImage={isMissingFromImage}
                 isInPlacementMode={isInPlacementMode}
                 placementModeActive={placementMode.active}
-                onSelect={(multiSelect) => onSelectWorldPoint(wp.id, multiSelect)}
+                onSelect={(ctrlKey, shiftKey) => onSelectWorldPoint(wp.id, ctrlKey, shiftKey)}
                 onEdit={() => startEditing(wp)}
                 onDelete={() => handleDelete(wp.id)}
                 onHighlight={onHighlightWorldPoint}
@@ -201,7 +201,7 @@ interface WorldPointItemProps {
   isMissingFromImage: boolean
   isInPlacementMode: boolean
   placementModeActive: boolean
-  onSelect: (multiSelect: boolean) => void
+  onSelect: (ctrlKey: boolean, shiftKey: boolean) => void
   onEdit: () => void
   onDelete: () => void
   onHighlight: (id: string | null) => void
@@ -238,7 +238,13 @@ const WorldPointItem: React.FC<WorldPointItemProps> = ({
   return (
     <div
       className={`world-point-item ${isSelected ? 'selected' : ''} ${hasBrokenConstraints ? 'broken' : ''} ${isMissingFromImage ? 'missing-from-image' : ''} ${isInPlacementMode ? 'in-placement-mode' : ''}`}
-      onClick={(e) => onSelect(e.ctrlKey || e.metaKey)}
+      onClick={(e) => {
+        // Prevent text selection on shift+click
+        if (e.shiftKey) {
+          e.preventDefault()
+        }
+        onSelect(e.ctrlKey || e.metaKey, e.shiftKey)
+      }}
       onMouseEnter={() => {
         setShowActions(true)
         onHighlight(worldPoint.id)

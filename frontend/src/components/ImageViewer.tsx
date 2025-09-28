@@ -14,8 +14,6 @@ interface ImageViewerProps {
   image: ProjectImage
   worldPoints: Record<string, WorldPoint>
   selectedPoints: string[]
-  selectedWorldPointIds?: string[]
-  highlightedWorldPointId?: string | null
   hoveredConstraintId: string | null
   placementMode?: { active: boolean; worldPointId: string | null }
   activeConstraintType?: string | null
@@ -31,8 +29,6 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
   image,
   worldPoints,
   selectedPoints,
-  selectedWorldPointIds = [],
-  highlightedWorldPointId = null,
   hoveredConstraintId,
   placementMode = { active: false, worldPointId: null },
   activeConstraintType = null,
@@ -277,7 +273,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
         cancelAnimationFrame(animationId)
       }
     }
-  }, [imageLoaded, scale, offset, worldPoints, selectedPoints, selectedWorldPointIds, highlightedWorldPointId, hoveredConstraintId, placementMode, isDraggingPoint, draggedPointId, hoveredPointId, isDragging, panVelocity, isAltKeyPressed])
+  }, [imageLoaded, scale, offset, worldPoints, selectedPoints, hoveredConstraintId, placementMode, isDraggingPoint, draggedPointId, hoveredPointId, isDragging, panVelocity, isAltKeyPressed])
 
   const renderWorldPoints = (ctx: CanvasRenderingContext2D) => {
     Object.values(worldPoints).forEach(wp => {
@@ -289,20 +285,10 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
 
       // Check point states
       const isSelected = selectedPoints.includes(wp.id)
-      const isWorldPointSelected = selectedWorldPointIds.includes(wp.id)
-      const isHighlighted = highlightedWorldPointId === wp.id
       const isBeingDragged = isDraggingPoint && draggedPointId === wp.id
       const isHovered = hoveredPointId === wp.id
 
-      // Draw highlight ring for world point selection/highlighting
-      // Only show world point selection ring if not also constraint-selected (to avoid double rings)
-      if ((isWorldPointSelected || isHighlighted) && !isSelected) {
-        ctx.strokeStyle = isHighlighted ? '#ff8c00' : '#27ae60'
-        ctx.lineWidth = 3
-        ctx.beginPath()
-        ctx.arc(x, y, 12, 0, 2 * Math.PI)
-        ctx.stroke()
-      }
+      // Note: Removed green circle world point selection - only blue constraint selection is used
 
       // Draw drag feedback for point being dragged
       if (isBeingDragged) {

@@ -58,10 +58,36 @@ export interface Camera {
 
 export interface Constraint {
   id: string
-  type: string
+  type: ConstraintType
   enabled: boolean
-  [key: string]: any  // Constraint-specific parameters
+  isDriving: boolean    // vs construction constraint
+  weight: number        // Solver weight (0-1)
+  residual?: number     // Current error/residual
+  status: 'satisfied' | 'warning' | 'violated'
+  entities: {
+    points?: string[]   // WorldPoint IDs
+    lines?: string[]    // Line IDs
+    planes?: string[]   // Plane IDs
+  }
+  parameters: Record<string, any>  // Constraint-specific parameters
+  createdAt: string
 }
+
+export type ConstraintType =
+  // Single entity constraints
+  | 'point_fixed_coord' | 'point_locked' | 'point_on_line' | 'point_on_plane'
+  | 'line_axis_aligned' | 'line_length' | 'line_passes_through' | 'line_in_plane'
+  | 'plane_parallel_to_axis' | 'plane_offset'
+  // Two entity constraints
+  | 'points_distance' | 'points_equal' | 'points_coincident'
+  | 'lines_parallel' | 'lines_perpendicular' | 'lines_colinear' | 'lines_intersect'
+  | 'line_plane_parallel' | 'line_plane_perpendicular' | 'line_plane_intersect'
+  | 'planes_parallel' | 'planes_perpendicular' | 'planes_coincident'
+  // Multi-entity constraints
+  | 'points_colinear' | 'points_coplanar' | 'points_equal_distance'
+  // Legacy constraints (for backwards compatibility)
+  | 'horizontal' | 'vertical' | 'distance' | 'angle' | 'perpendicular' | 'parallel'
+  | 'collinear' | 'rectangle' | 'circle' | 'coplanar' | 'symmetry'
 
 export interface ProjectSettings {
   showPointNames: boolean
@@ -74,16 +100,46 @@ export interface ProjectSettings {
   autoOptimize: boolean
   gridVisible: boolean
   snapToGrid: boolean
+  // New paradigm settings
+  defaultWorkspace: 'image' | 'world'
+  showConstructionGeometry: boolean
+  enableSmartSnapping: boolean
+  constraintPreview: boolean
+  visualFeedbackLevel: 'minimal' | 'standard' | 'detailed'
 }
+
+// Workspace and view types
+export type WorkspaceType = 'image' | 'world'
+export type ViewMode = 'image_view' | 'world_view' | 'split_view'
+
+// Visual language for constraint status
+export type ConstraintStatus = 'satisfied' | 'warning' | 'violated'
+export type EntityColor = {
+  satisfied: string     // Green
+  warning: string       // Amber
+  violated: string      // Red
+  worldGeometry: string // Blue
+  imageGuides: string   // Orange
+  construction: string  // Gray
+  selection: string     // Highlight color
+}
+
+// Constraint glyphs for visual feedback
+export type ConstraintGlyph =
+  | '∥' | '⟂' | '⎓' | '⌖' | '🔒' | '≡' | '↔' | '∠' | '○' | '□' | '△'
 
 export interface Project {
   id: string
   name: string
   worldPoints: Record<string, WorldPoint>
+  lines: Record<string, Line>
+  planes: Record<string, Plane>
   images: Record<string, ProjectImage>
   cameras: Record<string, Camera>
   constraints: Constraint[]
   nextWpNumber: number    // For auto-naming WP1, WP2...
+  nextLineNumber: number  // For auto-naming L1, L2...
+  nextPlaneNumber: number // For auto-naming P1, P2...
   settings: ProjectSettings
   coordinateSystem?: {
     origin: string        // World point ID marked as origin
@@ -117,16 +173,49 @@ export interface Project {
   updatedAt: string
 }
 
-// Selection and interaction types
+// New paradigm: Geometric primitives
 export interface Line {
-  pointA: string
-  pointB: string
+  id: string           // UUID for backend
+  name: string         // Display name: "L1", "L2", etc.
+  pointA: string       // First world point ID
+  pointB: string       // Second world point ID
+  type: 'segment' | 'infinite'  // Segment or infinite line
+  isVisible: boolean   // Show/hide in UI
+  color: string        // Visual distinction
+  isConstruction?: boolean  // Construction vs driving geometry
+  createdAt?: string   // Creation timestamp
+}
+
+export interface Plane {
+  id: string           // UUID for backend
+  name: string         // Display name: "P1", "P2", etc.
+  definition: {
+    type: 'three_points' | 'two_lines' | 'line_point'
+    pointIds?: [string, string, string]  // For three_points
+    lineIds?: [string, string]           // For two_lines
+    lineId?: string                      // For line_point
+    pointId?: string                     // For line_point
+  }
+  equation?: [number, number, number, number]  // ax + by + cz + d = 0
+  isVisible: boolean   // Show/hide in UI
+  color: string        // Visual distinction
+  isConstruction?: boolean  // Construction vs driving geometry
+  createdAt?: string   // Creation timestamp
 }
 
 export interface SelectionState {
-  selectedPoints: string[]
-  selectedLines: Line[]
-  selectionMode: 'points' | 'lines' | 'auto'
+  selectedPoints: string[]      // WorldPoint IDs
+  selectedLines: string[]       // Line IDs
+  selectedPlanes: string[]      // Plane IDs
+  selectedImagePoints: string[] // ImagePoint IDs
+  primarySelection: string | null  // ID of last selected entity (pivot)
+  primaryType: 'point' | 'line' | 'plane' | 'imagepoint' | null
+  selectionFilters: {
+    points: boolean
+    lines: boolean
+    planes: boolean
+    imagePoints: boolean
+  }
 }
 
 // Constraint creation types
