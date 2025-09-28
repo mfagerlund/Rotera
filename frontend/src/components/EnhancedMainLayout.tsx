@@ -6,6 +6,7 @@ import { useSelection, useSelectionKeyboard } from '../hooks/useSelection'
 import { useConstraints } from '../hooks/useConstraints'
 import { useEnhancedProject } from '../hooks/useEnhancedProject'
 import { useLines } from '../hooks/useLines'
+import { Line } from '../types/project'
 
 // UI Components
 import ConstraintToolbar from './ConstraintToolbar'
@@ -15,6 +16,7 @@ import ConstraintTimeline from './ConstraintTimeline'
 import ImageViewer, { ImageViewerRef } from './ImageViewer'
 import WorldView, { WorldViewRef } from './WorldView'
 import WorldPointPanel from './WorldPointPanel'
+import EditLineWindow from './EditLineWindow'
 
 // Enhanced workspace components
 import {
@@ -123,6 +125,12 @@ export const EnhancedMainLayout: React.FC = () => {
     worldPointId: string | null
   }>({ active: false, worldPointId: null })
 
+  // Edit Line Window state
+  const [editLineState, setEditLineState] = useState<{
+    isOpen: boolean
+    lineId: string | null
+  }>({ isOpen: false, lineId: null })
+
   // Refs for viewer components
   const imageViewerRef = useRef<ImageViewerRef>(null)
   const worldViewRef = useRef<WorldViewRef>(null)
@@ -167,9 +175,28 @@ export const EnhancedMainLayout: React.FC = () => {
     }))
   }, [currentImageId])
 
-  // Constraint logic
-  const allConstraints = getAllConstraints(selectedPoints, selectedLines)
-  const availableConstraints = getAvailableConstraints(selectedPoints, selectedLines)
+  // Constraint logic - Convert selectedLines to both IDs and objects
+  const selectedLineIds = selectedLines.map(lineObj => lineObj.id)
+
+  // Helper to convert LineData to Line interface with defaults
+  const createLineFromData = (lineData: any, lineObj: any): Line => ({
+    id: lineObj.id,
+    name: lineData?.name || `L${lineObj.id.slice(-4)}`,
+    pointA: lineObj.pointA,
+    pointB: lineObj.pointB,
+    type: lineData?.type || 'segment',
+    isVisible: lineData?.isVisible ?? true,
+    color: lineData?.color || '#0696d7',
+    isConstruction: lineData?.isConstruction || false,
+    createdAt: lineData?.createdAt || new Date().toISOString()
+  })
+
+  const selectedLineObjects = selectedLines.map(lineObj => {
+    const lineData = lines[lineObj.id]
+    return createLineFromData(lineData, lineObj)
+  })
+  const allConstraints = getAllConstraints(selectedPoints, selectedLineObjects)
+  const availableConstraints = getAvailableConstraints(selectedPoints, selectedLineObjects)
 
   const worldPointNames = Object.fromEntries(
     Object.entries(worldPoints).map(([id, wp]) => [id, wp.name])
@@ -214,6 +241,40 @@ export const EnhancedMainLayout: React.FC = () => {
   const handleMovePoint = (worldPointId: string, u: number, v: number) => {
     if (currentImage) {
       addImagePointToWorldPoint(worldPointId, currentImage.id, u, v)
+    }
+  }
+
+  // EditLineWindow handlers
+  const handleEditLineClose = () => {
+    setEditLineState({ isOpen: false, lineId: null })
+  }
+
+  const handleEditLineSave = (updatedLine: Line) => {
+    updateLine(updatedLine.id, updatedLine)
+  }
+
+  const handleEditLineDelete = (lineId: string) => {
+    deleteLine(lineId)
+  }
+
+  // Enhanced line click handler to open EditLineWindow
+  const handleEnhancedLineClick = (lineId: string, ctrlKey: boolean, shiftKey: boolean) => {
+    console.log('🔥 ENHANCED LINE CLICK DEBUG:')
+    console.log('  - lineId:', lineId)
+    console.log('  - ctrlKey:', ctrlKey)
+    console.log('  - shiftKey:', shiftKey)
+    console.log('  - lines available:', Object.keys(lines).length)
+    console.log('  - line exists:', !!lines[lineId])
+
+    // If not holding modifier keys, open edit window
+    if (!ctrlKey && !shiftKey) {
+      console.log('  - Opening edit window for line:', lineId)
+      setEditLineState({ isOpen: true, lineId })
+      console.log('  - Edit state set to:', { isOpen: true, lineId })
+    } else {
+      // Use constraint selection for multi-selection
+      // TODO: Wire up line selection for constraints
+      console.log('  - Multi-selection not yet implemented in Enhanced layout')
     }
   }
 
@@ -315,11 +376,11 @@ export const EnhancedMainLayout: React.FC = () => {
         ref={worldViewRef}
         project={project!}
         selectedPoints={selectedPoints}
-        selectedLines={selectedLines}
+        selectedLines={selectedLineIds}
         selectedPlanes={selectedPlanes}
         hoveredConstraintId={hoveredConstraintId}
         onPointClick={handleEnhancedPointClick}
-        onLineClick={handleLineClick}
+        onLineClick={handleEnhancedLineClick}
         onPlaneClick={handlePlaneClick}
       />
     </div>
@@ -354,10 +415,11 @@ export const EnhancedMainLayout: React.FC = () => {
   }
 
   return (
+    <>
     <EnhancedWorkspaceManager
       workspaceState={localWorkspaceState}
       onWorkspaceStateChange={(updates) =>
-        setLocalWorkspaceState(prev => ({ ...prev, ...updates }))
+        setLocalWorkspaceState(prev => ({ ...prev, ...updates as any }))
       }
     >
       {(currentWorkspace, workspaceActions) => (
@@ -375,12 +437,26 @@ export const EnhancedMainLayout: React.FC = () => {
               <button className="btn-tool">📁 Open</button>
               <button className="btn-tool">💾 Save</button>
               <button className="btn-tool">📤 Export</button>
+
+              {/* DEBUG: Manual trigger for floating window */}
+              <button
+                className="btn-tool"
+                onClick={() => {
+                  console.log('🔥 ENHANCED MANUAL TRIGGER CLICKED')
+                  // Use first available line or create a test line entry
+                  const lineIds = Object.keys(lines)
+                  const testLineId = lineIds.length > 0 ? lineIds[0] : 'test-line-123'
+                  setEditLineState({ isOpen: true, lineId: testLineId })
+                }}
+              >
+                🔥 TEST FLOAT
+              </button>
             </div>
 
             {/* Context-sensitive constraint toolbar */}
             <ConstraintToolbar
               selectedPoints={selectedPoints}
-              selectedLines={selectedLines}
+              selectedLines={selectedLineObjects}
               availableConstraints={allConstraints}
               selectionSummary={selectionSummary}
               onConstraintClick={startConstraintCreation}
@@ -431,12 +507,12 @@ export const EnhancedMainLayout: React.FC = () => {
               {/* Creation Tools */}
               <CreationToolsManager
                 selectedPoints={selectedPoints}
-                selectedLines={selectedLines}
+                selectedLines={selectedLineIds}
                 selectedPlanes={selectedPlanes}
                 activeTool={activeTool}
                 onToolChange={setActiveTool}
                 worldPointNames={worldPointNames}
-                onCreatePoint={handleImageClick}
+                onCreatePoint={(imageId: string, u: number, v: number) => handleImageClick(u, v)}
                 onCreateLine={(pointIds, constraints) => {
                   // Enhanced line creation with constraints
                   const lineId = createLine(pointIds, 'segment')
@@ -460,7 +536,7 @@ export const EnhancedMainLayout: React.FC = () => {
               <ConstraintPropertyPanel
                 activeConstraintType={activeConstraintType}
                 selectedPoints={selectedPoints}
-                selectedLines={selectedLines}
+                selectedLines={selectedLineObjects}
                 parameters={constraintParameters}
                 isComplete={isConstraintComplete()}
                 worldPointNames={worldPointNames}
@@ -507,10 +583,24 @@ export const EnhancedMainLayout: React.FC = () => {
               worldInfo={worldInfo}
             />
             <span className="selection-summary">{selectionSummary}</span>
+            <span style={{marginLeft: 'auto', color: '#888'}}>v0.3-ENHANCED</span>
           </div>
         </div>
       )}
     </EnhancedWorkspaceManager>
+
+    {/* Edit Line Window - Truly free floating over entire viewport */}
+    <EditLineWindow
+      line={editLineState.lineId && lines[editLineState.lineId] ? {
+        ...lines[editLineState.lineId],
+        type: 'segment' as const
+      } : null}
+      isOpen={editLineState.isOpen}
+      onClose={handleEditLineClose}
+      onSave={handleEditLineSave}
+      onDelete={handleEditLineDelete}
+    />
+  </>
   )
 }
 

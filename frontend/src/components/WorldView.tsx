@@ -13,6 +13,8 @@ interface WorldViewProps {
   onPlaneClick?: (planeId: string, ctrlKey: boolean, shiftKey: boolean) => void
   onCreatePoint?: (x: number, y: number, z: number) => void
   onMovePoint?: (pointId: string, x: number, y: number, z: number) => void
+  onLineHover?: (lineId: string | null) => void
+  onPointHover?: (pointId: string | null) => void
 }
 
 export interface WorldViewRef {
@@ -31,7 +33,9 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
   onLineClick,
   onPlaneClick,
   onCreatePoint,
-  onMovePoint
+  onMovePoint,
+  onLineHover,
+  onPointHover
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [viewMatrix, setViewMatrix] = useState({
@@ -50,6 +54,14 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
     lastX: 0,
     lastY: 0,
     dragType: 'rotate'
+  })
+
+  const [hoverState, setHoverState] = useState<{
+    hoveredPointId: string | null
+    hoveredLineId: string | null
+  }>({
+    hoveredPointId: null,
+    hoveredLineId: null
   })
 
   // 3D to 2D projection
@@ -96,29 +108,42 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
 
       const projected = project3DTo2D(point.xyz)
       const isSelected = selectedPoints.includes(pointId)
-      const radius = isSelected ? 8 : 6
+      const isHovered = hoverState.hoveredPointId === pointId
+      const radius = isSelected ? 8 : (isHovered ? 7 : 6)
 
       // Point circle
       ctx.beginPath()
       ctx.arc(projected.x, projected.y, radius, 0, 2 * Math.PI)
-      ctx.fillStyle = isSelected ? '#FFC107' : point.color || '#2196F3'
+
+      if (isSelected) {
+        ctx.fillStyle = '#FFC107'
+      } else if (isHovered) {
+        ctx.fillStyle = '#FFE082' // Lighter yellow for hover
+      } else {
+        ctx.fillStyle = point.color || '#2196F3'
+      }
+
       ctx.fill()
-      ctx.strokeStyle = '#000'
-      ctx.lineWidth = 1
+      ctx.strokeStyle = isHovered ? '#FFB300' : '#000'
+      ctx.lineWidth = isHovered ? 2 : 1
       ctx.stroke()
 
       // Point name
-      if (project.settings.showPointNames) {
+      if (project.settings.showPointNames || isHovered) {
         ctx.fillStyle = '#000'
         ctx.font = '12px Arial'
         ctx.textAlign = 'center'
         ctx.fillText(point.name, projected.x, projected.y - 12)
       }
     })
-  }, [project, selectedPoints, project3DTo2D])
+  }, [project, selectedPoints, hoverState, project3DTo2D])
 
   // Render lines
   const renderLines = useCallback((ctx: CanvasRenderingContext2D) => {
+    console.log('🔥 WORLDVIEW RENDER LINES DEBUG:')
+    console.log('  - project.lines:', project.lines)
+    console.log('  - lines count:', Object.keys(project.lines || {}).length)
+
     Object.entries(project.lines || {}).forEach(([lineId, line]) => {
       if (!line.isVisible) return
 
@@ -129,6 +154,7 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
       const projA = project3DTo2D(pointA.xyz)
       const projB = project3DTo2D(pointB.xyz)
       const isSelected = selectedLines.includes(lineId)
+      const isHovered = hoverState.hoveredLineId === lineId
 
       ctx.beginPath()
       ctx.moveTo(projA.x, projA.y)
@@ -146,17 +172,48 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
 
           ctx.moveTo(projA.x - unitX * extension, projA.y - unitY * extension)
           ctx.lineTo(projB.x + unitX * extension, projB.y + unitY * extension)
-          ctx.setLineDash([5, 5]) // Dashed for infinite
+
+          if (line.isConstruction) {
+            ctx.setLineDash([10, 5]) // Construction dashed pattern
+          } else {
+            ctx.setLineDash([5, 5]) // Regular infinite line dashed
+          }
         }
       } else {
-        ctx.setLineDash([]) // Solid for segments
+        if (line.isConstruction) {
+          ctx.setLineDash([5, 3]) // Construction segments
+        } else {
+          ctx.setLineDash([]) // Solid for segments
+        }
       }
 
-      ctx.strokeStyle = isSelected ? '#FFC107' : line.color || '#2196F3'
-      ctx.lineWidth = isSelected ? 3 : 2
+      let strokeColor = line.color || '#2196F3'
+      let lineWidth = 2
+
+      if (isSelected) {
+        strokeColor = '#FFC107'
+        lineWidth = 3
+      } else if (isHovered) {
+        strokeColor = '#42A5F5' // Lighter blue for hover
+        lineWidth = 3
+      }
+
+      ctx.strokeStyle = strokeColor
+      ctx.lineWidth = lineWidth
       ctx.stroke()
+
+      // Show line name on hover
+      if (isHovered) {
+        const midX = (projA.x + projB.x) / 2
+        const midY = (projA.y + projB.y) / 2
+
+        ctx.fillStyle = '#000'
+        ctx.font = '12px Arial'
+        ctx.textAlign = 'center'
+        ctx.fillText(line.name, midX, midY - 8)
+      }
     })
-  }, [project, selectedLines, project3DTo2D])
+  }, [project, selectedLines, hoverState, project3DTo2D])
 
   // Render planes
   const renderPlanes = useCallback((ctx: CanvasRenderingContext2D) => {
@@ -272,6 +329,13 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
       return
     }
 
+    // Check if clicking on a line
+    const clickedLine = findLineAt(x, y)
+    if (clickedLine && onLineClick) {
+      onLineClick(clickedLine, event.ctrlKey, event.shiftKey)
+      return
+    }
+
     // Start view manipulation
     setDragState({
       isDragging: true,
@@ -282,8 +346,6 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
   }
 
   const handleMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!dragState.isDragging) return
-
     const canvas = canvasRef.current
     if (!canvas) return
 
@@ -291,6 +353,37 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
     const x = event.clientX - rect.left
     const y = event.clientY - rect.top
 
+    // Handle hover states when not dragging
+    if (!dragState.isDragging) {
+      const hoveredPoint = findPointAt(x, y)
+      const hoveredLine = findLineAt(x, y)
+
+      // Update hover state if changed
+      if (hoveredPoint !== hoverState.hoveredPointId || hoveredLine !== hoverState.hoveredLineId) {
+        setHoverState({
+          hoveredPointId: hoveredPoint,
+          hoveredLineId: hoveredLine
+        })
+
+        // Update cursor style
+        if (hoveredPoint || hoveredLine) {
+          canvas.style.cursor = 'pointer'
+        } else {
+          canvas.style.cursor = 'default'
+        }
+
+        // Notify parent components of hover changes
+        if (onPointHover && hoveredPoint !== hoverState.hoveredPointId) {
+          onPointHover(hoveredPoint)
+        }
+        if (onLineHover && hoveredLine !== hoverState.hoveredLineId) {
+          onLineHover(hoveredLine)
+        }
+      }
+      return
+    }
+
+    // Handle dragging
     const deltaX = x - dragState.lastX
     const deltaY = y - dragState.lastY
 
@@ -329,6 +422,24 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
     }))
   }
 
+  const handleMouseLeave = () => {
+    // Clear hover states when mouse leaves canvas
+    setHoverState({
+      hoveredPointId: null,
+      hoveredLineId: null
+    })
+
+    // Notify parent components
+    if (onPointHover) onPointHover(null)
+    if (onLineHover) onLineHover(null)
+
+    // Reset cursor
+    const canvas = canvasRef.current
+    if (canvas) {
+      canvas.style.cursor = 'default'
+    }
+  }
+
   // NO ZOOM HANDLING - REMOVED COMPLETELY
 
   // Find point at screen coordinates
@@ -342,6 +453,54 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
       )
 
       if (distance <= 8) return pointId
+    }
+    return null
+  }
+
+  // Find line at screen coordinates
+  const findLineAt = (x: number, y: number): string | null => {
+    for (const [lineId, line] of Object.entries(project.lines || {})) {
+      if (!line.isVisible) continue
+
+      const pointA = project.worldPoints[line.pointA]
+      const pointB = project.worldPoints[line.pointB]
+      if (!pointA?.xyz || !pointB?.xyz) continue
+
+      const projA = project3DTo2D(pointA.xyz)
+      const projB = project3DTo2D(pointB.xyz)
+
+      // Calculate distance from point to line segment
+      const A = x - projA.x
+      const B = y - projA.y
+      const C = projB.x - projA.x
+      const D = projB.y - projA.y
+
+      const dot = A * C + B * D
+      const lenSq = C * C + D * D
+
+      if (lenSq === 0) {
+        // Line is a point
+        const distance = Math.sqrt(A * A + B * B)
+        if (distance <= 5) return lineId
+        continue
+      }
+
+      let param = dot / lenSq
+
+      // For line segments, clamp parameter to [0, 1]
+      if (line.type === 'segment') {
+        param = Math.max(0, Math.min(1, param))
+      }
+
+      const closestX = projA.x + param * C
+      const closestY = projA.y + param * D
+
+      const distance = Math.sqrt(
+        Math.pow(x - closestX, 2) + Math.pow(y - closestY, 2)
+      )
+
+      // Increase hit tolerance for lines
+      if (distance <= 5) return lineId
     }
     return null
   }
@@ -415,6 +574,7 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
       />
       <div className="world-view-info">
         <div>Scale: {viewMatrix.scale.toFixed(0)}%</div>

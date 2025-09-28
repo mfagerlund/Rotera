@@ -26,6 +26,22 @@ interface ConstraintTemplatesPanelProps {
   onClearSelection: () => void
 }
 
+// Helper function to create properly formatted constraint objects
+const createConstraint = (constraintData: any): Omit<Constraint, 'id'> => ({
+  enabled: true,
+  isDriving: true,
+  weight: 1.0,
+  status: 'satisfied' as const,
+  entities: {
+    points: constraintData.pointA && constraintData.pointB
+      ? [constraintData.pointA, constraintData.pointB]
+      : constraintData.wp_ids || constraintData.point_ids || []
+  },
+  parameters: {},
+  createdAt: new Date().toISOString(),
+  ...constraintData
+})
+
 const DEFAULT_TEMPLATES: Omit<ConstraintTemplate, 'id' | 'createdAt' | 'usageCount'>[] = [
   {
     name: 'Rectangle',
@@ -35,48 +51,48 @@ const DEFAULT_TEMPLATES: Omit<ConstraintTemplate, 'id' | 'createdAt' | 'usageCou
     requiredPoints: 4,
     pointLabels: ['Top-Left', 'Top-Right', 'Bottom-Right', 'Bottom-Left'],
     constraints: [
-      {
+      createConstraint({
         type: 'distance',
         pointA: 'point1',
         pointB: 'point2',
         value: 100,
         tolerance: 1.0
-      },
-      {
+      }),
+      createConstraint({
         type: 'distance',
         pointA: 'point2',
         pointB: 'point3',
         value: 100,
         tolerance: 1.0
-      },
-      {
+      }),
+      createConstraint({
         type: 'distance',
         pointA: 'point3',
         pointB: 'point4',
         value: 100,
         tolerance: 1.0
-      },
-      {
+      }),
+      createConstraint({
         type: 'distance',
         pointA: 'point4',
         pointB: 'point1',
         value: 100,
         tolerance: 1.0
-      },
-      {
+      }),
+      createConstraint({
         type: 'perpendicular',
         line1_wp_a: 'point1',
         line1_wp_b: 'point2',
         line2_wp_a: 'point2',
         line2_wp_b: 'point3'
-      },
-      {
+      }),
+      createConstraint({
         type: 'perpendicular',
         line1_wp_a: 'point2',
         line1_wp_b: 'point3',
         line2_wp_a: 'point3',
         line2_wp_b: 'point4'
-      }
+      })
     ]
   },
   {
@@ -87,13 +103,13 @@ const DEFAULT_TEMPLATES: Omit<ConstraintTemplate, 'id' | 'createdAt' | 'usageCou
     requiredPoints: 4,
     pointLabels: ['Corner A', 'Corner B', 'Corner C', 'Corner D'],
     constraints: [
-      {
+      createConstraint({
         type: 'rectangle',
         cornerA: 'point1',
         cornerB: 'point2',
         cornerC: 'point3',
         cornerD: 'point4'
-      }
+      })
     ]
   },
   {
@@ -104,13 +120,13 @@ const DEFAULT_TEMPLATES: Omit<ConstraintTemplate, 'id' | 'createdAt' | 'usageCou
     requiredPoints: 3,
     pointLabels: ['Right Angle', 'Point A', 'Point B'],
     constraints: [
-      {
+      createConstraint({
         type: 'angle',
         vertex: 'point1',
         line1_end: 'point2',
         line2_end: 'point3',
         value: 90
-      }
+      })
     ]
   },
   {
@@ -121,13 +137,13 @@ const DEFAULT_TEMPLATES: Omit<ConstraintTemplate, 'id' | 'createdAt' | 'usageCou
     requiredPoints: 4,
     pointLabels: ['Line 1 Start', 'Line 1 End', 'Line 2 Start', 'Line 2 End'],
     constraints: [
-      {
+      createConstraint({
         type: 'parallel',
         line1_wp_a: 'point1',
         line1_wp_b: 'point2',
         line2_wp_a: 'point3',
         line2_wp_b: 'point4'
-      }
+      })
     ]
   },
   {
@@ -138,13 +154,13 @@ const DEFAULT_TEMPLATES: Omit<ConstraintTemplate, 'id' | 'createdAt' | 'usageCou
     requiredPoints: 4,
     pointLabels: ['Line 1 Start', 'Line 1 End', 'Line 2 Start', 'Line 2 End'],
     constraints: [
-      {
+      createConstraint({
         type: 'perpendicular',
         line1_wp_a: 'point1',
         line1_wp_b: 'point2',
         line2_wp_a: 'point3',
         line2_wp_b: 'point4'
-      }
+      })
     ]
   },
   {
@@ -155,10 +171,10 @@ const DEFAULT_TEMPLATES: Omit<ConstraintTemplate, 'id' | 'createdAt' | 'usageCou
     requiredPoints: 3,
     pointLabels: ['Point A', 'Point B', 'Point C'],
     constraints: [
-      {
+      createConstraint({
         type: 'collinear',
         wp_ids: ['point1', 'point2', 'point3']
-      }
+      })
     ]
   },
   {
@@ -169,11 +185,11 @@ const DEFAULT_TEMPLATES: Omit<ConstraintTemplate, 'id' | 'createdAt' | 'usageCou
     requiredPoints: 3,
     pointLabels: ['Point A', 'Point B', 'Point C'],
     constraints: [
-      {
+      createConstraint({
         type: 'circle',
         point_ids: ['point1', 'point2', 'point3'],
         radius: 50
-      }
+      })
     ]
   },
   {
@@ -184,13 +200,13 @@ const DEFAULT_TEMPLATES: Omit<ConstraintTemplate, 'id' | 'createdAt' | 'usageCou
     requiredPoints: 2,
     pointLabels: ['Start Point', 'End Point'],
     constraints: [
-      {
+      createConstraint({
         type: 'distance',
         pointA: 'point1',
         pointB: 'point2',
         value: 100,
         tolerance: 1.0
-      }
+      })
     ]
   },
   {
@@ -201,13 +217,13 @@ const DEFAULT_TEMPLATES: Omit<ConstraintTemplate, 'id' | 'createdAt' | 'usageCou
     requiredPoints: 3,
     pointLabels: ['Vertex', 'Ray 1 End', 'Ray 2 End'],
     constraints: [
-      {
+      createConstraint({
         type: 'angle',
         vertex: 'point1',
         line1_end: 'point2',
         line2_end: 'point3',
         value: 90
-      }
+      })
     ]
   },
   {
@@ -218,11 +234,11 @@ const DEFAULT_TEMPLATES: Omit<ConstraintTemplate, 'id' | 'createdAt' | 'usageCou
     requiredPoints: 2,
     pointLabels: ['Start Point', 'End Point'],
     constraints: [
-      {
+      createConstraint({
         type: 'horizontal',
         pointA: 'point1',
         pointB: 'point2'
-      }
+      })
     ]
   },
   {
@@ -233,11 +249,11 @@ const DEFAULT_TEMPLATES: Omit<ConstraintTemplate, 'id' | 'createdAt' | 'usageCou
     requiredPoints: 2,
     pointLabels: ['Start Point', 'End Point'],
     constraints: [
-      {
+      createConstraint({
         type: 'vertical',
         pointA: 'point1',
         pointB: 'point2'
-      }
+      })
     ]
   }
 ]

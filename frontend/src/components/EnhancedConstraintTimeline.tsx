@@ -15,6 +15,36 @@ interface EnhancedConstraintTimelineProps {
   visualManager: VisualLanguageManager
 }
 
+// Helper function to categorize constraint types
+const getCategoryForConstraintType = (type: string): string => {
+  switch (type) {
+    case 'points_distance':
+    case 'points_equal':
+    case 'points_coincident':
+    case 'distance':
+      return 'distance'
+    case 'lines_parallel':
+    case 'lines_perpendicular':
+    case 'parallel':
+    case 'perpendicular':
+      return 'alignment'
+    case 'point_fixed_coord':
+    case 'point_locked':
+    case 'fixed':
+      return 'positioning'
+    case 'angle':
+      return 'angular'
+    case 'rectangle':
+    case 'circle':
+      return 'geometry'
+    case 'horizontal':
+    case 'vertical':
+      return 'orientation'
+    default:
+      return 'uncategorized'
+  }
+}
+
 export const EnhancedConstraintTimeline: React.FC<EnhancedConstraintTimelineProps> = ({
   constraints,
   hoveredConstraintId,
@@ -44,8 +74,8 @@ export const EnhancedConstraintTimeline: React.FC<EnhancedConstraintTimelineProp
 
   // Group constraints by category
   const constraintsByCategory = constraints.reduce((groups, constraint) => {
-    const definition = visualManager.getConstraintTypeDefinition?.(constraint.type)
-    const category = definition?.category || 'uncategorized'
+    // Fallback category mapping since getConstraintTypeDefinition doesn't exist
+    const category = getCategoryForConstraintType(constraint.type)
 
     if (!groups[category]) {
       groups[category] = []

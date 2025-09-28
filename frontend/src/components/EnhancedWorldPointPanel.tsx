@@ -431,8 +431,7 @@ const EnhancedWorldPointItem: React.FC<EnhancedWorldPointItemProps> = ({
               <>
                 <DelightfulTooltip content={isMissingFromImage ? "Place this point on current image" : "Point already in current image"}>
                   <RippleButton
-                    onClick={(e) => {
-                      e.stopPropagation()
+                    onClick={() => {
                       if (isMissingFromImage) onStartPlacement()
                     }}
                     className={`btn-place ${!isMissingFromImage ? 'disabled' : ''}`}
@@ -445,10 +444,7 @@ const EnhancedWorldPointItem: React.FC<EnhancedWorldPointItemProps> = ({
 
                 <DelightfulTooltip content="Rename world point">
                   <RippleButton
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onEdit()
-                    }}
+                    onClick={() => onEdit()}
                     className="btn-edit"
                     variant="tool"
                   >
@@ -459,10 +455,7 @@ const EnhancedWorldPointItem: React.FC<EnhancedWorldPointItemProps> = ({
                 {involvedConstraints.length > 0 && (
                   <DelightfulTooltip content="Show involved constraints">
                     <RippleButton
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setShowConstraints(!showConstraints)
-                      }}
+                      onClick={() => setShowConstraints(!showConstraints)}
                       className="btn-constraints"
                       variant="tool"
                     >
@@ -473,10 +466,7 @@ const EnhancedWorldPointItem: React.FC<EnhancedWorldPointItemProps> = ({
 
                 <DelightfulTooltip content="Delete world point">
                   <RippleButton
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onDelete()
-                    }}
+                    onClick={() => onDelete()}
                     className="btn-delete"
                     variant="tool"
                   >

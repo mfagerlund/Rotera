@@ -1,7 +1,7 @@
 // Core project management hook with localStorage integration
 
 import { useState, useEffect, useCallback } from 'react'
-import { Project, WorldPoint, ProjectImage, Camera, Constraint } from '../types/project'
+import { Project, WorldPoint, ProjectImage, Camera, Constraint, Line } from '../types/project'
 import { ProjectStorage } from '../utils/storage'
 import { ImageUtils } from '../utils/imageUtils'
 
@@ -287,6 +287,46 @@ export const useProject = () => {
 
   const currentImage = project && currentImageId ? project.images[currentImageId] : null
 
+  // Line Management
+  const updateLine = useCallback((lineId: string, updates: Partial<Line>) => {
+    updateProject(prev => {
+      const line = prev.lines[lineId]
+      if (!line) return prev
+
+      return {
+        ...prev,
+        lines: {
+          ...prev.lines,
+          [lineId]: { ...line, ...updates }
+        }
+      }
+    })
+  }, [updateProject])
+
+  const deleteLine = useCallback((lineId: string) => {
+    updateProject(prev => {
+      const { [lineId]: deleted, ...remainingLines } = prev.lines
+
+      // Remove any constraints that reference this line
+      const filteredConstraints = prev.constraints.filter(constraint => {
+        // Check if constraint references this line
+        if (constraint.type === 'parallel' || constraint.type === 'perpendicular') {
+          return !(
+            (constraint.line1_wp_a === deleted?.pointA && constraint.line1_wp_b === deleted?.pointB) ||
+            (constraint.line2_wp_a === deleted?.pointA && constraint.line2_wp_b === deleted?.pointB)
+          )
+        }
+        return true
+      })
+
+      return {
+        ...prev,
+        lines: remainingLines,
+        constraints: filteredConstraints
+      }
+    })
+  }, [updateProject])
+
   return {
     // State
     project,
@@ -316,12 +356,17 @@ export const useProject = () => {
     deleteConstraint,
     toggleConstraint,
 
+    // Lines
+    updateLine,
+    deleteLine,
+
     // Utilities
     getImagePointCount,
     getSelectedPointsInImage,
 
     // Computed values
     worldPoints: project?.worldPoints || {},
+    lines: project?.lines || {},
     images: project?.images || {},
     cameras: project?.cameras || {},
     constraints: project?.constraints || [],

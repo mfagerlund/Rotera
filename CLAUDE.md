@@ -1,1 +1,2 @@
 - Before we're done with a task, run `bash check.sh`
+- This project should currently have NO backward compability and NO legacy code. Keep it CLEAN.

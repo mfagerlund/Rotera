@@ -1711,7 +1711,7 @@ const MainLayout = () => {
           <button className="btn-tool">🔍 Zoom Fit</button>
           <button className="btn-tool">🎯 Zoom Selection</button>
           <label className="toolbar-toggle">
-            <input type="checkbox" /> Show Point Names
+            <input type="checkbox" /> Show Point Names v0.1
           </label>
         </div>
       </div>

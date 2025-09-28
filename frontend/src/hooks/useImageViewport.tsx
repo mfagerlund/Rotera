@@ -1,6 +1,6 @@
 // Image viewport management with zoom controls
 
-import { useState, useCallback, useRef } from 'react'
+import React, { useState, useCallback, useRef } from 'react'
 import { WorldPoint, ProjectImage } from '../types/project'
 
 interface ViewportState {

@@ -1,5 +1,37 @@
 # Pictorigo Implementation Tasks
 
+<!-- INSTRUCTION: Beep when a task is completed or user feedback is required -->
+<!-- Command: powershell -c "[System.Media.SystemSounds]::Beep.Play()" -->
+
+## 🧹 **URGENT: DUPLICATE COMPONENT CLEANUP**
+
+**Components to DELETE (legacy duplicates that are NOT being used):**
+- `MainLayout.tsx` - Legacy layout component (keep only EnhancedMainLayout.tsx)
+- `LineCreationTool.tsx` - Old line tool (keep only FusionLineCreationTool.tsx)
+- Any remaining `.js` files in `/src/components/` that have `.tsx` counterparts
+- `EditLineWindow.js` if it exists (keep only EditLineWindow.tsx)
+
+**Components to CONSOLIDATE/RENAME:**
+- Rename `EnhancedMainLayout.tsx` → `MainLayout.tsx` (remove "Enhanced" prefix)
+- Rename `EnhancedWorkspaceManager.tsx` → `WorkspaceManager.tsx`
+- Rename `EnhancedWorldPointPanel.tsx` → `WorldPointPanel.tsx`
+- Rename `EnhancedConstraintTimeline.tsx` → `ConstraintTimeline.tsx`
+
+**BEFORE DELETION - VERIFY THESE ARE NOT IMPORTED:**
+```bash
+# Check what's importing legacy components
+grep -r "import.*MainLayout" frontend/src --exclude-dir=node_modules
+grep -r "import.*LineCreationTool" frontend/src --exclude-dir=node_modules
+```
+
+**VALUE TO PRESERVE:**
+- All floating window functionality (now working!)
+- Compact UI with no scrollbars
+- Position persistence with localStorage
+- Clean TypeScript interfaces
+
+---
+
 ## ✅ **COMPLETED IMPLEMENTATION (Dec 28, 2024)**
 
 **Core paradigm implementation is COMPLETE!** The new entity-first, constraint-on-selection system is fully functional with all foundational components in place.

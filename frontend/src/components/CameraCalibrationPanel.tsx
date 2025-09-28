@@ -88,7 +88,7 @@ export const CameraCalibrationPanel: React.FC<CameraCalibrationPanelProps> = ({
       hasIntrinsics,
       hasExtrinsics,
       isFullyCalibrated: hasIntrinsics && hasExtrinsics,
-      quality: camera.calibrationQuality || 'unknown'
+      quality: camera.calibrationQuality ? camera.calibrationQuality.toString() : 'unknown'
     }
   }, [])
 
@@ -187,7 +187,7 @@ export const CameraCalibrationPanel: React.FC<CameraCalibrationPanelProps> = ({
     onCameraUpdate(selectedCameraId, {
       intrinsics: manualIntrinsics,
       calibrationMethod: 'manual',
-      calibrationQuality: 'unknown'
+      calibrationQuality: 0
     })
   }, [selectedCameraId, manualIntrinsics, onCameraUpdate])
 

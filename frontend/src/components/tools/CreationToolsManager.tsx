@@ -3,6 +3,7 @@
 import React, { useState, useCallback } from 'react'
 import LineCreationTool from './LineCreationTool'
 import FusionLineCreationTool from './FusionLineCreationTool'
+import FloatingWindow from '../FloatingWindow'
 import '../../styles/tools.css'
 
 type ToolType = 'select' | 'point' | 'line' | 'plane' | 'circle'
@@ -162,14 +163,11 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
       {/* Active Tool Panel */}
       <div className="active-tool-panel">
         {activeTool === 'line' && (
-          <FusionLineCreationTool
-            selectedPoints={selectedPoints}
-            worldPointNames={worldPointNames}
-            onCreateLine={onCreateLine}
-            onCancel={handleToolCancel}
-            onConstructionPreviewChange={onConstructionPreviewChange}
-            isActive={activeTool === 'line'}
-          />
+          <div className="tool-placeholder">
+            <div className="tool-message">
+              Use the floating Line Creation window.
+            </div>
+          </div>
         )}
 
         {activeTool === 'point' && (
@@ -234,6 +232,26 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
           <span className="summary-count">{selectedPlanes.length}</span>
         </div>
       </div>
+
+      {/* Floating Line Creation Tool */}
+      <FloatingWindow
+        title="Create Line"
+        isOpen={activeTool === 'line'}
+        onClose={handleToolCancel}
+        width={300}
+        storageKey="line-creation-tool"
+        showOkCancel={false}
+      >
+        <FusionLineCreationTool
+          selectedPoints={selectedPoints}
+          worldPointNames={worldPointNames}
+          onCreateLine={onCreateLine}
+          onCancel={handleToolCancel}
+          onConstructionPreviewChange={onConstructionPreviewChange}
+          isActive={activeTool === 'line'}
+          showHeader={false}
+        />
+      </FloatingWindow>
     </div>
   )
 }

@@ -12,7 +12,8 @@ import ImageViewer, { ImageViewerRef } from './ImageViewer'
 import WorldView, { WorldViewRef } from './WorldView'
 import WorldPointPanel from './WorldPointPanel'
 import WorkspaceManager, { WorkspaceSwitcher } from './WorkspaceManager'
-import { WorkspaceType } from '../types/project'
+import EditLineWindow from './EditLineWindow'
+import { WorkspaceType, Line } from '../types/project'
 
 export const MainLayout: React.FC = () => {
   // Note: Removed selectedWorldPointIds and highlightedWorldPointId - using only constraint selection (blue circles)
@@ -20,6 +21,13 @@ export const MainLayout: React.FC = () => {
     active: boolean
     worldPointId: string | null
   }>({ active: false, worldPointId: null })
+
+  // Edit Line Window state
+  const [editLineState, setEditLineState] = useState<{
+    isOpen: boolean
+    lineId: string | null
+  }>({ isOpen: false, lineId: null })
+
   // ZOOM FUNCTIONALITY REMOVED
 
   const imageViewerRef = useRef<ImageViewerRef>(null)
@@ -31,11 +39,14 @@ export const MainLayout: React.FC = () => {
     currentImageId,
     setCurrentImageId,
     worldPoints,
+    lines,
     constraints,
     addConstraint,
     updateConstraint,
     deleteConstraint,
     toggleConstraint,
+    updateLine,
+    deleteLine,
     addImage,
     renameImage,
     deleteImage,
@@ -46,6 +57,14 @@ export const MainLayout: React.FC = () => {
     deleteWorldPoint,
     addImagePointToWorldPoint
   } = useProject()
+
+  // DEBUG: Log project data on every render
+  console.log('🔥 MAIN LAYOUT DEBUG:')
+  console.log('  - project exists:', !!project)
+  console.log('  - worldPoints count:', Object.keys(worldPoints).length)
+  console.log('  - lines count:', Object.keys(lines).length)
+  console.log('  - lines:', lines)
+  console.log('  - editLineState:', editLineState)
 
   const {
     selectedPoints,
@@ -79,8 +98,25 @@ export const MainLayout: React.FC = () => {
     toggleConstraint
   )
 
-  const allConstraints = getAllConstraints(selectedPoints, selectedLines)
-  const availableConstraints = getAvailableConstraints(selectedPoints, selectedLines)
+  // Convert selectedLines to both IDs and full Line objects
+  const selectedLineIds = selectedLines.map(lineObj => lineObj.id)
+  const selectedLineObjects = selectedLines.map(lineObj => {
+    const lineData = lines[lineObj.id]
+    return {
+      id: lineObj.id,
+      name: lineData?.name || `L${lineObj.id.slice(-4)}`,
+      pointA: lineObj.pointA,
+      pointB: lineObj.pointB,
+      type: lineData?.type || 'segment',
+      isVisible: lineData?.isVisible ?? true,
+      color: lineData?.color || '#0696d7',
+      isConstruction: lineData?.isConstruction || false,
+      createdAt: lineData?.createdAt || new Date().toISOString()
+    }
+  })
+
+  const allConstraints = getAllConstraints(selectedPoints, selectedLineObjects)
+  const availableConstraints = getAvailableConstraints(selectedPoints, selectedLineObjects)
 
   const worldPointNames = Object.fromEntries(
     Object.entries(worldPoints).map(([id, wp]) => [id, wp.name])
@@ -94,6 +130,26 @@ export const MainLayout: React.FC = () => {
     handlePointClick(pointId, ctrlKey, shiftKey)
   }
 
+  // Enhanced line click handler to open EditLineWindow
+  const handleEnhancedLineClick = (lineId: string, ctrlKey: boolean, shiftKey: boolean) => {
+    console.log('🔥 LINE CLICK DEBUG:')
+    console.log('  - lineId:', lineId)
+    console.log('  - ctrlKey:', ctrlKey)
+    console.log('  - shiftKey:', shiftKey)
+    console.log('  - lines available:', Object.keys(lines))
+    console.log('  - line exists:', !!lines[lineId])
+
+    // If not holding modifier keys, open edit window
+    if (!ctrlKey && !shiftKey) {
+      console.log('  - Opening edit window for line:', lineId)
+      setEditLineState({ isOpen: true, lineId })
+      console.log('  - Edit state set to:', { isOpen: true, lineId })
+    } else {
+      // Use constraint selection for multi-selection
+      handleLineClick(lineId, ctrlKey, shiftKey)
+    }
+  }
+
   // Placement mode handlers
   const startPlacementMode = (worldPointId: string) => {
     setPlacementMode({ active: true, worldPointId })
@@ -101,6 +157,19 @@ export const MainLayout: React.FC = () => {
 
   const cancelPlacementMode = () => {
     setPlacementMode({ active: false, worldPointId: null })
+  }
+
+  // EditLineWindow handlers
+  const handleEditLineClose = () => {
+    setEditLineState({ isOpen: false, lineId: null })
+  }
+
+  const handleEditLineSave = (updatedLine: Line) => {
+    updateLine(updatedLine.id, updatedLine)
+  }
+
+  const handleEditLineDelete = (lineId: string) => {
+    deleteLine(lineId)
   }
 
   const handleImageClick = (u: number, v: number) => {
@@ -225,6 +294,7 @@ App layout: ${document.querySelector('.app-layout')?.getBoundingClientRect().wid
   }
 
   return (
+    <>
     <WorkspaceManager defaultWorkspace={project.settings.defaultWorkspace || 'image'}>
       {(currentWorkspace, setCurrentWorkspace) => (
         <div className="app-layout">
@@ -239,12 +309,26 @@ App layout: ${document.querySelector('.app-layout')?.getBoundingClientRect().wid
               <button className="btn-tool">📁 Open</button>
               <button className="btn-tool">💾 Save</button>
               <button className="btn-tool">📤 Export</button>
+
+              {/* DEBUG: Manual trigger for floating window */}
+              <button
+                className="btn-tool"
+                style={{background: 'red', color: 'white'}}
+                onClick={() => {
+                  console.log('🔥 MANUAL TRIGGER CLICKED')
+                  // Create a fake line for testing
+                  const fakeLineId = 'test-line-123'
+                  setEditLineState({ isOpen: true, lineId: fakeLineId })
+                }}
+              >
+                🔥 TEST FLOAT
+              </button>
             </div>
 
             {/* Context-sensitive constraint toolbar */}
             <ConstraintToolbar
               selectedPoints={selectedPoints}
-              selectedLines={selectedLines}
+              selectedLines={selectedLineObjects}
               availableConstraints={allConstraints}
               selectionSummary={selectionSummary}
               onConstraintClick={startConstraintCreation}
@@ -313,11 +397,11 @@ App layout: ${document.querySelector('.app-layout')?.getBoundingClientRect().wid
                     ref={worldViewRef}
                     project={project}
                     selectedPoints={selectedPoints}
-                    selectedLines={selectedLines}
+                    selectedLines={selectedLineIds}
                     selectedPlanes={selectedPlanes}
                     hoveredConstraintId={hoveredConstraintId}
                     onPointClick={handleEnhancedPointClick}
-                    onLineClick={handleLineClick}
+                    onLineClick={handleEnhancedLineClick}
                     onPlaneClick={handlePlaneClick}
                   />
                 </div>
@@ -329,7 +413,7 @@ App layout: ${document.querySelector('.app-layout')?.getBoundingClientRect().wid
               <ConstraintPropertyPanel
                 activeConstraintType={activeConstraintType}
                 selectedPoints={selectedPoints}
-                selectedLines={selectedLines}
+                selectedLines={selectedLineObjects}
                 parameters={constraintParameters}
                 isComplete={isConstraintComplete()}
                 worldPointNames={worldPointNames}
@@ -371,12 +455,24 @@ App layout: ${document.querySelector('.app-layout')?.getBoundingClientRect().wid
             <span>Workspace: {currentWorkspace === 'image' ? 'Image View' : 'World View'}</span>
             <span>Image: {currentImage?.name || 'None'}</span>
             <span>WP: {Object.keys(worldPoints).length}</span>
+            <span>Lines: {Object.keys(lines).length}</span>
             <span>Constraints: {constraints.length}</span>
             <span>{getSelectionSummary()}</span>
+            <span style={{marginLeft: 'auto', color: '#888'}}>v0.1-MAIN</span>
           </div>
         </div>
       )}
     </WorkspaceManager>
+
+    {/* Edit Line Window - Truly free floating over entire viewport */}
+    <EditLineWindow
+      line={editLineState.lineId ? lines[editLineState.lineId] || null : null}
+      isOpen={editLineState.isOpen}
+      onClose={handleEditLineClose}
+      onSave={handleEditLineSave}
+      onDelete={handleEditLineDelete}
+    />
+    </>
   )
 }
 

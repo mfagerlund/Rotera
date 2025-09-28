@@ -15,6 +15,7 @@ interface FusionLineCreationToolProps {
     showToCursor?: boolean
   } | null) => void
   isActive: boolean
+  showHeader?: boolean // Whether to show the internal header (false when wrapped in FloatingWindow)
 }
 
 interface LineConstraints {
@@ -29,7 +30,8 @@ export const FusionLineCreationTool: React.FC<FusionLineCreationToolProps> = ({
   onCancel,
   onPointSlotClick,
   onConstructionPreviewChange,
-  isActive
+  isActive,
+  showHeader = true
 }) => {
   // Point slots state
   const [pointSlot1, setPointSlot1] = useState<string>('')
@@ -168,29 +170,31 @@ export const FusionLineCreationTool: React.FC<FusionLineCreationToolProps> = ({
   if (!isActive) return null
 
   return (
-    <div className="fusion-line-creation-tool">
-      <div className="tool-header">
-        <h4>Line Creation</h4>
-        <button
-          className="btn-cancel"
-          onClick={onCancel}
-          title="Cancel line creation (Esc)"
-        >
-          ✕
-        </button>
-      </div>
+    <>
+      {showHeader && (
+        <div className="tool-header">
+          <h4>Line Creation</h4>
+          <button
+            className="btn-cancel"
+            onClick={onCancel}
+            title="Cancel line creation (Esc)"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
-      <div className="tool-content">
+      <div style={{padding: '6px'}}>
         {/* Property Editor Layout */}
-        <div className="property-editor">
-          <div className={`property-row ${activeSlot === 1 ? 'active' : ''}`}>
-            <label className="property-label">Point 1</label>
-            <div className="property-value">
+        <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
+          <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+            <label style={{minWidth: '50px', fontSize: '12px'}}>Point 1</label>
+            <div style={{display: 'flex', alignItems: 'center', gap: '4px', flex: 1}}>
               <select
                 value={pointSlot1}
                 onChange={(e) => setPointSlot1(e.target.value)}
                 onFocus={handleSlot1Focus}
-                className="point-slot-dropdown"
+                style={{flex: 1, fontSize: '12px', padding: '2px'}}
               >
                 <option value="">Select point...</option>
                 {availablePoints.map(point => (
@@ -201,8 +205,8 @@ export const FusionLineCreationTool: React.FC<FusionLineCreationToolProps> = ({
               </select>
               {pointSlot1 && (
                 <button
-                  className="btn-clear-icon"
                   onClick={clearSlot1}
+                  style={{padding: '2px 4px', fontSize: '10px'}}
                   title="Clear point 1"
                 >
                   ✕
@@ -211,14 +215,14 @@ export const FusionLineCreationTool: React.FC<FusionLineCreationToolProps> = ({
             </div>
           </div>
 
-          <div className={`property-row ${activeSlot === 2 ? 'active' : ''}`}>
-            <label className="property-label">Point 2</label>
-            <div className="property-value">
+          <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+            <label style={{minWidth: '50px', fontSize: '12px'}}>Point 2</label>
+            <div style={{display: 'flex', alignItems: 'center', gap: '4px', flex: 1}}>
               <select
                 value={pointSlot2}
                 onChange={(e) => setPointSlot2(e.target.value)}
                 onFocus={handleSlot2Focus}
-                className="point-slot-dropdown"
+                style={{flex: 1, fontSize: '12px', padding: '2px'}}
               >
                 <option value="">Select point...</option>
                 {availablePoints.map(point => (
@@ -229,8 +233,8 @@ export const FusionLineCreationTool: React.FC<FusionLineCreationToolProps> = ({
               </select>
               {pointSlot2 && (
                 <button
-                  className="btn-clear-icon"
                   onClick={clearSlot2}
+                  style={{padding: '2px 4px', fontSize: '10px'}}
                   title="Clear point 2"
                 >
                   ✕
@@ -242,82 +246,62 @@ export const FusionLineCreationTool: React.FC<FusionLineCreationToolProps> = ({
 
 
         {/* Line Constraints */}
-        <div className="constraints-section">
-          <h5 className="section-header">Constraints</h5>
+        <div style={{marginTop: '8px'}}>
+          <h5 style={{margin: '0 0 6px 0', fontSize: '12px', fontWeight: 'bold'}}>Constraints</h5>
 
-          <div className="property-row">
-            <label className="property-label">Direction</label>
-            <div className="property-value">
-              <select
-                value={direction}
-                onChange={(e) => setDirection(e.target.value)}
-                className="direction-dropdown"
-              >
-                <option value="none">None</option>
-                <option value="horizontal">Horizontal</option>
-                <option value="vertical">Vertical</option>
-                <option value="x-aligned">X-aligned</option>
-                <option value="y-aligned">Y-aligned</option>
-                <option value="z-aligned">Z-aligned</option>
-              </select>
-            </div>
+          <div style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px'}}>
+            <label style={{minWidth: '50px', fontSize: '12px'}}>Direction</label>
+            <select
+              value={direction}
+              onChange={(e) => setDirection(e.target.value)}
+              style={{flex: 1, fontSize: '12px', padding: '2px'}}
+            >
+              <option value="none">None</option>
+              <option value="horizontal">Horizontal</option>
+              <option value="vertical">Vertical</option>
+              <option value="x-aligned">X-aligned</option>
+              <option value="y-aligned">Y-aligned</option>
+              <option value="z-aligned">Z-aligned</option>
+            </select>
           </div>
 
-          <div className="property-row">
-            <label className="property-label">Length</label>
-            <div className="property-value">
-              <div className="length-input">
-                <input
-                  type="number"
-                  value={lengthValue}
-                  onChange={(e) => setLengthValue(e.target.value)}
-                  step="0.1"
-                  min="0.001"
-                  placeholder="Optional"
-                  className="length-value"
-                />
-                <span className="unit">m</span>
-              </div>
+          <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+            <label style={{minWidth: '50px', fontSize: '12px'}}>Length</label>
+            <div style={{display: 'flex', alignItems: 'center', gap: '4px', flex: 1}}>
+              <input
+                type="number"
+                value={lengthValue}
+                onChange={(e) => setLengthValue(e.target.value)}
+                step="0.1"
+                min="0.001"
+                placeholder="Optional"
+                style={{width: '80px', fontSize: '12px', padding: '2px'}}
+              />
+              <span style={{fontSize: '12px'}}>m</span>
             </div>
           </div>
         </div>
 
-        {/* Instructions */}
-        <div className="instructions">
-          <div className="instruction-text">
-            {!pointSlot1 && !pointSlot2 && "Click points or use dropdowns to fill slots"}
-            {pointSlot1 && !pointSlot2 && "Select second point"}
-            {pointSlot1 && pointSlot2 && pointSlot1 === pointSlot2 && "Points must be different"}
-            {canCreateLine && "Ready to create line"}
-          </div>
-        </div>
 
         {/* Action Buttons */}
-        <div className="action-buttons">
+        <div style={{display: 'flex', gap: '8px', marginTop: '8px'}}>
           <button
-            className="btn-cancel-secondary"
             onClick={onCancel}
+            style={{flex: 1, padding: '4px 8px', fontSize: '12px'}}
           >
             Cancel
           </button>
           <button
-            className="btn-create-line"
             onClick={handleCreateLine}
             disabled={!canCreateLine}
+            style={{flex: 1, padding: '4px 8px', fontSize: '12px'}}
           >
             OK
           </button>
         </div>
       </div>
 
-      <div className="tool-help">
-        <div className="help-text">
-          • Click existing points to fill slots sequentially
-          • Use dropdowns to manually select points
-          • Press Esc to cancel
-        </div>
-      </div>
-    </div>
+    </>
   )
 }
 
