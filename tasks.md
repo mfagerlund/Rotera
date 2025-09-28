@@ -98,38 +98,19 @@
 
 ---
 
-## 🎯 **NEXT IMPLEMENTATION PRIORITIES**
+## ✅ **RECENTLY COMPLETED (Dec 28, 2024)**
 
-### **🐛 URGENT BUG FIX: Line Creation Not Working**
-
-#### **Problem Analysis**
-- Users click "OK" in line creation window but line is not added to collection
-- `createLine` function exists in `useLines` hook and appears correct
-- Issue is in the callback connection between `FusionLineCreationTool` and `MainLayout`
-- Need to ensure proper state updates and error handling
-
-#### **Implementation Tasks**
-1. **Fix Line Creation Callback**
-   - Verify `createLine` from `useLines` is properly imported and called
-   - Ensure the line creation callback in MainLayout.tsx:516-523 actually calls the hook
-   - Add logging to trace the execution path from OK button to line creation
-   - Test that new lines appear in both UI and internal state
-
-2. **Add Error Handling**
-   - Add try-catch around line creation with user feedback
-   - Validate point IDs exist before creating line
-   - Show success/error messages to user
-   - Handle duplicate line prevention gracefully
-
-3. **State Synchronization**
-   - Ensure lines appear immediately in both ImageViewer and WorldView
-   - Verify line selection works after creation
-   - Test that line constraints are properly applied
-   - Confirm line appears in ConstraintTimeline
-
-**Success Criteria**: User can create line, see it immediately, and interact with it
+### **✅ Line Creation Bug Fix - COMPLETED**
+- **Fixed**: Centralized line management in useProject hook instead of separate useLines hook
+- **Fixed**: Duplicate prevention in UI with disabled OK button and warning messages
+- **Fixed**: State synchronization between ImageViewer and WorldView
+- **Added**: Object counts footer showing World Points, Image Points, Lines, Planes, Constraints
+- **Added**: Comprehensive error handling and logging
+- **Success**: Users can now create lines, see them immediately, and proper duplicate prevention works
 
 ---
+
+## 🎯 **NEXT IMPLEMENTATION PRIORITIES**
 
 ### **🎯 REFACTOR: Unified Selection Interface**
 
@@ -505,39 +486,31 @@
 
 ---
 
-## 🎯 **IMMEDIATE NEXT STEPS (This Session)**
+## 🎯 **IMMEDIATE NEXT STEPS (Current Session)**
 
-### **Floating Edit Windows Implementation**
-1. **FloatingWindow Component**
-   - Draggable header with title
-   - Standardized OK/Cancel button layout
-   - Z-index management for multiple windows
-   - ESC key handling for cancel
+The next highest priority tasks to implement:
 
-2. **EditLineWindow**
-   - Line property editing (name, color, visibility)
-   - Line constraint editing (direction, length)
-   - Live preview of changes
-   - Validation and error handling
+### **1. 🎯 Unified Selection Interface**
+- Consolidate separate `selectedPoints`, `selectedLines`, `selectedConstraints` arrays
+- Create single `ISelectable` interface for all entity types
+- Simplify constraint filtering and application logic
+- **Impact**: Cleaner code architecture and easier constraint management
 
-3. **Enhanced Selection & Hover**
-   - Line click detection in ImageViewer and WorldView
-   - Hover state management for lines and points
-   - Visual hover feedback (highlighting, cursor changes)
-   - Selection state consistency across viewers
+### **2. 🔧 Line Click Detection & Editing**
+- Implement clickable lines in ImageViewer and WorldView
+- Add hover states and visual feedback for lines
+- Connect line clicks to existing EditLineWindow
+- **Impact**: Complete line interaction workflow
 
-4. **Integration Workflow**
-   - Line selection triggers EditLineWindow
-   - Window positioning near selected line
-   - Apply changes with live preview
-   - Cancel reverts to original state
+### **3. 🛠️ Remove WP from Specific Image**
+- Add ability to remove WorldPoint from current image while keeping it in others
+- Distinguish between "remove from this image" vs "delete entire WP"
+- **Impact**: Better image point management workflow
 
-**Success Criteria:**
-- Users can click any line to open its edit window
-- Edit window is draggable and well-positioned
-- Changes preview live in viewers
-- OK applies changes, Cancel reverts
-- Window serves as template for future edit tools
+### **4. 🐛 Construction Preview Cleanup**
+- Fix preview line persisting after tool cancellation
+- Improve preview state management across tool switches
+- **Impact**: Cleaner user experience during line creation
 
 ---
 
