@@ -776,34 +776,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     }
   }, [scale, fitImageToCanvas])
 
-  // Enhanced wheel handling with Ctrl modifier
-  const handleWheelEnhanced = (event: React.WheelEvent) => {
-    event.preventDefault()
-
-    const canvas = canvasRef.current
-    if (!canvas) return
-
-    const rect = canvas.getBoundingClientRect()
-    const mouseX = event.clientX - rect.left
-    const mouseY = event.clientY - rect.top
-
-    // Adjust zoom speed based on Ctrl key
-    const baseScaleFactor = event.deltaY > 0 ? 0.9 : 1.1
-    const scaleFactor = event.ctrlKey ?
-      (event.deltaY > 0 ? 0.95 : 1.05) : // Slower zoom with Ctrl
-      baseScaleFactor // Normal zoom speed
-
-    const newScale = Math.max(0.1, Math.min(5, scale * scaleFactor))
-
-    // Zoom towards mouse position
-    const scaleRatio = newScale / scale
-    setOffset(prev => ({
-      x: mouseX - (mouseX - prev.x) * scaleRatio,
-      y: mouseY - (mouseY - prev.y) * scaleRatio
-    }))
-
-    setScale(newScale)
-  }
+  // NO ZOOM HANDLING - REMOVED COMPLETELY
 
   return (
     <div
@@ -817,7 +790,6 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
-        onWheel={handleWheelEnhanced}
         style={{
           cursor: isDragging ? 'grabbing' :
                   isDraggingPoint ? 'move' :

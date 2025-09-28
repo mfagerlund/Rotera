@@ -1,0 +1,73 @@
+/* EMERGENCY SIMPLE LAYOUT - NO SCROLLING POSSIBLE */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+.app-layout {
+  width: 100vw;
+  height: 100vh;
+  display: grid;
+  grid-template-rows: 56px 1fr 24px;
+  grid-template-columns: 180px 1fr 250px;
+  grid-template-areas:
+    "toolbar toolbar toolbar"
+    "left center right"
+    "footer footer footer";
+}
+
+.top-toolbar {
+  grid-area: toolbar;
+  background: #454545;
+  border-bottom: 1px solid #666;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  gap: 8px;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.sidebar-left {
+  grid-area: left;
+  background: #454545;
+  border-right: 1px solid #666;
+  overflow-y: auto;
+}
+
+.viewer-area {
+  grid-area: center;
+  background: #2d2d2d;
+  overflow: hidden;
+}
+
+.sidebar-right {
+  grid-area: right;
+  background: #454545;
+  border-left: 1px solid #666;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.status-bar {
+  grid-area: footer;
+  background: #454545;
+  border-top: 1px solid #666;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 24px;
+  font-size: 12px;
+  color: #cccccc;
+}

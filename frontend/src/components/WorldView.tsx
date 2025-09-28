@@ -329,14 +329,7 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
     }))
   }
 
-  const handleWheel = (event: React.WheelEvent<HTMLCanvasElement>) => {
-    event.preventDefault()
-    const scaleFactor = event.deltaY > 0 ? 0.9 : 1.1
-    setViewMatrix(prev => ({
-      ...prev,
-      scale: Math.max(10, Math.min(1000, prev.scale * scaleFactor))
-    }))
-  }
+  // NO ZOOM HANDLING - REMOVED COMPLETELY
 
   // Find point at screen coordinates
   const findPointAt = (x: number, y: number): string | null => {
@@ -422,7 +415,6 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onWheel={handleWheel}
       />
       <div className="world-view-info">
         <div>Scale: {viewMatrix.scale.toFixed(0)}%</div>

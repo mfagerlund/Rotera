@@ -22,11 +22,12 @@
   --spacing-lg: 24px;
   --spacing-xl: 32px;
 
-  /* Layout */
-  --sidebar-left-width: 210px;
-  --sidebar-right-width: 350px;
+  /* Layout - EXACT PIXEL VALUES */
+  --sidebar-left-width: 180px;
+  --sidebar-right-width: 250px;
   --top-toolbar-height: 56px;
   --status-bar-height: 24px;
+  --content-height: calc(100vh - 80px); /* 56px + 24px = 80px */
 
   /* Form elements */
   --border-radius: 3px;
@@ -120,6 +121,106 @@ body {
   font-size: 12px;
   color: var(--text-secondary);
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.scale-slider-footer {
+  width: 80px;
+  height: 4px;
+  background: #666;
+  border-radius: 2px;
+  outline: none;
+  appearance: none;
+  flex-shrink: 0;
+}
+
+.scale-slider-footer::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  background: var(--accent-blue);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.scale-slider-footer::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: var(--accent-blue);
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
+.zoom-controls-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  position: relative;
+}
+
+.zoom-dropdown-container {
+  position: relative;
+}
+
+.zoom-dropdown-btn {
+  background: var(--bg-secondary);
+  border: 1px solid #666;
+  color: var(--text-primary);
+  width: 20px;
+  height: 20px;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  transition: all 0.2s ease;
+}
+
+.zoom-dropdown-btn:hover {
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
+  color: white;
+}
+
+.zoom-dropup {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  background: var(--bg-panel);
+  border: 1px solid #666;
+  border-radius: var(--border-radius);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  margin-bottom: 4px;
+  min-width: 120px;
+}
+
+.zoom-dropup button {
+  display: block;
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  text-align: left;
+  cursor: pointer;
+  font-size: 11px;
+  transition: background 0.2s ease;
+}
+
+.zoom-dropup button:hover {
+  background: var(--accent-blue);
+  color: white;
+}
+
+.zoom-dropup button:first-child {
+  border-radius: var(--border-radius) var(--border-radius) 0 0;
+}
+
+.zoom-dropup button:last-child {
+  border-radius: 0 0 var(--border-radius) var(--border-radius);
 }
 
 /* Toolbar components */
@@ -953,6 +1054,7 @@ body {
   min-height: 0;
   max-width: 100%;
   max-height: 100%;
+  flex: 1;
 }
 
 .image-viewer {
@@ -967,10 +1069,10 @@ body {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100% !important;
-  height: 100% !important;
-  max-width: 100% !important;
-  max-height: 100% !important;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
   object-fit: contain;
 }
 
@@ -1077,7 +1179,7 @@ body {
 }
 
 .world-point-list {
-  max-height: 300px;
+  max-height: 350px;
   overflow-y: auto;
 }
 
@@ -1131,6 +1233,7 @@ body {
   gap: var(--spacing-sm);
   flex: 1;
   cursor: pointer;
+  min-width: 0;
 }
 
 .wp-color-dot {
@@ -1144,6 +1247,11 @@ body {
   font-weight: 500;
   color: var(--text-primary);
   font-size: 14px;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .wp-name-input {
@@ -1159,16 +1267,27 @@ body {
 .wp-info {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-xs);
   margin-left: auto;
   font-size: 12px;
   color: var(--text-muted);
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .image-count, .constraint-count {
-  background: rgba(255, 255, 255, 0.1);
-  padding: 1px 6px;
-  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.image-count .count-icon,
+.constraint-count .count-icon {
+  font-size: 10px;
+  opacity: 0.8;
 }
 
 .broken-indicator {
@@ -1438,15 +1557,30 @@ body {
 }
 
 /* Responsive adjustments */
+@media (max-width: 1400px) {
+  :root {
+    --sidebar-right-width: 320px;
+  }
+}
+
 @media (max-width: 1200px) {
   :root {
-    --sidebar-width: 250px;
+    --sidebar-left-width: 180px;
+    --sidebar-right-width: 280px;
+  }
+}
+
+@media (max-width: 1000px) {
+  :root {
+    --sidebar-left-width: 160px;
+    --sidebar-right-width: 260px;
   }
 }
 
 @media (max-width: 900px) {
   :root {
-    --sidebar-width: 200px;
+    --sidebar-left-width: 140px;
+    --sidebar-right-width: 240px;
   }
 
   .constraint-btn {

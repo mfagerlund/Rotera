@@ -20,7 +20,7 @@ export const MainLayout: React.FC = () => {
     active: boolean
     worldPointId: string | null
   }>({ active: false, worldPointId: null })
-  const [currentScale, setCurrentScale] = useState(1)
+  // ZOOM FUNCTIONALITY REMOVED
 
   const imageViewerRef = useRef<ImageViewerRef>(null)
   const worldViewRef = useRef<WorldViewRef>(null)
@@ -121,18 +121,7 @@ export const MainLayout: React.FC = () => {
     }
   }
 
-  // Zoom control handlers
-  const handleZoomFit = () => {
-    imageViewerRef.current?.zoomFit()
-  }
-
-  const handleZoomSelection = () => {
-    imageViewerRef.current?.zoomSelection()
-  }
-
-  const handleScaleChange = (scale: number) => {
-    setCurrentScale(scale)
-  }
+  // ZOOM HANDLERS REMOVED
 
   // Check which world points are missing from current image
   const getMissingWorldPoints = () => {
@@ -199,6 +188,32 @@ export const MainLayout: React.FC = () => {
     return parts.length > 0 ? `Selection: ${parts.join(', ')}` : 'No selection'
   }
 
+  // VISUAL DEBUG OVERLAY
+  const [debugInfo, setDebugInfo] = useState<string>('')
+
+  useEffect(() => {
+    const updateDebug = () => {
+      const info = `
+Window: ${window.innerWidth}x${window.innerHeight}
+Body scroll: ${document.body.scrollWidth}x${document.body.scrollHeight}
+Doc scroll: ${document.documentElement.scrollWidth}x${document.documentElement.scrollHeight}
+App layout: ${document.querySelector('.app-layout')?.getBoundingClientRect().width}x${document.querySelector('.app-layout')?.getBoundingClientRect().height}
+      `.trim()
+      setDebugInfo(info)
+    }
+
+    updateDebug()
+    const interval = setInterval(updateDebug, 1000)
+    window.addEventListener('resize', updateDebug)
+
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('resize', updateDebug)
+    }
+  }, [])
+
+  // ZOOM DROPDOWN HANDLER REMOVED
+
   if (!project) {
     return (
       <div className="app-layout">
@@ -213,7 +228,7 @@ export const MainLayout: React.FC = () => {
     <WorkspaceManager defaultWorkspace={project.settings.defaultWorkspace || 'image'}>
       {(currentWorkspace, setCurrentWorkspace) => (
         <div className="app-layout">
-          {/* Top toolbar with context-sensitive constraints */}
+          {/* Top toolbar */}
           <div className="top-toolbar">
             <WorkspaceSwitcher
               currentWorkspace={currentWorkspace}
@@ -221,149 +236,135 @@ export const MainLayout: React.FC = () => {
             />
 
             <div className="toolbar-section">
-          <button className="btn-tool">📁 Open</button>
-          <button className="btn-tool">💾 Save</button>
-          <button className="btn-tool">📤 Export</button>
-        </div>
+              <button className="btn-tool">📁 Open</button>
+              <button className="btn-tool">💾 Save</button>
+              <button className="btn-tool">📤 Export</button>
+            </div>
 
-        {/* Context-sensitive constraint toolbar */}
-        <ConstraintToolbar
-          selectedPoints={selectedPoints}
-          selectedLines={selectedLines}
-          availableConstraints={allConstraints}
-          selectionSummary={selectionSummary}
-          onConstraintClick={startConstraintCreation}
-        />
-
-        <div className="toolbar-section">
-          <button className="btn-tool" onClick={handleZoomFit} title="Zoom to fit entire image">
-            🔍 Zoom Fit
-          </button>
-          <button
-            className="btn-tool"
-            onClick={handleZoomSelection}
-            title={selectedPoints.length > 0 ? "Zoom to selected points" : "Zoom to all points"}
-          >
-            🎯 Zoom Selection
-          </button>
-          <label className="toolbar-toggle">
-            <input
-              type="checkbox"
-              checked={project.settings.showPointNames}
-              onChange={(e) => {
-                // TODO: Update project settings
-              }}
+            {/* Context-sensitive constraint toolbar */}
+            <ConstraintToolbar
+              selectedPoints={selectedPoints}
+              selectedLines={selectedLines}
+              availableConstraints={allConstraints}
+              selectionSummary={selectionSummary}
+              onConstraintClick={startConstraintCreation}
             />
-            Show Point Names
-          </label>
-        </div>
-      </div>
 
-      {/* Main content area */}
-      <div className="content-area">
-        {/* Left sidebar: Image Navigation */}
-        <div className="sidebar-left">
-          <ImageNavigationToolbar
-            images={project.images}
-            currentImageId={currentImageId}
-            worldPoints={worldPoints}
-            selectedWorldPointIds={selectedPoints}
-            isCreatingConstraint={!!activeConstraintType}
-            onImageSelect={setCurrentImageId}
-            onImageAdd={addImage}
-            onImageRename={renameImage}
-            onImageDelete={deleteImage}
-            getImagePointCount={getImagePointCount}
-            getSelectedPointsInImage={(imageId) => getSelectedPointsInImage(imageId, selectedPoints)}
-          />
-        </div>
+            <div className="toolbar-section">
+              <label className="toolbar-toggle">
+                <input
+                  type="checkbox"
+                  checked={project.settings.showPointNames}
+                  onChange={(e) => {
+                    // TODO: Update project settings
+                  }}
+                />
+                Show Point Names
+              </label>
+            </div>
+          </div>
 
-        {/* Center: Workspace-specific viewer */}
-        <div className="viewer-area">
-          {currentWorkspace === 'image' ? (
-            <div className="image-viewer-container">
-              {currentImage ? (
-                <>
-                  <ImageViewer
-                    ref={imageViewerRef}
-                    image={currentImage}
-                    worldPoints={worldPoints}
-                    selectedPoints={selectedPoints}
-                    hoveredConstraintId={hoveredConstraintId}
-                    placementMode={placementMode}
-                    activeConstraintType={activeConstraintType}
-                    onPointClick={handleEnhancedPointClick}
-                    onCreatePoint={handleImageClick}
-                    onMovePoint={handleMovePoint}
-                    onScaleChange={handleScaleChange}
-                  />
-                  {/* Selection and constraint overlays will be part of ImageViewer */}
-                </>
+          {/* Main content area */}
+          <div className="content-area">
+            {/* Left sidebar: Image Navigation */}
+            <div className="sidebar-left">
+              <ImageNavigationToolbar
+                images={project.images}
+                currentImageId={currentImageId}
+                worldPoints={worldPoints}
+                selectedWorldPointIds={selectedPoints}
+                isCreatingConstraint={!!activeConstraintType}
+                onImageSelect={setCurrentImageId}
+                onImageAdd={addImage}
+                onImageRename={renameImage}
+                onImageDelete={deleteImage}
+                getImagePointCount={getImagePointCount}
+                getSelectedPointsInImage={(imageId) => getSelectedPointsInImage(imageId, selectedPoints)}
+              />
+            </div>
+
+            {/* Center: Workspace-specific viewer */}
+            <div className="viewer-area">
+              {currentWorkspace === 'image' ? (
+                <div className="image-viewer-container">
+                  {currentImage ? (
+                    <ImageViewer
+                      ref={imageViewerRef}
+                      image={currentImage}
+                      worldPoints={worldPoints}
+                      selectedPoints={selectedPoints}
+                      hoveredConstraintId={hoveredConstraintId}
+                      placementMode={placementMode}
+                      activeConstraintType={activeConstraintType}
+                      onPointClick={handleEnhancedPointClick}
+                      onCreatePoint={handleImageClick}
+                      onMovePoint={handleMovePoint}
+                    />
+                  ) : (
+                    <div className="no-image-state">
+                      <h3>No Image Selected</h3>
+                      <p>Add images using the sidebar to get started</p>
+                    </div>
+                  )}
+                </div>
               ) : (
-                <div className="no-image-state">
-                  <h3>No Image Selected</h3>
-                  <p>Add images using the sidebar to get started</p>
+                <div className="world-viewer-container">
+                  <WorldView
+                    ref={worldViewRef}
+                    project={project}
+                    selectedPoints={selectedPoints}
+                    selectedLines={selectedLines}
+                    selectedPlanes={selectedPlanes}
+                    hoveredConstraintId={hoveredConstraintId}
+                    onPointClick={handleEnhancedPointClick}
+                    onLineClick={handleLineClick}
+                    onPlaneClick={handlePlaneClick}
+                  />
                 </div>
               )}
             </div>
-          ) : (
-            <div className="world-viewer-container">
-              <WorldView
-                ref={worldViewRef}
-                project={project}
+
+            {/* Right sidebar: Properties & Timeline */}
+            <div className="sidebar-right">
+              <ConstraintPropertyPanel
+                activeConstraintType={activeConstraintType}
                 selectedPoints={selectedPoints}
                 selectedLines={selectedLines}
-                selectedPlanes={selectedPlanes}
+                parameters={constraintParameters}
+                isComplete={isConstraintComplete()}
+                worldPointNames={worldPointNames}
+                onParameterChange={updateParameter}
+                onApply={applyConstraint}
+                onCancel={cancelConstraintCreation}
+              />
+
+              <WorldPointPanel
+                worldPoints={worldPoints}
+                constraints={constraints}
+                selectedWorldPointIds={selectedPoints}
+                currentImageId={currentImageId}
+                placementMode={placementMode}
+                onSelectWorldPoint={(pointId: string, ctrlKey: boolean, shiftKey: boolean) => handlePointClick(pointId, ctrlKey, shiftKey)}
+                onHighlightWorldPoint={() => {}}
+                onRenameWorldPoint={renameWorldPoint}
+                onDeleteWorldPoint={deleteWorldPoint}
+                onStartPlacement={startPlacementMode}
+                onCancelPlacement={cancelPlacementMode}
+              />
+
+              <ConstraintTimeline
+                constraints={constraints}
                 hoveredConstraintId={hoveredConstraintId}
-                onPointClick={handleEnhancedPointClick}
-                onLineClick={handleLineClick}
-                onPlaneClick={handlePlaneClick}
+                worldPointNames={worldPointNames}
+                onHover={setHoveredConstraintId}
+                onEdit={(constraint) => {
+                  // TODO: Implement constraint editing
+                }}
+                onDelete={deleteConstraint}
+                onToggle={toggleConstraint}
               />
             </div>
-          )}
-        </div>
-
-        {/* Right sidebar: Properties & Timeline */}
-        <div className="sidebar-right">
-          <ConstraintPropertyPanel
-            activeConstraintType={activeConstraintType}
-            selectedPoints={selectedPoints}
-            selectedLines={selectedLines}
-            parameters={constraintParameters}
-            isComplete={isConstraintComplete()}
-            worldPointNames={worldPointNames}
-            onParameterChange={updateParameter}
-            onApply={applyConstraint}
-            onCancel={cancelConstraintCreation}
-          />
-
-          <WorldPointPanel
-            worldPoints={worldPoints}
-            constraints={constraints}
-            selectedWorldPointIds={selectedPoints}
-            currentImageId={currentImageId}
-            placementMode={placementMode}
-            onSelectWorldPoint={(pointId: string, ctrlKey: boolean, shiftKey: boolean) => handlePointClick(pointId, ctrlKey, shiftKey)}
-            onHighlightWorldPoint={() => {}}
-            onRenameWorldPoint={renameWorldPoint}
-            onDeleteWorldPoint={deleteWorldPoint}
-            onStartPlacement={startPlacementMode}
-            onCancelPlacement={cancelPlacementMode}
-          />
-
-          <ConstraintTimeline
-            constraints={constraints}
-            hoveredConstraintId={hoveredConstraintId}
-            worldPointNames={worldPointNames}
-            onHover={setHoveredConstraintId}
-            onEdit={(constraint) => {
-              // TODO: Implement constraint editing
-            }}
-            onDelete={deleteConstraint}
-            onToggle={toggleConstraint}
-          />
-        </div>
-      </div>
+          </div>
 
           {/* Bottom status bar */}
           <div className="status-bar">
@@ -372,21 +373,6 @@ export const MainLayout: React.FC = () => {
             <span>WP: {Object.keys(worldPoints).length}</span>
             <span>Constraints: {constraints.length}</span>
             <span>{getSelectionSummary()}</span>
-            <span>Scale:</span>
-            <input
-              type="range"
-              min="10"
-              max="500"
-              step="5"
-              value={Math.round(currentScale * 100)}
-              onChange={(e) => {
-                const newScale = parseInt(e.target.value) / 100
-                imageViewerRef.current?.setScale?.(newScale)
-              }}
-              className="scale-slider-footer"
-              title="Zoom level"
-            />
-            <span>{Math.round(currentScale * 100)}%</span>
           </div>
         </div>
       )}

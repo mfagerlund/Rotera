@@ -275,11 +275,13 @@ const WorldPointItem: React.FC<WorldPointItemProps> = ({
 
           <div className="wp-info">
             <span className="image-count">
-              {worldPoint.imagePoints.length} image{worldPoint.imagePoints.length !== 1 ? 's' : ''}
+              <span className="count-icon">📷</span>
+              <span>{worldPoint.imagePoints.length}</span>
             </span>
             {involvedConstraints.length > 0 && (
               <span className="constraint-count">
-                {involvedConstraints.length} constraint{involvedConstraints.length !== 1 ? 's' : ''}
+                <span className="count-icon">⚙</span>
+                <span>{involvedConstraints.length}</span>
               </span>
             )}
             {hasBrokenConstraints && (
