@@ -92,17 +92,6 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
         />
       </div>
 
-      {/* Constraint creation status */}
-      {isCreatingConstraint && (
-        <div className="constraint-creation-status">
-          <div className="constraint-type-badge">
-            CREATING CONSTRAINT
-          </div>
-          <div className="navigation-hint">
-            Switch images freely during creation
-          </div>
-        </div>
-      )}
 
       <div className="image-list">
         {imageList.length > 0 ? (
@@ -113,7 +102,6 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
               worldPoints={worldPoints}
               selectedWorldPointIds={selectedWorldPointIds}
               isActive={currentImageId === image.id}
-              isConstraintMode={isCreatingConstraint}
               pointCount={getImagePointCount(image.id)}
               selectedPointCount={getSelectedPointsInImage(image.id)}
               selectedWorldPointCount={getSelectedWorldPointsInImage(image.id)}
@@ -135,18 +123,6 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
         )}
       </div>
 
-      {/* Instructions for cross-image constraint creation */}
-      {isCreatingConstraint && (
-        <div className="constraint-instructions">
-          <h4>Cross-Image Constraint Creation</h4>
-          <ul>
-            <li>• Click points in any image</li>
-            <li>🔄 Switch images anytime</li>
-            <li>👁️ Selected points highlighted</li>
-            <li>✅ Complete when enough points selected</li>
-          </ul>
-        </div>
-      )}
     </div>
   )
 }
@@ -156,7 +132,6 @@ interface ImageNavigationItemProps {
   worldPoints: Record<string, WorldPoint>
   selectedWorldPointIds: string[]
   isActive: boolean
-  isConstraintMode: boolean
   pointCount: number
   selectedPointCount: number
   selectedWorldPointCount: number
@@ -170,7 +145,6 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
   worldPoints,
   selectedWorldPointIds,
   isActive,
-  isConstraintMode,
   pointCount,
   selectedPointCount,
   selectedWorldPointCount,
@@ -201,38 +175,22 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
 
   return (
     <div
-      className={`image-nav-item ${isActive ? 'active' : ''} ${isConstraintMode ? 'constraint-mode' : ''}`}
+      className={`image-nav-item ${isActive ? 'active' : ''}`}
       onClick={onClick}
     >
       <div className="image-thumbnail">
         <img src={image.blob} alt={image.name} />
 
-        {/* Constraint mode overlay */}
-        {isConstraintMode && (
-          <div className="constraint-mode-overlay">
-            {selectedPointCount > 0 && (
-              <div className="selected-points-indicator">
-                {selectedPointCount} selected
-              </div>
-            )}
-            {!isActive && (
-              <div className="switch-hint">
-                Click to switch →
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Selected world points indicator */}
-        {selectedWorldPointCount > 0 && !isConstraintMode && (
+        {selectedWorldPointCount > 0 && (
           <div className="selected-wp-indicator">
             <span className="selected-wp-count">{selectedWorldPointCount}</span>
           </div>
         )}
 
         {/* World point locations overlay */}
-        {!isConstraintMode && (
-          <div className="wp-locations-overlay">
+        <div className="wp-locations-overlay">
             {Object.values(worldPoints).map(wp => {
               const imagePoint = wp.imagePoints.find(ip => ip.imageId === image.id)
               if (!imagePoint) return null
@@ -261,8 +219,7 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
                 />
               )
             })}
-          </div>
-        )}
+        </div>
 
       </div>
 
@@ -282,9 +239,9 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
             className="image-name"
             onDoubleClick={(e) => {
               e.stopPropagation()
-              if (!isConstraintMode) setIsEditing(true)
+              setIsEditing(true)
             }}
-            title={isConstraintMode ? "Exit constraint mode to rename" : "Double-click to rename"}
+            title="Double-click to rename"
           >
             {image.name}
           </div>
@@ -299,16 +256,9 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
             <span className="stat-icon">□</span>
             <span>{image.width}×{image.height}</span>
           </div>
-          {isConstraintMode && selectedPointCount > 0 && (
-            <div className="stat-item selected">
-              <span className="stat-icon">✓</span>
-              <span>{selectedPointCount} selected</span>
-            </div>
-          )}
         </div>
 
-        {!isConstraintMode && (
-          <div className="image-actions">
+        <div className="image-actions">
             <button
               className="btn-image-action"
               onClick={(e) => {
@@ -329,8 +279,7 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
             >
               ×
             </button>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   )
