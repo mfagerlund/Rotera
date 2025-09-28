@@ -1,226 +1,251 @@
-// Constraint timeline component with hover feedback
+// Enhanced constraint timeline with visual language integration
 
 import React from 'react'
-import { Constraint } from '../types/project'
+import { EnhancedConstraint } from '../types/geometry'
+import { VisualLanguageManager } from '../utils/visualLanguage'
+import { useEnhancedProject } from '../hooks/useEnhancedProject'
 
 interface ConstraintTimelineProps {
-  constraints: Constraint[]
-  hoveredConstraintId: string | null
-  worldPointNames: Record<string, string>
+  constraints: EnhancedConstraint[]
+  hoveredConstraintId?: string | null
   onHover: (constraintId: string | null) => void
-  onEdit: (constraint: Constraint) => void
+  onEdit: (constraint: EnhancedConstraint) => void
   onDelete: (constraintId: string) => void
   onToggle: (constraintId: string) => void
+  visualManager: VisualLanguageManager
+}
+
+// Helper function to categorize constraint types
+const getCategoryForConstraintType = (type: string): string => {
+  switch (type) {
+    case 'points_distance':
+    case 'points_equal':
+    case 'points_coincident':
+    case 'distance':
+      return 'distance'
+    case 'lines_parallel':
+    case 'lines_perpendicular':
+    case 'parallel':
+    case 'perpendicular':
+      return 'alignment'
+    case 'point_fixed_coord':
+    case 'point_locked':
+    case 'fixed':
+      return 'positioning'
+    case 'angle':
+      return 'angular'
+    case 'rectangle':
+    case 'circle':
+      return 'geometry'
+    case 'horizontal':
+    case 'vertical':
+      return 'orientation'
+    default:
+      return 'uncategorized'
+  }
 }
 
 export const ConstraintTimeline: React.FC<ConstraintTimelineProps> = ({
   constraints,
   hoveredConstraintId,
-  worldPointNames,
   onHover,
   onEdit,
   onDelete,
-  onToggle
+  onToggle,
+  visualManager
 }) => {
-  const getPointName = (pointId: string) => worldPointNames[pointId] || pointId
-
-  const getConstraintDisplayName = (constraint: Constraint) => {
-    switch (constraint.type) {
-      case 'distance':
-        return `Distance: ${getPointName(constraint.pointA)} ↔ ${getPointName(constraint.pointB)}`
-      case 'angle':
-        return `Angle: ${constraint.angle_degrees || constraint.angle}°`
-      case 'perpendicular':
-        return `Perpendicular Lines`
-      case 'parallel':
-        return `Parallel Lines`
-      case 'collinear':
-        return `Collinear Points`
-      case 'rectangle':
-        return `Rectangle Shape`
-      case 'circle':
-        return `Circle Constraint`
-      case 'fixed':
-        return `Fixed Point: ${getPointName(constraint.point_id)}`
-      case 'horizontal':
-        return `Horizontal Alignment`
-      case 'vertical':
-        return `Vertical Alignment`
-      default:
-        return `${constraint.type.charAt(0).toUpperCase()}${constraint.type.slice(1)} Constraint`
-    }
+  if (constraints.length === 0) {
+    return (
+      <div className="constraint-timeline">
+        <div className="timeline-header">
+          <h3>Constraints</h3>
+          <span className="constraint-count">0</span>
+        </div>
+        <div className="timeline-empty">
+          <div className="empty-icon">⚙️</div>
+          <div className="empty-text">No constraints yet</div>
+          <div className="empty-hint">
+            Select entities and use the constraint toolbar to create relationships
+          </div>
+        </div>
+      </div>
+    )
   }
 
-  const getConstraintSummary = (constraint: Constraint) => {
-    switch (constraint.type) {
-      case 'distance':
-        return `${constraint.distance}m between points`
-      case 'angle':
-        return `${constraint.angle_degrees || constraint.angle}° angle constraint`
-      case 'perpendicular':
-        return `Perpendicular line relationship`
-      case 'parallel':
-        return `Parallel line relationship`
-      case 'collinear':
-        return `Points on same line`
-      case 'rectangle':
-        return `4-corner rectangle shape`
-      case 'circle':
-        return `Points on circle boundary`
-      case 'fixed':
-        return `Fixed position constraint`
-      case 'horizontal':
-        return `Horizontal alignment constraint`
-      case 'vertical':
-        return `Vertical alignment constraint`
-      default:
-        return 'Geometric constraint'
+  // Group constraints by category
+  const constraintsByCategory = constraints.reduce((groups, constraint) => {
+    // Fallback category mapping since getConstraintTypeDefinition doesn't exist
+    const category = getCategoryForConstraintType(constraint.type)
+
+    if (!groups[category]) {
+      groups[category] = []
     }
+    groups[category].push(constraint)
+
+    return groups
+  }, {} as Record<string, EnhancedConstraint[]>)
+
+  const renderConstraintItem = (constraint: EnhancedConstraint) => {
+    const isHovered = hoveredConstraintId === constraint.id
+    const glyph = visualManager.getConstraintGlyph(constraint.type)
+    const constraintClasses = visualManager.getConstraintClasses(
+      constraint.status,
+      [
+        'timeline-item',
+        constraint.enabled ? '' : 'disabled',
+        isHovered ? 'hovered' : ''
+      ]
+    )
+
+    const style = visualManager.getConstraintStyle(constraint.status)
+
+    return (
+      <div
+        key={constraint.id}
+        className={constraintClasses}
+        style={style}
+        onMouseEnter={() => onHover(constraint.id)}
+        onMouseLeave={() => onHover(null)}
+        onClick={() => onEdit(constraint)}
+      >
+        <div className="timeline-item-icon">
+          <div className="constraint-glyph">
+            <span className="glyph-icon">{glyph}</span>
+          </div>
+        </div>
+
+        <div className="timeline-item-content">
+          <div className="timeline-item-title">
+            {constraint.name || constraint.type}
+          </div>
+          <div className="timeline-item-details">
+            {getConstraintDescription(constraint, visualManager)}
+          </div>
+        </div>
+
+        <div className={`timeline-item-actions ${isHovered ? 'visible' : ''}`}>
+          <button
+            className={`btn-toggle ${constraint.enabled ? 'enabled' : 'disabled'}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              onToggle(constraint.id)
+            }}
+            title={constraint.enabled ? 'Disable constraint' : 'Enable constraint'}
+          >
+            {constraint.enabled ? '👁️' : '👁️‍🗨️'}
+          </button>
+
+          <button
+            className="btn-edit"
+            onClick={(e) => {
+              e.stopPropagation()
+              onEdit(constraint)
+            }}
+            title="Edit constraint"
+          >
+            ✏️
+          </button>
+
+          <button
+            className="btn-delete"
+            onClick={(e) => {
+              e.stopPropagation()
+              onDelete(constraint.id)
+            }}
+            title="Delete constraint"
+          >
+            🗑️
+          </button>
+        </div>
+      </div>
+    )
   }
 
-  const getConstraintIcon = (type: string) => {
-    const icons: Record<string, string> = {
-      distance: '↔',
-      angle: '∠',
-      perpendicular: '⊥',
-      parallel: '∥',
-      collinear: '─',
-      rectangle: '▭',
-      circle: '○',
-      fixed: '📌',
-      horizontal: '⟷',
-      vertical: '↕'
+  const renderCategory = (category: string, categoryConstraints: EnhancedConstraint[]) => {
+    const categoryNames: Record<string, string> = {
+      positioning: 'Positioning',
+      dimensioning: 'Dimensioning',
+      geometric: 'Geometric',
+      advanced: 'Advanced',
+      uncategorized: 'Other'
     }
-    return icons[type] || '⚙'
+
+    const enabledCount = categoryConstraints.filter(c => c.enabled).length
+    const satisfiedCount = categoryConstraints.filter(c => c.status === 'satisfied').length
+
+    return (
+      <div key={category} className="constraint-category">
+        <div className="category-header">
+          <h4>{categoryNames[category] || category}</h4>
+          <div className="category-stats">
+            <span className="count-total">{categoryConstraints.length}</span>
+            <span className="count-enabled">
+              {enabledCount}/{categoryConstraints.length} enabled
+            </span>
+            <span className="count-satisfied">
+              {satisfiedCount}/{enabledCount} satisfied
+            </span>
+          </div>
+        </div>
+        <div className="category-items">
+          {categoryConstraints.map(renderConstraintItem)}
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="constraint-timeline">
+    <div className="constraint-timeline enhanced">
       <div className="timeline-header">
-        <h3>Constraint History</h3>
-        <span className="constraint-count">{constraints.length} constraints</span>
+        <h3>Constraints</h3>
+        <div className="timeline-stats">
+          <span className="constraint-count">{constraints.length}</span>
+          <div className="status-summary">
+            {Object.entries(getStatusCounts(constraints)).map(([status, count]) => (
+              <span
+                key={status}
+                className={`status-count ${status}`}
+                style={{ color: visualManager.getConstraintColor(status as any) }}
+              >
+                {count}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
 
-      <div className="timeline-items">
-        {constraints.length > 0 ? (
-          constraints.map((constraint, index) => (
-            <ConstraintTimelineItem
-              key={constraint.id}
-              constraint={constraint}
-              index={index}
-              isHovered={hoveredConstraintId === constraint.id}
-              displayName={getConstraintDisplayName(constraint)}
-              summary={getConstraintSummary(constraint)}
-              icon={getConstraintIcon(constraint.type)}
-              onEdit={() => onEdit(constraint)}
-              onDelete={() => onDelete(constraint.id)}
-              onToggle={() => onToggle(constraint.id)}
-              onMouseEnter={() => onHover(constraint.id)}
-              onMouseLeave={() => onHover(null)}
-            />
-          ))
-        ) : (
-          <div className="timeline-empty">
-            <div className="empty-icon">📐</div>
-            <div className="empty-text">No constraints yet</div>
-            <div className="empty-hint">Start by selecting points and choosing a constraint type</div>
-          </div>
+      <div className="timeline-content">
+        {Object.entries(constraintsByCategory).map(([category, categoryConstraints]) =>
+          renderCategory(category, categoryConstraints)
         )}
       </div>
     </div>
   )
 }
 
-interface ConstraintTimelineItemProps {
-  constraint: Constraint
-  index: number
-  isHovered: boolean
-  displayName: string
-  summary: string
-  icon: string
-  onEdit: () => void
-  onDelete: () => void
-  onToggle: () => void
-  onMouseEnter: () => void
-  onMouseLeave: () => void
+// Helper functions
+function getConstraintDescription(constraint: EnhancedConstraint, visualManager: VisualLanguageManager): string {
+  const paramValues = Object.entries(constraint.parameters)
+    .filter(([_, param]) => param.value !== undefined && param.value !== null && param.value !== '')
+    .map(([key, param]) => `${param.name}: ${param.value}${param.unit || ''}`)
+    .join(', ')
+
+  const entityCounts = [
+    constraint.entities.points.length > 0 ? `${constraint.entities.points.length} points` : '',
+    constraint.entities.lines.length > 0 ? `${constraint.entities.lines.length} lines` : '',
+    constraint.entities.planes.length > 0 ? `${constraint.entities.planes.length} planes` : '',
+    constraint.entities.circles.length > 0 ? `${constraint.entities.circles.length} circles` : ''
+  ].filter(Boolean).join(', ')
+
+  const parts = [entityCounts, paramValues].filter(Boolean)
+  return parts.join(' • ')
 }
 
-const ConstraintTimelineItem: React.FC<ConstraintTimelineItemProps> = ({
-  constraint,
-  index,
-  isHovered,
-  displayName,
-  summary,
-  icon,
-  onEdit,
-  onDelete,
-  onToggle,
-  onMouseEnter,
-  onMouseLeave
-}) => {
-  const [showActions, setShowActions] = React.useState(false)
-
-  return (
-    <div
-      className={`timeline-item ${constraint.enabled ? 'enabled' : 'disabled'} ${isHovered ? 'hovered' : ''}`}
-      onMouseEnter={() => {
-        setShowActions(true)
-        onMouseEnter()
-      }}
-      onMouseLeave={() => {
-        setShowActions(false)
-        onMouseLeave()
-      }}
-    >
-      <div className="timeline-item-icon">
-        <span>{icon}</span>
-      </div>
-
-      <div className="timeline-item-content">
-        <div className="timeline-item-title">
-          {displayName}
-        </div>
-        <div className="timeline-item-details">
-          {summary}
-        </div>
-      </div>
-
-      <div className={`timeline-item-actions ${showActions ? 'visible' : ''}`}>
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            onToggle()
-          }}
-          className={`btn-toggle ${constraint.enabled ? 'enabled' : 'disabled'}`}
-          title={constraint.enabled ? "Disable constraint" : "Enable constraint"}
-        >
-          {constraint.enabled ? '👁️' : '🚫'}
-        </button>
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            onEdit()
-          }}
-          className="btn-edit"
-          title="Edit constraint"
-        >
-          ✏️
-        </button>
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            if (confirm('Delete this constraint?')) {
-              onDelete()
-            }
-          }}
-          className="btn-delete"
-          title="Delete constraint"
-        >
-          🗑️
-        </button>
-      </div>
-    </div>
-  )
+function getStatusCounts(constraints: EnhancedConstraint[]): Record<string, number> {
+  return constraints.reduce((counts, constraint) => {
+    counts[constraint.status] = (counts[constraint.status] || 0) + 1
+    return counts
+  }, {} as Record<string, number>)
 }
 
 export default ConstraintTimeline

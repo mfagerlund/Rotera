@@ -1,7 +1,6 @@
 // Creation Tools Manager - Handles all geometry creation tools
 
 import React, { useState, useCallback } from 'react'
-import LineCreationTool from './LineCreationTool'
 import FusionLineCreationTool from './FusionLineCreationTool'
 import FloatingWindow from '../FloatingWindow'
 import '../../styles/tools.css'

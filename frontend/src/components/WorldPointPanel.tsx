@@ -1,7 +1,13 @@
-// World Point administration panel with comprehensive management
+// Enhanced World Point Panel with delightful micro-interactions
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { WorldPoint, Constraint } from '../types/project'
+import {
+  RippleButton,
+  DelightfulTooltip,
+  OptimisticFeedback,
+  useCelebration
+} from './DelightfulComponents'
 
 interface WorldPointPanelProps {
   worldPoints: Record<string, WorldPoint>
@@ -32,6 +38,59 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState('')
+  const [recentlyCreated, setRecentlyCreated] = useState<Set<string>>(new Set())
+  const [justPlaced, setJustPlaced] = useState<Set<string>>(new Set())
+  const { triggerAchievement, triggerProgress } = useCelebration()
+
+  // Track newly created world points for celebration
+  const prevWorldPointCount = React.useRef(Object.keys(worldPoints).length)
+
+  useEffect(() => {
+    const currentCount = Object.keys(worldPoints).length
+    if (currentCount > prevWorldPointCount.current) {
+      // New world point created!
+      const newPoints = Object.keys(worldPoints).filter(id =>
+        !Object.keys(worldPoints).slice(0, prevWorldPointCount.current).includes(id)
+      )
+
+      newPoints.forEach(pointId => {
+        setRecentlyCreated(prev => new Set(prev).add(pointId))
+
+        // Celebrate milestones
+        if (currentCount === 1) {
+          triggerAchievement(
+            "First Point Created! 🎯",
+            "Great start! Add more points to build your model.",
+            "🎯"
+          )
+        } else if (currentCount === 10) {
+          triggerProgress(
+            "10 Points Milestone! 🚀",
+            "You're building a solid foundation for your model.",
+            "🚀"
+          )
+        } else if (currentCount % 25 === 0) {
+          triggerProgress(
+            `${currentCount} Points! 🎉`,
+            "Your photogrammetry model is taking shape beautifully!",
+            "🎉"
+          )
+        }
+      })
+
+      // Remove the celebration flag after animation
+      setTimeout(() => {
+        newPoints.forEach(pointId => {
+          setRecentlyCreated(prev => {
+            const next = new Set(prev)
+            next.delete(pointId)
+            return next
+          })
+        })
+      }, 2000)
+    }
+    prevWorldPointCount.current = currentCount
+  }, [worldPoints, triggerAchievement, triggerProgress])
 
   // Find constraints involving a world point
   const getConstraintsForWorldPoint = (wpId: string): Constraint[] => {
@@ -58,6 +117,15 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
   const saveEdit = () => {
     if (editingId && editingName.trim()) {
       onRenameWorldPoint(editingId, editingName.trim())
+
+      // Celebrate meaningful renames
+      if (editingName.trim().length > 5) {
+        triggerAchievement(
+          "Descriptive Naming! 📝",
+          "Good organization helps with complex projects.",
+          "📝"
+        )
+      }
     }
     setEditingId(null)
     setEditingName('')
@@ -93,6 +161,19 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
     }
   }
 
+  const handlePlacement = (wpId: string) => {
+    onStartPlacement(wpId)
+    setJustPlaced(prev => new Set(prev).add(wpId))
+
+    setTimeout(() => {
+      setJustPlaced(prev => {
+        const next = new Set(prev)
+        next.delete(wpId)
+        return next
+      })
+    }, 1500)
+  }
+
   // Check if world point is missing from current image
   const isWorldPointMissingFromImage = (wp: WorldPoint): boolean => {
     if (!currentImageId) return false
@@ -111,36 +192,47 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
 
   return (
     <div className="world-point-panel">
-      {/* Placement mode header */}
+      {/* Enhanced placement mode header */}
       {placementMode.active && (
-        <div className="placement-mode-header">
+        <div className="placement-mode-header constraint-step">
           <div className="placement-info">
-            <span className="placement-icon">📍</span>
+            <span className="placement-icon">🎯</span>
             <span>Click on image to place "{worldPoints[placementMode.worldPointId!]?.name}"</span>
           </div>
-          <button onClick={onCancelPlacement} className="btn-cancel-placement">
-            ✕
-          </button>
+          <DelightfulTooltip content="Press Escape to cancel">
+            <RippleButton
+              onClick={onCancelPlacement}
+              className="btn-cancel-placement"
+              variant="secondary"
+            >
+              ✕
+            </RippleButton>
+          </DelightfulTooltip>
         </div>
       )}
 
       <div className="panel-header">
         <h3>World Points</h3>
-        <span className="point-count">{worldPointsList.length} points</span>
+        <div className="point-count status-indicator connected">
+          {worldPointsList.length} points
+        </div>
       </div>
 
+      {/* Enhanced missing points notice */}
       {missingWPs.length > 0 && !placementMode.active && (
-        <div className="missing-points-notice">
+        <div className="missing-points-notice help-hint">
           <span className="notice-icon">⚠️</span>
           <span>{missingWPs.length} point{missingWPs.length !== 1 ? 's' : ''} not in this image</span>
           {latestMissingWP && (
-            <button
-              onClick={() => onStartPlacement(latestMissingWP.id)}
-              className="btn-quick-place"
-              title={`Quick place latest: ${latestMissingWP.name}`}
-            >
-              Place Latest ({latestMissingWP.name})
-            </button>
+            <DelightfulTooltip content={`Place ${latestMissingWP.name} in this image`}>
+              <RippleButton
+                onClick={() => handlePlacement(latestMissingWP.id)}
+                className="btn-quick-place"
+                variant="primary"
+              >
+                Place Latest ({latestMissingWP.name})
+              </RippleButton>
+            </DelightfulTooltip>
           )}
         </div>
       )}
@@ -154,9 +246,11 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
             const isEditing = editingId === wp.id
             const isMissingFromImage = isWorldPointMissingFromImage(wp)
             const isInPlacementMode = placementMode.worldPointId === wp.id
+            const wasRecentlyCreated = recentlyCreated.has(wp.id)
+            const wasJustPlaced = justPlaced.has(wp.id)
 
             return (
-              <WorldPointItem
+              <EnhancedWorldPointItem
                 key={wp.id}
                 worldPoint={wp}
                 isSelected={isSelected}
@@ -167,11 +261,13 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
                 isMissingFromImage={isMissingFromImage}
                 isInPlacementMode={isInPlacementMode}
                 placementModeActive={placementMode.active}
+                wasRecentlyCreated={wasRecentlyCreated}
+                wasJustPlaced={wasJustPlaced}
                 onSelect={(ctrlKey, shiftKey) => onSelectWorldPoint(wp.id, ctrlKey, shiftKey)}
                 onEdit={() => startEditing(wp)}
                 onDelete={() => handleDelete(wp.id)}
                 onHighlight={onHighlightWorldPoint}
-                onStartPlacement={() => onStartPlacement(wp.id)}
+                onStartPlacement={() => handlePlacement(wp.id)}
                 onNameChange={setEditingName}
                 onSaveEdit={saveEdit}
                 onCancelEdit={cancelEdit}
@@ -181,9 +277,14 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
           })
         ) : (
           <div className="world-point-empty">
-            <div className="empty-icon">📍</div>
+            <div className="empty-icon">🎯</div>
             <div className="empty-text">No world points yet</div>
-            <div className="empty-hint">Click on images to create world points</div>
+            <div className="empty-hint">Click on images to create world points and start building your 3D model</div>
+            <div className="empty-tips">
+              <div>💡 Pro tip: Create points on distinct features</div>
+              <div>📐 Points help align multiple images</div>
+              <div>🎯 More points = better accuracy</div>
+            </div>
           </div>
         )}
       </div>
@@ -191,7 +292,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
   )
 }
 
-interface WorldPointItemProps {
+interface EnhancedWorldPointItemProps {
   worldPoint: WorldPoint
   isSelected: boolean
   isEditing: boolean
@@ -201,6 +302,8 @@ interface WorldPointItemProps {
   isMissingFromImage: boolean
   isInPlacementMode: boolean
   placementModeActive: boolean
+  wasRecentlyCreated: boolean
+  wasJustPlaced: boolean
   onSelect: (ctrlKey: boolean, shiftKey: boolean) => void
   onEdit: () => void
   onDelete: () => void
@@ -212,7 +315,7 @@ interface WorldPointItemProps {
   onKeyPress: (e: React.KeyboardEvent) => void
 }
 
-const WorldPointItem: React.FC<WorldPointItemProps> = ({
+const EnhancedWorldPointItem: React.FC<EnhancedWorldPointItemProps> = ({
   worldPoint,
   isSelected,
   isEditing,
@@ -222,6 +325,8 @@ const WorldPointItem: React.FC<WorldPointItemProps> = ({
   isMissingFromImage,
   isInPlacementMode,
   placementModeActive,
+  wasRecentlyCreated,
+  wasJustPlaced,
   onSelect,
   onEdit,
   onDelete,
@@ -235,136 +340,164 @@ const WorldPointItem: React.FC<WorldPointItemProps> = ({
   const [showActions, setShowActions] = useState(false)
   const [showConstraints, setShowConstraints] = useState(false)
 
+  const itemClasses = [
+    'world-point-item',
+    isSelected ? 'selected' : '',
+    hasBrokenConstraints ? 'broken' : '',
+    isMissingFromImage ? 'missing-from-image' : '',
+    isInPlacementMode ? 'in-placement-mode' : '',
+    wasRecentlyCreated ? 'just-created' : '',
+    wasJustPlaced ? 'optimistic-feedback' : ''
+  ].filter(Boolean).join(' ')
+
+  const constraintsText = involvedConstraints.length > 0
+    ? `Used in ${involvedConstraints.length} constraint${involvedConstraints.length !== 1 ? 's' : ''}`
+    : 'No constraints yet'
+
   return (
-    <div
-      className={`world-point-item ${isSelected ? 'selected' : ''} ${hasBrokenConstraints ? 'broken' : ''} ${isMissingFromImage ? 'missing-from-image' : ''} ${isInPlacementMode ? 'in-placement-mode' : ''}`}
-      onClick={(e) => {
-        // Prevent text selection on shift+click
-        if (e.shiftKey) {
-          e.preventDefault()
-        }
-        onSelect(e.ctrlKey || e.metaKey, e.shiftKey)
-      }}
-      onMouseEnter={() => {
-        setShowActions(true)
-        onHighlight(worldPoint.id)
-      }}
-      onMouseLeave={() => {
-        setShowActions(false)
-        onHighlight(null)
-      }}
-    >
-      <div className="wp-item-main">
-        <div className="wp-item-content">
-          <div className="wp-color-dot" style={{ backgroundColor: worldPoint.color }} />
+    <OptimisticFeedback trigger={wasJustPlaced}>
+      <div
+        className={itemClasses}
+        onClick={(e) => {
+          if (e.shiftKey) e.preventDefault()
+          onSelect(e.ctrlKey || e.metaKey, e.shiftKey)
+        }}
+        onMouseEnter={() => {
+          setShowActions(true)
+          onHighlight(worldPoint.id)
+        }}
+        onMouseLeave={() => {
+          setShowActions(false)
+          onHighlight(null)
+        }}
+      >
+        <div className="wp-item-main">
+          <div className="wp-item-content">
+            <DelightfulTooltip content={`Point ID: ${worldPoint.id}`}>
+              <div className="wp-color-dot world-point-hover" style={{ backgroundColor: worldPoint.color }} />
+            </DelightfulTooltip>
 
-          {isEditing ? (
-            <input
-              type="text"
-              value={editingName}
-              onChange={(e) => onNameChange(e.target.value)}
-              onKeyDown={onKeyPress}
-              onBlur={onSaveEdit}
-              onClick={(e) => e.stopPropagation()}
-              className="wp-name-input"
-              autoFocus
-            />
-          ) : (
-            <div className="wp-name">{worldPoint.name}</div>
-          )}
+            {isEditing ? (
+              <input
+                type="text"
+                value={editingName}
+                onChange={(e) => onNameChange(e.target.value)}
+                onKeyDown={onKeyPress}
+                onBlur={onSaveEdit}
+                onClick={(e) => e.stopPropagation()}
+                className="wp-name-input delightful-focus"
+                autoFocus
+                placeholder="Enter descriptive name..."
+              />
+            ) : (
+              <DelightfulTooltip content={constraintsText}>
+                <div className="wp-name">{worldPoint.name}</div>
+              </DelightfulTooltip>
+            )}
 
-          <div className="wp-info">
-            <span className="image-count">
-              <span className="count-icon">📷</span>
-              <span>{worldPoint.imagePoints.length}</span>
-            </span>
-            {involvedConstraints.length > 0 && (
-              <span className="constraint-count">
-                <span className="count-icon">⚙</span>
-                <span>{involvedConstraints.length}</span>
-              </span>
-            )}
-            {hasBrokenConstraints && (
-              <span className="broken-indicator" title="Has broken constraints">⚠️</span>
-            )}
-            {isInPlacementMode && (
-              <span className="placement-indicator" title="Click on image to place">🎯</span>
+            <div className="wp-info">
+              <DelightfulTooltip content={`Visible in ${worldPoint.imagePoints.length} image${worldPoint.imagePoints.length !== 1 ? 's' : ''}`}>
+                <span className="image-count">
+                  <span className="count-icon">📷</span>
+                  <span>{worldPoint.imagePoints.length}</span>
+                </span>
+              </DelightfulTooltip>
+
+              {involvedConstraints.length > 0 && (
+                <DelightfulTooltip content={constraintsText}>
+                  <span className="constraint-count">
+                    <span className="count-icon">⚙</span>
+                    <span>{involvedConstraints.length}</span>
+                  </span>
+                </DelightfulTooltip>
+              )}
+
+              {hasBrokenConstraints && (
+                <DelightfulTooltip content="Some constraints are broken - check connections">
+                  <span className="broken-indicator" title="Has broken constraints">⚠️</span>
+                </DelightfulTooltip>
+              )}
+
+              {isInPlacementMode && (
+                <DelightfulTooltip content="Click on image to place this point">
+                  <span className="placement-indicator">🎯</span>
+                </DelightfulTooltip>
+              )}
+            </div>
+          </div>
+
+          <div className={`wp-item-actions ${showActions ? 'visible' : ''}`}>
+            {!isEditing && !placementModeActive && (
+              <>
+                <DelightfulTooltip content={isMissingFromImage ? "Place this point on current image" : "Point already in current image"}>
+                  <RippleButton
+                    onClick={() => {
+                      if (isMissingFromImage) onStartPlacement()
+                    }}
+                    className={`btn-place ${!isMissingFromImage ? 'disabled' : ''}`}
+                    disabled={!isMissingFromImage}
+                    variant="tool"
+                  >
+                    +
+                  </RippleButton>
+                </DelightfulTooltip>
+
+                <DelightfulTooltip content="Rename world point">
+                  <RippleButton
+                    onClick={() => onEdit()}
+                    className="btn-edit"
+                    variant="tool"
+                  >
+                    ✎
+                  </RippleButton>
+                </DelightfulTooltip>
+
+                {involvedConstraints.length > 0 && (
+                  <DelightfulTooltip content="Show involved constraints">
+                    <RippleButton
+                      onClick={() => setShowConstraints(!showConstraints)}
+                      className="btn-constraints"
+                      variant="tool"
+                    >
+                      ⟷
+                    </RippleButton>
+                  </DelightfulTooltip>
+                )}
+
+                <DelightfulTooltip content="Delete world point">
+                  <RippleButton
+                    onClick={() => onDelete()}
+                    className="btn-delete"
+                    variant="tool"
+                  >
+                    ×
+                  </RippleButton>
+                </DelightfulTooltip>
+              </>
             )}
           </div>
         </div>
 
-        <div className={`wp-item-actions ${showActions ? 'visible' : ''}`}>
-          {!isEditing && !placementModeActive && (
-            <>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  if (isMissingFromImage) {
-                    onStartPlacement()
-                  }
-                }}
-                className={`btn-place ${!isMissingFromImage ? 'disabled' : ''}`}
-                title={isMissingFromImage ? "Place this point on current image" : "Point already in current image"}
-                disabled={!isMissingFromImage}
+        {showConstraints && involvedConstraints.length > 0 && (
+          <div className="wp-constraints">
+            {involvedConstraints.map(constraint => (
+              <div
+                key={constraint.id}
+                className={`wp-constraint-item ${!constraint.enabled ? 'disabled' : ''} ${constraint.enabled ? 'constraint-completion' : ''}`}
               >
-                +
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onEdit()
-                }}
-                className="btn-edit"
-                title="Rename world point"
-              >
-                ✎
-              </button>
-              {involvedConstraints.length > 0 && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setShowConstraints(!showConstraints)
-                  }}
-                  className="btn-constraints"
-                  title="Show involved constraints"
-                >
-                  ⟷
-                </button>
-              )}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onDelete()
-                }}
-                className="btn-delete"
-                title="Delete world point"
-              >
-                ×
-              </button>
-            </>
-          )}
-        </div>
+                <span className="constraint-icon">{getConstraintIcon(constraint.type)}</span>
+                <span className="constraint-name">{getConstraintDisplayName(constraint)}</span>
+                {!constraint.enabled && <span className="disabled-indicator">🚫</span>}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
-
-      {showConstraints && involvedConstraints.length > 0 && (
-        <div className="wp-constraints">
-          {involvedConstraints.map(constraint => (
-            <div
-              key={constraint.id}
-              className={`wp-constraint-item ${!constraint.enabled ? 'disabled' : ''}`}
-            >
-              <span className="constraint-icon">{getConstraintIcon(constraint.type)}</span>
-              <span className="constraint-name">{getConstraintDisplayName(constraint)}</span>
-              {!constraint.enabled && <span className="disabled-indicator">🚫</span>}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+    </OptimisticFeedback>
   )
 }
 
-// Helper functions
+// Helper functions (same as original, but with enhanced UI feedback)
 function getConstraintPointIds(constraint: Constraint): string[] {
   switch (constraint.type) {
     case 'distance':

@@ -1,9 +1,14 @@
-// Main Fusion 360-inspired layout for Pictorigo
+// Main layout with new workspace paradigm
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useProject } from '../hooks/useProject'
 import { useSelection, useSelectionKeyboard } from '../hooks/useSelection'
 import { useConstraints } from '../hooks/useConstraints'
+import { useEnhancedProject } from '../hooks/useEnhancedProject'
+import { useLines } from '../hooks/useLines'
+import { Line } from '../types/project'
+
+// UI Components
 import ConstraintToolbar from './ConstraintToolbar'
 import ConstraintPropertyPanel from './ConstraintPropertyPanel'
 import ImageNavigationToolbar from './ImageNavigationToolbar'
@@ -11,42 +16,65 @@ import ConstraintTimeline from './ConstraintTimeline'
 import ImageViewer, { ImageViewerRef } from './ImageViewer'
 import WorldView, { WorldViewRef } from './WorldView'
 import WorldPointPanel from './WorldPointPanel'
-import WorkspaceManager, { WorkspaceSwitcher } from './WorkspaceManager'
 import EditLineWindow from './EditLineWindow'
-import { WorkspaceType, Line } from '../types/project'
+
+// Enhanced workspace components
+import {
+  WorkspaceManager,
+  WorkspaceSwitcher,
+  WorkspaceStatus,
+  SplitViewContainer
+} from './WorkspaceManager'
+
+// Creation Tools
+import CreationToolsManager from './tools/CreationToolsManager'
+
+// Styles
+import '../styles/enhanced-workspace.css'
+import '../styles/tools.css'
+
+type ActiveTool = 'select' | 'point' | 'line' | 'plane' | 'circle'
 
 export const MainLayout: React.FC = () => {
-  // Note: Removed selectedWorldPointIds and highlightedWorldPointId - using only constraint selection (blue circles)
-  const [placementMode, setPlacementMode] = useState<{
-    active: boolean
-    worldPointId: string | null
-  }>({ active: false, worldPointId: null })
+  // Legacy project system (for now)
+  const legacyProject = useProject()
 
-  // Edit Line Window state
-  const [editLineState, setEditLineState] = useState<{
-    isOpen: boolean
-    lineId: string | null
-  }>({ isOpen: false, lineId: null })
+  // Enhanced project system (future)
+  const enhancedProject = useEnhancedProject()
 
-  // ZOOM FUNCTIONALITY REMOVED
+  // Tool state management
+  const [activeTool, setActiveTool] = useState<ActiveTool>('select')
+  const [constructionPreview, setConstructionPreview] = useState<{
+    type: 'line'
+    pointA?: string
+    pointB?: string
+    showToCursor?: boolean
+  } | null>(null)
 
-  const imageViewerRef = useRef<ImageViewerRef>(null)
-  const worldViewRef = useRef<WorldViewRef>(null)
+  // Line management
+  const {
+    lines,
+    createLine,
+    updateLine,
+    deleteLine,
+    toggleLineVisibility,
+    getLinesForPoints,
+    getLineById,
+    lineCount
+  } = useLines()
 
+  // Use legacy project for now, but prepare for enhanced
   const {
     project,
     currentImage,
     currentImageId,
     setCurrentImageId,
     worldPoints,
-    lines,
     constraints,
     addConstraint,
     updateConstraint,
     deleteConstraint,
     toggleConstraint,
-    updateLine,
-    deleteLine,
     addImage,
     renameImage,
     deleteImage,
@@ -56,16 +84,9 @@ export const MainLayout: React.FC = () => {
     renameWorldPoint,
     deleteWorldPoint,
     addImagePointToWorldPoint
-  } = useProject()
+  } = legacyProject
 
-  // DEBUG: Log project data on every render
-  console.log('🔥 MAIN LAYOUT DEBUG:')
-  console.log('  - project exists:', !!project)
-  console.log('  - worldPoints count:', Object.keys(worldPoints).length)
-  console.log('  - lines count:', Object.keys(lines).length)
-  console.log('  - lines:', lines)
-  console.log('  - editLineState:', editLineState)
-
+  // Selection and constraints
   const {
     selectedPoints,
     selectedLines,
@@ -98,23 +119,82 @@ export const MainLayout: React.FC = () => {
     toggleConstraint
   )
 
-  // Convert selectedLines to both IDs and full Line objects
-  const selectedLineIds = selectedLines.map(lineObj => lineObj.id)
-  const selectedLineObjects = selectedLines.map(lineObj => {
-    const lineData = lines[lineObj.id]
-    return {
-      id: lineObj.id,
-      name: lineData?.name || `L${lineObj.id.slice(-4)}`,
-      pointA: lineObj.pointA,
-      pointB: lineObj.pointB,
-      type: lineData?.type || 'segment',
-      isVisible: lineData?.isVisible ?? true,
-      color: lineData?.color || '#0696d7',
-      isConstruction: lineData?.isConstruction || false,
-      createdAt: lineData?.createdAt || new Date().toISOString()
+  // UI state
+  const [placementMode, setPlacementMode] = useState<{
+    active: boolean
+    worldPointId: string | null
+  }>({ active: false, worldPointId: null })
+
+  // Edit Line Window state
+  const [editLineState, setEditLineState] = useState<{
+    isOpen: boolean
+    lineId: string | null
+  }>({ isOpen: false, lineId: null })
+
+  // Refs for viewer components
+  const imageViewerRef = useRef<ImageViewerRef>(null)
+  const worldViewRef = useRef<WorldViewRef>(null)
+
+  // Workspace state (using enhanced project when ready, fallback to local state)
+  const [localWorkspaceState, setLocalWorkspaceState] = useState({
+    currentWorkspace: 'image' as 'image' | 'world' | 'split',
+    imageWorkspace: {
+      currentImageId: currentImageId,
+      scale: 1.0,
+      pan: { x: 0, y: 0 },
+      showImagePoints: true,
+      showProjections: true
+    },
+    worldWorkspace: {
+      viewMatrix: {
+        scale: 100,
+        rotation: { x: 0, y: 0, z: 0 },
+        translation: { x: 0, y: 0, z: 0 }
+      },
+      renderMode: 'wireframe' as const,
+      showAxes: true,
+      showGrid: true,
+      showCameras: true
+    },
+    splitWorkspace: {
+      splitDirection: 'horizontal' as const,
+      splitRatio: 0.5,
+      syncSelection: true,
+      syncNavigation: false
     }
   })
 
+  // Update local workspace when current image changes
+  useEffect(() => {
+    setLocalWorkspaceState(prev => ({
+      ...prev,
+      imageWorkspace: {
+        ...prev.imageWorkspace,
+        currentImageId: currentImageId
+      }
+    }))
+  }, [currentImageId])
+
+  // Constraint logic - Convert selectedLines to both IDs and objects
+  const selectedLineIds = selectedLines.map(lineObj => lineObj.id)
+
+  // Helper to convert LineData to Line interface with defaults
+  const createLineFromData = (lineData: any, lineObj: any): Line => ({
+    id: lineObj.id,
+    name: lineData?.name || `L${lineObj.id.slice(-4)}`,
+    pointA: lineObj.pointA,
+    pointB: lineObj.pointB,
+    type: lineData?.type || 'segment',
+    isVisible: lineData?.isVisible ?? true,
+    color: lineData?.color || '#0696d7',
+    isConstruction: lineData?.isConstruction || false,
+    createdAt: lineData?.createdAt || new Date().toISOString()
+  })
+
+  const selectedLineObjects = selectedLines.map(lineObj => {
+    const lineData = lines[lineObj.id]
+    return createLineFromData(lineData, lineObj)
+  })
   const allConstraints = getAllConstraints(selectedPoints, selectedLineObjects)
   const availableConstraints = getAvailableConstraints(selectedPoints, selectedLineObjects)
 
@@ -122,32 +202,17 @@ export const MainLayout: React.FC = () => {
     Object.entries(worldPoints).map(([id, wp]) => [id, wp.name])
   )
 
-  // Note: Removed world point selection handlers - using only constraint selection
-
-  // Point click handler using constraint selection (blue circles only)
+  // Point interaction handlers
   const handleEnhancedPointClick = (pointId: string, ctrlKey: boolean, shiftKey: boolean) => {
-    // Use constraint selection (blue circles with numbers) for all point interaction
-    handlePointClick(pointId, ctrlKey, shiftKey)
-  }
-
-  // Enhanced line click handler to open EditLineWindow
-  const handleEnhancedLineClick = (lineId: string, ctrlKey: boolean, shiftKey: boolean) => {
-    console.log('🔥 LINE CLICK DEBUG:')
-    console.log('  - lineId:', lineId)
-    console.log('  - ctrlKey:', ctrlKey)
-    console.log('  - shiftKey:', shiftKey)
-    console.log('  - lines available:', Object.keys(lines))
-    console.log('  - line exists:', !!lines[lineId])
-
-    // If not holding modifier keys, open edit window
-    if (!ctrlKey && !shiftKey) {
-      console.log('  - Opening edit window for line:', lineId)
-      setEditLineState({ isOpen: true, lineId })
-      console.log('  - Edit state set to:', { isOpen: true, lineId })
-    } else {
-      // Use constraint selection for multi-selection
-      handleLineClick(lineId, ctrlKey, shiftKey)
+    // If Line tool is active, dispatch event for slot filling
+    if (activeTool === 'line') {
+      const event = new CustomEvent('lineToolPointClick', { detail: { pointId } })
+      window.dispatchEvent(event)
+      return // Don't do normal selection when line tool is active
     }
+
+    // Normal selection behavior
+    handlePointClick(pointId, ctrlKey, shiftKey)
   }
 
   // Placement mode handlers
@@ -157,6 +222,26 @@ export const MainLayout: React.FC = () => {
 
   const cancelPlacementMode = () => {
     setPlacementMode({ active: false, worldPointId: null })
+  }
+
+  const handleImageClick = (u: number, v: number) => {
+    if (placementMode.active && placementMode.worldPointId && currentImage) {
+      // Legacy placement mode (adding IP to existing WP)
+      addImagePointToWorldPoint(placementMode.worldPointId, currentImage.id, u, v)
+      cancelPlacementMode()
+    } else if (activeTool === 'point' && currentImage) {
+      // NEW: Only create world point when WP tool is explicitly active
+      createWorldPoint(currentImage.id, u, v)
+      // Auto-deactivate tool after point creation
+      setActiveTool('select')
+    }
+    // Default behavior: do nothing (selection only)
+  }
+
+  const handleMovePoint = (worldPointId: string, u: number, v: number) => {
+    if (currentImage) {
+      addImagePointToWorldPoint(worldPointId, currentImage.id, u, v)
+    }
   }
 
   // EditLineWindow handlers
@@ -172,117 +257,153 @@ export const MainLayout: React.FC = () => {
     deleteLine(lineId)
   }
 
-  const handleImageClick = (u: number, v: number) => {
-    if (placementMode.active && placementMode.worldPointId && currentImage) {
-      // Place existing world point in current image
-      addImagePointToWorldPoint(placementMode.worldPointId, currentImage.id, u, v)
-      cancelPlacementMode()
-    } else if (currentImage) {
-      // Create new world point
-      createWorldPoint(currentImage.id, u, v)
+  // Enhanced line click handler to open EditLineWindow
+  const handleEnhancedLineClick = (lineId: string, ctrlKey: boolean, shiftKey: boolean) => {
+    console.log('🔥 ENHANCED LINE CLICK DEBUG:')
+    console.log('  - lineId:', lineId)
+    console.log('  - ctrlKey:', ctrlKey)
+    console.log('  - shiftKey:', shiftKey)
+    console.log('  - lines available:', Object.keys(lines).length)
+    console.log('  - line exists:', !!lines[lineId])
+
+    // If not holding modifier keys, open edit window
+    if (!ctrlKey && !shiftKey) {
+      console.log('  - Opening edit window for line:', lineId)
+      setEditLineState({ isOpen: true, lineId })
+      console.log('  - Edit state set to:', { isOpen: true, lineId })
+    } else {
+      // Use constraint selection for multi-selection
+      // TODO: Wire up line selection for constraints
+      console.log('  - Multi-selection not yet implemented in Enhanced layout')
     }
   }
 
-  const handleMovePoint = (worldPointId: string, u: number, v: number) => {
-    if (currentImage) {
-      // Update the world point's position in the current image
-      addImagePointToWorldPoint(worldPointId, currentImage.id, u, v)
-    }
+  // Workspace data for status display
+  const imageInfo = {
+    currentImage: currentImage?.name,
+    totalImages: Object.keys(project?.images || {}).length,
+    pointsInCurrentImage: currentImage ? getImagePointCount(currentImage.id) : 0
   }
 
-  // ZOOM HANDLERS REMOVED
-
-  // Check which world points are missing from current image
-  const getMissingWorldPoints = () => {
-    if (!currentImage) return []
-    return Object.values(worldPoints).filter(wp =>
-      !wp.imagePoints.some(ip => ip.imageId === currentImage.id)
-    )
+  const worldInfo = {
+    totalPoints: Object.keys(worldPoints).length,
+    totalConstraints: constraints.length,
+    optimizationStatus: 'idle' // TODO: Get from actual optimization state
   }
 
-  // Get the latest (most recently created) world point that's missing from current image
-  const getLatestMissingWorldPoint = () => {
-    const missingWPs = getMissingWorldPoints()
-    if (missingWPs.length === 0) return null
-
-    // Find the WP with the highest number in its name (latest created)
-    return missingWPs.reduce((latest, wp) => {
-      const currentNum = parseInt(wp.name.replace('WP', '')) || 0
-      const latestNum = parseInt(latest.name.replace('WP', '')) || 0
-      return currentNum > latestNum ? wp : latest
-    })
-  }
-
-  // Auto-suggest placing latest WP when switching to an image without any WPs
-  useEffect(() => {
-    if (!currentImage || placementMode.active) return
-
-    const missingWPs = getMissingWorldPoints()
-    const imageHasAnyWPs = getImagePointCount(currentImage.id) > 0
-
-    // No automatic prompts - user can use "Place Latest" button in WorldPointPanel instead
-    // This provides a non-intrusive workflow
-  }, [currentImageId, worldPoints, placementMode.active, currentImage, getImagePointCount])
-
-  // Keyboard shortcuts for selection
+  // Keyboard shortcuts
   useSelectionKeyboard(
-    () => selectAllPoints(Object.keys(worldPoints)), // Ctrl+A: select all points
-    clearSelection, // Ctrl+D or Escape: clear constraint selection (blue circles)
-    () => {} // Delete key: we'll handle deletion separately
+    () => selectAllPoints(Object.keys(worldPoints)),
+    clearSelection,
+    () => {} // Delete handler
   )
 
-  // Escape key handler for canceling placement mode
+  // Keyboard shortcuts for tools and escape handling
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && placementMode.active) {
-        cancelPlacementMode()
+      // Escape key handling
+      if (event.key === 'Escape') {
+        if (placementMode.active) {
+          cancelPlacementMode()
+        } else if (activeTool !== 'select') {
+          setActiveTool('select')
+        }
+        return
+      }
+
+      // Tool activation shortcuts (only if no input is focused)
+      if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        switch (event.key.toLowerCase()) {
+          case 'w':
+            setActiveTool(activeTool === 'point' ? 'select' : 'point')
+            break
+          case 'l':
+            if (selectedPoints.length <= 2) { // Only activate if valid selection
+              setActiveTool(activeTool === 'line' ? 'select' : 'line')
+            }
+            break
+          // Add more shortcuts later for P (plane), C (circle), etc.
+        }
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [placementMode.active])
+  }, [placementMode.active, activeTool, selectedPoints.length])
 
-  const getSelectionSummary = () => {
-    if (!project) return ''
+  // Content for different workspaces
+  const renderImageWorkspace = () => (
+    <div className="workspace-image-view">
+      {currentImage ? (
+        <div className="image-viewer-container">
+          <ImageViewer
+            ref={imageViewerRef}
+            image={currentImage}
+            worldPoints={worldPoints}
+            lines={lines}
+            selectedPoints={selectedPoints}
+            hoveredConstraintId={hoveredConstraintId}
+            placementMode={placementMode}
+            activeConstraintType={activeConstraintType}
+            constructionPreview={constructionPreview}
+            onPointClick={handleEnhancedPointClick}
+            onCreatePoint={handleImageClick}
+            onMovePoint={handleMovePoint}
+          />
+        </div>
+      ) : (
+        <div className="no-image-state">
+          <div className="empty-state-content">
+            <h3>No Image Selected</h3>
+            <p>Add images using the sidebar to get started</p>
+            <button
+              className="btn-primary"
+              onClick={() => {
+                // TODO: Trigger image add dialog
+              }}
+            >
+              📷 Add First Image
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
 
-    const parts = []
-    if (selectedPoints.length > 0) {
-      parts.push(`${selectedPoints.length} point${selectedPoints.length !== 1 ? 's' : ''}`)
-    }
-    if (selectedLines.length > 0) {
-      parts.push(`${selectedLines.length} line${selectedLines.length !== 1 ? 's' : ''}`)
-    }
+  const renderWorldWorkspace = () => (
+    <div className="workspace-world-view">
+      <WorldView
+        ref={worldViewRef}
+        project={project!}
+        selectedPoints={selectedPoints}
+        selectedLines={selectedLineIds}
+        selectedPlanes={selectedPlanes}
+        hoveredConstraintId={hoveredConstraintId}
+        onPointClick={handleEnhancedPointClick}
+        onLineClick={handleEnhancedLineClick}
+        onPlaneClick={handlePlaneClick}
+      />
+    </div>
+  )
 
-    return parts.length > 0 ? `Selection: ${parts.join(', ')}` : 'No selection'
-  }
+  const renderSplitWorkspace = () => (
+    <div className="workspace-split-view">
+      <SplitViewContainer
+        splitDirection={localWorkspaceState.splitWorkspace.splitDirection}
+        splitRatio={localWorkspaceState.splitWorkspace.splitRatio}
+        onSplitRatioChange={(ratio) =>
+          setLocalWorkspaceState(prev => ({
+            ...prev,
+            splitWorkspace: { ...prev.splitWorkspace, splitRatio: ratio }
+          }))
+        }
+        leftContent={renderImageWorkspace()}
+        rightContent={renderWorldWorkspace()}
+      />
+    </div>
+  )
 
-  // VISUAL DEBUG OVERLAY
-  const [debugInfo, setDebugInfo] = useState<string>('')
-
-  useEffect(() => {
-    const updateDebug = () => {
-      const info = `
-Window: ${window.innerWidth}x${window.innerHeight}
-Body scroll: ${document.body.scrollWidth}x${document.body.scrollHeight}
-Doc scroll: ${document.documentElement.scrollWidth}x${document.documentElement.scrollHeight}
-App layout: ${document.querySelector('.app-layout')?.getBoundingClientRect().width}x${document.querySelector('.app-layout')?.getBoundingClientRect().height}
-      `.trim()
-      setDebugInfo(info)
-    }
-
-    updateDebug()
-    const interval = setInterval(updateDebug, 1000)
-    window.addEventListener('resize', updateDebug)
-
-    return () => {
-      clearInterval(interval)
-      window.removeEventListener('resize', updateDebug)
-    }
-  }, [])
-
-  // ZOOM DROPDOWN HANDLER REMOVED
-
+  // Loading state
   if (!project) {
     return (
       <div className="app-layout">
@@ -295,14 +416,21 @@ App layout: ${document.querySelector('.app-layout')?.getBoundingClientRect().wid
 
   return (
     <>
-    <WorkspaceManager defaultWorkspace={project.settings.defaultWorkspace || 'image'}>
-      {(currentWorkspace, setCurrentWorkspace) => (
-        <div className="app-layout">
-          {/* Top toolbar */}
+    <WorkspaceManager
+      workspaceState={localWorkspaceState}
+      onWorkspaceStateChange={(updates) =>
+        setLocalWorkspaceState(prev => ({ ...prev, ...updates as any }))
+      }
+    >
+      {(currentWorkspace, workspaceActions) => (
+        <div className="app-layout enhanced-layout">
+          {/* Enhanced top toolbar */}
           <div className="top-toolbar">
             <WorkspaceSwitcher
               currentWorkspace={currentWorkspace}
-              onWorkspaceChange={setCurrentWorkspace}
+              onWorkspaceChange={workspaceActions.setWorkspace}
+              imageHasContent={imageInfo.totalImages > 0}
+              worldHasContent={worldInfo.totalPoints > 0}
             />
 
             <div className="toolbar-section">
@@ -313,12 +441,12 @@ App layout: ${document.querySelector('.app-layout')?.getBoundingClientRect().wid
               {/* DEBUG: Manual trigger for floating window */}
               <button
                 className="btn-tool"
-                style={{background: 'red', color: 'white'}}
                 onClick={() => {
-                  console.log('🔥 MANUAL TRIGGER CLICKED')
-                  // Create a fake line for testing
-                  const fakeLineId = 'test-line-123'
-                  setEditLineState({ isOpen: true, lineId: fakeLineId })
+                  console.log('🔥 ENHANCED MANUAL TRIGGER CLICKED')
+                  // Use first available line or create a test line entry
+                  const lineIds = Object.keys(lines)
+                  const testLineId = lineIds.length > 0 ? lineIds[0] : 'test-line-123'
+                  setEditLineState({ isOpen: true, lineId: testLineId })
                 }}
               >
                 🔥 TEST FLOAT
@@ -369,47 +497,42 @@ App layout: ${document.querySelector('.app-layout')?.getBoundingClientRect().wid
 
             {/* Center: Workspace-specific viewer */}
             <div className="viewer-area">
-              {currentWorkspace === 'image' ? (
-                <div className="image-viewer-container">
-                  {currentImage ? (
-                    <ImageViewer
-                      ref={imageViewerRef}
-                      image={currentImage}
-                      worldPoints={worldPoints}
-                      selectedPoints={selectedPoints}
-                      hoveredConstraintId={hoveredConstraintId}
-                      placementMode={placementMode}
-                      activeConstraintType={activeConstraintType}
-                      onPointClick={handleEnhancedPointClick}
-                      onCreatePoint={handleImageClick}
-                      onMovePoint={handleMovePoint}
-                    />
-                  ) : (
-                    <div className="no-image-state">
-                      <h3>No Image Selected</h3>
-                      <p>Add images using the sidebar to get started</p>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="world-viewer-container">
-                  <WorldView
-                    ref={worldViewRef}
-                    project={project}
-                    selectedPoints={selectedPoints}
-                    selectedLines={selectedLineIds}
-                    selectedPlanes={selectedPlanes}
-                    hoveredConstraintId={hoveredConstraintId}
-                    onPointClick={handleEnhancedPointClick}
-                    onLineClick={handleEnhancedLineClick}
-                    onPlaneClick={handlePlaneClick}
-                  />
-                </div>
-              )}
+              {currentWorkspace === 'image' && renderImageWorkspace()}
+              {currentWorkspace === 'world' && renderWorldWorkspace()}
+              {currentWorkspace === 'split' && renderSplitWorkspace()}
             </div>
 
             {/* Right sidebar: Properties & Timeline */}
             <div className="sidebar-right">
+              {/* Creation Tools */}
+              <CreationToolsManager
+                selectedPoints={selectedPoints}
+                selectedLines={selectedLineIds}
+                selectedPlanes={selectedPlanes}
+                activeTool={activeTool}
+                onToolChange={setActiveTool}
+                worldPointNames={worldPointNames}
+                onCreatePoint={(imageId: string, u: number, v: number) => handleImageClick(u, v)}
+                onCreateLine={(pointIds, constraints) => {
+                  // Enhanced line creation with constraints
+                  const lineId = createLine(pointIds, 'segment')
+                  if (lineId && constraints) {
+                    // TODO: Apply line-local constraints
+                    console.log('Line created with constraints:', lineId, constraints)
+                  }
+                }}
+                onCreatePlane={(definition) => {
+                  // TODO: Implement plane creation
+                  console.log('Create plane:', definition)
+                }}
+                onCreateCircle={(definition) => {
+                  // TODO: Implement circle creation
+                  console.log('Create circle:', definition)
+                }}
+                onConstructionPreviewChange={setConstructionPreview}
+                currentImageId={currentImageId}
+              />
+
               <ConstraintPropertyPanel
                 activeConstraintType={activeConstraintType}
                 selectedPoints={selectedPoints}
@@ -428,7 +551,9 @@ App layout: ${document.querySelector('.app-layout')?.getBoundingClientRect().wid
                 selectedWorldPointIds={selectedPoints}
                 currentImageId={currentImageId}
                 placementMode={placementMode}
-                onSelectWorldPoint={(pointId: string, ctrlKey: boolean, shiftKey: boolean) => handlePointClick(pointId, ctrlKey, shiftKey)}
+                onSelectWorldPoint={(pointId: string, ctrlKey: boolean, shiftKey: boolean) =>
+                  handlePointClick(pointId, ctrlKey, shiftKey)
+                }
                 onHighlightWorldPoint={() => {}}
                 onRenameWorldPoint={renameWorldPoint}
                 onDeleteWorldPoint={deleteWorldPoint}
@@ -450,15 +575,15 @@ App layout: ${document.querySelector('.app-layout')?.getBoundingClientRect().wid
             </div>
           </div>
 
-          {/* Bottom status bar */}
+          {/* Enhanced bottom status bar */}
           <div className="status-bar">
-            <span>Workspace: {currentWorkspace === 'image' ? 'Image View' : 'World View'}</span>
-            <span>Image: {currentImage?.name || 'None'}</span>
-            <span>WP: {Object.keys(worldPoints).length}</span>
-            <span>Lines: {Object.keys(lines).length}</span>
-            <span>Constraints: {constraints.length}</span>
-            <span>{getSelectionSummary()}</span>
-            <span style={{marginLeft: 'auto', color: '#888'}}>v0.1-MAIN</span>
+            <WorkspaceStatus
+              workspace={currentWorkspace}
+              imageInfo={imageInfo}
+              worldInfo={worldInfo}
+            />
+            <span className="selection-summary">{selectionSummary}</span>
+            <span style={{marginLeft: 'auto', color: '#888'}}>v0.3-ENHANCED</span>
           </div>
         </div>
       )}
@@ -466,13 +591,16 @@ App layout: ${document.querySelector('.app-layout')?.getBoundingClientRect().wid
 
     {/* Edit Line Window - Truly free floating over entire viewport */}
     <EditLineWindow
-      line={editLineState.lineId ? lines[editLineState.lineId] || null : null}
+      line={editLineState.lineId && lines[editLineState.lineId] ? {
+        ...lines[editLineState.lineId],
+        type: 'segment' as const
+      } : null}
       isOpen={editLineState.isOpen}
       onClose={handleEditLineClose}
       onSave={handleEditLineSave}
       onDelete={handleEditLineDelete}
     />
-    </>
+  </>
   )
 }
 
