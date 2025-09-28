@@ -285,12 +285,13 @@ export const useConstraints = (
         return !!constraintParameters.distance
       case 'angle':
         return !!constraintParameters.angle
-      case 'fixed':
+      case 'fixed': {
         // Allow 0 values and require at least one coordinate to be set
         const hasX = constraintParameters.x !== undefined && constraintParameters.x !== null && constraintParameters.x !== ''
         const hasY = constraintParameters.y !== undefined && constraintParameters.y !== null && constraintParameters.y !== ''
         const hasZ = constraintParameters.z !== undefined && constraintParameters.z !== null && constraintParameters.z !== ''
         return hasX || hasY || hasZ
+      }
       case 'rectangle':
         return true // No additional parameters required
       case 'parallel':

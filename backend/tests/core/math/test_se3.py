@@ -2,8 +2,7 @@
 
 import numpy as np
 import pytest
-
-from pictorigo.core.math.se3 import se3_exp, se3_log, compose, invert, skew_symmetric
+from pictorigo.core.math.se3 import compose, invert, se3_exp, se3_log, skew_symmetric
 
 
 class TestSE3:
@@ -60,11 +59,7 @@ class TestSE3:
         v = np.array([1, 2, 3])
         S = skew_symmetric(v)
 
-        expected = np.array([
-            [0, -3, 2],
-            [3, 0, -1],
-            [-2, 1, 0]
-        ])
+        expected = np.array([[0, -3, 2], [3, 0, -1], [-2, 1, 0]])
 
         np.testing.assert_allclose(S, expected)
 

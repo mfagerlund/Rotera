@@ -6,6 +6,7 @@ import type {
 import type { ISelectable } from '../types/selectable'
 import type { IValidatable, ValidationContext, ValidationResult } from '../validation/validator'
 import { ValidationEngine } from '../validation/validator'
+import { ReferenceManager, createReferenceManager, type IEntityRepository } from '../services/ReferenceManager'
 
 // Import our DTOs and domain classes
 import { WorldPoint, type WorldPointDto, type WorldPointRepository } from '../entities/world-point'
@@ -53,7 +54,8 @@ export class Repository implements
   CameraRepository,
   ImageRepository,
   ConstraintRepository,
-  ValidationContext
+  ValidationContext,
+  IEntityRepository
 {
   private pointCache = new Map<PointId, WorldPoint>()
   private lineCache = new Map<LineId, Line>()
@@ -66,13 +68,52 @@ export class Repository implements
   private dependencyGraph = new Map<EntityId, Set<EntityId>>()
   private dependentGraph = new Map<EntityId, Set<EntityId>>()
 
+  // Smart reference management
+  private referenceManager: ReferenceManager
+
   constructor(private project: ProjectDto) {
     this.buildDependencyGraph()
+    this.referenceManager = createReferenceManager(this)
   }
 
   // Factory method to create repository from DTO
   static fromProjectDto(dto: ProjectDto): Repository {
     return new Repository(dto)
+  }
+
+  // Get reference manager for advanced operations
+  getReferenceManager(): ReferenceManager {
+    return this.referenceManager
+  }
+
+  // Batch loading methods for performance optimization
+  getPointsById(ids: PointId[]): WorldPoint[] {
+    return this.referenceManager.batchResolve<WorldPoint>(ids as EntityId[], 'point')
+  }
+
+  getLinesById(ids: LineId[]): Line[] {
+    return this.referenceManager.batchResolve<Line>(ids as EntityId[], 'line')
+  }
+
+  getPlanesById(ids: PlaneId[]): Plane[] {
+    return this.referenceManager.batchResolve<Plane>(ids as EntityId[], 'plane')
+  }
+
+  getCamerasById(ids: CameraId[]): Camera[] {
+    return this.referenceManager.batchResolve<Camera>(ids as EntityId[], 'camera')
+  }
+
+  getImagesById(ids: ImageId[]): Image[] {
+    return this.referenceManager.batchResolve<Image>(ids as EntityId[], 'image')
+  }
+
+  getConstraintsById(ids: ConstraintId[]): Constraint[] {
+    return this.referenceManager.batchResolve<Constraint>(ids as EntityId[], 'constraint')
+  }
+
+  // Preload entity graphs for performance-critical operations
+  preloadEntityGraph(rootIds: EntityId[], depth: number = 2): void {
+    this.referenceManager.preloadReferences(rootIds, { depth })
   }
 
   // Export current state as DTO
@@ -499,20 +540,23 @@ export class Repository implements
     }
   }
 
-  // Internal deletion methods
+  // Internal deletion methods with reference invalidation
   private deletePointInternal(id: PointId): void {
     delete this.project.points[id]
     this.pointCache.delete(id)
+    this.referenceManager.invalidateReferences(id as EntityId)
   }
 
   private deleteLineInternal(id: LineId): void {
     delete this.project.lines[id]
     this.lineCache.delete(id)
+    this.referenceManager.invalidateReferences(id as EntityId)
   }
 
   private deleteConstraintInternal(id: ConstraintId): void {
     this.project.constraints = this.project.constraints.filter(c => c.id !== id)
     this.constraintCache.delete(id)
+    this.referenceManager.invalidateReferences(id as EntityId)
   }
 
   // Validation
@@ -529,12 +573,13 @@ export class Repository implements
     return ValidationEngine.validateProject(entities, this)
   }
 
-  // CRUD operations
+  // CRUD operations with reference management
   addPoint(dto: WorldPointDto): WorldPoint {
     this.project.points[dto.id] = dto
     const point = WorldPoint.fromDTO(dto, this)
     this.pointCache.set(dto.id, point)
     this.buildDependencyGraph()
+    // No need to invalidate - new entity doesn't affect existing references
     return point
   }
 
@@ -543,6 +588,7 @@ export class Repository implements
     const line = Line.fromDTO(dto, this)
     this.lineCache.set(dto.id, line)
     this.buildDependencyGraph()
+    // No need to invalidate - new entity doesn't affect existing references
     return line
   }
 
@@ -551,7 +597,43 @@ export class Repository implements
     const constraint = Constraint.fromDTO(dto, this)
     this.constraintCache.set(dto.id, constraint)
     this.buildDependencyGraph()
+    // No need to invalidate - new entity doesn't affect existing references
     return constraint
+  }
+
+  // Update operations with reference invalidation
+  updatePoint(id: PointId, updates: Partial<WorldPointDto>): boolean {
+    const existing = this.project.points[id]
+    if (!existing) return false
+
+    this.project.points[id] = { ...existing, ...updates, updatedAt: new Date().toISOString() }
+    this.pointCache.delete(id) // Clear cache to force reload
+    this.referenceManager.invalidateReferences(id as EntityId)
+    return true
+  }
+
+  updateLine(id: LineId, updates: Partial<LineDto>): boolean {
+    const existing = this.project.lines[id]
+    if (!existing) return false
+
+    this.project.lines[id] = { ...existing, ...updates, updatedAt: new Date().toISOString() }
+    this.lineCache.delete(id) // Clear cache to force reload
+    this.referenceManager.invalidateReferences(id as EntityId)
+    return true
+  }
+
+  updateConstraint(id: ConstraintId, updates: Partial<ConstraintDto>): boolean {
+    const index = this.project.constraints.findIndex(c => c.id === id)
+    if (index === -1) return false
+
+    this.project.constraints[index] = {
+      ...this.project.constraints[index],
+      ...updates,
+      updatedAt: new Date().toISOString()
+    }
+    this.constraintCache.delete(id) // Clear cache to force reload
+    this.referenceManager.invalidateReferences(id as EntityId)
+    return true
   }
 
   // Cache management

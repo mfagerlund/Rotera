@@ -2,9 +2,8 @@
 
 import numpy as np
 import pytest
+from pictorigo.core.models.entities import Camera, CameraLockFlags, Image, WorldPoint
 from pydantic import ValidationError
-
-from pictorigo.core.models.entities import WorldPoint, Image, Camera, CameraLockFlags
 
 
 class TestWorldPoint:
@@ -67,7 +66,7 @@ class TestImage:
     def test_image_aspect_ratio(self):
         """Test aspect ratio calculation."""
         img = Image(id="img1", path="/path/to/image.jpg", width=1920, height=1080)
-        assert abs(img.aspect_ratio() - 16/9) < 1e-10
+        assert abs(img.aspect_ratio() - 16 / 9) < 1e-10
 
     def test_image_contains_pixel(self):
         """Test pixel bounds checking."""
@@ -101,7 +100,7 @@ class TestCamera:
             image_id="img1",
             K=[500.0, 500.0, 320.0, 240.0],
             R=[0.0, 0.0, 0.0],
-            t=[0.0, 0.0, 0.0]
+            t=[0.0, 0.0, 0.0],
         )
         assert camera.id == "cam1"
         assert camera.image_id == "img1"
@@ -116,7 +115,7 @@ class TestCamera:
             image_id="img1",
             K=[500.0, 500.0, 320.0, 240.0, 0.1, 0.01],
             R=[0.1, 0.2, 0.3],
-            t=[1.0, 2.0, 3.0]
+            t=[1.0, 2.0, 3.0],
         )
         assert camera.has_distortion()
         assert camera.get_distortion() == [0.1, 0.01]
@@ -128,7 +127,7 @@ class TestCamera:
             image_id="img1",
             K=[500.0, 500.0, 320.0, 240.0],
             R=[0.1, 0.2, 0.3],
-            t=[1.0, 2.0, 3.0]
+            t=[1.0, 2.0, 3.0],
         )
 
         K = camera.get_intrinsics()
@@ -146,7 +145,7 @@ class TestCamera:
             image_id="img1",
             K=[500.0, 500.0, 320.0, 240.0],
             R=[0.0, 0.0, 0.0],
-            t=[0.0, 0.0, 0.0]
+            t=[0.0, 0.0, 0.0],
         )
 
         new_K = np.array([600.0, 600.0, 320.0, 240.0, 0.05])
@@ -168,7 +167,7 @@ class TestCamera:
             image_id="img1",
             K=[500.0, 600.0, 320.0, 240.0],
             R=[0.0, 0.0, 0.0],
-            t=[0.0, 0.0, 0.0]
+            t=[0.0, 0.0, 0.0],
         )
 
         fx, fy = camera.get_focal_length()
@@ -188,7 +187,7 @@ class TestCamera:
             K=[500.0, 500.0, 320.0, 240.0],
             R=[0.0, 0.0, 0.0],
             t=[0.0, 0.0, 0.0],
-            lock_flags=lock_flags
+            lock_flags=lock_flags,
         )
 
         assert camera.lock_flags.intrinsics
@@ -204,7 +203,7 @@ class TestCamera:
                 image_id="img1",
                 K=[500.0, 500.0, 320.0],  # Too few elements
                 R=[0.0, 0.0, 0.0],
-                t=[0.0, 0.0, 0.0]
+                t=[0.0, 0.0, 0.0],
             )
 
         # Invalid R length
@@ -214,7 +213,7 @@ class TestCamera:
                 image_id="img1",
                 K=[500.0, 500.0, 320.0, 240.0],
                 R=[0.0, 0.0],  # Too few elements
-                t=[0.0, 0.0, 0.0]
+                t=[0.0, 0.0, 0.0],
             )
 
         # Invalid t length
@@ -224,7 +223,7 @@ class TestCamera:
                 image_id="img1",
                 K=[500.0, 500.0, 320.0, 240.0],
                 R=[0.0, 0.0, 0.0],
-                t=[0.0, 0.0]  # Too few elements
+                t=[0.0, 0.0],  # Too few elements
             )
 
     def test_camera_invalid_numpy_shapes(self):
@@ -234,7 +233,7 @@ class TestCamera:
             image_id="img1",
             K=[500.0, 500.0, 320.0, 240.0],
             R=[0.0, 0.0, 0.0],
-            t=[0.0, 0.0, 0.0]
+            t=[0.0, 0.0, 0.0],
         )
 
         with pytest.raises(ValueError):

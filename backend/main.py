@@ -2,12 +2,13 @@
 
 import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pictorigo import __version__
 
+from pictorigo import __version__
 from routers import projects, solve, synthetic
 
 app = FastAPI(
@@ -45,11 +46,14 @@ async def get_version() -> dict[str, str]:
 
 if __name__ == "__main__":
     import argparse
-    import uvicorn
     import time
 
+    import uvicorn
+
     parser = argparse.ArgumentParser(description="Run Pictorigo backend server")
-    parser.add_argument("--test", action="store_true", help="Run in test mode with slow startup")
+    parser.add_argument(
+        "--test", action="store_true", help="Run in test mode with slow startup"
+    )
     parser.add_argument("--port", type=int, default=8000, help="Port to run server on")
     args = parser.parse_args()
 

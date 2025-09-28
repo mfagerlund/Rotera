@@ -2,8 +2,7 @@
 
 import numpy as np
 import pytest
-
-from pictorigo.core.math.camera import project, unproject, camera_center, point_depth
+from pictorigo.core.math.camera import camera_center, point_depth, project, unproject
 
 
 class TestCamera:
@@ -19,12 +18,14 @@ class TestCamera:
         self.t_id = np.zeros(3)
 
         # Test 3D points
-        self.X = np.array([
-            [0, 0, 1],    # Point in front of camera at unit depth
-            [1, 0, 2],    # Point to the right
-            [0, 1, 3],    # Point above
-            [-1, -1, 4]   # Point to bottom-left
-        ])
+        self.X = np.array(
+            [
+                [0, 0, 1],  # Point in front of camera at unit depth
+                [1, 0, 2],  # Point to the right
+                [0, 1, 3],  # Point above
+                [-1, -1, 4],  # Point to bottom-left
+            ]
+        )
 
     def test_project_identity_pose(self):
         """Test projection with identity camera pose."""
@@ -88,7 +89,7 @@ class TestCamera:
         X_recovered = np.zeros_like(self.X)
 
         for i, depth in enumerate(depths):
-            X_rec = unproject(self.K, self.R_id, self.t_id, uv[i:i+1], depth)
+            X_rec = unproject(self.K, self.R_id, self.t_id, uv[i : i + 1], depth)
             X_recovered[i] = X_rec[0]
 
         np.testing.assert_allclose(X_recovered, self.X, atol=1e-10)
@@ -122,11 +123,7 @@ class TestCamera:
     def test_transformed_camera(self):
         """Test projection with transformed camera."""
         # 90 degree rotation around Y axis
-        R = np.array([
-            [0, 0, 1],
-            [0, 1, 0],
-            [-1, 0, 0]
-        ])
+        R = np.array([[0, 0, 1], [0, 1, 0], [-1, 0, 0]])
         t = np.array([1, 0, 0])
 
         X_test = np.array([[0, 0, 0]])  # World origin
@@ -139,10 +136,14 @@ class TestCamera:
     def test_invalid_input_shapes(self):
         """Test error handling for invalid input shapes."""
         with pytest.raises(ValueError):
-            project(np.array([1, 2, 3]), self.R_id, self.t_id, self.X)  # Not enough K params
+            project(
+                np.array([1, 2, 3]), self.R_id, self.t_id, self.X
+            )  # Not enough K params
 
         with pytest.raises(ValueError):
-            project(self.K, np.array([[1, 2], [3, 4]]), self.t_id, self.X)  # Wrong R shape
+            project(
+                self.K, np.array([[1, 2], [3, 4]]), self.t_id, self.X
+            )  # Wrong R shape
 
         with pytest.raises(ValueError):
             project(self.K, self.R_id, np.array([1, 2]), self.X)  # Wrong t shape

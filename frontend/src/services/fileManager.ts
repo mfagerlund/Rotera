@@ -160,7 +160,7 @@ export class FileManagerService {
         projectData = JSON.parse(text)
 
         // Handle different JSON formats
-        if (projectData.project) {
+        if (projectData.project && !projectData.version) {
           // Full project file format
           return projectData.project
         } else if (projectData.version && projectData.project) {

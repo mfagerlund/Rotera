@@ -2,12 +2,11 @@
 
 import numpy as np
 import pytest
-
 from pictorigo.core.math.jacobians import (
-    finite_difference_jacobian,
-    check_jacobian,
-    perturbation_jacobian,
     JacobianTester,
+    check_jacobian,
+    finite_difference_jacobian,
+    perturbation_jacobian,
 )
 
 
@@ -30,16 +29,13 @@ class TestJacobians:
 
     def test_finite_difference_quadratic(self):
         """Test finite difference for quadratic function."""
+
         # f(x) = [x1^2, x1*x2, x2^2]
         def func(x):
-            return np.array([x[0]**2, x[0]*x[1], x[1]**2])
+            return np.array([x[0] ** 2, x[0] * x[1], x[1] ** 2])
 
         def analytic_jacobian(x):
-            return np.array([
-                [2*x[0], 0],
-                [x[1], x[0]],
-                [0, 2*x[1]]
-            ])
+            return np.array([[2 * x[0], 0], [x[1], x[0]], [0, 2 * x[1]]])
 
         x = np.array([3.0, 4.0])
         J_numeric = finite_difference_jacobian(func, x)
@@ -49,8 +45,9 @@ class TestJacobians:
 
     def test_finite_difference_methods(self):
         """Test different finite difference methods."""
+
         def func(x):
-            return np.array([x[0]**2 + x[1]])
+            return np.array([x[0] ** 2 + x[1]])
 
         x = np.array([2.0, 3.0])
 
@@ -71,8 +68,9 @@ class TestJacobians:
 
     def test_finite_difference_scalar_function(self):
         """Test finite difference for scalar function."""
+
         def func(x):
-            return x[0]**3
+            return x[0] ** 3
 
         x = np.array([2.0])
         J = finite_difference_jacobian(func, x)
@@ -82,14 +80,12 @@ class TestJacobians:
 
     def test_check_jacobian_correct(self):
         """Test Jacobian checker with correct implementation."""
+
         def func(x):
-            return np.array([x[0]**2, x[0]*x[1]])
+            return np.array([x[0] ** 2, x[0] * x[1]])
 
         def jacobian(x):
-            return np.array([
-                [2*x[0], 0],
-                [x[1], x[0]]
-            ])
+            return np.array([[2 * x[0], 0], [x[1], x[0]]])
 
         x = np.array([1.5, 2.5])
         is_correct, max_error, _ = check_jacobian(func, jacobian, x)
@@ -99,8 +95,9 @@ class TestJacobians:
 
     def test_check_jacobian_incorrect(self):
         """Test Jacobian checker with incorrect implementation."""
+
         def func(x):
-            return np.array([x[0]**2])
+            return np.array([x[0] ** 2])
 
         def wrong_jacobian(x):
             return np.array([[x[0]]])  # Should be 2*x[0]
@@ -113,8 +110,9 @@ class TestJacobians:
 
     def test_perturbation_jacobian(self):
         """Test perturbation-based Jacobian computation."""
+
         def func(x):
-            return np.array([x[0]**2 + x[1]**2])
+            return np.array([x[0] ** 2 + x[1] ** 2])
 
         x = np.array([3.0, 4.0])
         J = perturbation_jacobian(func, x)
@@ -124,37 +122,32 @@ class TestJacobians:
 
     def test_perturbation_jacobian_custom_h(self):
         """Test perturbation Jacobian with custom step sizes."""
+
         def func(x):
-            return np.array([x[0]**3, x[1]**2])
+            return np.array([x[0] ** 3, x[1] ** 2])
 
         x = np.array([2.0, 3.0])
         perturbations = np.array([1e-6, 1e-7])
         J = perturbation_jacobian(func, x, perturbations)
 
-        expected = np.array([
-            [12.0, 0.0],  # [3*x[0]^2, 0]
-            [0.0, 6.0]    # [0, 2*x[1]]
-        ])
+        expected = np.array([[12.0, 0.0], [0.0, 6.0]])  # [3*x[0]^2, 0]  # [0, 2*x[1]]
         np.testing.assert_allclose(J, expected, atol=1e-5)
 
     def test_jacobian_tester_class(self):
         """Test JacobianTester helper class."""
+
         def func(x):
-            return np.array([x[0]**2, x[0]*x[1], x[1]**3])
+            return np.array([x[0] ** 2, x[0] * x[1], x[1] ** 3])
 
         def jacobian(x):
-            return np.array([
-                [2*x[0], 0],
-                [x[1], x[0]],
-                [0, 3*x[1]**2]
-            ])
+            return np.array([[2 * x[0], 0], [x[1], x[0]], [0, 3 * x[1] ** 2]])
 
         tester = JacobianTester(atol=1e-6, rtol=1e-6)
 
         test_points = [
             np.array([1.0, 2.0]),
             np.array([3.0, 4.0]),
-            np.array([-1.0, 0.5])
+            np.array([-1.0, 0.5]),
         ]
 
         result = tester.test_jacobian(func, jacobian, test_points)
@@ -175,6 +168,7 @@ class TestJacobians:
 
     def test_invalid_finite_difference_method(self):
         """Test error handling for invalid finite difference method."""
+
         def func(x):
             return x**2
 
@@ -185,6 +179,7 @@ class TestJacobians:
 
     def test_jacobian_edge_cases(self):
         """Test Jacobian computation edge cases."""
+
         # Zero function
         def zero_func(x):
             return np.zeros(2)

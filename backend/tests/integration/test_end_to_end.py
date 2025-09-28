@@ -2,10 +2,9 @@
 
 import numpy as np
 import pytest
-
-from pictorigo.core.synthetic import make_two_view
 from pictorigo.core.optimization.problem import OptimizationProblem
 from pictorigo.core.solver.scipy_solver import SciPySolver, SolverOptions
+from pictorigo.core.synthetic import make_two_view
 
 
 class TestEndToEndPipeline:
@@ -14,11 +13,7 @@ class TestEndToEndPipeline:
     def test_two_view_reconstruction(self):
         """Test two-view reconstruction pipeline."""
         # Generate synthetic two-view scene
-        project = make_two_view(
-            n_points=10,
-            baseline=2.0,
-            seed=42
-        )
+        project = make_two_view(n_points=10, baseline=2.0, seed=42)
 
         # Validate project structure
         assert len(project.world_points) == 12  # 10 points + 2 camera centers
@@ -52,11 +47,7 @@ class TestEndToEndPipeline:
     def test_solver_on_synthetic_scene(self):
         """Test solver on synthetic scene."""
         # Create a simple synthetic scene
-        project = make_two_view(
-            n_points=5,
-            baseline=1.0,
-            seed=123
-        )
+        project = make_two_view(n_points=5, baseline=1.0, seed=123)
 
         # Add some noise to make it non-trivial
         for wp in project.world_points.values():
@@ -71,10 +62,7 @@ class TestEndToEndPipeline:
 
         # Configure solver for fast convergence
         solver_options = SolverOptions(
-            method="lm",
-            max_iterations=20,
-            tolerance=1e-4,
-            verbose=0
+            method="lm", max_iterations=20, tolerance=1e-4, verbose=0
         )
 
         solver = SciPySolver(solver_options)
@@ -106,7 +94,7 @@ class TestEndToEndPipeline:
         project = make_two_view(n_points=8, seed=42)
 
         problem = OptimizationProblem(project)
-        factor_graph = problem.build_factor_graph()
+        problem.build_factor_graph()
 
         summary = problem.get_optimization_summary()
 
@@ -135,13 +123,12 @@ class TestEndToEndPipeline:
         factor_graph = problem.build_factor_graph()
 
         # Apply Huber loss to image point constraints
-        problem.set_robust_loss_for_constraint_type(
-            "image_point", "huber", delta=1.0
-        )
+        problem.set_robust_loss_for_constraint_type("image_point", "huber", delta=1.0)
 
         # Verify that factors have robust loss set
         reprojection_factors = [
-            f for f in factor_graph.factors.values()
+            f
+            for f in factor_graph.factors.values()
             if f.factor_id.startswith("reprojection_")
         ]
 
@@ -200,8 +187,7 @@ class TestEndToEndPipeline:
 
         # Should generate multiple factors for gauge fixing
         gauge_factors = [
-            f for f in factor_graph.factors.values()
-            if "gauge" in f.factor_id
+            f for f in factor_graph.factors.values() if "gauge" in f.factor_id
         ]
 
         assert len(gauge_factors) >= 4  # origin, x_axis, xy_plane, scale
@@ -228,11 +214,7 @@ class TestEndToEndPipeline:
         problem = OptimizationProblem(project)
         factor_graph = problem.build_factor_graph()
 
-        solver_options = SolverOptions(
-            method="lm",
-            max_iterations=50,
-            tolerance=1e-8
-        )
+        solver_options = SolverOptions(method="lm", max_iterations=50, tolerance=1e-8)
         solver = SciPySolver(solver_options)
 
         result = solver.solve(factor_graph)
@@ -254,6 +236,7 @@ class TestEndToEndPipeline:
         """Test error handling in the pipeline."""
         # Create empty project
         from pictorigo.core.models.project import Project
+
         empty_project = Project()
 
         problem = OptimizationProblem(empty_project)

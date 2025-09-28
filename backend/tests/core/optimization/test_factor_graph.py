@@ -2,7 +2,6 @@
 
 import numpy as np
 import pytest
-
 from pictorigo.core.optimization.factor_graph import FactorGraph, Variable, VariableType
 
 
@@ -47,7 +46,7 @@ class TestVariable:
             id="test_var",
             type=VariableType.WORLD_POINT,
             size=3,
-            value=np.array([1, 2, 3])
+            value=np.array([1, 2, 3]),
         )
 
         assert var.id == "test_var"
@@ -58,11 +57,7 @@ class TestVariable:
 
     def test_variable_without_value(self):
         """Test variable without initial value."""
-        var = Variable(
-            id="test_var",
-            type=VariableType.WORLD_POINT,
-            size=3
-        )
+        var = Variable(id="test_var", type=VariableType.WORLD_POINT, size=3)
 
         assert not var.is_initialized()
         assert var.value is None
@@ -72,11 +67,7 @@ class TestVariable:
 
     def test_variable_set_value(self):
         """Test setting variable value."""
-        var = Variable(
-            id="test_var",
-            type=VariableType.WORLD_POINT,
-            size=3
-        )
+        var = Variable(id="test_var", type=VariableType.WORLD_POINT, size=3)
 
         new_value = np.array([4, 5, 6])
         var.set_value(new_value)
@@ -92,7 +83,7 @@ class TestVariable:
             size=3,
             value=np.array([1, 2, 3]),
             lower_bounds=np.array([0, 0, 0]),
-            upper_bounds=np.array([10, 10, 10])
+            upper_bounds=np.array([10, 10, 10]),
         )
 
         # Test clamping
@@ -109,7 +100,7 @@ class TestVariable:
             type=VariableType.WORLD_POINT,
             size=3,
             value=np.array([1, 2, 3]),
-            is_constant=True
+            is_constant=True,
         )
 
         assert var.is_constant
@@ -121,7 +112,7 @@ class TestVariable:
                 id="test_var",
                 type=VariableType.WORLD_POINT,
                 size=3,
-                value=np.array([1, 2])  # Wrong size
+                value=np.array([1, 2]),  # Wrong size
             )
 
         with pytest.raises(ValueError):
@@ -129,7 +120,7 @@ class TestVariable:
                 id="test_var",
                 type=VariableType.WORLD_POINT,
                 size=3,
-                lower_bounds=np.array([0, 0])  # Wrong size
+                lower_bounds=np.array([0, 0]),  # Wrong size
             )
 
 
@@ -203,9 +194,19 @@ class TestFactorGraph:
         """Test packing and unpacking variables."""
         graph = FactorGraph()
 
-        var1 = Variable(id="var1", type=VariableType.WORLD_POINT, size=3, value=np.array([1, 2, 3]))
-        var2 = Variable(id="var2", type=VariableType.WORLD_POINT, size=2, value=np.array([4, 5]))
-        var3 = Variable(id="var3", type=VariableType.WORLD_POINT, size=3, value=np.array([6, 7, 8]), is_constant=True)
+        var1 = Variable(
+            id="var1", type=VariableType.WORLD_POINT, size=3, value=np.array([1, 2, 3])
+        )
+        var2 = Variable(
+            id="var2", type=VariableType.WORLD_POINT, size=2, value=np.array([4, 5])
+        )
+        var3 = Variable(
+            id="var3",
+            type=VariableType.WORLD_POINT,
+            size=3,
+            value=np.array([6, 7, 8]),
+            is_constant=True,
+        )
 
         graph.add_variable(var1)
         graph.add_variable(var2)
@@ -225,7 +226,9 @@ class TestFactorGraph:
         # Check that values were updated (except constant variable)
         np.testing.assert_array_equal(graph.variables["var1"].get_value(), [10, 20, 30])
         np.testing.assert_array_equal(graph.variables["var2"].get_value(), [40, 50])
-        np.testing.assert_array_equal(graph.variables["var3"].get_value(), [6, 7, 8])  # Unchanged
+        np.testing.assert_array_equal(
+            graph.variables["var3"].get_value(), [6, 7, 8]
+        )  # Unchanged
 
     def test_get_variable_bounds(self):
         """Test getting variable bounds."""
@@ -237,13 +240,10 @@ class TestFactorGraph:
             size=2,
             value=np.array([1, 2]),
             lower_bounds=np.array([0, 0]),
-            upper_bounds=np.array([10, 10])
+            upper_bounds=np.array([10, 10]),
         )
         var2 = Variable(
-            id="var2",
-            type=VariableType.WORLD_POINT,
-            size=2,
-            value=np.array([3, 4])
+            id="var2", type=VariableType.WORLD_POINT, size=2, value=np.array([3, 4])
         )
 
         graph.add_variable(var1)
@@ -262,8 +262,12 @@ class TestFactorGraph:
         graph = FactorGraph()
 
         # Add variables
-        var1 = Variable(id="var1", type=VariableType.WORLD_POINT, size=3, value=np.array([1, 2, 3]))
-        var2 = Variable(id="var2", type=VariableType.WORLD_POINT, size=3, value=np.array([4, 5, 6]))
+        var1 = Variable(
+            id="var1", type=VariableType.WORLD_POINT, size=3, value=np.array([1, 2, 3])
+        )
+        var2 = Variable(
+            id="var2", type=VariableType.WORLD_POINT, size=3, value=np.array([4, 5, 6])
+        )
         graph.add_variable(var1)
         graph.add_variable(var2)
 
@@ -284,8 +288,12 @@ class TestFactorGraph:
         graph = FactorGraph()
 
         # Add variables
-        var1 = Variable(id="var1", type=VariableType.WORLD_POINT, size=3, value=np.array([1, 2, 3]))
-        var2 = Variable(id="var2", type=VariableType.WORLD_POINT, size=2, value=np.array([4, 5]))
+        var1 = Variable(
+            id="var1", type=VariableType.WORLD_POINT, size=3, value=np.array([1, 2, 3])
+        )
+        var2 = Variable(
+            id="var2", type=VariableType.WORLD_POINT, size=2, value=np.array([4, 5])
+        )
         graph.add_variable(var1)
         graph.add_variable(var2)
 
@@ -309,9 +317,19 @@ class TestFactorGraph:
         graph = FactorGraph()
 
         # Add variables of different types
-        var1 = Variable(id="wp1", type=VariableType.WORLD_POINT, size=3, value=np.array([1, 2, 3]))
-        var2 = Variable(id="wp2", type=VariableType.WORLD_POINT, size=3, value=np.array([4, 5, 6]))
-        var3 = Variable(id="cam1_rot", type=VariableType.CAMERA_ROTATION, size=3, value=np.array([0, 0, 0]), is_constant=True)
+        var1 = Variable(
+            id="wp1", type=VariableType.WORLD_POINT, size=3, value=np.array([1, 2, 3])
+        )
+        var2 = Variable(
+            id="wp2", type=VariableType.WORLD_POINT, size=3, value=np.array([4, 5, 6])
+        )
+        var3 = Variable(
+            id="cam1_rot",
+            type=VariableType.CAMERA_ROTATION,
+            size=3,
+            value=np.array([0, 0, 0]),
+            is_constant=True,
+        )
 
         graph.add_variable(var1)
         graph.add_variable(var2)

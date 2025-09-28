@@ -1,10 +1,14 @@
 """Tests for project model."""
 
 import pytest
-
-from pictorigo.core.models.project import Project, ProjectSettings, SolverSettings, SolveResult
-from pictorigo.core.models.entities import WorldPoint, Image, Camera
-from pictorigo.core.models.constraints import ImagePointConstraint, DistanceConstraint
+from pictorigo.core.models.constraints import DistanceConstraint, ImagePointConstraint
+from pictorigo.core.models.entities import Camera, Image, WorldPoint
+from pictorigo.core.models.project import (
+    Project,
+    ProjectSettings,
+    SolveResult,
+    SolverSettings,
+)
 
 
 class TestSolverSettings:
@@ -22,10 +26,7 @@ class TestSolverSettings:
     def test_solver_settings_custom(self):
         """Test custom solver settings."""
         settings = SolverSettings(
-            max_iterations=200,
-            tolerance=1e-8,
-            robust_loss="cauchy",
-            cauchy_sigma=2.0
+            max_iterations=200, tolerance=1e-8, robust_loss="cauchy", cauchy_sigma=2.0
         )
         assert settings.max_iterations == 200
         assert settings.tolerance == 1e-8
@@ -57,7 +58,7 @@ class TestSolveResult:
             residuals={"constraint_1": 0.1, "constraint_2": 0.05},
             uncertainties={"wp1": [0.01, 0.01, 0.02]},
             unconstrained_dofs=["wp2_z"],
-            computation_time=2.5
+            computation_time=2.5,
         )
         assert result.success
         assert result.iterations == 50
@@ -127,7 +128,7 @@ class TestProject:
             image_id="img1",
             K=[500.0, 500.0, 320.0, 240.0],
             R=[0.0, 0.0, 0.0],
-            t=[0.0, 0.0, 0.0]
+            t=[0.0, 0.0, 0.0],
         )
 
         project.add_image(image)
@@ -144,7 +145,7 @@ class TestProject:
             image_id="nonexistent",
             K=[500.0, 500.0, 320.0, 240.0],
             R=[0.0, 0.0, 0.0],
-            t=[0.0, 0.0, 0.0]
+            t=[0.0, 0.0, 0.0],
         )
 
         with pytest.raises(ValueError):
@@ -163,19 +164,12 @@ class TestProject:
 
         # Image point constraint
         ip_constraint = ImagePointConstraint(
-            image_id="img1",
-            wp_id="wp1",
-            u=100.0,
-            v=200.0
+            image_id="img1", wp_id="wp1", u=100.0, v=200.0
         )
         project.add_constraint(ip_constraint)
 
         # Distance constraint
-        dist_constraint = DistanceConstraint(
-            wp_i="wp1",
-            wp_j="wp2",
-            distance=5.0
-        )
+        dist_constraint = DistanceConstraint(wp_i="wp1", wp_j="wp2", distance=5.0)
         project.add_constraint(dist_constraint)
 
         assert len(project.constraints) == 2
@@ -186,10 +180,7 @@ class TestProject:
 
         # Constraint referencing non-existent world point
         constraint = ImagePointConstraint(
-            image_id="nonexistent",
-            wp_id="nonexistent",
-            u=100.0,
-            v=200.0
+            image_id="nonexistent", wp_id="nonexistent", u=100.0, v=200.0
         )
 
         with pytest.raises(ValueError):
@@ -237,7 +228,7 @@ class TestProject:
             image_id="img1",
             K=[500.0, 500.0, 320.0, 240.0],
             R=[0.0, 0.0, 0.0],
-            t=[0.0, 0.0, 0.0]
+            t=[0.0, 0.0, 0.0],
         )
 
         project.add_world_point(wp)
@@ -245,10 +236,7 @@ class TestProject:
         project.add_camera(camera)
 
         constraint = ImagePointConstraint(
-            image_id="img1",
-            wp_id="wp1",
-            u=100.0,
-            v=200.0
+            image_id="img1", wp_id="wp1", u=100.0, v=200.0
         )
         project.add_constraint(constraint)
 
@@ -275,16 +263,9 @@ class TestProject:
         project.add_image(image)
 
         ip_constraint = ImagePointConstraint(
-            image_id="img1",
-            wp_id="wp1",
-            u=100.0,
-            v=200.0
+            image_id="img1", wp_id="wp1", u=100.0, v=200.0
         )
-        dist_constraint = DistanceConstraint(
-            wp_i="wp1",
-            wp_j="wp2",
-            distance=5.0
-        )
+        dist_constraint = DistanceConstraint(wp_i="wp1", wp_j="wp2", distance=5.0)
 
         project.add_constraint(ip_constraint)
         project.add_constraint(dist_constraint)
@@ -308,7 +289,7 @@ class TestProject:
             image_id="img1",
             K=[500.0, 500.0, 320.0, 240.0],
             R=[0.0, 0.0, 0.0],
-            t=[0.0, 0.0, 0.0]
+            t=[0.0, 0.0, 0.0],
         )
 
         project.add_world_point(wp1)
@@ -321,9 +302,7 @@ class TestProject:
 
         # Add invalid constraint manually
         invalid_constraint = DistanceConstraint(
-            wp_i="wp1",
-            wp_j="nonexistent",  # Non-existent world point
-            distance=5.0
+            wp_i="wp1", wp_j="nonexistent", distance=5.0  # Non-existent world point
         )
         project.constraints.append(invalid_constraint)
 
@@ -341,7 +320,7 @@ class TestProject:
             image_id="img1",
             K=[500.0, 500.0, 320.0, 240.0],
             R=[0.0, 0.0, 0.0],
-            t=[0.0, 0.0, 0.0]
+            t=[0.0, 0.0, 0.0],
         )
 
         project.add_world_point(wp)

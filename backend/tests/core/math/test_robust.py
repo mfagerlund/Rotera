@@ -2,12 +2,11 @@
 
 import numpy as np
 import pytest
-
 from pictorigo.core.math.robust import (
-    huber_loss,
-    cauchy_loss,
-    no_loss,
     apply_robust_loss,
+    cauchy_loss,
+    huber_loss,
+    no_loss,
     robust_scale_estimate,
 )
 
@@ -60,7 +59,7 @@ class TestRobustLoss:
 
         # Check individual values
         assert rho[0] == delta * (2 - 0.5 * delta)  # Outlier
-        assert rho[1] == 0.5 * (-0.5)**2  # Inlier
+        assert rho[1] == 0.5 * (-0.5) ** 2  # Inlier
         assert rho[2] == 0.0  # Zero residual
         assert rho[3] == 0.5 * 0.5**2  # Inlier
         assert rho[4] == delta * (2 - 0.5 * delta)  # Outlier
@@ -99,7 +98,7 @@ class TestRobustLoss:
         rho, weights = cauchy_loss(residual, sigma)
 
         # Manual calculation
-        r2_over_sigma2 = (residual[0]**2) / (sigma**2)
+        r2_over_sigma2 = (residual[0] ** 2) / (sigma**2)
         expected_rho = 0.5 * sigma**2 * np.log(1 + r2_over_sigma2)
         expected_weight = 1.0 / (1 + r2_over_sigma2)
 

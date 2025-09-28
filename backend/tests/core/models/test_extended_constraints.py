@@ -1,22 +1,20 @@
 """Tests for extended constraint types with comprehensive coverage."""
 
 import pytest
-import numpy as np
-from pydantic import ValidationError
-
 from pictorigo.core.models.constraints import (
+    AngleConstraint,
+    ConstraintRegistry,
+    EqualDistanceConstraint,
+    EqualSpacingConstraint,
+    MirrorSymmetryConstraint,
+    PointOnCircleConstraint,
     PointOnLineConstraint,
     PointOnPlaneConstraint,
-    PointOnCircleConstraint,
     PointOnSphereConstraint,
-    EqualDistanceConstraint,
     RectangleConstraint,
-    MirrorSymmetryConstraint,
-    EqualSpacingConstraint,
-    AngleConstraint,
     create_constraint,
-    ConstraintRegistry,
 )
+from pydantic import ValidationError
 
 
 class TestPointOnLineConstraint:
@@ -25,9 +23,7 @@ class TestPointOnLineConstraint:
     def test_point_on_line_creation(self):
         """Test basic point-on-line constraint creation."""
         constraint = PointOnLineConstraint(
-            point_id="p1",
-            line_wp_a="p2",
-            line_wp_b="p3"
+            point_id="p1", line_wp_a="p2", line_wp_b="p3"
         )
         assert constraint.type == "point_on_line"
         assert constraint.point_id == "p1"
@@ -37,9 +33,7 @@ class TestPointOnLineConstraint:
     def test_point_on_line_same_line_points(self):
         """Test validation that line requires distinct points."""
         constraint = PointOnLineConstraint(
-            point_id="p1",
-            line_wp_a="p2",
-            line_wp_b="p2"  # Same point
+            point_id="p1", line_wp_a="p2", line_wp_b="p2"  # Same point
         )
         with pytest.raises(ValueError):
             constraint.validate_constraint()
@@ -47,9 +41,7 @@ class TestPointOnLineConstraint:
     def test_point_on_line_point_on_line(self):
         """Test validation that point should be different from line points."""
         constraint = PointOnLineConstraint(
-            point_id="p2",  # Same as line point
-            line_wp_a="p2",
-            line_wp_b="p3"
+            point_id="p2", line_wp_a="p2", line_wp_b="p3"  # Same as line point
         )
         with pytest.raises(ValueError):
             constraint.validate_constraint()
@@ -61,10 +53,7 @@ class TestPointOnPlaneConstraint:
     def test_point_on_plane_creation(self):
         """Test basic point-on-plane constraint creation."""
         constraint = PointOnPlaneConstraint(
-            point_id="p1",
-            plane_wp_a="p2",
-            plane_wp_b="p3",
-            plane_wp_c="p4"
+            point_id="p1", plane_wp_a="p2", plane_wp_b="p3", plane_wp_c="p4"
         )
         assert constraint.type == "point_on_plane"
         assert constraint.point_id == "p1"
@@ -76,7 +65,7 @@ class TestPointOnPlaneConstraint:
             point_id="p1",
             plane_wp_a="p2",
             plane_wp_b="p2",  # Duplicate
-            plane_wp_c="p4"
+            plane_wp_c="p4",
         )
         with pytest.raises(ValueError):
             constraint.validate_constraint()
@@ -87,7 +76,7 @@ class TestPointOnPlaneConstraint:
             point_id="p2",  # Same as plane point
             plane_wp_a="p2",
             plane_wp_b="p3",
-            plane_wp_c="p4"
+            plane_wp_c="p4",
         )
         with pytest.raises(ValueError):
             constraint.validate_constraint()
@@ -104,7 +93,7 @@ class TestPointOnCircleConstraint:
             radius_ref_id="p3",
             plane_wp_a="p4",
             plane_wp_b="p5",
-            plane_wp_c="p6"
+            plane_wp_c="p6",
         )
         assert constraint.type == "point_on_circle"
         assert constraint.point_id == "p1"
@@ -118,7 +107,7 @@ class TestPointOnCircleConstraint:
             radius_ref_id="p3",
             plane_wp_a="p4",
             plane_wp_b="p4",  # Duplicate
-            plane_wp_c="p6"
+            plane_wp_c="p6",
         )
         with pytest.raises(ValueError):
             constraint.validate_constraint()
@@ -131,7 +120,7 @@ class TestPointOnCircleConstraint:
             radius_ref_id="p3",
             plane_wp_a="p4",
             plane_wp_b="p5",
-            plane_wp_c="p6"
+            plane_wp_c="p6",
         )
         with pytest.raises(ValueError):
             constraint.validate_constraint()
@@ -143,9 +132,7 @@ class TestPointOnSphereConstraint:
     def test_point_on_sphere_creation(self):
         """Test basic point-on-sphere constraint creation."""
         constraint = PointOnSphereConstraint(
-            point_id="p1",
-            center_id="p2",
-            radius_ref_id="p3"
+            point_id="p1", center_id="p2", radius_ref_id="p3"
         )
         assert constraint.type == "point_on_sphere"
         assert constraint.point_id == "p1"
@@ -155,9 +142,7 @@ class TestPointOnSphereConstraint:
     def test_point_on_sphere_duplicate_points(self):
         """Test validation that all points must be distinct."""
         constraint = PointOnSphereConstraint(
-            point_id="p1",
-            center_id="p1",  # Duplicate
-            radius_ref_id="p3"
+            point_id="p1", center_id="p1", radius_ref_id="p3"  # Duplicate
         )
         with pytest.raises(ValueError):
             constraint.validate_constraint()
@@ -169,10 +154,7 @@ class TestEqualDistanceConstraint:
     def test_equal_distance_creation(self):
         """Test basic equal distance constraint creation."""
         constraint = EqualDistanceConstraint(
-            line1_wp_a="p1",
-            line1_wp_b="p2",
-            line2_wp_a="p3",
-            line2_wp_b="p4"
+            line1_wp_a="p1", line1_wp_b="p2", line2_wp_a="p3", line2_wp_b="p4"
         )
         assert constraint.type == "equal_distance"
         assert constraint.line1_wp_a == "p1"
@@ -183,7 +165,7 @@ class TestEqualDistanceConstraint:
             line1_wp_a="p1",
             line1_wp_b="p1",  # Same point
             line2_wp_a="p3",
-            line2_wp_b="p4"
+            line2_wp_b="p4",
         )
         with pytest.raises(ValueError):
             constraint.validate_constraint()
@@ -194,7 +176,7 @@ class TestEqualDistanceConstraint:
             line1_wp_a="p1",
             line1_wp_b="p2",
             line2_wp_a="p3",
-            line2_wp_b="p3"  # Same point
+            line2_wp_b="p3",  # Same point
         )
         with pytest.raises(ValueError):
             constraint.validate_constraint()
@@ -206,10 +188,7 @@ class TestRectangleConstraint:
     def test_rectangle_creation(self):
         """Test basic rectangle constraint creation."""
         constraint = RectangleConstraint(
-            corner_a="p1",
-            corner_b="p2",
-            corner_c="p3",
-            corner_d="p4"
+            corner_a="p1", corner_b="p2", corner_c="p3", corner_d="p4"
         )
         assert constraint.type == "rectangle"
         assert constraint.corner_a == "p1"
@@ -218,32 +197,21 @@ class TestRectangleConstraint:
     def test_rectangle_with_aspect_ratio(self):
         """Test rectangle with aspect ratio."""
         constraint = RectangleConstraint(
-            corner_a="p1",
-            corner_b="p2",
-            corner_c="p3",
-            corner_d="p4",
-            aspect_ratio=2.0
+            corner_a="p1", corner_b="p2", corner_c="p3", corner_d="p4", aspect_ratio=2.0
         )
         assert constraint.aspect_ratio == 2.0
 
     def test_square_creation(self):
         """Test square creation (aspect ratio = 1.0)."""
         constraint = RectangleConstraint(
-            corner_a="p1",
-            corner_b="p2",
-            corner_c="p3",
-            corner_d="p4",
-            aspect_ratio=1.0
+            corner_a="p1", corner_b="p2", corner_c="p3", corner_d="p4", aspect_ratio=1.0
         )
         assert constraint.aspect_ratio == 1.0
 
     def test_rectangle_duplicate_corners(self):
         """Test validation that corners must be distinct."""
         constraint = RectangleConstraint(
-            corner_a="p1",
-            corner_b="p1",  # Duplicate
-            corner_c="p3",
-            corner_d="p4"
+            corner_a="p1", corner_b="p1", corner_c="p3", corner_d="p4"  # Duplicate
         )
         with pytest.raises(ValueError):
             constraint.validate_constraint()
@@ -256,7 +224,7 @@ class TestRectangleConstraint:
                 corner_b="p2",
                 corner_c="p3",
                 corner_d="p4",
-                aspect_ratio=-1.0  # Invalid
+                aspect_ratio=-1.0,  # Invalid
             )
 
     def test_rectangle_zero_aspect_ratio(self):
@@ -267,7 +235,7 @@ class TestRectangleConstraint:
                 corner_b="p2",
                 corner_c="p3",
                 corner_d="p4",
-                aspect_ratio=0.0  # Invalid
+                aspect_ratio=0.0,  # Invalid
             )
 
 
@@ -281,7 +249,7 @@ class TestMirrorSymmetryConstraint:
             point_b="p2",
             mirror_plane_a="p3",
             mirror_plane_b="p4",
-            mirror_plane_c="p5"
+            mirror_plane_c="p5",
         )
         assert constraint.type == "mirror_symmetry"
         assert constraint.point_a == "p1"
@@ -294,7 +262,7 @@ class TestMirrorSymmetryConstraint:
             point_b="p1",  # Same point
             mirror_plane_a="p3",
             mirror_plane_b="p4",
-            mirror_plane_c="p5"
+            mirror_plane_c="p5",
         )
         with pytest.raises(ValueError):
             constraint.validate_constraint()
@@ -306,7 +274,7 @@ class TestMirrorSymmetryConstraint:
             point_b="p2",
             mirror_plane_a="p3",
             mirror_plane_b="p3",  # Duplicate
-            mirror_plane_c="p5"
+            mirror_plane_c="p5",
         )
         with pytest.raises(ValueError):
             constraint.validate_constraint()
@@ -318,7 +286,7 @@ class TestMirrorSymmetryConstraint:
             point_b="p2",
             mirror_plane_a="p1",  # Overlaps with point_a
             mirror_plane_b="p4",
-            mirror_plane_c="p5"
+            mirror_plane_c="p5",
         )
         with pytest.raises(ValueError):
             constraint.validate_constraint()
@@ -329,31 +297,23 @@ class TestEqualSpacingConstraint:
 
     def test_equal_spacing_creation(self):
         """Test basic equal spacing constraint creation."""
-        constraint = EqualSpacingConstraint(
-            point_ids=["p1", "p2", "p3"]
-        )
+        constraint = EqualSpacingConstraint(point_ids=["p1", "p2", "p3"])
         assert constraint.type == "equal_spacing"
         assert constraint.point_ids == ["p1", "p2", "p3"]
 
     def test_equal_spacing_many_points(self):
         """Test equal spacing with many points."""
-        constraint = EqualSpacingConstraint(
-            point_ids=["p1", "p2", "p3", "p4", "p5"]
-        )
+        constraint = EqualSpacingConstraint(point_ids=["p1", "p2", "p3", "p4", "p5"])
         assert len(constraint.point_ids) == 5
 
     def test_equal_spacing_minimum_points(self):
         """Test validation of minimum number of points."""
         with pytest.raises(ValidationError):
-            EqualSpacingConstraint(
-                point_ids=["p1", "p2"]  # Too few points
-            )
+            EqualSpacingConstraint(point_ids=["p1", "p2"])  # Too few points
 
     def test_equal_spacing_duplicate_points(self):
         """Test validation against duplicate points."""
-        constraint = EqualSpacingConstraint(
-            point_ids=["p1", "p2", "p1"]  # Duplicate
-        )
+        constraint = EqualSpacingConstraint(point_ids=["p1", "p2", "p1"])  # Duplicate
         with pytest.raises(ValueError):
             constraint.validate_constraint()
 
@@ -368,7 +328,7 @@ class TestAngleConstraintExtended:
             line1_wp_b="p2",
             line2_wp_a="p3",
             line2_wp_b="p4",
-            angle_degrees=45.0
+            angle_degrees=45.0,
         )
         assert constraint.type == "angle"
         assert constraint.angle_degrees == 45.0
@@ -376,20 +336,14 @@ class TestAngleConstraintExtended:
     def test_angle_constraint_perpendicular_factory(self):
         """Test perpendicular constraint factory method."""
         constraint = AngleConstraint.perpendicular(
-            line1_wp_a="p1",
-            line1_wp_b="p2",
-            line2_wp_a="p3",
-            line2_wp_b="p4"
+            line1_wp_a="p1", line1_wp_b="p2", line2_wp_a="p3", line2_wp_b="p4"
         )
         assert constraint.angle_degrees == 90.0
 
     def test_angle_constraint_parallel_factory(self):
         """Test parallel constraint factory method."""
         constraint = AngleConstraint.parallel(
-            line1_wp_a="p1",
-            line1_wp_b="p2",
-            line2_wp_a="p3",
-            line2_wp_b="p4"
+            line1_wp_a="p1", line1_wp_b="p2", line2_wp_a="p3", line2_wp_b="p4"
         )
         assert constraint.angle_degrees == 0.0
 
@@ -401,7 +355,7 @@ class TestAngleConstraintExtended:
             line1_wp_b="p2",
             line2_wp_a="p3",
             line2_wp_b="p4",
-            angle_degrees=0.0
+            angle_degrees=0.0,
         )
         assert constraint_0.angle_degrees == 0.0
 
@@ -411,7 +365,7 @@ class TestAngleConstraintExtended:
             line1_wp_b="p2",
             line2_wp_a="p3",
             line2_wp_b="p4",
-            angle_degrees=180.0
+            angle_degrees=180.0,
         )
         assert constraint_180.angle_degrees == 180.0
 
@@ -423,7 +377,7 @@ class TestAngleConstraintExtended:
                 line1_wp_b="p2",
                 line2_wp_a="p3",
                 line2_wp_b="p4",
-                angle_degrees=-10.0  # Invalid
+                angle_degrees=-10.0,  # Invalid
             )
 
         with pytest.raises(ValidationError):
@@ -432,7 +386,7 @@ class TestAngleConstraintExtended:
                 line1_wp_b="p2",
                 line2_wp_a="p3",
                 line2_wp_b="p4",
-                angle_degrees=190.0  # Invalid
+                angle_degrees=190.0,  # Invalid
             )
 
 
@@ -445,7 +399,7 @@ class TestExtendedConstraintFactory:
             "type": "point_on_line",
             "point_id": "p1",
             "line_wp_a": "p2",
-            "line_wp_b": "p3"
+            "line_wp_b": "p3",
         }
         constraint = create_constraint(data)
         assert isinstance(constraint, PointOnLineConstraint)
@@ -458,7 +412,7 @@ class TestExtendedConstraintFactory:
             "point_id": "p1",
             "plane_wp_a": "p2",
             "plane_wp_b": "p3",
-            "plane_wp_c": "p4"
+            "plane_wp_c": "p4",
         }
         constraint = create_constraint(data)
         assert isinstance(constraint, PointOnPlaneConstraint)
@@ -469,7 +423,7 @@ class TestExtendedConstraintFactory:
             "type": "point_on_sphere",
             "point_id": "p1",
             "center_id": "p2",
-            "radius_ref_id": "p3"
+            "radius_ref_id": "p3",
         }
         constraint = create_constraint(data)
         assert isinstance(constraint, PointOnSphereConstraint)
@@ -481,7 +435,7 @@ class TestExtendedConstraintFactory:
             "line1_wp_a": "p1",
             "line1_wp_b": "p2",
             "line2_wp_a": "p3",
-            "line2_wp_b": "p4"
+            "line2_wp_b": "p4",
         }
         constraint = create_constraint(data)
         assert isinstance(constraint, EqualDistanceConstraint)
@@ -493,7 +447,7 @@ class TestExtendedConstraintFactory:
             "corner_a": "p1",
             "corner_b": "p2",
             "corner_c": "p3",
-            "corner_d": "p4"
+            "corner_d": "p4",
         }
         constraint = create_constraint(data)
         assert isinstance(constraint, RectangleConstraint)
@@ -506,7 +460,7 @@ class TestExtendedConstraintFactory:
             "corner_b": "p2",
             "corner_c": "p3",
             "corner_d": "p4",
-            "aspect_ratio": 1.0
+            "aspect_ratio": 1.0,
         }
         constraint = create_constraint(data)
         assert isinstance(constraint, RectangleConstraint)
@@ -520,17 +474,14 @@ class TestExtendedConstraintFactory:
             "point_b": "p2",
             "mirror_plane_a": "p3",
             "mirror_plane_b": "p4",
-            "mirror_plane_c": "p5"
+            "mirror_plane_c": "p5",
         }
         constraint = create_constraint(data)
         assert isinstance(constraint, MirrorSymmetryConstraint)
 
     def test_create_equal_spacing_constraint(self):
         """Test creating equal spacing constraint from dict."""
-        data = {
-            "type": "equal_spacing",
-            "point_ids": ["p1", "p2", "p3", "p4"]
-        }
+        data = {"type": "equal_spacing", "point_ids": ["p1", "p2", "p3", "p4"]}
         constraint = create_constraint(data)
         assert isinstance(constraint, EqualSpacingConstraint)
         assert len(constraint.point_ids) == 4
@@ -551,7 +502,7 @@ class TestExtendedConstraintRegistry:
             "equal_distance",
             "rectangle",
             "mirror_symmetry",
-            "equal_spacing"
+            "equal_spacing",
         ]
 
         for constraint_type in extended_types:
@@ -559,13 +510,33 @@ class TestExtendedConstraintRegistry:
 
     def test_get_extended_constraint_classes(self):
         """Test getting extended constraint classes by type."""
-        assert ConstraintRegistry.get_constraint_class("point_on_line") == PointOnLineConstraint
-        assert ConstraintRegistry.get_constraint_class("point_on_plane") == PointOnPlaneConstraint
-        assert ConstraintRegistry.get_constraint_class("point_on_sphere") == PointOnSphereConstraint
-        assert ConstraintRegistry.get_constraint_class("equal_distance") == EqualDistanceConstraint
-        assert ConstraintRegistry.get_constraint_class("rectangle") == RectangleConstraint
-        assert ConstraintRegistry.get_constraint_class("mirror_symmetry") == MirrorSymmetryConstraint
-        assert ConstraintRegistry.get_constraint_class("equal_spacing") == EqualSpacingConstraint
+        assert (
+            ConstraintRegistry.get_constraint_class("point_on_line")
+            == PointOnLineConstraint
+        )
+        assert (
+            ConstraintRegistry.get_constraint_class("point_on_plane")
+            == PointOnPlaneConstraint
+        )
+        assert (
+            ConstraintRegistry.get_constraint_class("point_on_sphere")
+            == PointOnSphereConstraint
+        )
+        assert (
+            ConstraintRegistry.get_constraint_class("equal_distance")
+            == EqualDistanceConstraint
+        )
+        assert (
+            ConstraintRegistry.get_constraint_class("rectangle") == RectangleConstraint
+        )
+        assert (
+            ConstraintRegistry.get_constraint_class("mirror_symmetry")
+            == MirrorSymmetryConstraint
+        )
+        assert (
+            ConstraintRegistry.get_constraint_class("equal_spacing")
+            == EqualSpacingConstraint
+        )
 
     def test_validate_extended_constraint_data(self):
         """Test validation of extended constraint data."""
@@ -575,7 +546,7 @@ class TestExtendedConstraintRegistry:
                 "type": "point_on_line",
                 "point_id": "p1",
                 "line_wp_a": "p2",
-                "line_wp_b": "p3"
+                "line_wp_b": "p3",
             },
             {
                 "type": "rectangle",
@@ -583,12 +554,9 @@ class TestExtendedConstraintRegistry:
                 "corner_b": "p2",
                 "corner_c": "p3",
                 "corner_d": "p4",
-                "aspect_ratio": 1.0
+                "aspect_ratio": 1.0,
             },
-            {
-                "type": "equal_spacing",
-                "point_ids": ["p1", "p2", "p3"]
-            }
+            {"type": "equal_spacing", "point_ids": ["p1", "p2", "p3"]},
         ]
 
         for data in valid_constraints:
@@ -600,15 +568,15 @@ class TestExtendedConstraintRegistry:
                 "type": "point_on_line",
                 "point_id": "p1",
                 "line_wp_a": "p1",  # Same as point
-                "line_wp_b": "p3"
+                "line_wp_b": "p3",
             },
             {
                 "type": "rectangle",
                 "corner_a": "p1",
                 "corner_b": "p1",  # Duplicate corner
                 "corner_c": "p3",
-                "corner_d": "p4"
-            }
+                "corner_d": "p4",
+            },
         ]
 
         for data in invalid_constraints:
@@ -642,7 +610,7 @@ class TestUIConsolidation:
             line1_wp_b="p2",
             line2_wp_a="p3",
             line2_wp_b="p4",
-            angle_degrees=30.0
+            angle_degrees=30.0,
         )
 
         assert constraint.angle_degrees == 30.0
@@ -652,11 +620,7 @@ class TestUIConsolidation:
         """Test that UI square button maps to rectangle constraint."""
         # UI would create this when user clicks "Square" button
         constraint = RectangleConstraint(
-            corner_a="p1",
-            corner_b="p2",
-            corner_c="p3",
-            corner_d="p4",
-            aspect_ratio=1.0
+            corner_a="p1", corner_b="p2", corner_c="p3", corner_d="p4", aspect_ratio=1.0
         )
 
         assert constraint.aspect_ratio == 1.0
@@ -669,7 +633,7 @@ class TestUIConsolidation:
             corner_a="p1",
             corner_b="p2",
             corner_c="p3",
-            corner_d="p4"
+            corner_d="p4",
             # No aspect ratio = general rectangle
         )
 

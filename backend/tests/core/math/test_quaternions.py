@@ -2,13 +2,12 @@
 
 import numpy as np
 import pytest
-
 from pictorigo.core.math.quaternions import (
-    quat_normalize,
-    quat_from_axis_angle,
-    quat_to_matrix,
-    quat_multiply,
     quat_conjugate,
+    quat_from_axis_angle,
+    quat_multiply,
+    quat_normalize,
+    quat_to_matrix,
 )
 
 
@@ -43,7 +42,7 @@ class TestQuaternions:
         angle = np.pi / 2
         q = quat_from_axis_angle(axis, angle)
 
-        expected = np.array([np.sqrt(2)/2, np.sqrt(2)/2, 0.0, 0.0])
+        expected = np.array([np.sqrt(2) / 2, np.sqrt(2) / 2, 0.0, 0.0])
         np.testing.assert_allclose(q, expected, atol=1e-10)
 
     def test_quat_from_axis_angle_zero_axis(self):
@@ -64,14 +63,10 @@ class TestQuaternions:
 
     def test_quat_to_matrix_90deg_x(self):
         """Test quaternion to matrix for 90 degree rotation around X."""
-        q = np.array([np.sqrt(2)/2, np.sqrt(2)/2, 0.0, 0.0])
+        q = np.array([np.sqrt(2) / 2, np.sqrt(2) / 2, 0.0, 0.0])
         R = quat_to_matrix(q)
 
-        expected = np.array([
-            [1, 0, 0],
-            [0, 0, -1],
-            [0, 1, 0]
-        ])
+        expected = np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]])
         np.testing.assert_allclose(R, expected, atol=1e-10)
 
     def test_quat_to_matrix_properties(self):

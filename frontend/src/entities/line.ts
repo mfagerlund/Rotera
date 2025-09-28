@@ -29,11 +29,17 @@ export interface LineRepository {
   getPlanesByLine(lineId: LineId): EntityId[]
   entityExists(id: EntityId): boolean
   pointExists(pointId: PointId): boolean
+  // Enhanced methods for smart references
+  getReferenceManager?(): { resolve<T extends ISelectable>(id: EntityId, type: string): T | undefined }
 }
 
 // Domain class with runtime behavior
 export class Line implements ISelectable, IValidatable {
   private selected = false
+
+  // Smart reference caching for performance optimization
+  private _pointARef?: any // WorldPoint reference cache
+  private _pointBRef?: any // WorldPoint reference cache
 
   private constructor(
     private repo: LineRepository,
@@ -330,6 +336,62 @@ export class Line implements ISelectable, IValidatable {
     return this.data.pointB
   }
 
+  // Smart reference getters for performance optimization
+  // Direct object access instead of ID-based repository lookups
+
+  /**
+   * Get the first point as a WorldPoint object (direct reference)
+   * Uses smart caching to avoid repeated repository lookups
+   */
+  get pointAEntity(): any {
+    if (!this._pointARef) {
+      const refManager = this.repo.getReferenceManager?.()
+      if (refManager) {
+        this._pointARef = refManager.resolve(this.data.pointA as EntityId, 'point')
+      }
+    }
+    return this._pointARef
+  }
+
+  /**
+   * Get the second point as a WorldPoint object (direct reference)
+   * Uses smart caching to avoid repeated repository lookups
+   */
+  get pointBEntity(): any {
+    if (!this._pointBRef) {
+      const refManager = this.repo.getReferenceManager?.()
+      if (refManager) {
+        this._pointBRef = refManager.resolve(this.data.pointB as EntityId, 'point')
+      }
+    }
+    return this._pointBRef
+  }
+
+  /**
+   * Get both points as an array of WorldPoint objects
+   * More efficient than individual lookups for operations needing both points
+   */
+  get points(): [any, any] {
+    return [this.pointAEntity, this.pointBEntity]
+  }
+
+  /**
+   * Get both point IDs (backward compatibility)
+   * Legacy method - prefer pointA/pointB for ID access or pointAEntity/pointBEntity for objects
+   */
+  getPointIds(): [PointId, PointId] {
+    return [this.data.pointA, this.data.pointB]
+  }
+
+  /**
+   * Invalidate cached references when underlying data changes
+   * Called automatically on updates that might affect relationships
+   */
+  private invalidateReferences(): void {
+    this._pointARef = undefined
+    this._pointBRef = undefined
+  }
+
   get color(): string {
     return this.data.color
   }
@@ -395,16 +457,98 @@ export class Line implements ISelectable, IValidatable {
     return this.data.updatedAt
   }
 
-  // Utility methods
+  // Enhanced utility methods using smart references
   length(): number | null {
-    // Would need access to point coordinates through repository
-    // This is a placeholder - actual implementation would get points from repo
-    return null
+    const pointA = this.pointAEntity
+    const pointB = this.pointBEntity
+
+    if (!pointA?.xyz || !pointB?.xyz) {
+      return null
+    }
+
+    const [x1, y1, z1] = pointA.xyz
+    const [x2, y2, z2] = pointB.xyz
+
+    return Math.sqrt(
+      Math.pow(x2 - x1, 2) +
+      Math.pow(y2 - y1, 2) +
+      Math.pow(z2 - z1, 2)
+    )
   }
 
   getDirection(): [number, number, number] | null {
-    // Would need access to point coordinates through repository
-    return null
+    const pointA = this.pointAEntity
+    const pointB = this.pointBEntity
+
+    if (!pointA?.xyz || !pointB?.xyz) {
+      return null
+    }
+
+    const [x1, y1, z1] = pointA.xyz
+    const [x2, y2, z2] = pointB.xyz
+
+    // Calculate direction vector
+    const dx = x2 - x1
+    const dy = y2 - y1
+    const dz = z2 - z1
+
+    // Normalize the vector
+    const length = Math.sqrt(dx * dx + dy * dy + dz * dz)
+    if (length === 0) return null
+
+    return [dx / length, dy / length, dz / length]
+  }
+
+  /**
+   * Get the midpoint of the line
+   */
+  getMidpoint(): [number, number, number] | null {
+    const pointA = this.pointAEntity
+    const pointB = this.pointBEntity
+
+    if (!pointA?.xyz || !pointB?.xyz) {
+      return null
+    }
+
+    const [x1, y1, z1] = pointA.xyz
+    const [x2, y2, z2] = pointB.xyz
+
+    return [
+      (x1 + x2) / 2,
+      (y1 + y2) / 2,
+      (z1 + z2) / 2
+    ]
+  }
+
+  /**
+   * Check if a point lies on this line (within tolerance)
+   */
+  containsPoint(point: [number, number, number], tolerance: number = 1e-6): boolean {
+    const pointA = this.pointAEntity
+    const pointB = this.pointBEntity
+
+    if (!pointA?.xyz || !pointB?.xyz) {
+      return false
+    }
+
+    const [x, y, z] = point
+    const [x1, y1, z1] = pointA.xyz
+    const [x2, y2, z2] = pointB.xyz
+
+    // Calculate cross product to check if point is collinear
+    const crossProduct = [
+      (y - y1) * (z2 - z1) - (z - z1) * (y2 - y1),
+      (z - z1) * (x2 - x1) - (x - x1) * (z2 - z1),
+      (x - x1) * (y2 - y1) - (y - y1) * (x2 - x1)
+    ]
+
+    const crossMagnitude = Math.sqrt(
+      crossProduct[0] * crossProduct[0] +
+      crossProduct[1] * crossProduct[1] +
+      crossProduct[2] * crossProduct[2]
+    )
+
+    return crossMagnitude < tolerance
   }
 
   clone(newId: LineId, newName?: string): Line {

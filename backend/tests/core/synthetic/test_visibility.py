@@ -1,18 +1,16 @@
 """Tests for visibility checking utilities."""
 
 import numpy as np
-import pytest
-
+from pictorigo.core.models.constraints import ImagePointConstraint
+from pictorigo.core.models.entities import Camera, Image, WorldPoint
 from pictorigo.core.synthetic.visibility import (
-    check_visibility,
-    filter_visible_points,
-    compute_visibility_matrix,
-    analyze_scene_coverage,
     add_projection_noise,
+    analyze_scene_coverage,
+    check_visibility,
+    compute_visibility_matrix,
+    filter_visible_points,
     simulate_outliers,
 )
-from pictorigo.core.models.entities import WorldPoint, Image, Camera
-from pictorigo.core.models.constraints import ImagePointConstraint
 
 
 class TestVisibilityChecking:
@@ -30,16 +28,17 @@ class TestVisibilityChecking:
     def test_check_visibility_basic(self):
         """Test basic visibility checking."""
         # Points in front of camera
-        X = np.array([
-            [0, 0, 5],    # Center, should be visible
-            [2, 0, 5],    # Right, should be visible
-            [0, 2, 5],    # Up, should be visible
-            [0, 0, -1],   # Behind camera, should not be visible
-        ])
+        X = np.array(
+            [
+                [0, 0, 5],  # Center, should be visible
+                [2, 0, 5],  # Right, should be visible
+                [0, 2, 5],  # Up, should be visible
+                [0, 0, -1],  # Behind camera, should not be visible
+            ]
+        )
 
         visible, uv = check_visibility(
-            self.K, self.R, self.t, X,
-            self.image_width, self.image_height
+            self.K, self.R, self.t, X, self.image_width, self.image_height
         )
 
         # First three should be visible, last should not
@@ -54,39 +53,47 @@ class TestVisibilityChecking:
 
     def test_check_visibility_depth_constraints(self):
         """Test depth constraint checking."""
-        X = np.array([
-            [0, 0, 0.05],  # Too close
-            [0, 0, 5],     # Good depth
-            [0, 0, 1500],  # Too far
-        ])
+        X = np.array(
+            [
+                [0, 0, 0.05],  # Too close
+                [0, 0, 5],  # Good depth
+                [0, 0, 1500],  # Too far
+            ]
+        )
 
         visible, uv = check_visibility(
-            self.K, self.R, self.t, X,
-            self.image_width, self.image_height,
-            min_depth=0.1, max_depth=1000.0
+            self.K,
+            self.R,
+            self.t,
+            X,
+            self.image_width,
+            self.image_height,
+            min_depth=0.1,
+            max_depth=1000.0,
         )
 
         assert not visible[0]  # Too close
-        assert visible[1]      # Good depth
+        assert visible[1]  # Good depth
         assert not visible[2]  # Too far
 
     def test_check_visibility_image_bounds(self):
         """Test image bounds checking."""
         # Points that project outside image bounds
-        X = np.array([
-            [0, 0, 5],       # Center - should be visible
-            [10, 0, 5],      # Far right - should not be visible
-            [0, 10, 5],      # Far up - should not be visible
-            [-10, 0, 5],     # Far left - should not be visible
-            [0, -10, 5],     # Far down - should not be visible
-        ])
-
-        visible, uv = check_visibility(
-            self.K, self.R, self.t, X,
-            self.image_width, self.image_height
+        X = np.array(
+            [
+                [0, 0, 5],  # Center - should be visible
+                [10, 0, 5],  # Far right - should not be visible
+                [0, 10, 5],  # Far up - should not be visible
+                [-10, 0, 5],  # Far left - should not be visible
+                [0, -10, 5],  # Far down - should not be visible
+            ]
         )
 
-        assert visible[0]      # Center
+        visible, uv = check_visibility(
+            self.K, self.R, self.t, X, self.image_width, self.image_height
+        )
+
+        assert visible[0]  # Center
         assert not visible[1]  # Right
         assert not visible[2]  # Up
         assert not visible[3]  # Left
@@ -99,16 +106,24 @@ class TestVisibilityChecking:
 
         # Without margin
         visible_no_margin, _ = check_visibility(
-            self.K, self.R, self.t, X,
-            self.image_width, self.image_height,
-            border_margin=0
+            self.K,
+            self.R,
+            self.t,
+            X,
+            self.image_width,
+            self.image_height,
+            border_margin=0,
         )
 
         # With margin
         visible_with_margin, _ = check_visibility(
-            self.K, self.R, self.t, X,
-            self.image_width, self.image_height,
-            border_margin=50
+            self.K,
+            self.R,
+            self.t,
+            X,
+            self.image_width,
+            self.image_height,
+            border_margin=50,
         )
 
         # Point might be visible without margin but not with margin
@@ -121,8 +136,7 @@ class TestVisibilityChecking:
         X = np.array([0, 0, 5])  # Single point
 
         visible, uv = check_visibility(
-            self.K, self.R, self.t, X,
-            self.image_width, self.image_height
+            self.K, self.R, self.t, X, self.image_width, self.image_height
         )
 
         assert len(visible) == 1
@@ -137,10 +151,10 @@ class TestVisibilityFiltering:
         """Set up test fixtures."""
         # Create test world points
         self.world_points = [
-            WorldPoint(id="wp1", xyz=[0, 0, 5]),     # Center
-            WorldPoint(id="wp2", xyz=[2, 0, 5]),     # Right
-            WorldPoint(id="wp3", xyz=[0, 0, -1]),    # Behind cameras
-            WorldPoint(id="wp4", xyz=[10, 0, 5]),    # Far right (may not be visible)
+            WorldPoint(id="wp1", xyz=[0, 0, 5]),  # Center
+            WorldPoint(id="wp2", xyz=[2, 0, 5]),  # Right
+            WorldPoint(id="wp3", xyz=[0, 0, -1]),  # Behind cameras
+            WorldPoint(id="wp4", xyz=[10, 0, 5]),  # Far right (may not be visible)
         ]
 
         # Create test cameras
@@ -152,16 +166,14 @@ class TestVisibilityFiltering:
                 image_id=f"img{i}",
                 K=[500.0, 500.0, 320.0, 240.0],
                 R=[0.0, 0.0, 0.0],  # Identity rotation
-                t=[i * 1.0, 0.0, 0.0]  # Offset cameras
+                t=[i * 1.0, 0.0, 0.0],  # Offset cameras
             )
             self.cameras_and_images.append((camera, image))
 
     def test_filter_visible_points(self):
         """Test filtering points by visibility."""
         filtered_points = filter_visible_points(
-            self.world_points,
-            self.cameras_and_images,
-            min_visible_cameras=1
+            self.world_points, self.cameras_and_images, min_visible_cameras=1
         )
 
         # Should filter out points behind cameras and far outside bounds
@@ -177,14 +189,12 @@ class TestVisibilityFiltering:
         filtered_points = filter_visible_points(
             self.world_points,
             self.cameras_and_images,
-            min_visible_cameras=2  # Must be visible in both cameras
+            min_visible_cameras=2,  # Must be visible in both cameras
         )
 
         # Should be more restrictive
         lenient_filter = filter_visible_points(
-            self.world_points,
-            self.cameras_and_images,
-            min_visible_cameras=1
+            self.world_points, self.cameras_and_images, min_visible_cameras=1
         )
 
         assert len(filtered_points) <= len(lenient_filter)
@@ -192,8 +202,7 @@ class TestVisibilityFiltering:
     def test_compute_visibility_matrix(self):
         """Test visibility matrix computation."""
         visibility_matrix = compute_visibility_matrix(
-            self.world_points,
-            self.cameras_and_images
+            self.world_points, self.cameras_and_images
         )
 
         n_points = len(self.world_points)
@@ -208,10 +217,7 @@ class TestVisibilityFiltering:
 
     def test_analyze_scene_coverage(self):
         """Test scene coverage analysis."""
-        stats = analyze_scene_coverage(
-            self.world_points,
-            self.cameras_and_images
-        )
+        stats = analyze_scene_coverage(self.world_points, self.cameras_and_images)
 
         # Check required fields in stats
         required_fields = [
@@ -220,7 +226,7 @@ class TestVisibilityFiltering:
             "points_per_camera",
             "cameras_per_point",
             "visibility_distribution",
-            "total_observations"
+            "total_observations",
         ]
 
         for field in required_fields:
@@ -241,11 +247,7 @@ class TestProjectionNoise:
 
     def test_add_projection_noise(self):
         """Test adding noise to projections."""
-        uv_original = np.array([
-            [320, 240],
-            [400, 300],
-            [200, 180]
-        ])
+        uv_original = np.array([[320, 240], [400, 300], [200, 180]])
 
         noise_std = 1.0
         uv_noisy = add_projection_noise(uv_original, noise_std, seed=42)
@@ -273,10 +275,7 @@ class TestProjectionNoise:
         # Create test constraints
         constraints = [
             ImagePointConstraint(
-                image_id="img1",
-                wp_id=f"wp{i}",
-                u=320 + i * 10,
-                v=240 + i * 10
+                image_id="img1", wp_id=f"wp{i}", u=320 + i * 10, v=240 + i * 10
             )
             for i in range(10)
         ]
@@ -286,7 +285,7 @@ class TestProjectionNoise:
             constraints,
             outlier_fraction=outlier_fraction,
             outlier_noise_std=20.0,
-            seed=42
+            seed=42,
         )
 
         assert len(outlier_constraints) == len(constraints)
@@ -295,7 +294,11 @@ class TestProjectionNoise:
         original_coords = [(c.u, c.v) for c in constraints]
         outlier_coords = [(c.u, c.v) for c in outlier_constraints]
 
-        n_modified = sum(1 for orig, outl in zip(original_coords, outlier_coords) if orig != outl)
+        n_modified = sum(
+            1
+            for orig, outl in zip(original_coords, outlier_coords, strict=False)
+            if orig != outl
+        )
         expected_outliers = int(len(constraints) * outlier_fraction)
 
         # Should have roughly the expected number of outliers
@@ -303,19 +306,10 @@ class TestProjectionNoise:
 
     def test_simulate_outliers_zero_fraction(self):
         """Test outlier simulation with zero fraction."""
-        constraints = [
-            ImagePointConstraint(
-                image_id="img1",
-                wp_id="wp1",
-                u=320,
-                v=240
-            )
-        ]
+        constraints = [ImagePointConstraint(image_id="img1", wp_id="wp1", u=320, v=240)]
 
         outlier_constraints = simulate_outliers(
-            constraints,
-            outlier_fraction=0.0,
-            seed=42
+            constraints, outlier_fraction=0.0, seed=42
         )
 
         # Should be unchanged
@@ -326,18 +320,13 @@ class TestProjectionNoise:
     def test_simulate_outliers_reproducible(self):
         """Test that outlier simulation is reproducible."""
         constraints = [
-            ImagePointConstraint(
-                image_id="img1",
-                wp_id=f"wp{i}",
-                u=320,
-                v=240
-            )
+            ImagePointConstraint(image_id="img1", wp_id=f"wp{i}", u=320, v=240)
             for i in range(5)
         ]
 
         outliers1 = simulate_outliers(constraints, 0.4, seed=42)
         outliers2 = simulate_outliers(constraints, 0.4, seed=42)
 
-        for c1, c2 in zip(outliers1, outliers2):
+        for c1, c2 in zip(outliers1, outliers2, strict=False):
             assert c1.u == c2.u
             assert c1.v == c2.v

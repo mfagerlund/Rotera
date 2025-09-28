@@ -2,15 +2,14 @@
 
 import numpy as np
 import pytest
-
+from pictorigo.core.models.constraints import ImagePointConstraint
+from pictorigo.core.models.entities import Camera, Image, WorldPoint
 from pictorigo.core.synthetic.scene_gen import (
     SceneGenerator,
     make_box_room,
     make_grid_plane,
     make_two_view,
 )
-from pictorigo.core.models.entities import WorldPoint, Image, Camera
-from pictorigo.core.models.constraints import ImagePointConstraint
 
 
 class TestSceneGenerator:
@@ -60,7 +59,9 @@ class TestSceneGenerator:
 
         # With noise, points should not be exactly on grid
         coords = np.array([p.xyz for p in points])
-        grid_coords = np.array([[i, j, k] for i in [0, 1] for j in [0, 1] for k in [0, 1]])
+        grid_coords = np.array(
+            [[i, j, k] for i in [0, 1] for j in [0, 1] for k in [0, 1]]
+        )
 
         # Check that at least some points are not exactly on grid
         differences = np.linalg.norm(coords - grid_coords, axis=1)
@@ -112,7 +113,7 @@ class TestSceneGenerator:
             image_id="img1",
             K=[500.0, 500.0, 320.0, 240.0],
             R=[0.0, 0.0, 0.0],  # Identity rotation
-            t=[0.0, 0.0, 0.0]   # At origin
+            t=[0.0, 0.0, 0.0],  # At origin
         )
 
         cameras_and_images = [(camera, image)]
@@ -144,7 +145,7 @@ class TestSceneGenerator:
             image_id="img1",
             K=[500.0, 500.0, 320.0, 240.0],
             R=[0.0, 0.0, 0.0],
-            t=[0.0, 0.0, 0.0]
+            t=[0.0, 0.0, 0.0],
         )
 
         cameras_and_images = [(camera, image)]
@@ -169,11 +170,7 @@ class TestSceneFactories:
 
     def test_make_box_room(self):
         """Test box room scene creation."""
-        project = make_box_room(
-            room_size=(4.0, 3.0, 2.5),
-            n_cameras=4,
-            seed=42
-        )
+        project = make_box_room(room_size=(4.0, 3.0, 2.5), n_cameras=4, seed=42)
 
         # Check project structure
         assert len(project.world_points) > 8  # At least room corners + interior points
@@ -181,7 +178,9 @@ class TestSceneFactories:
         assert len(project.images) == 4
 
         # Check that room corners exist
-        corner_ids = [f"corner_{i}{j}{k}" for i in [0, 1] for j in [0, 1] for k in [0, 1]]
+        corner_ids = [
+            f"corner_{i}{j}{k}" for i in [0, 1] for j in [0, 1] for k in [0, 1]
+        ]
         for corner_id in corner_ids:
             assert corner_id in project.world_points
 
@@ -199,12 +198,7 @@ class TestSceneFactories:
 
     def test_make_grid_plane(self):
         """Test grid plane scene creation."""
-        project = make_grid_plane(
-            grid_size=(3, 3),
-            spacing=1.0,
-            n_cameras=3,
-            seed=42
-        )
+        project = make_grid_plane(grid_size=(3, 3), spacing=1.0, n_cameras=3, seed=42)
 
         # Check project structure
         assert len(project.world_points) == 9  # 3x3 grid
@@ -227,11 +221,7 @@ class TestSceneFactories:
 
     def test_make_two_view(self):
         """Test two-view scene creation."""
-        project = make_two_view(
-            n_points=10,
-            baseline=1.5,
-            seed=42
-        )
+        project = make_two_view(n_points=10, baseline=1.5, seed=42)
 
         # Check project structure
         assert len(project.world_points) == 12  # 10 scene points + 2 camera centers
@@ -249,9 +239,10 @@ class TestSceneFactories:
         # Check baseline constraint
         distance_constraints = project.get_constraints_by_type("distance")
         baseline_constraints = [
-            c for c in distance_constraints
-            if (c.wp_i == "cam_center_0" and c.wp_j == "cam_center_1") or
-               (c.wp_i == "cam_center_1" and c.wp_j == "cam_center_0")
+            c
+            for c in distance_constraints
+            if (c.wp_i == "cam_center_0" and c.wp_j == "cam_center_1")
+            or (c.wp_i == "cam_center_1" and c.wp_j == "cam_center_0")
         ]
         assert len(baseline_constraints) == 1
         assert baseline_constraints[0].distance == 1.5
