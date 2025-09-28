@@ -54,7 +54,7 @@ export class ExportService {
     } catch (error) {
       return {
         success: false,
-        message: error.message || 'Export failed',
+        message: error instanceof Error ? error.message : 'Export failed',
         filename: ''
       }
     }
@@ -64,7 +64,6 @@ export class ExportService {
     const exportData: any = {
       project: {
         name: this.project.name,
-        description: this.project.description,
         createdAt: this.project.createdAt,
         updatedAt: this.project.updatedAt
       },
@@ -303,7 +302,6 @@ EOF
 <pictorigo-export>
   <project>
     <name>${this.escapeXML(this.project.name)}</name>
-    <description>${this.escapeXML(this.project.description || '')}</description>
     <created-at>${this.project.createdAt}</created-at>
     <updated-at>${this.project.updatedAt}</updated-at>
   </project>
@@ -393,23 +391,23 @@ EOF
   private getConstraintPointIds(constraint: Constraint): string[] {
     switch (constraint.type) {
       case 'distance':
-        return [constraint.pointA, constraint.pointB]
+        return [constraint.pointA, constraint.pointB].filter((id): id is string => typeof id === 'string')
       case 'angle':
-        return [constraint.vertex, constraint.line1_end, constraint.line2_end]
+        return [constraint.vertex, constraint.line1_end, constraint.line2_end].filter((id): id is string => typeof id === 'string')
       case 'perpendicular':
       case 'parallel':
-        return [constraint.line1_wp_a, constraint.line1_wp_b, constraint.line2_wp_a, constraint.line2_wp_b]
+        return [constraint.line1_wp_a, constraint.line1_wp_b, constraint.line2_wp_a, constraint.line2_wp_b].filter((id): id is string => typeof id === 'string')
       case 'collinear':
         return constraint.wp_ids || []
       case 'rectangle':
-        return [constraint.cornerA, constraint.cornerB, constraint.cornerC, constraint.cornerD]
+        return [constraint.cornerA, constraint.cornerB, constraint.cornerC, constraint.cornerD].filter((id): id is string => typeof id === 'string')
       case 'circle':
         return constraint.point_ids || []
       case 'fixed':
-        return [constraint.point_id]
+        return [constraint.point_id].filter((id): id is string => typeof id === 'string')
       case 'horizontal':
       case 'vertical':
-        return [constraint.pointA, constraint.pointB]
+        return [constraint.pointA, constraint.pointB].filter((id): id is string => typeof id === 'string')
       default:
         return []
     }
@@ -438,7 +436,7 @@ EOF
 ========================
 
 Project: ${this.project.name}
-Description: ${this.project.description || 'No description'}
+Description: No description
 Created: ${new Date(this.project.createdAt).toLocaleString()}
 Updated: ${new Date(this.project.updatedAt).toLocaleString()}
 

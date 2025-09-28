@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Project, WorldPoint, ProjectImage, Camera, Constraint, Line } from '../types/project'
 import { ProjectStorage } from '../utils/storage'
 import { ImageUtils } from '../utils/imageUtils'
+import { getConstraintPointIds } from '../types/utils'
 
 export const useProject = () => {
   const [project, setProject] = useState<Project | null>(null)
@@ -444,25 +445,3 @@ function generatePointColor(index: number): string {
   return colors[index % colors.length]
 }
 
-function getConstraintPointIds(constraint: Constraint): string[] {
-  // Extract point IDs from constraint based on type
-  switch (constraint.type) {
-    case 'distance':
-      return [constraint.pointA, constraint.pointB]
-    case 'angle':
-      return [constraint.vertex, constraint.line1_end, constraint.line2_end]
-    case 'perpendicular':
-    case 'parallel':
-      return [constraint.line1_wp_a, constraint.line1_wp_b, constraint.line2_wp_a, constraint.line2_wp_b]
-    case 'collinear':
-      return constraint.wp_ids || []
-    case 'rectangle':
-      return [constraint.cornerA, constraint.cornerB, constraint.cornerC, constraint.cornerD]
-    case 'circle':
-      return constraint.point_ids || []
-    case 'fixed':
-      return [constraint.point_id]
-    default:
-      return []
-  }
-}

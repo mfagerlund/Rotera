@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { WorldPoint, Constraint } from '../types/project'
+import { getConstraintPointIds } from '../types/utils'
 import {
   RippleButton,
   DelightfulTooltip,
@@ -498,28 +499,6 @@ const EnhancedWorldPointItem: React.FC<EnhancedWorldPointItemProps> = ({
 }
 
 // Helper functions (same as original, but with enhanced UI feedback)
-function getConstraintPointIds(constraint: Constraint): string[] {
-  switch (constraint.type) {
-    case 'distance':
-      return [constraint.pointA, constraint.pointB]
-    case 'angle':
-      return [constraint.vertex, constraint.line1_end, constraint.line2_end]
-    case 'perpendicular':
-    case 'parallel':
-      return [constraint.line1_wp_a, constraint.line1_wp_b, constraint.line2_wp_a, constraint.line2_wp_b]
-    case 'collinear':
-      return constraint.wp_ids || []
-    case 'rectangle':
-      return [constraint.cornerA, constraint.cornerB, constraint.cornerC, constraint.cornerD]
-    case 'circle':
-      return constraint.point_ids || []
-    case 'fixed':
-      return [constraint.point_id]
-    default:
-      return []
-  }
-}
-
 function getConstraintDisplayName(constraint: Constraint): string {
   switch (constraint.type) {
     case 'distance':

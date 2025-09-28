@@ -6,6 +6,8 @@ import { useSelection, useSelectionKeyboard } from '../hooks/useSelection'
 import { useConstraints } from '../hooks/useConstraints'
 import { useEnhancedProject } from '../hooks/useEnhancedProject'
 import { Line } from '../types/project'
+import { EnhancedConstraint, ConstraintType as GeometryConstraintType } from '../types/geometry'
+import { VisualLanguageManager } from '../utils/visualLanguage'
 
 // UI Components
 import ConstraintToolbar from './ConstraintToolbar'
@@ -110,6 +112,69 @@ export const MainLayout: React.FC = () => {
     deleteConstraint,
     toggleConstraint
   )
+
+  // Convert legacy constraints to enhanced constraints
+  const enhancedConstraints: EnhancedConstraint[] = constraints.map(constraint => ({
+    id: constraint.id,
+    type: constraint.type as GeometryConstraintType,
+    name: constraint.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+    description: undefined,
+    entities: {
+      points: constraint.entities?.points || [],
+      lines: constraint.entities?.lines || [],
+      planes: constraint.entities?.planes || [],
+      circles: []
+    },
+    parameters: {},
+    enabled: constraint.enabled,
+    isDriving: constraint.isDriving,
+    weight: constraint.weight,
+    priority: 1,
+    status: constraint.status,
+    residual: constraint.residual,
+    error: undefined,
+    showGlyph: true,
+    glyphPosition: undefined,
+    color: undefined,
+    createdAt: constraint.createdAt,
+    updatedAt: undefined,
+    createdBy: 'user',
+    tags: undefined
+  }))
+
+  // Create visual language manager with minimal settings
+  const visualManager = new VisualLanguageManager({
+    showPointNames: true,
+    showPointIds: false,
+    showConstraintGlyphs: true,
+    showMeasurements: true,
+    showConstructionGeometry: true,
+    theme: 'dark' as const,
+    visualFeedbackLevel: 'standard' as const,
+    entityColors: {} as any, // Minimal placeholder
+    measurementUnits: 'meters' as const,
+    precisionDigits: 3,
+    anglePrecisionDigits: 1,
+    defaultWorkspace: 'image' as const,
+    autoSwitchWorkspace: true,
+    enableSmartSnapping: true,
+    snapTolerance: 5,
+    constraintPreview: true,
+    autoOptimize: false,
+    solverMaxIterations: 100,
+    solverTolerance: 1e-6,
+    gridVisible: true,
+    gridSize: 1,
+    snapToGrid: false,
+    showCoordinateAxes: true,
+    showCameraPoses: true,
+    maxVisibleEntities: 1000,
+    levelOfDetail: true,
+    renderQuality: 'medium' as const,
+    autoSave: true,
+    autoSaveInterval: 30,
+    keepBackups: 5
+  })
 
   // UI state
   const [placementMode, setPlacementMode] = useState<{
@@ -337,7 +402,9 @@ export const MainLayout: React.FC = () => {
                 id,
                 {
                   ...line,
-                  geometry: line.type // Convert 'type' to 'geometry' for ImageViewer
+                  geometry: line.type, // Convert 'type' to 'geometry' for ImageViewer
+                  isConstruction: line.isConstruction ?? false,
+                  createdAt: line.createdAt ?? new Date().toISOString()
                 }
               ])
             )}
@@ -444,7 +511,7 @@ export const MainLayout: React.FC = () => {
                 onClick={() => {
                   console.log('🔥 ENHANCED MANUAL TRIGGER CLICKED')
                   // Use first available line or create a test line entry
-                  const lineIds = Object.keys(lines)
+                  const lineIds = Object.keys(project?.lines || {})
                   const testLineId = lineIds.length > 0 ? lineIds[0] : 'test-line-123'
                   setEditLineState({ isOpen: true, lineId: testLineId })
                 }}
@@ -610,15 +677,15 @@ export const MainLayout: React.FC = () => {
               />
 
               <ConstraintTimeline
-                constraints={constraints}
+                constraints={enhancedConstraints}
                 hoveredConstraintId={hoveredConstraintId}
-                worldPointNames={worldPointNames}
                 onHover={setHoveredConstraintId}
                 onEdit={(constraint) => {
                   // TODO: Implement constraint editing
                 }}
                 onDelete={deleteConstraint}
                 onToggle={toggleConstraint}
+                visualManager={visualManager}
               />
             </div>
           </div>

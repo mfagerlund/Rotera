@@ -5,6 +5,11 @@ import { Project, WorldPoint, Constraint } from '../types/project'
 
 export type SymmetryType = 'mirror' | 'rotational' | 'translational'
 
+interface SymmetricPointPair {
+  original: string
+  symmetric: string
+}
+
 export interface SymmetryConstraint extends Omit<Constraint, 'type'> {
   type: 'symmetry'
   symmetryType: SymmetryType
@@ -190,7 +195,7 @@ export const SymmetryConstraintsPanel: React.FC<SymmetryConstraintsPanelProps> =
         } else if (currentStep === 1) {
           // Step 2: Select point pairs
           if (selectedPointIds.length >= 2 && selectedPointIds.length % 2 === 0) {
-            const pairs = []
+            const pairs: SymmetricPointPair[] = []
             for (let i = 0; i < selectedPointIds.length; i += 2) {
               pairs.push({
                 original: selectedPointIds[i],
@@ -223,7 +228,7 @@ export const SymmetryConstraintsPanel: React.FC<SymmetryConstraintsPanelProps> =
         } else if (currentStep === 1) {
           // Step 2: Select symmetric point pairs
           if (selectedPointIds.length >= 2 && selectedPointIds.length % 2 === 0) {
-            const pairs = []
+            const pairs: SymmetricPointPair[] = []
             for (let i = 0; i < selectedPointIds.length; i += 2) {
               pairs.push({
                 original: selectedPointIds[i],
@@ -262,7 +267,7 @@ export const SymmetryConstraintsPanel: React.FC<SymmetryConstraintsPanelProps> =
         } else if (currentStep === 1) {
           // Step 2: Select symmetric point pairs
           if (selectedPointIds.length >= 2 && selectedPointIds.length % 2 === 0) {
-            const pairs = []
+            const pairs: SymmetricPointPair[] = []
             for (let i = 0; i < selectedPointIds.length; i += 2) {
               pairs.push({
                 original: selectedPointIds[i],
@@ -284,9 +289,9 @@ export const SymmetryConstraintsPanel: React.FC<SymmetryConstraintsPanelProps> =
   const completeSymmetryCreation = useCallback(() => {
     if (symmetryData.symmetricPairs && symmetryData.symmetricPairs.length > 0) {
       const constraint: SymmetryConstraint = {
+        ...symmetryData as SymmetryConstraint,
         id: crypto.randomUUID(),
-        type: 'symmetry',
-        ...symmetryData as SymmetryConstraint
+        type: 'symmetry'
       }
       onSymmetryCreate(constraint)
     }

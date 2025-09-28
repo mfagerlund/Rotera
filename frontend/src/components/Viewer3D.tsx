@@ -120,9 +120,10 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
         const projected = project3DTo2D(point.position)
         if (!projected) return
 
-        const radius = point.size / Math.max(1, projected.depth / 5)
+        const radius = (point.size || 5) / Math.max(1, projected.depth / 5)
 
-        ctx.fillStyle = `rgb(${point.color[0]}, ${point.color[1]}, ${point.color[2]})`
+        const color = point.color || [255, 0, 0]
+        ctx.fillStyle = `rgb(${color[0]}, ${color[1]}, ${color[2]})`
         ctx.strokeStyle = selectedPointIds.includes(point.worldPointId) ? '#ffffff' : '#000000'
         ctx.lineWidth = selectedPointIds.includes(point.worldPointId) ? 2 : 1
 

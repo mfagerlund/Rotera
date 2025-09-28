@@ -1,7 +1,8 @@
 // Constraint creation and management hook for context-sensitive toolbar
 
 import { useState, useCallback, useMemo } from 'react'
-import { Constraint, AvailableConstraint, Line } from '../types/project'
+import { Constraint, ConstraintType, AvailableConstraint, Line } from '../types/project'
+import { getConstraintPointIds } from '../types/utils'
 
 export const useConstraints = (
   constraints: Constraint[],
@@ -247,8 +248,18 @@ export const useConstraints = (
 
     const constraint: Constraint = {
       id: crypto.randomUUID(),
-      type: activeConstraintType,
+      type: activeConstraintType as ConstraintType,
       enabled: true,
+      isDriving: true,
+      weight: 1.0,
+      status: 'satisfied',
+      entities: {
+        points: [],
+        lines: [],
+        planes: []
+      },
+      parameters: {},
+      createdAt: new Date().toISOString(),
       ...constraintParameters
     }
 
@@ -340,27 +351,7 @@ export const useConstraints = (
     }
   }, [])
 
-  const getConstraintPointIds = useCallback((constraint: Constraint): string[] => {
-    switch (constraint.type) {
-      case 'distance':
-        return [constraint.pointA, constraint.pointB]
-      case 'angle':
-        return [constraint.vertex, constraint.line1_end, constraint.line2_end]
-      case 'perpendicular':
-      case 'parallel':
-        return [constraint.line1_wp_a, constraint.line1_wp_b, constraint.line2_wp_a, constraint.line2_wp_b]
-      case 'collinear':
-        return constraint.wp_ids || []
-      case 'rectangle':
-        return [constraint.cornerA, constraint.cornerB, constraint.cornerC, constraint.cornerD]
-      case 'circle':
-        return constraint.point_ids || []
-      case 'fixed':
-        return [constraint.point_id]
-      default:
-        return []
-    }
-  }, [])
+  const getConstraintPointIdsCallback = useCallback(getConstraintPointIds, [])
 
   return {
     // State
@@ -387,18 +378,20 @@ export const useConstraints = (
     isConstraintComplete,
     getConstraintDisplayName,
     getConstraintSummary,
-    getConstraintPointIds,
+    getConstraintPointIds: getConstraintPointIdsCallback,
     isCreatingConstraint: !!activeConstraintType
   }
 }
 
 // Helper function to get initial parameters for a constraint type
+type ConstraintParameters = Record<string, string | number | string[] | boolean | undefined>
+
 function getInitialConstraintParameters(
   type: string,
   selectedPoints: string[],
   selectedLines: Line[]
-): Record<string, any> {
-  const params: Record<string, any> = {}
+): ConstraintParameters {
+  const params: ConstraintParameters = {}
 
   switch (type) {
     case 'distance':

@@ -6,32 +6,64 @@ import { configure } from '@testing-library/react'
 configure({ testIdAttribute: 'data-testid' })
 
 // Mock canvas for 3D visualization tests
-HTMLCanvasElement.prototype.getContext = jest.fn(() => ({
-  fillRect: jest.fn(),
-  clearRect: jest.fn(),
-  getImageData: jest.fn(() => ({ data: new Array(4) })),
-  putImageData: jest.fn(),
-  createImageData: jest.fn(() => ({ data: new Array(4) })),
-  setTransform: jest.fn(),
-  drawImage: jest.fn(),
-  save: jest.fn(),
-  fillText: jest.fn(),
-  restore: jest.fn(),
-  beginPath: jest.fn(),
-  moveTo: jest.fn(),
-  lineTo: jest.fn(),
-  closePath: jest.fn(),
-  stroke: jest.fn(),
-  translate: jest.fn(),
-  scale: jest.fn(),
-  rotate: jest.fn(),
-  arc: jest.fn(),
-  fill: jest.fn(),
-  measureText: jest.fn(() => ({ width: 0 })),
-  transform: jest.fn(),
-  rect: jest.fn(),
-  clip: jest.fn(),
-}))
+interface MockCanvasRenderingContext2D extends Partial<CanvasRenderingContext2D> {
+  fillRect: jest.Mock
+  clearRect: jest.Mock
+  getImageData: jest.Mock
+  putImageData: jest.Mock
+  createImageData: jest.Mock
+  setTransform: jest.Mock
+  drawImage: jest.Mock
+  save: jest.Mock
+  fillText: jest.Mock
+  restore: jest.Mock
+  beginPath: jest.Mock
+  moveTo: jest.Mock
+  lineTo: jest.Mock
+  closePath: jest.Mock
+  stroke: jest.Mock
+  translate: jest.Mock
+  scale: jest.Mock
+  rotate: jest.Mock
+  arc: jest.Mock
+  fill: jest.Mock
+  measureText: jest.Mock
+  transform: jest.Mock
+  rect: jest.Mock
+  clip: jest.Mock
+}
+
+HTMLCanvasElement.prototype.getContext = jest.fn((contextId: string): MockCanvasRenderingContext2D | null => {
+  if (contextId === '2d') {
+    return {
+      fillRect: jest.fn(),
+      clearRect: jest.fn(),
+      getImageData: jest.fn(() => ({ data: new Array(4) })),
+      putImageData: jest.fn(),
+      createImageData: jest.fn(() => ({ data: new Array(4) })),
+      setTransform: jest.fn(),
+      drawImage: jest.fn(),
+      save: jest.fn(),
+      fillText: jest.fn(),
+      restore: jest.fn(),
+      beginPath: jest.fn(),
+      moveTo: jest.fn(),
+      lineTo: jest.fn(),
+      closePath: jest.fn(),
+      stroke: jest.fn(),
+      translate: jest.fn(),
+      scale: jest.fn(),
+      rotate: jest.fn(),
+      arc: jest.fn(),
+      fill: jest.fn(),
+      measureText: jest.fn(() => ({ width: 0 })),
+      transform: jest.fn(),
+      rect: jest.fn(),
+      clip: jest.fn(),
+    } as MockCanvasRenderingContext2D
+  }
+  return null
+})
 
 // Mock File API
 global.File = class File {
@@ -40,10 +72,16 @@ global.File = class File {
   size: number
   lastModified: number
 
-  constructor(chunks: any[], filename: string, options: any = {}) {
+  constructor(chunks: (string | ArrayBuffer | ArrayBufferView | Blob)[], filename: string, options: FilePropertyBag = {}) {
     this.name = filename
     this.type = options.type || ''
-    this.size = chunks.reduce((acc, chunk) => acc + chunk.length, 0)
+    this.size = chunks.reduce((acc, chunk) => {
+      if (typeof chunk === 'string') return acc + chunk.length
+      if (chunk instanceof ArrayBuffer) return acc + chunk.byteLength
+      if ('byteLength' in chunk) return acc + chunk.byteLength
+      if (chunk instanceof Blob) return acc + chunk.size
+      return acc
+    }, 0)
     this.lastModified = Date.now()
   }
 
@@ -57,8 +95,14 @@ global.Blob = class Blob {
   size: number
   type: string
 
-  constructor(chunks: any[] = [], options: any = {}) {
-    this.size = chunks.reduce((acc, chunk) => acc + chunk.length, 0)
+  constructor(chunks: (string | ArrayBuffer | ArrayBufferView | Blob)[] = [], options: BlobPropertyBag = {}) {
+    this.size = chunks.reduce((acc, chunk) => {
+      if (typeof chunk === 'string') return acc + chunk.length
+      if (chunk instanceof ArrayBuffer) return acc + chunk.byteLength
+      if ('byteLength' in chunk) return acc + chunk.byteLength
+      if (chunk instanceof Blob) return acc + chunk.size
+      return acc
+    }, 0)
     this.type = options.type || ''
   }
 }

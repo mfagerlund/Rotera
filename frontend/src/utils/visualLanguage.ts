@@ -270,7 +270,7 @@ export class VisualLanguageManager {
       strokeWidth: state === 'selected' ? 3 : state === 'highlighted' ? 4 : 2,
       opacity: state === 'construction' ? 0.7 : 1,
       transition: 'all 0.3s ease',
-      ...overrides
+      ...(overrides as React.CSSProperties)
     }
 
     // Add filter effects for selected/highlighted states
@@ -296,7 +296,7 @@ export class VisualLanguageManager {
       backgroundColor: `${color}20`, // 20% opacity
       opacity: status === 'redundant' ? 0.6 : 1,
       transition: 'all 0.3s ease',
-      ...overrides
+      ...(overrides as React.CSSProperties)
     }
   }
 
@@ -314,6 +314,11 @@ export class VisualLanguageManager {
       ...this.settings,
       ...newSettings
     }
+  }
+
+  // Getter for the color scheme
+  getColorScheme(): ColorScheme {
+    return this.colorScheme
   }
 
   // Export current scheme for persistence
@@ -356,24 +361,24 @@ export const setCSSColorVariables = (manager: VisualLanguageManager): void => {
   const root = document.documentElement
 
   // Set entity colors
-  Object.entries(manager.colorScheme.entities).forEach(([entityType, states]) => {
+  Object.entries(manager.getColorScheme().entities).forEach(([entityType, states]) => {
     Object.entries(states).forEach(([state, color]) => {
       root.style.setProperty(`--entity-${entityType}-${state}`, color)
     })
   })
 
   // Set constraint colors
-  Object.entries(manager.colorScheme.constraints).forEach(([status, color]) => {
+  Object.entries(manager.getColorScheme().constraints).forEach(([status, color]) => {
     root.style.setProperty(`--constraint-${status}`, color)
   })
 
   // Set workspace colors
-  Object.entries(manager.colorScheme.workspaces).forEach(([workspace, color]) => {
+  Object.entries(manager.getColorScheme().workspaces).forEach(([workspace, color]) => {
     root.style.setProperty(`--workspace-${workspace}`, color)
   })
 
   // Set state colors
-  Object.entries(manager.colorScheme.states).forEach(([state, color]) => {
+  Object.entries(manager.getColorScheme().states).forEach(([state, color]) => {
     root.style.setProperty(`--state-${state}`, color)
   })
 }

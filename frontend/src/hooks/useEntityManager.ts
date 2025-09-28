@@ -294,7 +294,7 @@ export const useEntityManager = (
   const getVisible = useCallback((): GeometricEntity[] => {
     const all: GeometricEntity[] = []
     for (const collection of Object.values(entities)) {
-      all.push(...Object.values(collection).filter(entity => entity.isVisible))
+      all.push(...Object.values(collection).filter((entity: unknown): entity is GeometricEntity => (entity as GeometricEntity).isVisible))
     }
     return all
   }, [entities])
@@ -302,7 +302,7 @@ export const useEntityManager = (
   const getConstruction = useCallback((): GeometricEntity[] => {
     const all: GeometricEntity[] = []
     for (const collection of Object.values(entities)) {
-      all.push(...Object.values(collection).filter(entity => entity.isConstruction))
+      all.push(...Object.values(collection).filter((entity: unknown): entity is GeometricEntity => (entity as GeometricEntity).isConstruction))
     }
     return all
   }, [entities])
@@ -310,9 +310,10 @@ export const useEntityManager = (
   const getByTag = useCallback((tag: string): GeometricEntity[] => {
     const all: GeometricEntity[] = []
     for (const collection of Object.values(entities)) {
-      all.push(...Object.values(collection).filter(entity =>
-        entity.tags?.includes(tag)
-      ))
+      all.push(...Object.values(collection).filter((entity: unknown): entity is GeometricEntity => {
+        const geometricEntity = entity as GeometricEntity
+        return geometricEntity.type === 'point' && geometricEntity.tags?.includes(tag)
+      }))
     }
     return all
   }, [entities])
@@ -450,7 +451,7 @@ export const useEntityManager = (
 
     for (const collection of Object.values(entities)) {
       for (const entity of Object.values(collection)) {
-        results[entity.id] = validate(entity.id)
+        results[(entity as GeometricEntity).id] = validate((entity as GeometricEntity).id)
       }
     }
 
@@ -477,10 +478,10 @@ export const useEntityManager = (
 
     for (const collection of Object.values(entities)) {
       for (const entity of Object.values(collection)) {
-        if (entity.isVisible) stats.visible++
-        if (entity.isConstruction) stats.construction++
+        if ((entity as GeometricEntity).isVisible) stats.visible++
+        if ((entity as GeometricEntity).isConstruction) stats.construction++
 
-        const entityConstraints = getConstraintsForEntity(entity.id)
+        const entityConstraints = getConstraintsForEntity((entity as GeometricEntity).id)
         if (entityConstraints.length > 0) {
           stats.constrained++
         } else {

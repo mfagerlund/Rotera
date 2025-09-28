@@ -1,6 +1,20 @@
 // Project template system
 import { Project, Constraint, WorldPoint, ProjectImage } from '../types/project'
 
+// Helper function to create constraint with required properties
+const createConstraint = (base: any): Omit<Constraint, "id" | "enabled"> => ({
+  ...base,
+  isDriving: true,
+  status: 'satisfied' as const,
+  entities: {
+    points: base.pointIds || [],
+    lines: [],
+    planes: []
+  },
+  parameters: {},
+  createdAt: new Date().toISOString()
+})
+
 export interface ProjectTemplate {
   id: string
   name: string
@@ -50,13 +64,12 @@ export class ProjectTemplateService {
         },
         setup: {
           defaultConstraints: [
-            {
+            createConstraint({
               type: 'parallel',
               pointIds: [],
               tolerance: 0.01,
               weight: 1.0,
-              name: 'Horizontal Lines'
-            },
+            }),
             {
               type: 'perpendicular',
               pointIds: [],
@@ -86,6 +99,10 @@ export class ProjectTemplateService {
           images: {},
           constraints: [],
           cameras: {},
+          lines: {},
+          planes: {},
+          nextLineNumber: 1,
+          nextPlaneNumber: 1,
           pointGroups: {
             'corners': {
               name: 'Building Corners',
@@ -130,7 +147,6 @@ export class ProjectTemplateService {
               distance: 0,
               tolerance: 0.001,
               weight: 1.0,
-              name: 'Reference Distance'
             }
           ],
           recommendedCameraSettings: {
@@ -154,6 +170,10 @@ export class ProjectTemplateService {
           images: {},
           constraints: [],
           cameras: {},
+          lines: {},
+          planes: {},
+          nextLineNumber: 1,
+          nextPlaneNumber: 1,
           pointGroups: {
             'outline': {
               name: 'Object Outline',
@@ -191,7 +211,6 @@ export class ProjectTemplateService {
               pointIds: [],
               tolerance: 0.005,
               weight: 1.0,
-              name: 'Structural Parallel Lines'
             },
             {
               type: 'distance',
@@ -199,7 +218,6 @@ export class ProjectTemplateService {
               distance: 0,
               tolerance: 0.001,
               weight: 1.0,
-              name: 'Critical Measurements'
             }
           ],
           recommendedCameraSettings: {
@@ -223,6 +241,10 @@ export class ProjectTemplateService {
           images: {},
           constraints: [],
           cameras: {},
+          lines: {},
+          planes: {},
+          nextLineNumber: 1,
+          nextPlaneNumber: 1,
           pointGroups: {
             'structure': {
               name: 'Main Structure',
@@ -267,14 +289,12 @@ export class ProjectTemplateService {
               distance: 1.0,
               tolerance: 0.001,
               weight: 1.0,
-              name: 'Survey Grid'
             },
             {
               type: 'parallel',
               pointIds: [],
               tolerance: 0.01,
               weight: 1.0,
-              name: 'Grid Lines'
             }
           ],
           recommendedCameraSettings: {
@@ -298,6 +318,10 @@ export class ProjectTemplateService {
           images: {},
           constraints: [],
           cameras: {},
+          lines: {},
+          planes: {},
+          nextLineNumber: 1,
+          nextPlaneNumber: 1,
           pointGroups: {
             'grid': {
               name: 'Survey Grid',
@@ -342,7 +366,6 @@ export class ProjectTemplateService {
               distance: 0,
               tolerance: 0.01,
               weight: 1.0,
-              name: 'Ground Control Distances'
             }
           ],
           recommendedCameraSettings: {
@@ -366,6 +389,10 @@ export class ProjectTemplateService {
           images: {},
           constraints: [],
           cameras: {},
+          lines: {},
+          planes: {},
+          nextLineNumber: 1,
+          nextPlaneNumber: 1,
           pointGroups: {
             'gcp': {
               name: 'Ground Control Points',
@@ -419,6 +446,10 @@ export class ProjectTemplateService {
           images: {},
           constraints: [],
           cameras: {},
+          lines: {},
+          planes: {},
+          nextLineNumber: 1,
+          nextPlaneNumber: 1,
           pointGroups: {
             'main': {
               name: 'Main Features',
@@ -487,7 +518,13 @@ export class ProjectTemplateService {
         showMeasurements: true,
         autoOptimize: false,
         gridVisible: true,
-        snapToGrid: false
+        snapToGrid: false,
+        // New paradigm settings
+        defaultWorkspace: 'image' as const,
+        showConstructionGeometry: true,
+        enableSmartSnapping: true,
+        constraintPreview: true,
+        visualFeedbackLevel: 'standard' as const
       },
       optimization: {
         status: 'not_run' as const

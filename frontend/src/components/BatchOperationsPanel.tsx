@@ -328,7 +328,7 @@ export const BatchOperationsPanel: React.FC<BatchOperationsPanelProps> = ({
                     key={tag}
                     className="tag-btn"
                     onClick={() => {
-                      const existing = currentValue.split(',').map(t => t.trim()).filter(Boolean)
+                      const existing = currentValue.split(',').map((t: string) => t.trim()).filter(Boolean)
                       if (!existing.includes(tag)) {
                         const newValue = existing.concat([tag]).join(', ')
                         handleParameterChange(operation.operation, newValue)

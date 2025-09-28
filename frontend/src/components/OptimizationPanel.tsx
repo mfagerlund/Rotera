@@ -3,6 +3,7 @@
 import React, { useState, useCallback } from 'react'
 import { Project, WorldPoint, Constraint } from '../types/project'
 import { OptimizationService, OptimizationProgress, defaultOptimizationSettings, validateOptimizationRequest } from '../services/optimization'
+import { errorToMessage } from '../types/utils'
 
 interface OptimizationPanelProps {
   project: Project
@@ -61,57 +62,44 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
     onOptimizationStart()
 
     try {
-      const request = {
-        worldPoints: project.worldPoints,
-        constraints: project.constraints || [],
-        settings
-      }
-
-      // Validate request
-      const validationError = validateOptimizationRequest(request)
-      if (validationError) {
-        throw new Error(validationError)
-      }
-
       const onProgressUpdate = (progressData: OptimizationProgress) => {
         setProgress(progressData)
       }
 
-      // Choose optimization method
-      const result = useBackend && backendAvailable
-        ? await optimizationService.optimize(request, onProgressUpdate)
-        : await optimizationService.simulateOptimization(request, onProgressUpdate)
+      // Use optimizeBundle instead of optimize
+      const options = {
+        maxIterations: settings.maxIterations,
+        convergenceThreshold: settings.tolerance,
+        useRobustKernel: false,
+        simulationMode: !useBackend || !backendAvailable
+      }
+
+      const result = await optimizationService.optimizeBundle(project, options, onProgressUpdate)
 
       setResults(result)
 
-      if (result.success) {
+      if (result.converged) {
         // Update project with optimized coordinates
         const updatedProject = {
           ...project,
-          worldPoints: {
-            ...project.worldPoints,
-            ...result.updatedWorldPoints
-          },
           optimization: {
             ...project.optimization,
             lastRun: new Date().toISOString(),
-            iterations: result.iterations,
-            residualBefore: result.residualBefore,
-            residualAfter: result.residualAfter,
-            converged: result.convergence.converged
+            status: result.converged ? 'converged' as const : 'failed' as const,
+            residuals: result.totalError
           },
           updatedAt: new Date().toISOString()
         }
 
         onProjectUpdate(updatedProject)
-        onOptimizationComplete(true, result.message)
+        onOptimizationComplete(true, 'Optimization converged successfully')
       } else {
-        onOptimizationComplete(false, result.message)
+        onOptimizationComplete(false, 'Optimization failed to converge')
       }
 
     } catch (error) {
       console.error('Optimization failed:', error)
-      onOptimizationComplete(false, error.message || 'Optimization failed')
+      onOptimizationComplete(false, errorToMessage(error))
     } finally {
       setIsOptimizing(false)
       setProgress(null)
@@ -236,33 +224,31 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
           </div>
           <div className="progress-details">
             <span>Iteration: {progress.iteration}</span>
-            <span>Residual: {progress.residual.toExponential(3)}</span>
+            <span>Residual: {progress.error.toExponential(3)}</span>
           </div>
         </div>
       )}
 
       {results && (
-        <div className={`optimization-results ${results.success ? 'success' : 'error'}`}>
+        <div className={`optimization-results ${results.converged ? 'success' : 'error'}`}>
           <div className="results-header">
             <span className="results-status">
-              {results.success ? '✅' : '❌'} {results.message}
+              {results.converged ? '✅' : '❌'} {results.converged ? 'Optimization converged' : 'Optimization failed to converge'}
             </span>
           </div>
-          {results.success && (
+          {results.converged && (
             <div className="results-details">
               <div className="result-item">
-                <span>Iterations:</span>
-                <span>{results.iterations}</span>
+                <span>Total Error:</span>
+                <span>{results.totalError.toExponential(3)}</span>
               </div>
               <div className="result-item">
-                <span>Residual Improvement:</span>
-                <span>
-                  {results.residualBefore.toExponential(3)} → {results.residualAfter.toExponential(3)}
-                </span>
+                <span>Point Accuracy:</span>
+                <span>{results.pointAccuracy.toExponential(3)}</span>
               </div>
               <div className="result-item">
                 <span>Converged:</span>
-                <span>{results.convergence.converged ? 'Yes' : 'No'}</span>
+                <span>{results.converged ? 'Yes' : 'No'}</span>
               </div>
             </div>
           )}
@@ -342,7 +328,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
             </div>
             <div className="detail-item">
               <span>Converged:</span>
-              <span>{project.optimization.converged ? 'Yes' : 'No'}</span>
+              <span>{project.optimization?.status === 'converged' ? 'Yes' : 'No'}</span>
             </div>
           </div>
         </div>

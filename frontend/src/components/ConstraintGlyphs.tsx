@@ -2,6 +2,7 @@
 
 import React, { useMemo } from 'react'
 import { Constraint, WorldPoint, ProjectImage } from '../types/project'
+import { getConstraintPointIds } from '../types/utils'
 
 interface ConstraintGlyphsProps {
   image: ProjectImage
@@ -136,31 +137,6 @@ export const ConstraintGlyphs: React.FC<ConstraintGlyphsProps> = ({
 }
 
 // Helper functions
-function getConstraintPointIds(constraint: Constraint): string[] {
-  switch (constraint.type) {
-    case 'distance':
-      return [constraint.pointA, constraint.pointB]
-    case 'angle':
-      return [constraint.vertex, constraint.line1_end, constraint.line2_end]
-    case 'perpendicular':
-    case 'parallel':
-      return [constraint.line1_wp_a, constraint.line1_wp_b, constraint.line2_wp_a, constraint.line2_wp_b]
-    case 'collinear':
-      return constraint.wp_ids || []
-    case 'rectangle':
-      return [constraint.cornerA, constraint.cornerB, constraint.cornerC, constraint.cornerD]
-    case 'circle':
-      return constraint.point_ids || []
-    case 'fixed':
-      return [constraint.point_id]
-    case 'horizontal':
-    case 'vertical':
-      return [constraint.pointA, constraint.pointB]
-    default:
-      return []
-  }
-}
-
 function getConstraintIcon(type: string): string {
   const icons: Record<string, string> = {
     distance: '↔',

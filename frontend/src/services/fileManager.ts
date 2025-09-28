@@ -292,7 +292,7 @@ export class FileManagerService {
       images: project.images || {},
       constraints: project.constraints || [],
       createdAt: project.createdAt || new Date().toISOString(),
-      modifiedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString()
     }
   }
 

@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useMemo } from 'react'
 import { Project, WorldPoint, Constraint } from '../types/project'
 import { ConstraintValidator, ValidationResult, ValidationError, ValidationWarning, ValidationSuggestion } from '../services/validation'
+import { errorToMessage } from '../types/utils'
 
 interface ValidationPanelProps {
   project: Project
@@ -53,7 +54,7 @@ export const ValidationPanel: React.FC<ValidationPanelProps> = ({
           type: 'error',
           severity: 'critical',
           message: 'Validation failed',
-          description: error.message || 'Unknown validation error'
+          description: errorToMessage(error)
         }],
         warnings: [],
         suggestions: []

@@ -62,7 +62,22 @@ export const GroundPlanePanel: React.FC<GroundPlanePanelProps> = ({
 
   // Get existing ground planes (stored in project metadata)
   const groundPlanes = useMemo((): GroundPlaneDefinition[] => {
-    return project.groundPlanes || []
+    if (!project.groundPlanes) return []
+
+    return project.groundPlanes.map(gp => ({
+      id: gp.id,
+      name: gp.name,
+      points: {
+        origin: gp.pointIds[0],
+        xAxisEnd: gp.pointIds[1],
+        xyPlanePoint: gp.pointIds[2]
+      },
+      plane: {
+        normal: gp.equation ? [gp.equation[0], gp.equation[1], gp.equation[2]] : [0, 0, 1],
+        point: [0, 0, 0] // Will be calculated from the origin point
+      },
+      createdAt: new Date().toISOString() // Since this isn't stored in the project type
+    }))
   }, [project.groundPlanes])
 
   // Get available points for ground plane definition
