@@ -1,0 +1,501 @@
+/* Visual Language and Color Coding System for Enhanced UI Paradigm */
+
+/* Entity Color System */
+:root {
+  /* Primary entity colors */
+  --entity-point-default: #2196F3;
+  --entity-point-selected: #FFC107;
+  --entity-point-highlighted: #FF9800;
+  --entity-point-construction: #9E9E9E;
+
+  --entity-line-default: #4CAF50;
+  --entity-line-selected: #FFC107;
+  --entity-line-highlighted: #FF9800;
+  --entity-line-construction: #9E9E9E;
+
+  --entity-plane-default: #9C27B0;
+  --entity-plane-selected: #FFC107;
+  --entity-plane-highlighted: #FF9800;
+  --entity-plane-construction: #9E9E9E;
+
+  --entity-circle-default: #FF5722;
+  --entity-circle-selected: #FFC107;
+  --entity-circle-highlighted: #FF9800;
+  --entity-circle-construction: #9E9E9E;
+
+  /* Constraint status colors */
+  --constraint-satisfied: #4CAF50;
+  --constraint-warning: #FF9800;
+  --constraint-violated: #F44336;
+  --constraint-conflicting: #9C27B0;
+  --constraint-redundant: #9E9E9E;
+  --constraint-undefined: #2196F3;
+
+  /* State colors */
+  --state-active: #FFC107;
+  --state-inactive: #757575;
+  --state-processing: #FF9800;
+  --state-error: #F44336;
+  --state-success: #4CAF50;
+
+  /* Workspace colors */
+  --workspace-image: #2196F3;
+  --workspace-world: #4CAF50;
+  --workspace-split: #9C27B0;
+
+  /* Visual feedback levels */
+  --feedback-subtle: 0.1;
+  --feedback-moderate: 0.3;
+  --feedback-strong: 0.6;
+  --feedback-intense: 0.9;
+}
+
+/* Entity State Classes */
+.entity-point {
+  color: var(--entity-point-default);
+  fill: var(--entity-point-default);
+}
+
+.entity-point.selected {
+  color: var(--entity-point-selected);
+  fill: var(--entity-point-selected);
+  filter: drop-shadow(0 0 4px var(--entity-point-selected));
+}
+
+.entity-point.highlighted {
+  color: var(--entity-point-highlighted);
+  fill: var(--entity-point-highlighted);
+  filter: drop-shadow(0 0 6px var(--entity-point-highlighted));
+  animation: pulse-highlight 1.5s ease-in-out infinite;
+}
+
+.entity-point.construction {
+  color: var(--entity-point-construction);
+  fill: var(--entity-point-construction);
+  opacity: 0.7;
+}
+
+.entity-line {
+  color: var(--entity-line-default);
+  stroke: var(--entity-line-default);
+}
+
+.entity-line.selected {
+  color: var(--entity-line-selected);
+  stroke: var(--entity-line-selected);
+  stroke-width: 3;
+  filter: drop-shadow(0 0 4px var(--entity-line-selected));
+}
+
+.entity-line.highlighted {
+  color: var(--entity-line-highlighted);
+  stroke: var(--entity-line-highlighted);
+  stroke-width: 4;
+  filter: drop-shadow(0 0 6px var(--entity-line-highlighted));
+  animation: pulse-highlight 1.5s ease-in-out infinite;
+}
+
+.entity-line.construction {
+  color: var(--entity-line-construction);
+  stroke: var(--entity-line-construction);
+  stroke-dasharray: 5 5;
+  opacity: 0.7;
+}
+
+.entity-plane {
+  color: var(--entity-plane-default);
+  fill: var(--entity-plane-default);
+  stroke: var(--entity-plane-default);
+}
+
+.entity-plane.selected {
+  color: var(--entity-plane-selected);
+  fill: var(--entity-plane-selected);
+  stroke: var(--entity-plane-selected);
+  filter: drop-shadow(0 0 4px var(--entity-plane-selected));
+}
+
+.entity-plane.highlighted {
+  color: var(--entity-plane-highlighted);
+  fill: var(--entity-plane-highlighted);
+  stroke: var(--entity-plane-highlighted);
+  filter: drop-shadow(0 0 6px var(--entity-plane-highlighted));
+  animation: pulse-highlight 1.5s ease-in-out infinite;
+}
+
+.entity-plane.construction {
+  color: var(--entity-plane-construction);
+  fill: var(--entity-plane-construction);
+  stroke: var(--entity-plane-construction);
+  opacity: 0.7;
+}
+
+/* Constraint Status Classes */
+.constraint-satisfied {
+  color: var(--constraint-satisfied);
+  border-color: var(--constraint-satisfied);
+}
+
+.constraint-satisfied .constraint-glyph {
+  background: var(--constraint-satisfied);
+}
+
+.constraint-warning {
+  color: var(--constraint-warning);
+  border-color: var(--constraint-warning);
+}
+
+.constraint-warning .constraint-glyph {
+  background: var(--constraint-warning);
+}
+
+.constraint-violated {
+  color: var(--constraint-violated);
+  border-color: var(--constraint-violated);
+  animation: pulse-error 2s ease-in-out infinite;
+}
+
+.constraint-violated .constraint-glyph {
+  background: var(--constraint-violated);
+}
+
+.constraint-conflicting {
+  color: var(--constraint-conflicting);
+  border-color: var(--constraint-conflicting);
+  animation: shake 0.5s ease-in-out infinite;
+}
+
+.constraint-conflicting .constraint-glyph {
+  background: var(--constraint-conflicting);
+}
+
+.constraint-redundant {
+  color: var(--constraint-redundant);
+  border-color: var(--constraint-redundant);
+  opacity: 0.6;
+}
+
+.constraint-redundant .constraint-glyph {
+  background: var(--constraint-redundant);
+}
+
+.constraint-undefined {
+  color: var(--constraint-undefined);
+  border-color: var(--constraint-undefined);
+}
+
+.constraint-undefined .constraint-glyph {
+  background: var(--constraint-undefined);
+}
+
+/* State Indicator Classes */
+.state-active {
+  background: var(--state-active);
+  color: #000;
+  box-shadow: 0 0 8px rgba(255, 193, 7, 0.5);
+}
+
+.state-inactive {
+  background: var(--state-inactive);
+  color: #fff;
+  opacity: 0.6;
+}
+
+.state-processing {
+  background: var(--state-processing);
+  color: #000;
+  animation: pulse-processing 1s ease-in-out infinite;
+}
+
+.state-error {
+  background: var(--state-error);
+  color: #fff;
+  animation: pulse-error 2s ease-in-out infinite;
+}
+
+.state-success {
+  background: var(--state-success);
+  color: #fff;
+  animation: success-flash 0.8s ease-out;
+}
+
+/* Workspace Visual Language */
+.workspace-indicator.image {
+  color: var(--workspace-image);
+  background: rgba(33, 150, 243, var(--feedback-subtle));
+}
+
+.workspace-indicator.world {
+  color: var(--workspace-world);
+  background: rgba(76, 175, 80, var(--feedback-subtle));
+}
+
+.workspace-indicator.split {
+  color: var(--workspace-split);
+  background: rgba(156, 39, 176, var(--feedback-subtle));
+}
+
+/* Visual Feedback Intensity Classes */
+.feedback-subtle {
+  opacity: var(--feedback-subtle);
+}
+
+.feedback-moderate {
+  opacity: var(--feedback-moderate);
+}
+
+.feedback-strong {
+  opacity: var(--feedback-strong);
+}
+
+.feedback-intense {
+  opacity: var(--feedback-intense);
+}
+
+/* Enhanced Glyph System */
+.constraint-glyph {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 12px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  transition: all 0.3s ease;
+}
+
+.constraint-glyph:hover {
+  transform: scale(1.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.constraint-glyph.distance::before {
+  content: '↔';
+}
+
+.constraint-glyph.angle::before {
+  content: '∠';
+}
+
+.constraint-glyph.parallel::before {
+  content: '∥';
+}
+
+.constraint-glyph.perpendicular::before {
+  content: '⊥';
+}
+
+.constraint-glyph.fixed::before {
+  content: '📌';
+}
+
+.constraint-glyph.horizontal::before {
+  content: '⟷';
+}
+
+.constraint-glyph.vertical::before {
+  content: '↕';
+}
+
+.constraint-glyph.collinear::before {
+  content: '─';
+}
+
+.constraint-glyph.circle::before {
+  content: '○';
+}
+
+.constraint-glyph.rectangle::before {
+  content: '▭';
+}
+
+/* Selection Ring System */
+.selection-ring {
+  position: absolute;
+  border: 2px solid var(--entity-point-selected);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: pulse-selection 2s ease-in-out infinite;
+  box-shadow: 0 0 8px rgba(255, 193, 7, 0.5);
+}
+
+.selection-ring.multi {
+  border-color: var(--entity-point-highlighted);
+  box-shadow: 0 0 8px rgba(255, 152, 0, 0.5);
+}
+
+/* Measurement and Dimension Lines */
+.dimension-line {
+  stroke: var(--constraint-satisfied);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  marker-end: url(#dimension-arrow);
+  marker-start: url(#dimension-arrow);
+}
+
+.dimension-text {
+  fill: var(--constraint-satisfied);
+  font-size: 12px;
+  font-weight: bold;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+/* Animation Keyframes */
+@keyframes pulse-highlight {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes pulse-selection {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes pulse-error {
+  0%, 100% {
+    opacity: 1;
+  }
+  25% {
+    opacity: 0.5;
+  }
+  75% {
+    opacity: 0.8;
+  }
+}
+
+@keyframes pulse-processing {
+  0%, 100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-2px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(2px);
+  }
+}
+
+@keyframes success-flash {
+  0% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.8);
+  }
+  50% {
+    box-shadow: 0 0 0 15px rgba(76, 175, 80, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+  }
+}
+
+/* Depth and Layering */
+.layer-background {
+  z-index: 1;
+}
+
+.layer-construction {
+  z-index: 2;
+}
+
+.layer-geometry {
+  z-index: 3;
+}
+
+.layer-constraints {
+  z-index: 4;
+}
+
+.layer-selection {
+  z-index: 5;
+}
+
+.layer-ui {
+  z-index: 10;
+}
+
+.layer-overlay {
+  z-index: 100;
+}
+
+.layer-modal {
+  z-index: 1000;
+}
+
+/* Accessibility and High Contrast Support */
+@media (prefers-contrast: high) {
+  :root {
+    --entity-point-default: #0066FF;
+    --entity-line-default: #008800;
+    --entity-plane-default: #AA00AA;
+    --entity-circle-default: #FF4400;
+
+    --constraint-satisfied: #008800;
+    --constraint-warning: #FF8800;
+    --constraint-violated: #CC0000;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .constraint-glyph,
+  .selection-ring,
+  .entity-point,
+  .entity-line,
+  .entity-plane {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Dark/Light Theme Support */
+@media (prefers-color-scheme: light) {
+  :root {
+    --entity-point-default: #1976D2;
+    --entity-line-default: #388E3C;
+    --entity-plane-default: #7B1FA2;
+    --entity-circle-default: #D84315;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .constraint-glyph,
+  .selection-ring {
+    display: none !important;
+  }
+
+  .entity-point,
+  .entity-line,
+  .entity-plane,
+  .entity-circle {
+    filter: none !important;
+    animation: none !important;
+  }
+}

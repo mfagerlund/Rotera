@@ -48,11 +48,6 @@ export const ConstraintToolbar: React.FC<ConstraintToolbarProps> = ({
         </div>
       </div>
 
-      <div className="toolbar-section">
-        <span className="selection-info">
-          {selectionSummary}
-        </span>
-      </div>
     </div>
   )
 }

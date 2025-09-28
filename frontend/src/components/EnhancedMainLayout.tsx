@@ -1,0 +1,424 @@
+// Enhanced main layout with new workspace paradigm
+
+import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { useProject } from '../hooks/useProject'
+import { useSelection, useSelectionKeyboard } from '../hooks/useSelection'
+import { useConstraints } from '../hooks/useConstraints'
+import { useEnhancedProject } from '../hooks/useEnhancedProject'
+
+// UI Components
+import ConstraintToolbar from './ConstraintToolbar'
+import ConstraintPropertyPanel from './ConstraintPropertyPanel'
+import ImageNavigationToolbar from './ImageNavigationToolbar'
+import ConstraintTimeline from './ConstraintTimeline'
+import ImageViewer, { ImageViewerRef } from './ImageViewer'
+import WorldView, { WorldViewRef } from './WorldView'
+import WorldPointPanel from './WorldPointPanel'
+
+// Enhanced workspace components
+import {
+  EnhancedWorkspaceManager,
+  EnhancedWorkspaceSwitcher,
+  WorkspaceStatus,
+  SplitViewContainer
+} from './EnhancedWorkspaceManager'
+
+// Styles
+import '../styles/enhanced-workspace.css'
+
+export const EnhancedMainLayout: React.FC = () => {
+  // Legacy project system (for now)
+  const legacyProject = useProject()
+
+  // Enhanced project system (future)
+  const enhancedProject = useEnhancedProject()
+
+  // Use legacy project for now, but prepare for enhanced
+  const {
+    project,
+    currentImage,
+    currentImageId,
+    setCurrentImageId,
+    worldPoints,
+    constraints,
+    addConstraint,
+    updateConstraint,
+    deleteConstraint,
+    toggleConstraint,
+    addImage,
+    renameImage,
+    deleteImage,
+    getImagePointCount,
+    getSelectedPointsInImage,
+    createWorldPoint,
+    renameWorldPoint,
+    deleteWorldPoint,
+    addImagePointToWorldPoint
+  } = legacyProject
+
+  // Selection and constraints
+  const {
+    selectedPoints,
+    selectedLines,
+    selectedPlanes,
+    selectionSummary,
+    handlePointClick,
+    handleLineClick,
+    handlePlaneClick,
+    clearSelection,
+    selectAllPoints
+  } = useSelection()
+
+  const {
+    getAvailableConstraints,
+    getAllConstraints,
+    startConstraintCreation,
+    activeConstraintType,
+    constraintParameters,
+    updateParameter,
+    applyConstraint,
+    cancelConstraintCreation,
+    isConstraintComplete,
+    hoveredConstraintId,
+    setHoveredConstraintId
+  } = useConstraints(
+    constraints,
+    addConstraint,
+    updateConstraint,
+    deleteConstraint,
+    toggleConstraint
+  )
+
+  // UI state
+  const [placementMode, setPlacementMode] = useState<{
+    active: boolean
+    worldPointId: string | null
+  }>({ active: false, worldPointId: null })
+
+  // Refs for viewer components
+  const imageViewerRef = useRef<ImageViewerRef>(null)
+  const worldViewRef = useRef<WorldViewRef>(null)
+
+  // Workspace state (using enhanced project when ready, fallback to local state)
+  const [localWorkspaceState, setLocalWorkspaceState] = useState({
+    currentWorkspace: 'image' as 'image' | 'world' | 'split',
+    imageWorkspace: {
+      currentImageId: currentImageId,
+      scale: 1.0,
+      pan: { x: 0, y: 0 },
+      showImagePoints: true,
+      showProjections: true
+    },
+    worldWorkspace: {
+      viewMatrix: {
+        scale: 100,
+        rotation: { x: 0, y: 0, z: 0 },
+        translation: { x: 0, y: 0, z: 0 }
+      },
+      renderMode: 'wireframe' as const,
+      showAxes: true,
+      showGrid: true,
+      showCameras: true
+    },
+    splitWorkspace: {
+      splitDirection: 'horizontal' as const,
+      splitRatio: 0.5,
+      syncSelection: true,
+      syncNavigation: false
+    }
+  })
+
+  // Update local workspace when current image changes
+  useEffect(() => {
+    setLocalWorkspaceState(prev => ({
+      ...prev,
+      imageWorkspace: {
+        ...prev.imageWorkspace,
+        currentImageId: currentImageId
+      }
+    }))
+  }, [currentImageId])
+
+  // Constraint logic
+  const allConstraints = getAllConstraints(selectedPoints, selectedLines)
+  const availableConstraints = getAvailableConstraints(selectedPoints, selectedLines)
+
+  const worldPointNames = Object.fromEntries(
+    Object.entries(worldPoints).map(([id, wp]) => [id, wp.name])
+  )
+
+  // Point interaction handlers
+  const handleEnhancedPointClick = (pointId: string, ctrlKey: boolean, shiftKey: boolean) => {
+    handlePointClick(pointId, ctrlKey, shiftKey)
+  }
+
+  // Placement mode handlers
+  const startPlacementMode = (worldPointId: string) => {
+    setPlacementMode({ active: true, worldPointId })
+  }
+
+  const cancelPlacementMode = () => {
+    setPlacementMode({ active: false, worldPointId: null })
+  }
+
+  const handleImageClick = (u: number, v: number) => {
+    if (placementMode.active && placementMode.worldPointId && currentImage) {
+      addImagePointToWorldPoint(placementMode.worldPointId, currentImage.id, u, v)
+      cancelPlacementMode()
+    } else if (currentImage) {
+      createWorldPoint(currentImage.id, u, v)
+    }
+  }
+
+  const handleMovePoint = (worldPointId: string, u: number, v: number) => {
+    if (currentImage) {
+      addImagePointToWorldPoint(worldPointId, currentImage.id, u, v)
+    }
+  }
+
+  // Workspace data for status display
+  const imageInfo = {
+    currentImage: currentImage?.name,
+    totalImages: Object.keys(project?.images || {}).length,
+    pointsInCurrentImage: currentImage ? getImagePointCount(currentImage.id) : 0
+  }
+
+  const worldInfo = {
+    totalPoints: Object.keys(worldPoints).length,
+    totalConstraints: constraints.length,
+    optimizationStatus: 'idle' // TODO: Get from actual optimization state
+  }
+
+  // Keyboard shortcuts
+  useSelectionKeyboard(
+    () => selectAllPoints(Object.keys(worldPoints)),
+    clearSelection,
+    () => {} // Delete handler
+  )
+
+  // Escape key for placement mode
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && placementMode.active) {
+        cancelPlacementMode()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [placementMode.active])
+
+  // Content for different workspaces
+  const renderImageWorkspace = () => (
+    <div className="workspace-image-view">
+      {currentImage ? (
+        <div className="image-viewer-container">
+          <ImageViewer
+            ref={imageViewerRef}
+            image={currentImage}
+            worldPoints={worldPoints}
+            selectedPoints={selectedPoints}
+            hoveredConstraintId={hoveredConstraintId}
+            placementMode={placementMode}
+            activeConstraintType={activeConstraintType}
+            onPointClick={handleEnhancedPointClick}
+            onCreatePoint={handleImageClick}
+            onMovePoint={handleMovePoint}
+          />
+        </div>
+      ) : (
+        <div className="no-image-state">
+          <div className="empty-state-content">
+            <h3>No Image Selected</h3>
+            <p>Add images using the sidebar to get started</p>
+            <button
+              className="btn-primary"
+              onClick={() => {
+                // TODO: Trigger image add dialog
+              }}
+            >
+              📷 Add First Image
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+
+  const renderWorldWorkspace = () => (
+    <div className="workspace-world-view">
+      <WorldView
+        ref={worldViewRef}
+        project={project!}
+        selectedPoints={selectedPoints}
+        selectedLines={selectedLines}
+        selectedPlanes={selectedPlanes}
+        hoveredConstraintId={hoveredConstraintId}
+        onPointClick={handleEnhancedPointClick}
+        onLineClick={handleLineClick}
+        onPlaneClick={handlePlaneClick}
+      />
+    </div>
+  )
+
+  const renderSplitWorkspace = () => (
+    <div className="workspace-split-view">
+      <SplitViewContainer
+        splitDirection={localWorkspaceState.splitWorkspace.splitDirection}
+        splitRatio={localWorkspaceState.splitWorkspace.splitRatio}
+        onSplitRatioChange={(ratio) =>
+          setLocalWorkspaceState(prev => ({
+            ...prev,
+            splitWorkspace: { ...prev.splitWorkspace, splitRatio: ratio }
+          }))
+        }
+        leftContent={renderImageWorkspace()}
+        rightContent={renderWorldWorkspace()}
+      />
+    </div>
+  )
+
+  // Loading state
+  if (!project) {
+    return (
+      <div className="app-layout">
+        <div className="loading-state">
+          <h3>Loading project...</h3>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <EnhancedWorkspaceManager
+      workspaceState={localWorkspaceState}
+      onWorkspaceStateChange={(updates) =>
+        setLocalWorkspaceState(prev => ({ ...prev, ...updates }))
+      }
+    >
+      {(currentWorkspace, workspaceActions) => (
+        <div className="app-layout enhanced-layout">
+          {/* Enhanced top toolbar */}
+          <div className="top-toolbar">
+            <EnhancedWorkspaceSwitcher
+              currentWorkspace={currentWorkspace}
+              onWorkspaceChange={workspaceActions.setWorkspace}
+              imageHasContent={imageInfo.totalImages > 0}
+              worldHasContent={worldInfo.totalPoints > 0}
+            />
+
+            <div className="toolbar-section">
+              <button className="btn-tool">📁 Open</button>
+              <button className="btn-tool">💾 Save</button>
+              <button className="btn-tool">📤 Export</button>
+            </div>
+
+            {/* Context-sensitive constraint toolbar */}
+            <ConstraintToolbar
+              selectedPoints={selectedPoints}
+              selectedLines={selectedLines}
+              availableConstraints={allConstraints}
+              selectionSummary={selectionSummary}
+              onConstraintClick={startConstraintCreation}
+            />
+
+            <div className="toolbar-section">
+              <label className="toolbar-toggle">
+                <input
+                  type="checkbox"
+                  checked={project.settings.showPointNames}
+                  onChange={(e) => {
+                    // TODO: Update project settings
+                  }}
+                />
+                Show Point Names
+              </label>
+            </div>
+          </div>
+
+          {/* Main content area */}
+          <div className="content-area">
+            {/* Left sidebar: Image Navigation */}
+            <div className="sidebar-left">
+              <ImageNavigationToolbar
+                images={project.images}
+                currentImageId={currentImageId}
+                worldPoints={worldPoints}
+                selectedWorldPointIds={selectedPoints}
+                isCreatingConstraint={!!activeConstraintType}
+                onImageSelect={setCurrentImageId}
+                onImageAdd={addImage}
+                onImageRename={renameImage}
+                onImageDelete={deleteImage}
+                getImagePointCount={getImagePointCount}
+                getSelectedPointsInImage={(imageId) => getSelectedPointsInImage(imageId, selectedPoints)}
+              />
+            </div>
+
+            {/* Center: Workspace-specific viewer */}
+            <div className="viewer-area">
+              {currentWorkspace === 'image' && renderImageWorkspace()}
+              {currentWorkspace === 'world' && renderWorldWorkspace()}
+              {currentWorkspace === 'split' && renderSplitWorkspace()}
+            </div>
+
+            {/* Right sidebar: Properties & Timeline */}
+            <div className="sidebar-right">
+              <ConstraintPropertyPanel
+                activeConstraintType={activeConstraintType}
+                selectedPoints={selectedPoints}
+                selectedLines={selectedLines}
+                parameters={constraintParameters}
+                isComplete={isConstraintComplete()}
+                worldPointNames={worldPointNames}
+                onParameterChange={updateParameter}
+                onApply={applyConstraint}
+                onCancel={cancelConstraintCreation}
+              />
+
+              <WorldPointPanel
+                worldPoints={worldPoints}
+                constraints={constraints}
+                selectedWorldPointIds={selectedPoints}
+                currentImageId={currentImageId}
+                placementMode={placementMode}
+                onSelectWorldPoint={(pointId: string, ctrlKey: boolean, shiftKey: boolean) =>
+                  handlePointClick(pointId, ctrlKey, shiftKey)
+                }
+                onHighlightWorldPoint={() => {}}
+                onRenameWorldPoint={renameWorldPoint}
+                onDeleteWorldPoint={deleteWorldPoint}
+                onStartPlacement={startPlacementMode}
+                onCancelPlacement={cancelPlacementMode}
+              />
+
+              <ConstraintTimeline
+                constraints={constraints}
+                hoveredConstraintId={hoveredConstraintId}
+                worldPointNames={worldPointNames}
+                onHover={setHoveredConstraintId}
+                onEdit={(constraint) => {
+                  // TODO: Implement constraint editing
+                }}
+                onDelete={deleteConstraint}
+                onToggle={toggleConstraint}
+              />
+            </div>
+          </div>
+
+          {/* Enhanced bottom status bar */}
+          <div className="status-bar">
+            <WorkspaceStatus
+              workspace={currentWorkspace}
+              imageInfo={imageInfo}
+              worldInfo={worldInfo}
+            />
+            <span className="selection-summary">{selectionSummary}</span>
+          </div>
+        </div>
+      )}
+    </EnhancedWorkspaceManager>
+  )
+}
+
+export default EnhancedMainLayout

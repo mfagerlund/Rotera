@@ -1,0 +1,328 @@
+/* Enhanced Workspace System Styling */
+
+/* Workspace Manager */
+.enhanced-workspace-manager {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.enhanced-workspace-manager.transitioning {
+  pointer-events: none;
+}
+
+.enhanced-workspace-manager.transitioning * {
+  transition: opacity 0.1s ease-in-out;
+}
+
+/* Workspace Switcher */
+.workspace-switcher {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+}
+
+.workspace-tabs {
+  display: flex;
+  gap: 2px;
+}
+
+.workspace-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px 6px 0 0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 12px;
+  color: var(--text-secondary);
+  position: relative;
+  min-width: 90px;
+}
+
+.workspace-tab:hover:not(.disabled) {
+  background: var(--surface-3);
+  color: var(--text-primary);
+  border-color: var(--border-hover);
+}
+
+.workspace-tab.active {
+  background: var(--surface-primary);
+  color: var(--text-primary);
+  border-color: var(--primary);
+  border-bottom-color: var(--surface-primary);
+  z-index: 1;
+}
+
+.workspace-tab.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: var(--surface-1);
+}
+
+.workspace-icon {
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+}
+
+.workspace-name {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.workspace-indicator {
+  font-size: 8px;
+  margin-left: 4px;
+}
+
+.workspace-indicator.active {
+  color: var(--primary);
+}
+
+.workspace-indicator.empty {
+  color: var(--text-muted);
+}
+
+/* Workspace Controls */
+.workspace-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.btn-workspace-action {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+}
+
+.btn-workspace-action:hover {
+  background: var(--surface-3);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.btn-workspace-action:active {
+  transform: scale(0.95);
+}
+
+/* Workspace Status */
+.workspace-status {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  height: 100%;
+  padding: 0 16px;
+}
+
+.workspace-status-section {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-label {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.status-value {
+  color: var(--text-primary);
+  font-weight: 400;
+}
+
+.status-value.workspace-name {
+  font-weight: 600;
+}
+
+.status-count {
+  background: var(--primary);
+  color: var(--primary-text);
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  font-size: 10px;
+}
+
+.status-indicator.optimization {
+  color: var(--success);
+}
+
+/* Split View Container */
+.split-view-container {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  position: relative;
+  overflow: hidden;
+}
+
+.split-view-container.horizontal {
+  grid-template-rows: 1fr;
+}
+
+.split-view-container.vertical {
+  grid-template-columns: 1fr;
+}
+
+.split-panel {
+  overflow: hidden;
+  position: relative;
+}
+
+.split-panel.left-panel {
+  border-right: 1px solid var(--border);
+}
+
+.split-panel.right-panel {
+  border-left: 1px solid var(--border);
+}
+
+.split-divider {
+  background: var(--border);
+  cursor: col-resize;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+  user-select: none;
+}
+
+.split-view-container.vertical .split-divider {
+  cursor: row-resize;
+}
+
+.split-divider:hover {
+  background: var(--border-hover);
+}
+
+.split-divider.dragging {
+  background: var(--primary);
+}
+
+.split-handle {
+  color: var(--text-muted);
+  font-size: 12px;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.split-divider:hover .split-handle {
+  opacity: 1;
+  color: var(--text-secondary);
+}
+
+.split-divider.dragging .split-handle {
+  color: var(--primary-text);
+  opacity: 1;
+}
+
+/* Workspace-specific styling */
+.workspace-image-view {
+  background: var(--surface-1);
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.workspace-world-view {
+  background: var(--surface-dark);
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.workspace-split-view {
+  background: var(--surface-2);
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* Workspace transitions */
+.workspace-transition-enter {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.workspace-transition-enter-active {
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.workspace-transition-exit {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.workspace-transition-exit-active {
+  opacity: 0;
+  transform: translateX(-20px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .workspace-tab {
+    min-width: 60px;
+    padding: 4px 8px;
+  }
+
+  .workspace-name {
+    display: none;
+  }
+
+  .workspace-icon {
+    font-size: 16px;
+  }
+
+  .workspace-status {
+    gap: 8px;
+    font-size: 11px;
+  }
+
+  .workspace-status-section {
+    gap: 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  .workspace-status {
+    display: none;
+  }
+
+  .workspace-switcher {
+    flex: 1;
+    justify-content: center;
+  }
+}

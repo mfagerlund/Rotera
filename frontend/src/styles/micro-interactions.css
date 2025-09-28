@@ -1,0 +1,474 @@
+/* Micro-interactions and ripple effects */
+
+@keyframes ripple {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(4);
+    opacity: 0;
+  }
+}
+
+/* Enhanced button press feedback */
+.btn-press-feedback {
+  transform: scale(0.98);
+  transition: transform 0.1s ease;
+}
+
+/* Constraint creation step indicators */
+.constraint-step {
+  position: relative;
+}
+
+.constraint-step::after {
+  content: '';
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 12px;
+  height: 12px;
+  background: var(--accent-orange);
+  border-radius: 50%;
+  border: 2px solid white;
+  animation: stepGlow 2s ease-in-out infinite;
+}
+
+@keyframes stepGlow {
+  0%, 100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+/* Point placement celebration */
+.point-placement-success {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.placement-success-ring {
+  position: absolute;
+  border: 3px solid var(--accent-green);
+  border-radius: 50%;
+  animation: successRingExpand 1s ease-out;
+}
+
+.placement-success-check {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--accent-green);
+  font-size: 20px;
+  font-weight: bold;
+  animation: checkPop 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes successRingExpand {
+  0% {
+    width: 20px;
+    height: 20px;
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+  100% {
+    width: 60px;
+    height: 60px;
+    opacity: 0;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes checkPop {
+  0% {
+    transform: translate(-50%, -50%) scale(0) rotate(-45deg);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.2) rotate(0deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1) rotate(0deg);
+  }
+}
+
+/* Constraint completion celebration */
+.constraint-completion {
+  position: relative;
+}
+
+.constraint-completion::before {
+  content: '✨';
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  font-size: 16px;
+  animation: sparkle 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes sparkle {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0.5) rotate(0deg);
+  }
+  25% {
+    opacity: 1;
+    transform: scale(1) rotate(90deg);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.2) rotate(180deg);
+  }
+  75% {
+    opacity: 1;
+    transform: scale(1) rotate(270deg);
+  }
+}
+
+/* Image loading shimmer effect */
+.image-loading-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--bg-secondary) 25%,
+    var(--bg-panel) 50%,
+    var(--bg-secondary) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Drag and drop feedback */
+.drag-preview {
+  opacity: 0.8;
+  transform: rotate(5deg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+}
+
+.drop-zone-active {
+  background: rgba(6, 150, 215, 0.1);
+  border: 2px dashed var(--accent-blue);
+  animation: dropZonePulse 2s ease-in-out infinite;
+}
+
+@keyframes dropZonePulse {
+  0%, 100% {
+    border-color: var(--accent-blue);
+    background: rgba(6, 150, 215, 0.1);
+  }
+  50% {
+    border-color: var(--accent-orange);
+    background: rgba(255, 140, 0, 0.1);
+  }
+}
+
+/* Workflow progress indicators */
+.workflow-step {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.workflow-step.completed::after {
+  content: '✓';
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 16px;
+  height: 16px;
+  background: var(--accent-green);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
+  animation: completionBounce 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes completionBounce {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Contextual help hints */
+.help-hint {
+  position: relative;
+}
+
+.help-hint::before {
+  content: '?';
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 16px;
+  height: 16px;
+  background: var(--accent-blue);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.help-hint:hover::before {
+  opacity: 1;
+  animation: helpBounce 0.5s ease-out;
+}
+
+@keyframes helpBounce {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+/* Keyboard shortcut hints */
+.shortcut-hint {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s ease;
+  margin-bottom: 8px;
+  border: 1px solid var(--accent-blue);
+}
+
+.shortcut-hint::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid var(--accent-blue);
+}
+
+.has-shortcut:hover .shortcut-hint {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-4px);
+}
+
+/* Focus states with personality */
+.delightful-focus:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(6, 150, 215, 0.4);
+  animation: focusGlow 0.3s ease-out;
+}
+
+@keyframes focusGlow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(6, 150, 215, 0.8);
+  }
+  100% {
+    box-shadow: 0 0 0 3px rgba(6, 150, 215, 0.4);
+  }
+}
+
+/* Status indicator animations */
+.status-indicator {
+  position: relative;
+  display: inline-block;
+}
+
+.status-indicator.connected::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  background: var(--accent-green);
+  border-radius: 50%;
+  animation: statusPulse 2s ease-in-out infinite;
+}
+
+.status-indicator.processing::after {
+  background: var(--accent-orange);
+  animation: statusSpin 1s linear infinite;
+}
+
+.status-indicator.error::after {
+  background: var(--accent-red);
+  animation: statusShake 0.5s ease-in-out 3;
+}
+
+@keyframes statusPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
+}
+
+@keyframes statusSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes statusShake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-2px);
+  }
+  75% {
+    transform: translateX(2px);
+  }
+}
+
+/* Progressive disclosure animations */
+.collapsible-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+}
+
+.collapsible-content.expanded {
+  max-height: 500px;
+  transition: max-height 0.5s ease-in;
+}
+
+.expand-indicator {
+  transition: transform 0.3s ease;
+}
+
+.expand-indicator.expanded {
+  transform: rotate(180deg);
+}
+
+/* Celebration particles */
+.celebration-particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: var(--accent-blue);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: particleFloat 3s ease-out forwards;
+}
+
+.celebration-particle:nth-child(2n) { background: var(--accent-orange); }
+.celebration-particle:nth-child(3n) { background: var(--accent-green); }
+.celebration-particle:nth-child(4n) { background: var(--accent-red); }
+
+@keyframes particleFloat {
+  0% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-100px) rotate(360deg);
+  }
+}
+
+/* Measurement reveal animation */
+.measurement-reveal {
+  opacity: 0;
+  transform: scale(0.8);
+  animation: measurementPop 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+}
+
+@keyframes measurementPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) rotate(-10deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1) rotate(5deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+/* Responsive micro-interactions */
+@media (max-width: 768px) {
+  .help-hint::before,
+  .workflow-step.completed::after,
+  .status-indicator::after {
+    display: none;
+  }
+
+  .shortcut-hint {
+    display: none;
+  }
+}
+
+/* High contrast mode adjustments */
+@media (prefers-contrast: high) {
+  .constraint-step::after,
+  .workflow-step.completed::after,
+  .status-indicator::after {
+    border: 2px solid black;
+  }
+}
+
+/* Animation performance optimizations */
+.gpu-accelerated {
+  transform: translateZ(0);
+  will-change: transform, opacity;
+}
+
+/* Hover states for touch devices */
+@media (hover: none) {
+  .btn-tool:hover,
+  .constraint-btn:hover,
+  .workspace-btn:hover {
+    transform: none;
+    box-shadow: none;
+  }
+}
