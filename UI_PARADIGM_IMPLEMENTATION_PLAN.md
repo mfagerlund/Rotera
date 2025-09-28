@@ -61,13 +61,13 @@ Transform Pictorigo from its current point-and-constraint system to a modern ent
 - **Primary selection tracking** (last selected = pivot for operations)
 
 ### 2.2 Creation Tools
-- **Tool palette with hotkeys:**
-  - W: Create Point tool (single-use, auto-deactivates)
-  - L: Create Line tool (selection-dependent behavior)
-  - P: Create Plane tool (selection-dependent behavior)
-  - I: Image Point tool (Image View only)
-  - M: Measure tool
-  - Esc: Return to Select mode / Cancel active tool
+- **Tool palette (button-based for now):**
+  - Create Point button (single-use, auto-deactivates)
+  - Create Line button (selection-dependent behavior)
+  - Create Plane button (selection-dependent behavior)
+  - Image Point button (Image View only)
+  - Measure button
+  - **Note**: Hotkeys deferred - users will use buttons for creation tools
 - **Selection-first workflow:**
   - Default state: Select mode (click to select entities)
   - Tools activate only when valid selection exists
@@ -76,7 +76,7 @@ Transform Pictorigo from its current point-and-constraint system to a modern ent
 - **Live preview** during creation (ghost entities)
 
 ### 2.3 Point Creation Workflow
-1. Click "Create Point" button (W) or use hotkey
+1. Click "Create Point" button
 2. Tool activates (cursor changes, UI shows "Click to place point")
 3. Click on image → Point created at location
 4. Tool automatically deactivates, returns to Select mode
@@ -86,18 +86,18 @@ Transform Pictorigo from its current point-and-constraint system to a modern ent
 **Smart selection-based behavior:**
 
 **Case 1: No points selected**
-1. Click "Create Line" button (L)
+1. Click "Create Line" button
 2. Tool prompts: "Select first point"
 3. Click point → Becomes selected, tool prompts: "Select second point"
 4. Click second point → Line created between points, tool deactivates
 
 **Case 2: One point selected**
-1. Click "Create Line" button (L)
+1. Click "Create Line" button
 2. Tool prompts: "Select second point"
 3. Click second point → Line created, tool deactivates
 
 **Case 3: Two points selected**
-1. Click "Create Line" button (L)
+1. Click "Create Line" button
 2. Line immediately created between selected points
 3. Tool deactivates
 
