@@ -92,31 +92,42 @@ Transform Pictorigo from its current point-and-constraint system to a modern ent
 - **Smart snapping:** Endpoints, midpoints, perpendicular, parallel, extensions
 - **Live preview** during creation (ghost entities)
 
-### 2.3 Point Creation Workflow
-1. Click "Create Point" button
-2. Tool activates (cursor changes, UI shows "Click to place point")
-3. Click on image → Point created at location
-4. Tool automatically deactivates, returns to Select mode
-5. Esc key cancels tool activation
+### 2.3 Point Creation Workflow (Corrected)
+**CRITICAL**: Point creation only happens when WP tool is explicitly active
+1. Click "WP" button or press W key → Tool activates
+2. While active: click on image → Point created at location
+3. Tool automatically deactivates after point creation OR press Esc
+4. **Default behavior**: Click without tool active = selection only (NO point creation)
 
-### 2.4 Line Creation Workflow
-**Smart selection-based behavior:**
+### 2.4 Line Creation Workflow (Fusion 360 Style - Corrected)
+**Slot-based creation with explicit panel:**
 
-**Case 1: No points selected**
-1. Click "Create Line" button
-2. Tool prompts: "Select first point"
-3. Click point → Becomes selected, tool prompts: "Select second point"
-4. Click second point → Line created between points, tool deactivates
+1. Click "Line" button or press L key
+2. Line creation panel opens with:
+   - Two point slots (Point 1, Point 2)
+   - Segment/Infinite radio buttons
+   - Line-local constraint options
+   - Cancel/OK buttons
 
-**Case 2: One point selected**
-1. Click "Create Line" button
-2. Tool prompts: "Select second point"
-3. Click second point → Line created, tool deactivates
+**Pre-population from selection:**
+- 2 points selected → both slots filled
+- 1 point selected → first slot filled
+- 0 points selected → both slots empty
 
-**Case 3: Two points selected**
-1. Click "Create Line" button
-2. Line immediately created between selected points
-3. Tool deactivates
+**Slot filling while tool active:**
+- Click any existing point → fills current empty slot, advances to next
+- Manual dropdown selection in slots
+- Clear buttons to remove points from slots
+
+**Line-local constraints (applied during creation):**
+- Direction: None/Horizontal/Vertical/X-aligned/Y-aligned/Z-aligned (dropdown)
+- Fixed length: Checkbox + value input (segments only)
+
+**Completion:**
+- OK button enabled only when both slots filled
+- Creates line with selected constraints applied
+- Tool deactivates, returns to select mode
+- Cancel or Esc closes panel without creating line
 
 **Case 4: Invalid selection (3+ points, mixed entities)**
 - "Create Line" button disabled/grayed out

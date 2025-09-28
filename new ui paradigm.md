@@ -151,11 +151,48 @@ Yes. Here’s the core interaction model—kept tight.
 # Creation
 
 * **Tools:** WP (W), Line (L), Plane (P), IP (I), Measure (M).
-* **WP:** click to place; snaps to existing geometry.
-* **Line:** click two WPs (auto-creates WPs if needed). Toggle **segment vs infinite**.
+
+## Point Creation (WP Tool)
+* **Activation:** Click "WP" button or press W key
+* **Behavior:** ONLY when WP tool is active, clicking on image creates new world point
+* **Default:** Click without tool active = selection only (no point creation)
+* **Deactivation:** After placing point OR press Esc
+
+## Line Creation Tool (Fusion 360 Style)
+* **Activation:** Click "Line" button or press L key
+* **UI:** Opens line creation panel with two point slots:
+  ```
+  Line Creation
+  Point 1: [WP001    ] [Clear]
+  Point 2: [_______  ] [Clear]
+
+  □ Segment  ☑ Infinite
+
+  Line Constraints (applied to line itself):
+  Direction: [None ▼] (None/Horizontal/Vertical/X-aligned/Y-aligned/Z-aligned)
+  Length: □ Fixed length [___] meters
+
+  [Cancel] [OK - disabled until both slots filled]
+  ```
+
+* **Slot Filling Logic:**
+  - **Pre-selection:** If 2 points selected when tool opens → fill both slots
+  - **Pre-selection:** If 1 point selected when tool opens → fill first slot
+  - **Click behavior:** While tool active, clicking point fills current empty slot and advances
+  - **Manual selection:** User can click slot dropdown to pick from existing WPs
+  - **Clear buttons:** Remove point from specific slot
+
+* **Constraints:** Only "line-local" constraints that affect the line without external dependencies:
+  - **Direction alignment:** Horizontal/Vertical/X/Y/Z-aligned (mutually exclusive dropdown)
+  - **Fixed length:** Optional checkbox with value input (only for segments)
+
+* **Completion:** OK button enabled only when both slots filled
+* **Cancellation:** Cancel button or Esc key - closes panel, returns to select mode
+
+## Other Tools
 * **Plane:** start tool, then pick **3 WPs** | **2 Lines** | **Line + WP** (live preview).
 * **IP (image view):** click to place; choose **new WP** or **attach to WP**.
-* **ESC:** cancel current op. **Enter:** confirm.
+* **ESC:** cancel current op. **Enter/OK:** confirm.
 
 # Multi-select → Constraints
 

@@ -8,15 +8,37 @@ export interface ImageViewerRef {
   zoomSelection: () => void
   getScale: () => number
   setScale: (newScale: number) => void
+  getMousePosition: () => { u: number; v: number } | null
+}
+
+interface LineData {
+  id: string
+  name: string
+  pointA: string
+  pointB: string
+  geometry: 'segment' | 'infinite'
+  length?: number
+  color: string
+  isVisible: boolean
+  isConstruction: boolean
+  createdAt: string
+  updatedAt?: string
 }
 
 interface ImageViewerProps {
   image: ProjectImage
   worldPoints: Record<string, WorldPoint>
+  lines?: Record<string, LineData>
   selectedPoints: string[]
   hoveredConstraintId: string | null
   placementMode?: { active: boolean; worldPointId: string | null }
   activeConstraintType?: string | null
+  constructionPreview?: {
+    type: 'line'
+    pointA?: string
+    pointB?: string
+    showToCursor?: boolean
+  } | null
   onPointClick: (pointId: string, ctrlKey: boolean, shiftKey: boolean) => void
   onCreatePoint?: (u: number, v: number) => void
   onMovePoint?: (worldPointId: string, u: number, v: number) => void
@@ -28,10 +50,12 @@ interface ImageViewerProps {
 export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
   image,
   worldPoints,
+  lines = {},
   selectedPoints,
   hoveredConstraintId,
   placementMode = { active: false, worldPointId: null },
   activeConstraintType = null,
+  constructionPreview = null,
   onPointClick,
   onCreatePoint,
   onMovePoint,
@@ -47,6 +71,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 })
+  const [currentMousePos, setCurrentMousePos] = useState<{ x: number; y: number } | null>(null)
   const [imageLoaded, setImageLoaded] = useState(false)
 
   // Drag state for world points
@@ -182,13 +207,20 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     setScale(clampedScale)
   }, [scale])
 
+  // Get current mouse position in image coordinates
+  const getMousePosition = useCallback(() => {
+    if (!currentMousePos) return null
+    return canvasToImageCoords(currentMousePos.x, currentMousePos.y)
+  }, [currentMousePos])
+
   // Expose methods to parent component
   useImperativeHandle(ref, () => ({
     zoomFit,
     zoomSelection,
     getScale: () => scale,
-    setScale: setScaleValue
-  }), [zoomFit, zoomSelection, scale, setScaleValue])
+    setScale: setScaleValue,
+    getMousePosition
+  }), [zoomFit, zoomSelection, scale, setScaleValue, getMousePosition])
 
   // Notify parent of scale changes
   useEffect(() => {
@@ -257,6 +289,12 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
       // Draw world points
       renderWorldPoints(ctx)
 
+      // Draw lines
+      renderLines(ctx)
+
+      // Draw construction preview
+      renderConstructionPreview(ctx)
+
       // Draw selection overlays with animation
       renderSelectionOverlay(ctx)
 
@@ -273,7 +311,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
         cancelAnimationFrame(animationId)
       }
     }
-  }, [imageLoaded, scale, offset, worldPoints, selectedPoints, hoveredConstraintId, placementMode, isDraggingPoint, draggedPointId, hoveredPointId, isDragging, panVelocity, isAltKeyPressed])
+  }, [imageLoaded, scale, offset, worldPoints, lines, selectedPoints, hoveredConstraintId, placementMode, isDraggingPoint, draggedPointId, hoveredPointId, isDragging, panVelocity, isAltKeyPressed, constructionPreview, currentMousePos])
 
   const renderWorldPoints = (ctx: CanvasRenderingContext2D) => {
     Object.values(worldPoints).forEach(wp => {
@@ -530,6 +568,104 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     ctx.fill()
   }
 
+  // Render completed lines on the image
+  const renderLines = (ctx: CanvasRenderingContext2D) => {
+    Object.values(lines).forEach(line => {
+      if (!line.isVisible) return
+
+      const pointA = worldPoints[line.pointA]
+      const pointB = worldPoints[line.pointB]
+
+      if (!pointA || !pointB) return
+
+      // Check if both points have image points in this image
+      const ipA = pointA.imagePoints.find(ip => ip.imageId === image.id)
+      const ipB = pointB.imagePoints.find(ip => ip.imageId === image.id)
+
+      if (!ipA || !ipB) return
+
+      // Convert to canvas coordinates
+      const x1 = ipA.u * scale + offset.x
+      const y1 = ipA.v * scale + offset.y
+      const x2 = ipB.u * scale + offset.x
+      const y2 = ipB.v * scale + offset.y
+
+      // Draw line
+      ctx.strokeStyle = line.isConstruction ? 'rgba(0, 150, 255, 0.6)' : line.color
+      ctx.lineWidth = line.isConstruction ? 1 : 2
+      if (line.isConstruction) {
+        ctx.setLineDash([3, 3])
+      }
+
+      ctx.beginPath()
+      ctx.moveTo(x1, y1)
+      ctx.lineTo(x2, y2)
+      ctx.stroke()
+
+      if (line.isConstruction) {
+        ctx.setLineDash([])
+      }
+    })
+  }
+
+  // Render construction preview for line tool
+  const renderConstructionPreview = (ctx: CanvasRenderingContext2D) => {
+    if (!constructionPreview || constructionPreview.type !== 'line') return
+    if (!currentMousePos) return
+
+    const { pointA, pointB, showToCursor } = constructionPreview
+
+    // Case 1: One point defined, show line to cursor
+    if (pointA && !pointB && showToCursor) {
+      const wpA = worldPoints[pointA]
+      if (!wpA) return
+
+      const ipA = wpA.imagePoints.find(ip => ip.imageId === image.id)
+      if (!ipA) return
+
+      const x1 = ipA.u * scale + offset.x
+      const y1 = ipA.v * scale + offset.y
+      const x2 = currentMousePos.x
+      const y2 = currentMousePos.y
+
+      // Draw preview line
+      ctx.strokeStyle = 'rgba(255, 140, 0, 0.8)'
+      ctx.lineWidth = 2
+      ctx.setLineDash([4, 4])
+
+      ctx.beginPath()
+      ctx.moveTo(x1, y1)
+      ctx.lineTo(x2, y2)
+      ctx.stroke()
+      ctx.setLineDash([])
+    }
+
+    // Case 2: Two points defined, show completed line preview
+    if (pointA && pointB) {
+      const wpA = worldPoints[pointA]
+      const wpB = worldPoints[pointB]
+      if (!wpA || !wpB) return
+
+      const ipA = wpA.imagePoints.find(ip => ip.imageId === image.id)
+      const ipB = wpB.imagePoints.find(ip => ip.imageId === image.id)
+      if (!ipA || !ipB) return
+
+      const x1 = ipA.u * scale + offset.x
+      const y1 = ipA.v * scale + offset.y
+      const x2 = ipB.u * scale + offset.x
+      const y2 = ipB.v * scale + offset.y
+
+      // Draw preview line (brighter than final line)
+      ctx.strokeStyle = 'rgba(255, 140, 0, 0.9)'
+      ctx.lineWidth = 3
+
+      ctx.beginPath()
+      ctx.moveTo(x1, y1)
+      ctx.lineTo(x2, y2)
+      ctx.stroke()
+    }
+  }
+
   // Convert canvas coordinates to image coordinates
   const canvasToImageCoords = (canvasX: number, canvasY: number) => {
     const img = imageRef.current
@@ -616,6 +752,9 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     const rect = canvas.getBoundingClientRect()
     const x = event.clientX - rect.left
     const y = event.clientY - rect.top
+
+    // Always track current mouse position for construction preview
+    setCurrentMousePos({ x, y })
 
     if (isDragging) {
       // Handle viewport panning

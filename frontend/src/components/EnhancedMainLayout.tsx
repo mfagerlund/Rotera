@@ -5,6 +5,7 @@ import { useProject } from '../hooks/useProject'
 import { useSelection, useSelectionKeyboard } from '../hooks/useSelection'
 import { useConstraints } from '../hooks/useConstraints'
 import { useEnhancedProject } from '../hooks/useEnhancedProject'
+import { useLines } from '../hooks/useLines'
 
 // UI Components
 import ConstraintToolbar from './ConstraintToolbar'
@@ -23,8 +24,14 @@ import {
   SplitViewContainer
 } from './EnhancedWorkspaceManager'
 
+// Creation Tools
+import CreationToolsManager from './tools/CreationToolsManager'
+
 // Styles
 import '../styles/enhanced-workspace.css'
+import '../styles/tools.css'
+
+type ActiveTool = 'select' | 'point' | 'line' | 'plane' | 'circle'
 
 export const EnhancedMainLayout: React.FC = () => {
   // Legacy project system (for now)
@@ -32,6 +39,27 @@ export const EnhancedMainLayout: React.FC = () => {
 
   // Enhanced project system (future)
   const enhancedProject = useEnhancedProject()
+
+  // Tool state management
+  const [activeTool, setActiveTool] = useState<ActiveTool>('select')
+  const [constructionPreview, setConstructionPreview] = useState<{
+    type: 'line'
+    pointA?: string
+    pointB?: string
+    showToCursor?: boolean
+  } | null>(null)
+
+  // Line management
+  const {
+    lines,
+    createLine,
+    updateLine,
+    deleteLine,
+    toggleLineVisibility,
+    getLinesForPoints,
+    getLineById,
+    lineCount
+  } = useLines()
 
   // Use legacy project for now, but prepare for enhanced
   const {
@@ -149,6 +177,14 @@ export const EnhancedMainLayout: React.FC = () => {
 
   // Point interaction handlers
   const handleEnhancedPointClick = (pointId: string, ctrlKey: boolean, shiftKey: boolean) => {
+    // If Line tool is active, dispatch event for slot filling
+    if (activeTool === 'line') {
+      const event = new CustomEvent('lineToolPointClick', { detail: { pointId } })
+      window.dispatchEvent(event)
+      return // Don't do normal selection when line tool is active
+    }
+
+    // Normal selection behavior
     handlePointClick(pointId, ctrlKey, shiftKey)
   }
 
@@ -163,11 +199,16 @@ export const EnhancedMainLayout: React.FC = () => {
 
   const handleImageClick = (u: number, v: number) => {
     if (placementMode.active && placementMode.worldPointId && currentImage) {
+      // Legacy placement mode (adding IP to existing WP)
       addImagePointToWorldPoint(placementMode.worldPointId, currentImage.id, u, v)
       cancelPlacementMode()
-    } else if (currentImage) {
+    } else if (activeTool === 'point' && currentImage) {
+      // NEW: Only create world point when WP tool is explicitly active
       createWorldPoint(currentImage.id, u, v)
+      // Auto-deactivate tool after point creation
+      setActiveTool('select')
     }
+    // Default behavior: do nothing (selection only)
   }
 
   const handleMovePoint = (worldPointId: string, u: number, v: number) => {
@@ -196,17 +237,38 @@ export const EnhancedMainLayout: React.FC = () => {
     () => {} // Delete handler
   )
 
-  // Escape key for placement mode
+  // Keyboard shortcuts for tools and escape handling
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && placementMode.active) {
-        cancelPlacementMode()
+      // Escape key handling
+      if (event.key === 'Escape') {
+        if (placementMode.active) {
+          cancelPlacementMode()
+        } else if (activeTool !== 'select') {
+          setActiveTool('select')
+        }
+        return
+      }
+
+      // Tool activation shortcuts (only if no input is focused)
+      if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        switch (event.key.toLowerCase()) {
+          case 'w':
+            setActiveTool(activeTool === 'point' ? 'select' : 'point')
+            break
+          case 'l':
+            if (selectedPoints.length <= 2) { // Only activate if valid selection
+              setActiveTool(activeTool === 'line' ? 'select' : 'line')
+            }
+            break
+          // Add more shortcuts later for P (plane), C (circle), etc.
+        }
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [placementMode.active])
+  }, [placementMode.active, activeTool, selectedPoints.length])
 
   // Content for different workspaces
   const renderImageWorkspace = () => (
@@ -217,10 +279,12 @@ export const EnhancedMainLayout: React.FC = () => {
             ref={imageViewerRef}
             image={currentImage}
             worldPoints={worldPoints}
+            lines={lines}
             selectedPoints={selectedPoints}
             hoveredConstraintId={hoveredConstraintId}
             placementMode={placementMode}
             activeConstraintType={activeConstraintType}
+            constructionPreview={constructionPreview}
             onPointClick={handleEnhancedPointClick}
             onCreatePoint={handleImageClick}
             onMovePoint={handleMovePoint}
@@ -364,6 +428,35 @@ export const EnhancedMainLayout: React.FC = () => {
 
             {/* Right sidebar: Properties & Timeline */}
             <div className="sidebar-right">
+              {/* Creation Tools */}
+              <CreationToolsManager
+                selectedPoints={selectedPoints}
+                selectedLines={selectedLines}
+                selectedPlanes={selectedPlanes}
+                activeTool={activeTool}
+                onToolChange={setActiveTool}
+                worldPointNames={worldPointNames}
+                onCreatePoint={handleImageClick}
+                onCreateLine={(pointIds, constraints) => {
+                  // Enhanced line creation with constraints
+                  const lineId = createLine(pointIds, 'segment')
+                  if (lineId && constraints) {
+                    // TODO: Apply line-local constraints
+                    console.log('Line created with constraints:', lineId, constraints)
+                  }
+                }}
+                onCreatePlane={(definition) => {
+                  // TODO: Implement plane creation
+                  console.log('Create plane:', definition)
+                }}
+                onCreateCircle={(definition) => {
+                  // TODO: Implement circle creation
+                  console.log('Create circle:', definition)
+                }}
+                onConstructionPreviewChange={setConstructionPreview}
+                currentImageId={currentImageId}
+              />
+
               <ConstraintPropertyPanel
                 activeConstraintType={activeConstraintType}
                 selectedPoints={selectedPoints}
