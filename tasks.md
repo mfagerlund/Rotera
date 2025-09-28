@@ -1,64 +1,125 @@
-# New UI Paradigm Implementation Tasks
+# Pictorigo Implementation Tasks
 
-## ✅ **COMPLETED PHASES (Dec 28, 2024)**
+## ✅ **COMPLETED IMPLEMENTATION (Dec 28, 2024)**
 
-### **Phase 1: Data Model Refactoring** - ✅ COMPLETE
-- ✅ Unified geometry system (Point, Line, Plane, Circle)
-- ✅ EntityManager with CRUD operations
-- ✅ Enhanced project structure with workspace support
-- ✅ Type-safe constraint system
+### **Core UI Paradigm - COMPLETE**
+- ✅ **Entity-first, constraint-on-selection paradigm** implemented
+- ✅ **Selection-first approach** (click selects, creation requires tool activation)
+- ✅ **Workspace separation** (Image/World/Split views with Ctrl+1/2/3)
+- ✅ **Enhanced selection system** with multi-select and keyboard shortcuts
+- ✅ **Visual language** with color coding and constraint status indicators
 
-### **Phase 2: Workspace Separation** - ✅ COMPLETE
-- ✅ Enhanced workspace tabs (📷 Image, 🌐 World, ⚌ Split views)
-- ✅ Keyboard shortcuts (Ctrl+1, Ctrl+2, Ctrl+3, Tab cycling)
-- ✅ Split view with resizable panels
-- ✅ Workspace-specific layouts
+### **Line Primitive - COMPLETE**
+- ✅ **Fusion 360-style Line Creation Tool** with slot-based selection
+- ✅ **Live construction preview** (dashed line to cursor, solid preview)
+- ✅ **Line rendering on images** when both world points have image points
+- ✅ **Line-local constraints** (direction alignment, optional length)
+- ✅ **Point creation tool** (W key, explicit activation required)
+- ✅ **Data integrity** (unique lines, cascading deletion)
 
-### **Phase 3: Visual Language & Color Coding** - ✅ COMPLETE
-- ✅ Consistent entity colors (Point=Blue, Line=Green, Plane=Purple, Circle=Orange)
-- ✅ Constraint status indicators (Green=Satisfied, Red=Violated, etc.)
-- ✅ Visual feedback system with accessibility support
-- ✅ Enhanced constraint glyphs and animations
-
-### **Phase 4: Integration & Testing** - ✅ COMPLETE
-- ✅ All core functionality preserved and working
-- ✅ Image viewer fully functional with point creation/movement
-- ✅ Selection summary moved to footer
-- ✅ Backwards compatibility maintained
+### **Project Infrastructure - COMPLETE**
+- ✅ **Enhanced project structure** with workspace state management
+- ✅ **Line data management** hooks and CRUD operations
+- ✅ **Component architecture** (tools, managers, viewers)
+- ✅ **Mouse tracking and interaction** systems
 
 ---
 
-## 🔄 **NEXT PHASE: Primitives Implementation**
+## 🎯 **NEXT IMPLEMENTATION PRIORITIES**
 
-### **Phase 5: Core Primitives** - 🔄 IN PROGRESS
-- 🔄 **Line primitive** (two WPs, toggle segment vs infinite)
-- ⏳ **Plane primitive** (3 WPs, 2 Lines, or Line + WP)
-- ⏳ **Circle/Arc primitive** (center WP + radius or 3 WPs)
-- ⏳ **Multi-select → constraints logic**
+### **🔥 HIGH PRIORITY: Floating Edit Windows**
+- ⏳ **Design FloatingWindow base component** (draggable, OK/Cancel, template for all edit tools)
+- ⏳ **Implement line selection in viewers** (click line to select)
+- ⏳ **Create EditLineWindow component** (name, color, constraints editing)
+- ⏳ **Add hover indicators** for lines and points (visual feedback)
+- ⏳ **Wire selection → edit workflow** (select line → auto-open edit window)
+- ⏳ **Test complete edit cycle** (select, edit, apply/cancel, close)
 
-### **Phase 6: Constraint System** - ⏳ PENDING
-- ⏳ **Constraint glyphs on entities** (∥, ⟂, ⎓, ⌖, 🔒, ≡)
-- ⏳ **Degrees-of-freedom meter** and under-constraint warnings
-- ⏳ **Constraint conflict resolution** (show conflicting set, one-click mute)
-- ⏳ **Inspector panel** (properties, enable/disable, weight, edit values)
+### **🔄 MEDIUM PRIORITY: Core Primitives**
+- ⏳ **Plane primitive implementation**
+  - 3 World Points method
+  - 2 Lines method (coplanar check)
+  - Line + World Point method
+  - Fusion 360-style creation panel with method selection
+- ⏳ **Circle/Arc primitive implementation**
+  - Center + radius method
+  - 3 Points method
+  - Live preview and constraints
 
-### **Phase 7: Image-side Guidance** - ⏳ PENDING
+### **📊 MEDIUM PRIORITY: Constraint System**
+- ⏳ **Constraint glyphs on entities** (∥, ⟂, ⎓, ⌖, 🔒 visual indicators)
+- ⏳ **Degrees-of-freedom meter** (system health indicator)
+- ⏳ **Under-constraint warnings** with suggestions
+- ⏳ **Over-constraint detection** with conflict resolution
+- ⏳ **Enhanced Inspector panel** (properties, weights, enable/disable)
+
+### **🎨 LOWER PRIORITY: Image-side Enhancements**
 - ⏳ **Vanishing guides** (2D lines tagged as X/Y/Z-aligned)
-- ⏳ **IP placement** (choose new WP or attach to existing)
-- ⏳ **Reprojection error badges** on IPs
+- ⏳ **Smart IP placement** (new WP vs attach to existing)
+- ⏳ **Reprojection error badges** on image points
 - ⏳ **One-click axis adoption** suggestions
 
-### **Phase 8: Measurement & Tools** - ⏳ PENDING
-- ⏳ **Measurement tools** (M key, inline meters display)
-- ⏳ **Snap cues** (endpoints, midpoints, perpendicular, parallel)
-- ⏳ **Auto-construct helpers** (perpendicular through point, midpoint, etc.)
-- ⏳ **Units display** (meters everywhere)
+### **🔧 LOWER PRIORITY: Tools & Measurement**
+- ⏳ **Measurement tools** (M key, inline distance/angle display)
+- ⏳ **Smart snapping** (endpoints, midpoints, perpendicular, parallel)
+- ⏳ **Auto-construction helpers** (perpendicular through point, midpoint)
+- ⏳ **Units display consistency** (meters everywhere)
 
 ---
 
-## 🔄 **ON HOLD (Previous Tasks)**
+## 🎯 **IMMEDIATE NEXT STEPS (This Session)**
 
-### **Project Templates** *(ON HOLD)*
-- **Status**: Code exists but no UI integration - ON HOLD
-- **Impact**: Users can't leverage pre-configured project setups
-- **Required**: Create project template selection interface
+### **Floating Edit Windows Implementation**
+1. **FloatingWindow Component**
+   - Draggable header with title
+   - Standardized OK/Cancel button layout
+   - Z-index management for multiple windows
+   - ESC key handling for cancel
+
+2. **EditLineWindow**
+   - Line property editing (name, color, visibility)
+   - Line constraint editing (direction, length)
+   - Live preview of changes
+   - Validation and error handling
+
+3. **Enhanced Selection & Hover**
+   - Line click detection in ImageViewer and WorldView
+   - Hover state management for lines and points
+   - Visual hover feedback (highlighting, cursor changes)
+   - Selection state consistency across viewers
+
+4. **Integration Workflow**
+   - Line selection triggers EditLineWindow
+   - Window positioning near selected line
+   - Apply changes with live preview
+   - Cancel reverts to original state
+
+**Success Criteria:**
+- Users can click any line to open its edit window
+- Edit window is draggable and well-positioned
+- Changes preview live in viewers
+- OK applies changes, Cancel reverts
+- Window serves as template for future edit tools
+
+---
+
+## 📋 **IMPLEMENTATION NOTES**
+
+### **Design Principles**
+- **Consistency**: All edit windows follow same FloatingWindow template
+- **Discoverability**: Hover feedback makes interactive elements obvious
+- **Predictability**: Selection-based workflow with clear visual cues
+- **Professional Feel**: Polished interactions matching CAD software standards
+
+### **Technical Approach**
+- **Component Composition**: FloatingWindow wraps specific edit components
+- **State Management**: Centralized edit state with preview capabilities
+- **Event Handling**: Unified selection and hover event systems
+- **Performance**: Efficient re-rendering for hover/selection feedback
+
+### **Future Extensibility**
+This floating window system will enable:
+- **EditPointWindow** (world point properties)
+- **EditPlaneWindow** (plane properties and constraints)
+- **EditConstraintWindow** (constraint parameters)
+- **CreatePlaneWindow** (plane creation following same pattern)
