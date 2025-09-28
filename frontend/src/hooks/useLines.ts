@@ -40,11 +40,12 @@ export const useLines = (
     geometry: 'segment' | 'infinite' = 'segment',
     name?: string
   ): string | null => {
+    console.log('useLines: createLine called with:', pointIds, geometry, name)
     const [pointA, pointB] = pointIds
 
     // Validate points are different
     if (pointA === pointB) {
-      console.warn('Cannot create line: same point provided twice')
+      console.warn('useLines: Cannot create line: same point provided twice')
       return null
     }
 
@@ -55,7 +56,7 @@ export const useLines = (
     )
 
     if (existingLine) {
-      console.warn('Line already exists between these points:', existingLine.name)
+      console.warn('useLines: Line already exists between these points:', existingLine.name)
       return null
     }
 
@@ -75,14 +76,20 @@ export const useLines = (
       createdAt: timestamp
     }
 
-    setLines(prev => ({
-      ...prev,
-      [id]: newLine
-    }))
+    console.log('useLines: Creating new line:', newLine)
+
+    setLines(prev => {
+      const newState = {
+        ...prev,
+        [id]: newLine
+      }
+      console.log('useLines: Updated lines state:', newState)
+      return newState
+    })
 
     setNextLineCounter(prev => prev + 1)
 
-    console.log(`Created line ${lineName} between points ${pointA} and ${pointB} (${geometry})`)
+    console.log(`useLines: Created line ${lineName} between points ${pointA} and ${pointB} (${geometry})`)
     return id
   }, [lines, nextLineCounter])
 

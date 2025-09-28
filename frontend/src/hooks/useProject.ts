@@ -288,6 +288,69 @@ export const useProject = () => {
   const currentImage = project && currentImageId ? project.images[currentImageId] : null
 
   // Line Management
+  const createLine = useCallback((
+    pointIds: [string, string],
+    geometry: 'segment' | 'infinite' = 'segment',
+    name?: string
+  ): string | null => {
+    if (!project) return null
+
+    const [pointA, pointB] = pointIds
+
+    // Validate points are different
+    if (pointA === pointB) {
+      console.warn('useProject: Cannot create line: same point provided twice')
+      return null
+    }
+
+    // Validate points exist
+    if (!project.worldPoints[pointA] || !project.worldPoints[pointB]) {
+      console.warn('useProject: Cannot create line: one or both points do not exist')
+      return null
+    }
+
+    // Check if line already exists between these points
+    const existingLine = Object.values(project.lines || {}).find(line =>
+      (line.pointA === pointA && line.pointB === pointB) ||
+      (line.pointA === pointB && line.pointB === pointA)
+    )
+
+    if (existingLine) {
+      console.warn('useProject: Line already exists between these points:', existingLine.name)
+      return null
+    }
+
+    const id = crypto?.randomUUID?.() || `line_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    const lineCount = Object.keys(project.lines || {}).length
+    const lineName = name || `L${lineCount + 1}`
+    const timestamp = new Date().toISOString()
+
+    const newLine: Line = {
+      id,
+      name: lineName,
+      pointA,
+      pointB,
+      type: geometry,
+      color: '#4CAF50', // Green for lines according to visual language
+      isVisible: true,
+      isConstruction: false,
+      createdAt: timestamp
+    }
+
+    console.log('useProject: Creating new line:', newLine)
+
+    updateProject(prev => ({
+      ...prev,
+      lines: {
+        ...prev.lines,
+        [id]: newLine
+      }
+    }))
+
+    console.log(`useProject: Created line ${lineName} between points ${pointA} and ${pointB} (${geometry})`)
+    return id
+  }, [project, updateProject])
+
   const updateLine = useCallback((lineId: string, updates: Partial<Line>) => {
     updateProject(prev => {
       const line = prev.lines[lineId]
@@ -357,6 +420,7 @@ export const useProject = () => {
     toggleConstraint,
 
     // Lines
+    createLine,
     updateLine,
     deleteLine,
 

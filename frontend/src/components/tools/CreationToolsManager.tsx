@@ -19,6 +19,7 @@ interface CreationToolsManagerProps {
   activeTool: ToolType
   onToolChange: (tool: ToolType) => void
   worldPointNames: Record<string, string>
+  existingLines: Record<string, any> // Existing lines for duplicate checking
   onCreatePoint: (imageId: string, u: number, v: number) => void
   onCreateLine: (pointIds: [string, string], constraints?: LineConstraints) => void
   onCreatePlane: (definition: any) => void
@@ -39,6 +40,7 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
   activeTool,
   onToolChange,
   worldPointNames,
+  existingLines,
   onCreatePoint,
   onCreateLine,
   onCreatePlane,
@@ -244,6 +246,7 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
         <FusionLineCreationTool
           selectedPoints={selectedPoints}
           worldPointNames={worldPointNames}
+          existingLines={existingLines}
           onCreateLine={onCreateLine}
           onCancel={handleToolCancel}
           onConstructionPreviewChange={onConstructionPreviewChange}

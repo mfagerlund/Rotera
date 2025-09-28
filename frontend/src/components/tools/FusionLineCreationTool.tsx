@@ -5,6 +5,7 @@ import React, { useState, useCallback, useEffect } from 'react'
 interface FusionLineCreationToolProps {
   selectedPoints: string[]
   worldPointNames: Record<string, string> // Map of pointId -> pointName
+  existingLines: Record<string, any> // Existing lines for duplicate checking
   onCreateLine: (pointIds: [string, string], constraints?: LineConstraints) => void
   onCancel: () => void
   onPointSlotClick?: (pointId: string) => void // For clicking points to fill slots
@@ -26,6 +27,7 @@ interface LineConstraints {
 export const FusionLineCreationTool: React.FC<FusionLineCreationToolProps> = ({
   selectedPoints,
   worldPointNames,
+  existingLines,
   onCreateLine,
   onCancel,
   onPointSlotClick,
@@ -141,10 +143,31 @@ export const FusionLineCreationTool: React.FC<FusionLineCreationToolProps> = ({
   const handleSlot1Focus = () => setActiveSlot(1)
   const handleSlot2Focus = () => setActiveSlot(2)
 
-  const canCreateLine = pointSlot1 && pointSlot2 && pointSlot1 !== pointSlot2
+  // Check if a line already exists between two points
+  const lineAlreadyExists = useCallback((pointA: string, pointB: string): { exists: boolean, lineName?: string } => {
+    if (!pointA || !pointB) return { exists: false }
+
+    const existingLine = Object.values(existingLines || {}).find(line =>
+      (line.pointA === pointA && line.pointB === pointB) ||
+      (line.pointA === pointB && line.pointB === pointA)
+    )
+
+    return {
+      exists: !!existingLine,
+      lineName: existingLine?.name
+    }
+  }, [existingLines])
+
+  const lineCheck = lineAlreadyExists(pointSlot1, pointSlot2)
+  const canCreateLine = pointSlot1 && pointSlot2 && pointSlot1 !== pointSlot2 && !lineCheck.exists
 
   const handleCreateLine = () => {
-    if (!canCreateLine) return
+    if (!canCreateLine) {
+      console.log('FusionLineCreationTool: Cannot create line - invalid state')
+      return
+    }
+
+    console.log('FusionLineCreationTool: Creating line between points:', pointSlot1, 'and', pointSlot2)
 
     const constraints: LineConstraints = {}
 
@@ -157,7 +180,9 @@ export const FusionLineCreationTool: React.FC<FusionLineCreationToolProps> = ({
       constraints.length = length
     }
 
+    console.log('FusionLineCreationTool: Calling onCreateLine with constraints:', constraints)
     onCreateLine([pointSlot1, pointSlot2], constraints)
+    console.log('FusionLineCreationTool: onCreateLine called, closing tool')
     onCancel() // Close the tool after creation
   }
 
@@ -283,6 +308,21 @@ export const FusionLineCreationTool: React.FC<FusionLineCreationToolProps> = ({
         </div>
 
 
+        {/* Duplicate Line Warning */}
+        {lineCheck.exists && pointSlot1 && pointSlot2 && (
+          <div style={{
+            marginTop: '8px',
+            padding: '4px 8px',
+            backgroundColor: '#fff3cd',
+            border: '1px solid #ffeaa7',
+            borderRadius: '4px',
+            fontSize: '12px',
+            color: '#856404'
+          }}>
+            ⚠️ Line "{lineCheck.lineName}" already exists between these points
+          </div>
+        )}
+
         {/* Action Buttons */}
         <div style={{display: 'flex', gap: '8px', marginTop: '8px'}}>
           <button
@@ -295,6 +335,7 @@ export const FusionLineCreationTool: React.FC<FusionLineCreationToolProps> = ({
             onClick={handleCreateLine}
             disabled={!canCreateLine}
             style={{flex: 1, padding: '4px 8px', fontSize: '12px'}}
+            title={!canCreateLine && lineCheck.exists ? `Line already exists: ${lineCheck.lineName}` : ''}
           >
             OK
           </button>

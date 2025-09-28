@@ -3,34 +3,6 @@
 <!-- INSTRUCTION: Beep when a task is completed or user feedback is required -->
 <!-- Command: powershell -c "[System.Media.SystemSounds]::Beep.Play()" -->
 
-## 🧹 **URGENT: DUPLICATE COMPONENT CLEANUP**
-
-**Components to DELETE (legacy duplicates that are NOT being used):**
-- `MainLayout.tsx` - Legacy layout component (keep only EnhancedMainLayout.tsx)
-- `LineCreationTool.tsx` - Old line tool (keep only FusionLineCreationTool.tsx)
-- Any remaining `.js` files in `/src/components/` that have `.tsx` counterparts
-- `EditLineWindow.js` if it exists (keep only EditLineWindow.tsx)
-
-**Components to CONSOLIDATE/RENAME:**
-- Rename `EnhancedMainLayout.tsx` → `MainLayout.tsx` (remove "Enhanced" prefix)
-- Rename `EnhancedWorkspaceManager.tsx` → `WorkspaceManager.tsx`
-- Rename `EnhancedWorldPointPanel.tsx` → `WorldPointPanel.tsx`
-- Rename `EnhancedConstraintTimeline.tsx` → `ConstraintTimeline.tsx`
-
-**BEFORE DELETION - VERIFY THESE ARE NOT IMPORTED:**
-```bash
-# Check what's importing legacy components
-grep -r "import.*MainLayout" frontend/src --exclude-dir=node_modules
-grep -r "import.*LineCreationTool" frontend/src --exclude-dir=node_modules
-```
-
-**VALUE TO PRESERVE:**
-- All floating window functionality (now working!)
-- Compact UI with no scrollbars
-- Position persistence with localStorage
-- Clean TypeScript interfaces
-
----
 
 ## ✅ **COMPLETED IMPLEMENTATION (Dec 28, 2024)**
 
@@ -127,6 +99,200 @@ grep -r "import.*LineCreationTool" frontend/src --exclude-dir=node_modules
 ---
 
 ## 🎯 **NEXT IMPLEMENTATION PRIORITIES**
+
+### **🐛 URGENT BUG FIX: Line Creation Not Working**
+
+#### **Problem Analysis**
+- Users click "OK" in line creation window but line is not added to collection
+- `createLine` function exists in `useLines` hook and appears correct
+- Issue is in the callback connection between `FusionLineCreationTool` and `MainLayout`
+- Need to ensure proper state updates and error handling
+
+#### **Implementation Tasks**
+1. **Fix Line Creation Callback**
+   - Verify `createLine` from `useLines` is properly imported and called
+   - Ensure the line creation callback in MainLayout.tsx:516-523 actually calls the hook
+   - Add logging to trace the execution path from OK button to line creation
+   - Test that new lines appear in both UI and internal state
+
+2. **Add Error Handling**
+   - Add try-catch around line creation with user feedback
+   - Validate point IDs exist before creating line
+   - Show success/error messages to user
+   - Handle duplicate line prevention gracefully
+
+3. **State Synchronization**
+   - Ensure lines appear immediately in both ImageViewer and WorldView
+   - Verify line selection works after creation
+   - Test that line constraints are properly applied
+   - Confirm line appears in ConstraintTimeline
+
+**Success Criteria**: User can create line, see it immediately, and interact with it
+
+---
+
+### **🎯 REFACTOR: Unified Selection Interface**
+
+#### **Problem Analysis**
+- Current system has separate `selectedPoints`, `selectedLines`, `selectedConstraints` arrays
+- Forces components to know about specific entity types
+- Makes filtering and constraint application complex
+- User wants single unified list that implements `ISelectable` interface
+
+#### **Implementation Tasks**
+1. **Create ISelectable Interface**
+   ```typescript
+   interface ISelectable {
+     id: string
+     type: 'point' | 'line' | 'plane' | 'circle' | 'constraint'
+     name: string
+     isVisible: boolean
+     isSelected: boolean
+     getDisplayInfo(): { icon: string, description: string }
+   }
+   ```
+
+2. **Unified Selection State**
+   - Replace separate arrays with `selectedEntities: ISelectable[]`
+   - Update `useSelection` hook to work with unified list
+   - Add filtering methods: `getSelectedByType(type)`, `filterSelected(predicate)`
+   - Maintain backward compatibility during transition
+
+3. **Update Components**
+   - Modify all constraint panels to use filtered selection
+   - Update creation tools to work with unified selection
+   - Change property panels to query selection by type
+   - Ensure all click handlers update unified state
+
+4. **Selection UI Improvements**
+   - Add entity type filters in selection panel
+   - Show unified count: "3 entities selected (2 points, 1 line)"
+   - Allow searching/filtering within selection
+   - Group by entity type in selection displays
+
+**Success Criteria**: Single selection list, easier constraint filtering, cleaner code
+
+---
+
+### **🔧 FEATURE: Line Click Detection & Editing**
+
+#### **Problem Analysis**
+- Lines exist but are not clickable in ImageViewer or WorldView
+- No hover states or visual feedback for lines
+- EditLineWindow exists but no way to trigger it
+- Need line hit testing and interaction system
+
+#### **Implementation Tasks**
+1. **Line Hit Testing in ImageViewer**
+   - Implement line segment click detection in 2D space
+   - Add buffer zone around lines for easier clicking (e.g., 5px radius)
+   - Handle overlapping lines with priority system
+   - Test line clicks in zoomed/panned image views
+
+2. **Line Hit Testing in WorldView**
+   - Add 3D line click detection in world space
+   - Convert 3D lines to screen space for hit testing
+   - Handle perspective projection correctly
+   - Ensure lines are clickable from any camera angle
+
+3. **Hover States and Visual Feedback**
+   - Add line hover highlighting (thicker line, different color)
+   - Show cursor changes when hovering over clickable lines
+   - Display line name/info in tooltip on hover
+   - Ensure hover state clears when mouse leaves line
+
+4. **EditLineWindow Integration**
+   - Wire up line clicks to open EditLineWindow
+   - Pass correct line data to edit window
+   - Position edit window near clicked line
+   - Handle click-to-edit vs. click-to-select based on modifiers
+
+5. **Selection Integration**
+   - Support Ctrl+Click to add line to selection
+   - Support Shift+Click for range selection
+   - Clear other selections when clicking line without modifiers
+   - Update unified selection system with line selection
+
+**Success Criteria**: Lines are visibly interactive, click opens edit window, selection works
+
+---
+
+### **🛠️ FEATURE: Remove WP from Specific Image**
+
+#### **Problem Analysis**
+- Currently no way to remove a WorldPoint from a specific image without deleting the entire WP
+- Users need to remove image observations while keeping the WP for other images/3D work
+- Need to distinguish between "remove from this image" vs "delete entire WP"
+- Should maintain data integrity when removing image points
+
+#### **Implementation Tasks**
+1. **Add removeImagePointFromWorldPoint Function**
+   ```typescript
+   const removeImagePointFromWorldPoint = (worldPointId: string, imageId: string) => {
+     // Remove specific imagePoint from worldPoint.imagePoints array
+     // Keep worldPoint intact for other images
+     // Handle case where this was the last image point
+   }
+   ```
+
+2. **Update WorldPointPanel UI**
+   - Add "Remove from Image" button in addition to "Delete WP"
+   - Show different actions based on context (current image vs. all images)
+   - Display which images each WP appears in
+   - Confirm dialog: "Remove WP3 from Image001? (Will remain in Image002, Image003)"
+
+3. **Update ImageViewer Context Menu**
+   - Right-click on image point → "Remove from this image"
+   - Keep existing "Delete world point" option
+   - Visual distinction between the two actions
+   - Update tooltips to clarify scope of action
+
+4. **Handle Edge Cases**
+   - Prevent removing last image point if WP has no XYZ coordinates
+   - Show warning if removing would leave WP with insufficient constraints
+   - Update line rendering when image points are removed
+   - Refresh constraint validation after removal
+
+**Success Criteria**: Can remove WP from current image while preserving it in other images
+
+---
+
+### **🐛 BUG FIX: Construction Preview Cleanup**
+
+#### **Problem Analysis**
+- Line creation preview (dashed line from point to cursor) persists after canceling
+- `onConstructionPreviewChange(null)` should clear preview but doesn't always work
+- Preview state not properly reset when tool closes or ESC is pressed
+- Multiple preview states may conflict with each other
+
+#### **Implementation Tasks**
+1. **Fix FusionLineCreationTool Cancel Handler**
+   - Ensure `onCancel` properly calls `onConstructionPreviewChange(null)`
+   - Clear both point slots and active slot state
+   - Reset all local tool state on cancel
+   - Test that ESC key triggers proper cleanup
+
+2. **Improve Construction Preview State Management**
+   - Add preview cleanup to tool deactivation lifecycle
+   - Ensure preview clears when switching between tools
+   - Add timeout cleanup as fallback for stuck previews
+   - Log preview state changes for debugging
+
+3. **Update ImageViewer Preview Rendering**
+   - Verify that `constructionPreview: null` actually clears the canvas
+   - Add explicit canvas clearing when preview is null
+   - Ensure preview doesn't persist across image switches
+   - Test preview cleanup in both normal and error cases
+
+4. **Enhanced Tool State Management**
+   - Track tool lifecycle states (active, canceling, deactivated)
+   - Ensure all tools clean up their preview state consistently
+   - Add tool state debugging for development
+   - Prevent preview conflicts between different tools
+
+**Success Criteria**: Preview disappears immediately when tool is canceled or deactivated
+
+---
 
 ### **🔥 HIGH PRIORITY: Floating Edit Windows**
 

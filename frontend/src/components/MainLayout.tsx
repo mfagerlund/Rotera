@@ -5,7 +5,6 @@ import { useProject } from '../hooks/useProject'
 import { useSelection, useSelectionKeyboard } from '../hooks/useSelection'
 import { useConstraints } from '../hooks/useConstraints'
 import { useEnhancedProject } from '../hooks/useEnhancedProject'
-import { useLines } from '../hooks/useLines'
 import { Line } from '../types/project'
 
 // UI Components
@@ -51,17 +50,7 @@ export const MainLayout: React.FC = () => {
     showToCursor?: boolean
   } | null>(null)
 
-  // Line management
-  const {
-    lines,
-    createLine,
-    updateLine,
-    deleteLine,
-    toggleLineVisibility,
-    getLinesForPoints,
-    getLineById,
-    lineCount
-  } = useLines()
+  // Lines are now managed by the project
 
   // Use legacy project for now, but prepare for enhanced
   const {
@@ -83,7 +72,10 @@ export const MainLayout: React.FC = () => {
     createWorldPoint,
     renameWorldPoint,
     deleteWorldPoint,
-    addImagePointToWorldPoint
+    addImagePointToWorldPoint,
+    createLine,
+    updateLine,
+    deleteLine
   } = legacyProject
 
   // Selection and constraints
@@ -192,7 +184,7 @@ export const MainLayout: React.FC = () => {
   })
 
   const selectedLineObjects = selectedLines.map(lineObj => {
-    const lineData = lines[lineObj.id]
+    const lineData = project?.lines[lineObj.id]
     return createLineFromData(lineData, lineObj)
   })
   const allConstraints = getAllConstraints(selectedPoints, selectedLineObjects)
@@ -263,8 +255,8 @@ export const MainLayout: React.FC = () => {
     console.log('  - lineId:', lineId)
     console.log('  - ctrlKey:', ctrlKey)
     console.log('  - shiftKey:', shiftKey)
-    console.log('  - lines available:', Object.keys(lines).length)
-    console.log('  - line exists:', !!lines[lineId])
+    console.log('  - lines available:', Object.keys(project?.lines || {}).length)
+    console.log('  - line exists:', !!(project?.lines[lineId]))
 
     // If not holding modifier keys, open edit window
     if (!ctrlKey && !shiftKey) {
@@ -340,7 +332,15 @@ export const MainLayout: React.FC = () => {
             ref={imageViewerRef}
             image={currentImage}
             worldPoints={worldPoints}
-            lines={lines}
+            lines={Object.fromEntries(
+              Object.entries(project?.lines || {}).map(([id, line]) => [
+                id,
+                {
+                  ...line,
+                  geometry: line.type // Convert 'type' to 'geometry' for ImageViewer
+                }
+              ])
+            )}
             selectedPoints={selectedPoints}
             hoveredConstraintId={hoveredConstraintId}
             placementMode={placementMode}
@@ -512,13 +512,61 @@ export const MainLayout: React.FC = () => {
                 activeTool={activeTool}
                 onToolChange={setActiveTool}
                 worldPointNames={worldPointNames}
+                existingLines={project?.lines || {}}
                 onCreatePoint={(imageId: string, u: number, v: number) => handleImageClick(u, v)}
                 onCreateLine={(pointIds, constraints) => {
-                  // Enhanced line creation with constraints
-                  const lineId = createLine(pointIds, 'segment')
-                  if (lineId && constraints) {
-                    // TODO: Apply line-local constraints
-                    console.log('Line created with constraints:', lineId, constraints)
+                  try {
+                    console.log('MainLayout: Creating line with points:', pointIds, 'constraints:', constraints)
+
+                    // Enhanced line creation with constraints
+                    const lineId = createLine(pointIds, 'segment')
+                    console.log('MainLayout: createLine returned:', lineId)
+
+                    if (lineId) {
+                      console.log('MainLayout: Line created successfully with ID:', lineId)
+                      if (constraints) {
+                        // TODO: Apply line-local constraints
+                        console.log('Line created with constraints:', lineId, constraints)
+                      }
+                      // Beep on successful creation
+                      console.log('🔔 Line created successfully!')
+                      // Sound notification for completed task
+                      if (window.navigator.platform.startsWith('Win')) {
+                        try {
+                          // Use PowerShell beep for Windows
+                          fetch('/api/beep', { method: 'POST' }).catch(() => {
+                            // Fallback: browser beep
+                            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+                            const oscillator = audioContext.createOscillator()
+                            const gainNode = audioContext.createGain()
+                            oscillator.connect(gainNode)
+                            gainNode.connect(audioContext.destination)
+                            oscillator.frequency.value = 800
+                            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime)
+                            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2)
+                            oscillator.start(audioContext.currentTime)
+                            oscillator.stop(audioContext.currentTime + 0.2)
+                          })
+                        } catch (e) {
+                          console.log('Could not play sound notification')
+                        }
+                      }
+                    } else {
+                      console.error('MainLayout: createLine failed - no line ID returned')
+                      // Check if it's a duplicate line issue
+                      const [pointA, pointB] = pointIds
+                      const existingLine = Object.values(project?.lines || {}).find(line =>
+                        (line.pointA === pointA && line.pointB === pointB) ||
+                        (line.pointA === pointB && line.pointB === pointA)
+                      )
+                      if (existingLine) {
+                        console.log(`⚠️ Line already exists: ${existingLine.name}`)
+                        // TODO: Show user notification about existing line
+                        // TODO: Optionally highlight the existing line
+                      }
+                    }
+                  } catch (error) {
+                    console.error('MainLayout: Error creating line:', error)
                   }
                 }}
                 onCreatePlane={(definition) => {
@@ -583,6 +631,16 @@ export const MainLayout: React.FC = () => {
               worldInfo={worldInfo}
             />
             <span className="selection-summary">{selectionSummary}</span>
+
+            {/* Object counts */}
+            <div style={{display: 'flex', gap: '12px', fontSize: '12px', color: '#888'}}>
+              <span>World Points: {Object.keys(worldPoints || {}).length}</span>
+              <span>Image Points: {Object.values(worldPoints || {}).reduce((total, wp) => total + wp.imagePoints.length, 0)}</span>
+              <span>Lines: {Object.keys(project?.lines || {}).length}</span>
+              <span>Planes: {Object.keys(project?.planes || {}).length}</span>
+              <span>Constraints: {constraints.length}</span>
+            </div>
+
             <span style={{marginLeft: 'auto', color: '#888'}}>v0.3-ENHANCED</span>
           </div>
         </div>
@@ -591,8 +649,8 @@ export const MainLayout: React.FC = () => {
 
     {/* Edit Line Window - Truly free floating over entire viewport */}
     <EditLineWindow
-      line={editLineState.lineId && lines[editLineState.lineId] ? {
-        ...lines[editLineState.lineId],
+      line={editLineState.lineId && project?.lines[editLineState.lineId] ? {
+        ...project.lines[editLineState.lineId],
         type: 'segment' as const
       } : null}
       isOpen={editLineState.isOpen}
