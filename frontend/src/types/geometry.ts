@@ -26,8 +26,7 @@ export interface Line extends BaseEntity {
     type: 'two_points'
     pointIds: [string, string]
   }
-  geometry: 'segment' | 'infinite'
-  length?: number  // For segments
+  length?: number
 }
 
 export interface Plane extends BaseEntity {
@@ -44,7 +43,7 @@ export interface Plane extends BaseEntity {
 }
 
 export interface Circle extends BaseEntity {
-  type: 'points_equal_distance'
+  type: 'circle'
   definition: {
     type: 'center_radius' | 'three_points'
     centerId?: string

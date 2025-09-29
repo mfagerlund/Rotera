@@ -13,7 +13,7 @@ export interface EntityCollection {
 // Entity references for constraint system
 export interface EntityReference {
   id: string
-  type: 'point' | 'line' | 'plane' | 'points_equal_distance'
+  type: 'point' | 'line' | 'plane' | 'circle'
   role?: string  // e.g., 'start', 'end', 'center', 'vertex'
 }
 
@@ -32,7 +32,7 @@ export interface EntitySelection {
 
 // Entity creation parameters
 export interface EntityCreationParams {
-  type: 'point' | 'line' | 'plane' | 'points_equal_distance'
+  type: 'point' | 'line' | 'plane' | 'circle'
   name?: string
   definition: any  // Type-specific definition
   properties?: {
@@ -132,7 +132,7 @@ export interface EntityManager {
   dispatchEvent: (event: EntityEvent) => void
 
   // Naming and counters
-  generateName: (type: 'point' | 'line' | 'plane' | 'points_equal_distance') => string
+  generateName: (type: 'point' | 'line' | 'plane' | 'circle') => string
   resetCounters: () => void
 
   // Import/Export
@@ -168,7 +168,6 @@ export type CreatePointParams = {
 export type CreateLineParams = {
   type: 'line'
   pointIds: [string, string]
-  geometry: 'segment' | 'infinite'
 }
 
 export type CreatePlaneParams = {

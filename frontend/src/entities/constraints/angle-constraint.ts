@@ -1,0 +1,204 @@
+// Angle constraint between three points
+
+import type { ConstraintId, PointId } from '../../types/ids'
+import type { ValidationResult, ValidationError } from '../../validation/validator'
+import { ValidationHelpers } from '../../validation/validator'
+import {
+  Constraint,
+  type ConstraintRepository,
+  type BaseConstraintDto,
+  type ConstraintDto,
+  type AngleConstraintDto,
+  type ConstraintEvaluation
+} from './base-constraint'
+
+export interface AngleConstraintData extends BaseConstraintDto {
+  entities: {
+    points: [PointId, PointId, PointId] // [pointA, vertex, pointC]
+    lines?: undefined
+    planes?: undefined
+  }
+  parameters: BaseConstraintDto['parameters'] & {
+    targetAngle: number // In degrees
+  }
+}
+
+export class AngleConstraint extends Constraint {
+  protected data: AngleConstraintData
+
+  private constructor(repo: ConstraintRepository, data: AngleConstraintData) {
+    super(repo, data)
+    this.data = data
+  }
+
+  static create(
+    id: ConstraintId,
+    name: string,
+    pointAId: PointId,
+    vertexId: PointId,
+    pointCId: PointId,
+    targetAngle: number,
+    repo: ConstraintRepository,
+    options: {
+      tolerance?: number
+      priority?: number
+      isEnabled?: boolean
+      isDriving?: boolean
+      group?: string
+      tags?: string[]
+      notes?: string
+    } = {}
+  ): AngleConstraint {
+    const now = new Date().toISOString()
+    const data: AngleConstraintData = {
+      id,
+      name,
+      type: 'angle_point_point_point',
+      status: 'satisfied',
+      entities: {
+        points: [pointAId, vertexId, pointCId]
+      },
+      parameters: {
+        targetAngle,
+        tolerance: options.tolerance ?? 0.001,
+        priority: options.priority ?? 5
+      },
+      isEnabled: options.isEnabled ?? true,
+      isDriving: options.isDriving ?? false,
+      group: options.group,
+      tags: options.tags,
+      notes: options.notes,
+      createdAt: now,
+      updatedAt: now
+    }
+    return new AngleConstraint(repo, data)
+  }
+
+  static fromDto(dto: ConstraintDto, repo: ConstraintRepository): AngleConstraint {
+    if (!dto.angleConstraint) {
+      throw new Error('Invalid AngleConstraint DTO: missing angleConstraint data')
+    }
+
+    if (!dto.entities.points || dto.entities.points.length !== 3) {
+      throw new Error('AngleConstraint requires exactly 3 points')
+    }
+
+    const data: AngleConstraintData = {
+      ...dto,
+      entities: {
+        points: [dto.entities.points[0], dto.entities.points[1], dto.entities.points[2]]
+      },
+      parameters: {
+        ...dto.parameters,
+        targetAngle: dto.angleConstraint.targetAngle
+      }
+    }
+
+    return new AngleConstraint(repo, data)
+  }
+
+  getConstraintType(): string {
+    return 'angle_point_point_point'
+  }
+
+  evaluate(): ConstraintEvaluation {
+    const points = this.points
+    if (points.length >= 3 && points.every(p => p.hasCoordinates())) {
+      const value = this.calculateAngleBetweenPoints(points[0], points[1], points[2])
+      return {
+        value,
+        satisfied: this.checkSatisfaction(value, this.targetAngle)
+      }
+    }
+    return { value: 0, satisfied: false }
+  }
+
+  validateConstraintSpecific(): ValidationResult {
+    const errors: ValidationError[] = []
+    const warnings: ValidationError[] = []
+
+    if (this.data.parameters.targetAngle < 0 || this.data.parameters.targetAngle > 360) {
+      warnings.push(ValidationHelpers.createError(
+        'UNUSUAL_ANGLE_VALUE',
+        'targetAngle should typically be between 0 and 360 degrees',
+        this.data.id,
+        'constraint',
+        'parameters.targetAngle'
+      ))
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      warnings,
+      summary: errors.length === 0 ? 'Angle constraint validation passed' : `Angle constraint validation failed: ${errors.length} errors`
+    }
+  }
+
+  getRequiredEntityCounts(): { points: number } {
+    return { points: 3 }
+  }
+
+  toConstraintDto(): ConstraintDto {
+    const baseDto: ConstraintDto = {
+      ...this.data,
+      entities: {
+        points: [...this.data.entities.points]
+      },
+      parameters: { ...this.data.parameters },
+      distanceConstraint: undefined,
+      angleConstraint: {
+        targetAngle: this.data.parameters.targetAngle
+      },
+      parallelLinesConstraint: undefined,
+      perpendicularLinesConstraint: undefined,
+      fixedPointConstraint: undefined,
+      collinearPointsConstraint: undefined,
+      coplanarPointsConstraint: undefined,
+      equalDistancesConstraint: undefined,
+      equalAnglesConstraint: undefined
+    }
+    return baseDto
+  }
+
+  clone(newId: ConstraintId, newName?: string): AngleConstraint {
+    const clonedData: AngleConstraintData = {
+      ...this.data,
+      id: newId,
+      name: newName || `${this.data.name} (copy)`,
+      entities: {
+        points: [...this.data.entities.points]
+      },
+      parameters: { ...this.data.parameters },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+    return new AngleConstraint(this.repo, clonedData)
+  }
+
+  // Specific getters/setters
+  get targetAngle(): number {
+    return this.data.parameters.targetAngle
+  }
+
+  set targetAngle(value: number) {
+    this.data.parameters.targetAngle = value
+    this.updateTimestamp()
+  }
+
+  get pointAId(): PointId {
+    return this.data.entities.points[0]
+  }
+
+  get vertexId(): PointId {
+    return this.data.entities.points[1]
+  }
+
+  get pointCId(): PointId {
+    return this.data.entities.points[2]
+  }
+
+  protected getTargetValue(): number {
+    return this.targetAngle
+  }
+}

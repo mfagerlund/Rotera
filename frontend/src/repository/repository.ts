@@ -14,7 +14,7 @@ import { Line, type LineDto } from '../entities/line'
 import { Plane, type PlaneDto } from '../entities/plane'
 import { Camera, type CameraDto } from '../entities/camera'
 import { Image, type ImageDto } from '../entities/image'
-import { Constraint, type ConstraintDto } from '../entities/constraint'
+import { Constraint, type ConstraintDto, createConstraintFromDto } from '../entities/constraint'
 
 // Project DTO (storage only - no runtime state)
 export interface ProjectDto {
@@ -48,12 +48,6 @@ export interface ProjectDto {
 
 // Repository implementation with caching and dependency tracking
 export class Repository implements
-  WorldPointRepository,
-  LineRepository,
-  PlaneRepository,
-  CameraRepository,
-  ImageRepository,
-  ConstraintRepository,
   ValidationContext,
   IEntityRepository
 {
@@ -188,7 +182,7 @@ export class Repository implements
     this.project.constraints.forEach(constraintDto => {
       const cached = this.constraintCache.get(constraintDto.id)
       if (cached) {
-        updatedProject.constraints.push(cached.toDTO())
+        updatedProject.constraints.push(cached.toConstraintDto())
       } else {
         updatedProject.constraints.push(constraintDto)
       }
@@ -204,7 +198,7 @@ export class Repository implements
       if (!dto) {
         throw new Error(`Point not found: ${id}`)
       }
-      this.pointCache.set(id, WorldPoint.fromDTO(dto, this))
+      this.pointCache.set(id, WorldPoint.fromDTO(dto))
     }
     return this.pointCache.get(id)!
   }
@@ -215,7 +209,9 @@ export class Repository implements
       if (!dto) {
         throw new Error(`Line not found: ${id}`)
       }
-      this.lineCache.set(id, Line.fromDTO(dto, this))
+      const pointA = this.point(dto.pointA)
+      const pointB = this.point(dto.pointB)
+      this.lineCache.set(id, Line.fromDTO(dto, pointA, pointB))
     }
     return this.lineCache.get(id)!
   }
@@ -259,7 +255,7 @@ export class Repository implements
       if (!dto) {
         throw new Error(`Constraint not found: ${id}`)
       }
-      this.constraintCache.set(id, Constraint.fromDTO(dto, this))
+      this.constraintCache.set(id, createConstraintFromDto(dto, this))
     }
     return this.constraintCache.get(id)!
   }
@@ -350,7 +346,7 @@ export class Repository implements
   // WorldPointRepository
   getLinesByPoint(pointId: PointId): EntityId[] {
     return this.getAllLines()
-      .filter(line => line.pointA === pointId || line.pointB === pointId)
+      .filter(line => line.pointA.getId() === pointId || line.pointB.getId() === pointId)
       .map(line => line.getId() as EntityId)
   }
 
@@ -576,7 +572,7 @@ export class Repository implements
   // CRUD operations with reference management
   addPoint(dto: WorldPointDto): WorldPoint {
     this.project.points[dto.id] = dto
-    const point = WorldPoint.fromDTO(dto, this)
+    const point = WorldPoint.fromDTO(dto)
     this.pointCache.set(dto.id, point)
     this.buildDependencyGraph()
     // No need to invalidate - new entity doesn't affect existing references
@@ -585,7 +581,9 @@ export class Repository implements
 
   addLine(dto: LineDto): Line {
     this.project.lines[dto.id] = dto
-    const line = Line.fromDTO(dto, this)
+    const pointA = this.point(dto.pointA)
+    const pointB = this.point(dto.pointB)
+    const line = Line.fromDTO(dto, pointA, pointB)
     this.lineCache.set(dto.id, line)
     this.buildDependencyGraph()
     // No need to invalidate - new entity doesn't affect existing references
@@ -594,7 +592,7 @@ export class Repository implements
 
   addConstraint(dto: ConstraintDto): Constraint {
     this.project.constraints.push(dto)
-    const constraint = Constraint.fromDTO(dto, this)
+    const constraint = createConstraintFromDto(dto, this)
     this.constraintCache.set(dto.id, constraint)
     this.buildDependencyGraph()
     // No need to invalidate - new entity doesn't affect existing references

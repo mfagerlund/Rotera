@@ -5,7 +5,7 @@ import { ConstraintStatus } from '../types/geometry'
 import { EnhancedProjectSettings } from '../types/enhanced-project'
 
 // Entity type definitions
-export type EntityType = 'point' | 'line' | 'plane' | 'points_equal_distance'
+export type EntityType = 'point' | 'line' | 'plane' | 'circle'
 export type EntityState = 'default' | 'selected' | 'highlighted' | 'construction'
 export type WorkspaceType = 'image' | 'world' | 'split'
 export type FeedbackLevel = 'minimal' | 'standard' | 'detailed'
@@ -205,23 +205,18 @@ export class VisualLanguageManager {
       'points_equal_distance': '∠',
       'angle_three_points': '∠',
       'lines_parallel': '∥',
-      'lines_parallel': '∥',
-      'lines_perpendicular': '⊥',
       'lines_perpendicular': '⊥',
       'point_fixed_coord': '📌',
       'point_fixed_position': '📌',
-      'line_axis_aligned': '⟷',
+      // NOTE: line_axis_aligned moved to Line constraint properties
       'points_horizontal': '⟷',
-      'line_axis_aligned': '↕',
       'points_vertical': '↕',
       'points_colinear': '─',
       'points_collinear': '─',
-      'points_equal_distance': '○',
       'shape_circle': '○',
       'points_coplanar': '▭',
       'shape_rectangle': '▭',
       'coplanar': '◱',
-      'points_coplanar': '◱',
       'coincident': '●',
       'symmetry': '⚌'
     }

@@ -1,6 +1,6 @@
 // Delightful UI components for enhanced user experience
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 
 // Achievement Toast Component
 interface AchievementToastProps {
@@ -314,12 +314,29 @@ export const DelightfulTooltip: React.FC<DelightfulTooltipProps> = ({
   position = 'top'
 }) => {
   const [show, setShow] = useState(false)
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  const handleMouseEnter = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+    }
+    timeoutRef.current = setTimeout(() => {
+      setShow(true)
+    }, 300) // 300ms delay
+  }
+
+  const handleMouseLeave = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+    }
+    setShow(false)
+  }
 
   return (
     <div
-      style={{ position: 'relative', display: 'inline-block' }}
-      onMouseEnter={() => setShow(true)}
-      onMouseLeave={() => setShow(false)}
+      className="tooltip-wrapper"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       {children}
       {show && (

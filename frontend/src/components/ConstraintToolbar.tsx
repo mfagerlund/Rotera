@@ -1,4 +1,4 @@
-// Context-sensitive constraint toolbar - Fusion 360 style
+// Context-sensitive constraint toolbar - CAD style
 
 import React from 'react'
 import { AvailableConstraint, Line } from '../types/project'

@@ -117,26 +117,6 @@ export type RequiredDeep<T> = {
  * Helper function to get constraint point IDs with proper type filtering
  */
 export function getConstraintPointIds(constraint: Constraint): string[] {
-  switch (constraint.type) {
-    case 'points_distance':
-      return [constraint.pointA, constraint.pointB].filter((id): id is string => typeof id === 'string')
-    case 'points_equal_distance':
-      return [constraint.vertex, constraint.line1_end, constraint.line2_end].filter((id): id is string => typeof id === 'string')
-    case 'lines_perpendicular':
-    case 'lines_parallel':
-      return [constraint.line1_wp_a, constraint.line1_wp_b, constraint.line2_wp_a, constraint.line2_wp_b].filter((id): id is string => typeof id === 'string')
-    case 'points_colinear':
-      return constraint.wp_ids || []
-    case 'points_coplanar':
-      return [constraint.cornerA, constraint.cornerB, constraint.cornerC, constraint.cornerD].filter((id): id is string => typeof id === 'string')
-    case 'points_equal_distance':
-      return constraint.point_ids || []
-    case 'point_fixed_coord':
-      return [constraint.point_id].filter((id): id is string => typeof id === 'string')
-    case 'line_axis_aligned':
-    case 'line_axis_aligned':
-      return [constraint.pointA, constraint.pointB].filter((id): id is string => typeof id === 'string')
-    default:
-      return []
-  }
+  // Use the entities structure instead of specific properties
+  return constraint.entities.points || []
 }

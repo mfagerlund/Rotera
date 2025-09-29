@@ -1,5 +1,7 @@
 """Core entity models for Pictorigo backend."""
 
+from typing import Any
+
 import numpy as np
 from pydantic import BaseModel, Field, validator
 
@@ -9,8 +11,8 @@ class WorldPoint(BaseModel):
 
     id: str
     name: str = ""
-    xyz: list[float] | None = Field(None, min_items=3, max_items=3)
-    image_points: list[dict] = Field(default_factory=list)
+    xyz: list[float] | None = Field(None, min_length=3, max_length=3)
+    image_points: list[dict[str, Any]] = Field(default_factory=list)
     is_visible: bool = True
     color: str = "#ffffff"
     is_origin: bool = False
@@ -19,10 +21,10 @@ class WorldPoint(BaseModel):
     tags: list[str] = Field(default_factory=list)
     created_at: str | None = None
 
-    @validator('xyz')
-    def validate_xyz(cls, v):
+    @validator("xyz")
+    def validate_xyz(cls, v: list[float] | None) -> list[float] | None:  # noqa: N805
         if v is not None and len(v) != 3:
-            raise ValueError('xyz must have exactly 3 coordinates')
+            raise ValueError("xyz must have exactly 3 coordinates")
         return v
 
     def is_initialized(self) -> bool:
@@ -45,7 +47,7 @@ class WorldPoint(BaseModel):
         """Check if point has valid coordinates."""
         return self.xyz is not None
 
-    def distance_to(self, other: 'WorldPoint') -> float | None:
+    def distance_to(self, other: "WorldPoint") -> float | None:
         """Calculate distance to another world point."""
         if not self.has_coordinates() or not other.has_coordinates():
             return None
@@ -101,8 +103,8 @@ class CameraIntrinsics(BaseModel):
 class CameraExtrinsics(BaseModel):
     """Camera extrinsics matching frontend."""
 
-    rotation: list[float] = Field(min_items=3, max_items=3)  # Rodrigues vector
-    translation: list[float] = Field(min_items=3, max_items=3)  # Translation vector
+    rotation: list[float] = Field(min_length=3, max_length=3)  # Rodrigues vector
+    translation: list[float] = Field(min_length=3, max_length=3)  # Translation vector
 
 
 class CameraLockFlags(BaseModel):
@@ -121,9 +123,11 @@ class Camera(BaseModel):
     image_id: str
 
     # Backend uses different format for optimization
-    K: list[float] = Field(min_items=4)  # [fx, fy, cx, cy] or [fx, fy, cx, cy, k1, k2, ...]
-    R: list[float] = Field(min_items=3, max_items=3)  # Rodrigues rotation vector
-    t: list[float] = Field(min_items=3, max_items=3)  # Translation vector
+    K: list[float] = Field(
+        min_length=4
+    )  # [fx, fy, cx, cy] or [fx, fy, cx, cy, k1, k2, ...]
+    R: list[float] = Field(min_length=3, max_length=3)  # Rodrigues rotation vector
+    t: list[float] = Field(min_length=3, max_length=3)  # Translation vector
 
     # Optional fields
     intrinsics: CameraIntrinsics | None = None
@@ -132,10 +136,10 @@ class Camera(BaseModel):
     calibration_method: str | None = None
     lock_flags: CameraLockFlags | None = None
 
-    @validator('K')
-    def validate_K(cls, v):
+    @validator("K")
+    def validate_k(cls, v: list[float]) -> list[float]:  # noqa: N805
         if len(v) < 4:
-            raise ValueError('K must have at least 4 elements [fx, fy, cx, cy]')
+            raise ValueError("K must have at least 4 elements [fx, fy, cx, cy]")
         return v
 
     def has_distortion(self) -> bool:
@@ -158,17 +162,17 @@ class Camera(BaseModel):
         """Get translation as numpy array."""
         return np.array(self.t)
 
-    def set_intrinsics(self, K: np.ndarray) -> None:
+    def set_intrinsics(self, k: np.ndarray) -> None:
         """Set intrinsics from numpy array."""
-        if K.shape[0] < 4:
+        if k.shape[0] < 4:
             raise ValueError("K must have at least 4 elements")
-        self.K = K.tolist()
+        self.K = k.tolist()
 
-    def set_rotation(self, R: np.ndarray) -> None:
+    def set_rotation(self, r: np.ndarray) -> None:
         """Set rotation from numpy array."""
-        if R.shape != (3,):
+        if r.shape != (3,):
             raise ValueError("R must have shape (3,)")
-        self.R = R.tolist()
+        self.R = r.tolist()
 
     def set_translation(self, t: np.ndarray) -> None:
         """Set translation from numpy array."""
@@ -184,7 +188,7 @@ class Camera(BaseModel):
         """Get principal point."""
         return self.K[2], self.K[3]
 
-    def to_frontend_format(self) -> dict:
+    def to_frontend_format(self) -> dict[str, Any]:
         """Convert to frontend Camera format."""
         result = {
             "id": self.id,
@@ -193,29 +197,39 @@ class Camera(BaseModel):
                 "fx": self.K[0],
                 "fy": self.K[1],
                 "cx": self.K[2],
-                "cy": self.K[3]
+                "cy": self.K[3],
             },
-            "extrinsics": {
-                "rotation": self.R,
-                "translation": self.t
-            }
+            "extrinsics": {"rotation": self.R, "translation": self.t},
         }
 
         # Add distortion if present
         if self.has_distortion():
             distortion = self.get_distortion()
+            intrinsics = result["intrinsics"]
+            assert isinstance(intrinsics, dict)  # Type hint for mypy
             if len(distortion) >= 1:
-                result["intrinsics"]["k1"] = distortion[0]
+                intrinsics["k1"] = distortion[0]
             if len(distortion) >= 2:
-                result["intrinsics"]["k2"] = distortion[1]
+                intrinsics["k2"] = distortion[1]
             if len(distortion) >= 3:
-                result["intrinsics"]["k3"] = distortion[2]
+                intrinsics["k3"] = distortion[2]
             if len(distortion) >= 4:
-                result["intrinsics"]["p1"] = distortion[3]
+                intrinsics["p1"] = distortion[3]
             if len(distortion) >= 5:
-                result["intrinsics"]["p2"] = distortion[4]
+                intrinsics["p2"] = distortion[4]
 
         return result
+
+
+class LineConstraintSettings(BaseModel):
+    """Line constraint settings embedded in Line entity."""
+
+    direction: str = "free"  # 'free', 'horizontal', 'vertical', 'x-aligned'...
+    distance: str = "free"  # 'free' or 'fixed' - whether length is constrained
+    target_length: float | None = (
+        None  # Fixed length constraint (if undefined, length is free)
+    )
+    tolerance: float = 0.001
 
 
 class Line(BaseModel):
@@ -230,18 +244,18 @@ class Line(BaseModel):
     is_construction: bool = False
     line_style: str = "solid"
     thickness: float = 1.0
+
+    # NEW: Constraint settings embedded in line
+    constraints: LineConstraintSettings = Field(default_factory=LineConstraintSettings)
+
     group: str | None = None
     tags: list[str] = Field(default_factory=list)
     created_at: str | None = None
     updated_at: str | None = None
 
-    def to_solver_dto(self) -> dict:
+    def to_solver_dto(self) -> dict[str, Any]:
         """Convert to minimal solver DTO format."""
-        return {
-            "id": self.id,
-            "pointA": self.point_a,
-            "pointB": self.point_b
-        }
+        return {"id": self.id, "pointA": self.point_a, "pointB": self.point_b}
 
 
 class Plane(BaseModel):
@@ -249,8 +263,10 @@ class Plane(BaseModel):
 
     id: str
     name: str
-    definition: dict  # Plane definition (three_points, etc.)
-    equation: list[float] | None = Field(None, min_items=4, max_items=4)  # [a, b, c, d]
+    definition: dict[str, Any]  # Plane definition (three_points, etc.)
+    equation: list[float] | None = Field(
+        None, min_length=4, max_length=4
+    )  # [a, b, c, d]
     is_visible: bool = True
     color: str = "#ffffff"
     is_construction: bool = False
@@ -258,24 +274,23 @@ class Plane(BaseModel):
 
 
 # Constraint types matching frontend
+# NOTE: horizontal_line, vertical_line, distance moved to Line entity properties
 CONSTRAINT_TYPES = [
-    'distance_point_point',
-    'distance_point_line',
-    'distance_point_plane',
-    'angle_point_point_point',
-    'angle_line_line',
-    'parallel_lines',
-    'perpendicular_lines',
-    'collinear_points',
-    'coplanar_points',
-    'fixed_point',
-    'horizontal_line',
-    'vertical_line',
-    'equal_distances',
-    'equal_angles'
+    "distance_point_point",
+    "distance_point_line",
+    "distance_point_plane",
+    "angle_point_point_point",
+    "angle_line_line",
+    "parallel_lines",
+    "perpendicular_lines",
+    "collinear_points",
+    "coplanar_points",
+    "fixed_point",
+    "equal_distances",
+    "equal_angles",
 ]
 
-CONSTRAINT_STATUS_TYPES = ['satisfied', 'violated', 'warning', 'disabled']
+CONSTRAINT_STATUS_TYPES = ["satisfied", "violated", "warning", "disabled"]
 
 
 class Constraint(BaseModel):
@@ -287,10 +302,12 @@ class Constraint(BaseModel):
     status: str = "satisfied"  # One of CONSTRAINT_STATUS_TYPES
 
     # Entity references
-    entities: dict = Field(default_factory=dict)  # {points: [...], lines: [...], planes: [...]}
+    entities: dict[str, Any] = Field(
+        default_factory=dict
+    )  # {points: [...], lines: [...], planes: [...]}
 
     # Constraint parameters
-    parameters: dict = Field(default_factory=dict)
+    parameters: dict[str, Any] = Field(default_factory=dict)
 
     # Runtime state
     current_value: float | None = None
@@ -305,16 +322,16 @@ class Constraint(BaseModel):
     created_at: str | None = None
     updated_at: str | None = None
 
-    @validator('type')
-    def validate_constraint_type(cls, v):
+    @validator("type")
+    def validate_constraint_type(cls, v: str) -> str:  # noqa: N805
         if v not in CONSTRAINT_TYPES:
-            raise ValueError(f'Invalid constraint type: {v}')
+            raise ValueError(f"Invalid constraint type: {v}")
         return v
 
-    @validator('status')
-    def validate_status(cls, v):
+    @validator("status")
+    def validate_status(cls, v: str) -> str:  # noqa: N805
         if v not in CONSTRAINT_STATUS_TYPES:
-            raise ValueError(f'Invalid constraint status: {v}')
+            raise ValueError(f"Invalid constraint status: {v}")
         return v
 
     def constraint_type(self) -> str:
@@ -323,12 +340,15 @@ class Constraint(BaseModel):
 
     def get_point_ids(self) -> list[str]:
         """Get point IDs referenced by this constraint."""
-        return self.entities.get('points', [])
+        points = self.entities.get("points", [])
+        return points if isinstance(points, list) else []
 
     def get_line_ids(self) -> list[str]:
         """Get line IDs referenced by this constraint."""
-        return self.entities.get('lines', [])
+        lines = self.entities.get("lines", [])
+        return lines if isinstance(lines, list) else []
 
     def get_plane_ids(self) -> list[str]:
         """Get plane IDs referenced by this constraint."""
-        return self.entities.get('planes', [])
+        planes = self.entities.get("planes", [])
+        return planes if isinstance(planes, list) else []

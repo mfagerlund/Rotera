@@ -337,7 +337,7 @@ export const useProject = () => {
       name: lineName,
       pointA,
       pointB,
-      type: geometry,
+      type: 'segment',
       color: '#4CAF50', // Green for lines according to visual language
       isVisible: true,
       isConstruction: false,
@@ -379,12 +379,10 @@ export const useProject = () => {
 
       // Remove any constraints that reference this line
       const filteredConstraints = prev.constraints.filter(constraint => {
-        // Check if constraint references this line
+        // Check if constraint references this line through line IDs
         if (constraint.type === 'lines_parallel' || constraint.type === 'lines_perpendicular') {
-          return !(
-            (constraint.line1_wp_a === deleted?.pointA && constraint.line1_wp_b === deleted?.pointB) ||
-            (constraint.line2_wp_a === deleted?.pointA && constraint.line2_wp_b === deleted?.pointB)
-          )
+          const lineIds = constraint.entities.lines || []
+          return !lineIds.includes(lineId)
         }
         return true
       })

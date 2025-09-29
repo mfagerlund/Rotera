@@ -106,7 +106,6 @@ export const mockProject: Project = {
     'camera-1': {
       id: 'camera-1',
       name: 'Test Camera',
-      make: 'Test',
       intrinsics: {
         fx: 1000,
         fy: 1000,

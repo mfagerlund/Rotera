@@ -140,9 +140,6 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
 
   // Render lines
   const renderLines = useCallback((ctx: CanvasRenderingContext2D) => {
-    console.log('🔥 WORLDVIEW RENDER LINES DEBUG:')
-    console.log('  - project.lines:', project.lines)
-    console.log('  - lines count:', Object.keys(project.lines || {}).length)
 
     Object.entries(project.lines || {}).forEach(([lineId, line]) => {
       if (!line.isVisible) return
@@ -160,31 +157,11 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
       ctx.moveTo(projA.x, projA.y)
       ctx.lineTo(projB.x, projB.y)
 
-      if (line.type === 'infinite') {
-        // Extend line to canvas edges for infinite lines
-        const dx = projB.x - projA.x
-        const dy = projB.y - projA.y
-        const length = Math.sqrt(dx * dx + dy * dy)
-        if (length > 0) {
-          const unitX = dx / length
-          const unitY = dy / length
-          const extension = 1000 // Extend by 1000 pixels
-
-          ctx.moveTo(projA.x - unitX * extension, projA.y - unitY * extension)
-          ctx.lineTo(projB.x + unitX * extension, projB.y + unitY * extension)
-
-          if (line.isConstruction) {
-            ctx.setLineDash([10, 5]) // Construction dashed pattern
-          } else {
-            ctx.setLineDash([5, 5]) // Regular infinite line dashed
-          }
-        }
+      // All lines are segments now
+      if (line.isConstruction) {
+        ctx.setLineDash([5, 3]) // Construction segments
       } else {
-        if (line.isConstruction) {
-          ctx.setLineDash([5, 3]) // Construction segments
-        } else {
-          ctx.setLineDash([]) // Solid for segments
-        }
+        ctx.setLineDash([]) // Solid for segments
       }
 
       let strokeColor = line.color || '#2196F3'
@@ -202,16 +179,49 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
       ctx.lineWidth = lineWidth
       ctx.stroke()
 
-      // Show line name on hover
-      if (isHovered) {
-        const midX = (projA.x + projB.x) / 2
-        const midY = (projA.y + projB.y) / 2
+      // Always show line name and distance (if set)
+      const midX = (projA.x + projB.x) / 2
+      const midY = (projA.y + projB.y) / 2
 
-        ctx.fillStyle = '#000'
-        ctx.font = '12px Arial'
-        ctx.textAlign = 'center'
-        ctx.fillText(line.name, midX, midY - 8)
+      // Show glyph with direction constraint if available
+      let directionGlyph = '↔' // Default glyph
+      if (line.constraints) {
+        switch (line.constraints.direction) {
+          case 'horizontal': directionGlyph = '↔'; break
+          case 'vertical': directionGlyph = '↕'; break
+          case 'x-aligned': directionGlyph = '→'; break
+          case 'y-aligned': directionGlyph = '↑'; break
+          case 'z-aligned': directionGlyph = '⬆'; break
+          case 'free': directionGlyph = '↔'; break
+        }
       }
+
+      // Show target length if set, otherwise show calculated length
+      let displayText = `${line.name} ${directionGlyph}`
+      if (line.constraints?.targetLength) {
+        displayText = `${line.name} ${directionGlyph} ${line.constraints.targetLength.toFixed(1)}m`
+      } else if (pointA.xyz && pointB.xyz) {
+        const dx = pointB.xyz[0] - pointA.xyz[0]
+        const dy = pointB.xyz[1] - pointA.xyz[1]
+        const dz = pointB.xyz[2] - pointA.xyz[2]
+        const calculatedLength = Math.sqrt(dx*dx + dy*dy + dz*dz)
+        displayText = `${line.name} ${directionGlyph} ${calculatedLength.toFixed(1)}m`
+      }
+
+      // WorldView shows calculated 3D distance when coordinates are available
+
+      // Draw outlined text
+      ctx.font = '12px Arial'
+      ctx.textAlign = 'center'
+
+      // Draw text outline (stroke)
+      ctx.strokeStyle = 'white'
+      ctx.lineWidth = 3
+      ctx.strokeText(displayText, midX, midY + 2)
+
+      // Draw text fill
+      ctx.fillStyle = '#000'
+      ctx.fillText(displayText, midX, midY + 2)
     })
   }, [project, selectedLines, hoverState, project3DTo2D])
 
@@ -487,10 +497,8 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
 
       let param = dot / lenSq
 
-      // For line segments, clamp parameter to [0, 1]
-      if (line.type === 'segment') {
-        param = Math.max(0, Math.min(1, param))
-      }
+      // All lines are segments, clamp parameter to [0, 1]
+      param = Math.max(0, Math.min(1, param))
 
       const closestX = projA.x + param * C
       const closestY = projA.y + param * D
@@ -499,8 +507,8 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
         Math.pow(x - closestX, 2) + Math.pow(y - closestY, 2)
       )
 
-      // Increase hit tolerance for lines
-      if (distance <= 5) return lineId
+      // Increase hit tolerance for lines (larger buffer for easier clicking)
+      if (distance <= 8) return lineId
     }
     return null
   }

@@ -1,4 +1,4 @@
-// Core project data types for Fusion 360-inspired UI
+// Core project data types for CAD-inspired UI
 
 export interface WorldPoint {
   id: string           // UUID for backend
@@ -106,6 +106,7 @@ export interface ProjectSettings {
   enableSmartSnapping: boolean
   constraintPreview: boolean
   visualFeedbackLevel: 'minimal' | 'standard' | 'detailed'
+  imageSortOrder?: string[]
 }
 
 // Workspace and view types
@@ -180,11 +181,16 @@ export interface Line {
   name: string         // Display name: "L1", "L2", etc.
   pointA: string       // First world point ID
   pointB: string       // Second world point ID
-  type: 'segment' | 'infinite'  // Segment or infinite line
+  type: 'segment'  // Line segment
   isVisible: boolean   // Show/hide in UI
   color: string        // Visual distinction
   isConstruction?: boolean  // Construction vs driving geometry
   createdAt?: string   // Creation timestamp
+  constraints?: {      // Embedded constraints
+    direction: 'free' | 'horizontal' | 'vertical' | 'x-aligned' | 'y-aligned' | 'z-aligned'
+    targetLength?: number
+    tolerance?: number
+  }
 }
 
 export interface Plane {

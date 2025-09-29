@@ -1,15 +1,19 @@
 // Creation Tools Manager - Handles all geometry creation tools
 
 import React, { useState, useCallback } from 'react'
-import FusionLineCreationTool from './FusionLineCreationTool'
+import LineCreationTool from './LineCreationTool'
 import FloatingWindow from '../FloatingWindow'
+import { LineConstraintSettings } from '../../entities/line'
 import '../../styles/tools.css'
 
 type ToolType = 'select' | 'point' | 'line' | 'plane' | 'circle'
 
 interface LineConstraints {
-  direction?: 'horizontal' | 'vertical' | 'x-aligned' | 'y-aligned' | 'z-aligned'
-  length?: number
+  name?: string
+  color?: string
+  isVisible?: boolean
+  isConstruction?: boolean
+  constraints?: LineConstraintSettings
 }
 
 interface CreationToolsManagerProps {
@@ -243,7 +247,7 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
         storageKey="line-creation-tool"
         showOkCancel={false}
       >
-        <FusionLineCreationTool
+        <LineCreationTool
           selectedPoints={selectedPoints}
           worldPointNames={worldPointNames}
           existingLines={existingLines}

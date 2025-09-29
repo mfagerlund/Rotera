@@ -45,18 +45,7 @@ export const ConstraintPropertyPanel: React.FC<ConstraintPropertyPanelProps> = (
   }, [activeConstraintType, onCancel])
 
   if (!activeConstraintType) {
-    return (
-      <div className="property-panel">
-        <div className="property-panel-header">
-          <h3>Properties</h3>
-        </div>
-        <div className="property-panel-content">
-          <div className="empty-state">
-            <span>Select points and choose a constraint type to set parameters</span>
-          </div>
-        </div>
-      </div>
-    )
+    return null
   }
 
   const getConstraintDisplayName = (type: string) => {
@@ -145,40 +134,56 @@ const ConstraintParameterForm: React.FC<ConstraintParameterFormProps> = ({
         </div>
       )
 
-    case 'points_equal_distance':
+    case 'points_equal_distance': {
+      // Determine if this is angle or circle constraint based on selection
+      const isAngleConstraint = selectedPoints.length === 3 || selectedLines.length >= 2
+
       return (
         <div className="parameter-form">
           <div className="selected-points-preview">
-            {selectedPoints.length >= 3 ? (
-              <span>Angle: {getPointNames(selectedPoints.slice(0, 3)).join(' - ')}</span>
+            {isAngleConstraint ? (
+              selectedPoints.length >= 3 ? (
+                <span>Angle: {getPointNames(selectedPoints.slice(0, 3)).join(' - ')}</span>
+              ) : (
+                <span>Lines: {selectedLines.map(line =>
+                  `${getPointName(line.pointA)}-${getPointName(line.pointB)}`
+                ).join(' and ')}</span>
+              )
             ) : (
-              <span>Lines: {selectedLines.map(line =>
-                `${getPointName(line.pointA)}-${getPointName(line.pointB)}`
-              ).join(' and ')}</span>
+              <span>Points: {getPointNames(selectedPoints).join(', ')}</span>
             )}
           </div>
-          <div className="form-field">
-            <label>Angle (degrees)</label>
-            <input
-              type="number"
-              step="0.1"
-              value={parameters.angle || ''}
-              onChange={(e) => onParameterChange('points_equal_distance', parseFloat(e.target.value))}
-              placeholder="Enter angle..."
-              autoFocus
-            />
-          </div>
+
+          {isAngleConstraint ? (
+            <div className="form-field">
+              <label>Angle (degrees)</label>
+              <input
+                type="number"
+                step="0.1"
+                value={parameters.angle || ''}
+                onChange={(e) => onParameterChange('points_equal_distance', parseFloat(e.target.value))}
+                placeholder="Enter angle..."
+                autoFocus
+              />
+            </div>
+          ) : (
+            <div className="constraint-description">
+              Make the selected points lie on the same circle
+            </div>
+          )}
+
           <div className="form-actions">
             <button
               className="btn-primary"
               onClick={onApply}
               disabled={!isComplete}
             >
-              Apply Angle
+              {isAngleConstraint ? 'Apply Angle' : 'Apply Circle'}
             </button>
           </div>
         </div>
       )
+    }
 
     case 'lines_parallel':
     case 'lines_perpendicular':
@@ -302,65 +307,7 @@ const ConstraintParameterForm: React.FC<ConstraintParameterFormProps> = ({
         </div>
       )
 
-    case 'points_equal_distance':
-      return (
-        <div className="parameter-form">
-          <div className="selected-points-preview">
-            <span>Points: {getPointNames(selectedPoints).join(', ')}</span>
-          </div>
-          <div className="constraint-description">
-            Make the selected points lie on the same circle
-          </div>
-          <div className="form-actions">
-            <button
-              className="btn-primary"
-              onClick={onApply}
-            >
-              Apply Circle
-            </button>
-          </div>
-        </div>
-      )
 
-    case 'line_axis_aligned':
-      return (
-        <div className="parameter-form">
-          <div className="selected-points-preview">
-            <span>Points: {getPointNames(selectedPoints.slice(0, 2)).join(' - ')}</span>
-          </div>
-          <div className="constraint-description">
-            Make the selected points horizontally aligned
-          </div>
-          <div className="form-actions">
-            <button
-              className="btn-primary"
-              onClick={onApply}
-            >
-              Apply Horizontal
-            </button>
-          </div>
-        </div>
-      )
-
-    case 'line_axis_aligned':
-      return (
-        <div className="parameter-form">
-          <div className="selected-points-preview">
-            <span>Points: {getPointNames(selectedPoints.slice(0, 2)).join(' - ')}</span>
-          </div>
-          <div className="constraint-description">
-            Make the selected points vertically aligned
-          </div>
-          <div className="form-actions">
-            <button
-              className="btn-primary"
-              onClick={onApply}
-            >
-              Apply Vertical
-            </button>
-          </div>
-        </div>
-      )
 
     default:
       return (

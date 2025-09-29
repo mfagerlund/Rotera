@@ -64,15 +64,13 @@ export const ConstraintEditor: React.FC<ConstraintEditorProps> = ({
   const getConstraintDisplayName = (c: Constraint) => {
     switch (c.type) {
       case 'points_distance': return 'Distance'
-      case 'points_equal_distance': return 'Angle' // TODO: Map angle to appropriate constraint
+      case 'points_equal_distance': return 'Circle' // Combined angle/circle constraint type
       case 'point_fixed_coord': return 'Fixed Position'
       case 'lines_parallel': return 'Parallel'
       case 'lines_perpendicular': return 'Perpendicular'
-      case 'points_coplanar': return 'Rectangle' // TODO: Map rectangle to appropriate constraint
+      case 'points_coplanar': return 'Rectangle'
       case 'points_colinear': return 'Collinear'
-      case 'points_equal_distance': return 'Circle' // TODO: Map circle to appropriate constraint
-      case 'line_axis_aligned': return 'Horizontal' // TODO: Horizontal/Vertical might need different types
-      case 'line_axis_aligned': return 'Vertical' // TODO: Need different type for vertical
+      // NOTE: line_axis_aligned constraint has been moved to Line entity properties
       default: return c.type
     }
   }

@@ -260,7 +260,7 @@ export const useEnhancedConstraints = (
       points: selection.entities.filter(e => e.type === 'point').length,
       lines: selection.entities.filter(e => e.type === 'line').length,
       planes: selection.entities.filter(e => e.type === 'plane').length,
-      circles: selection.entities.filter(e => e.type === 'points_equal_distance').length
+      circles: selection.entities.filter(e => e.type === 'circle').length
     }
 
     // Check each requirement
@@ -375,7 +375,7 @@ export const useEnhancedConstraints = (
       points: selection.entities.filter(e => e.type === 'point').map(e => e.id),
       lines: selection.entities.filter(e => e.type === 'line').map(e => e.id),
       planes: selection.entities.filter(e => e.type === 'plane').map(e => e.id),
-      circles: selection.entities.filter(e => e.type === 'points_equal_distance').map(e => e.id)
+      circles: selection.entities.filter(e => e.type === 'circle').map(e => e.id)
     }
 
     const constraint: EnhancedConstraint = {

@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from pictorigo import __version__
-from routers import projects, solve, synthetic
+from routers import projects
 
 app = FastAPI(
     title="Pictorigo Backend",
@@ -28,8 +28,6 @@ app.add_middleware(
 
 # Include API routers
 app.include_router(projects.router)
-app.include_router(solve.router)
-app.include_router(synthetic.router)
 
 
 @app.get("/healthz")

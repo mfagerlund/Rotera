@@ -16,13 +16,17 @@ interface LineData {
   name: string
   pointA: string
   pointB: string
-  geometry: 'segment' | 'infinite'
   length?: number
   color: string
   isVisible: boolean
   isConstruction: boolean
   createdAt: string
   updatedAt?: string
+  constraints?: {
+    direction: 'free' | 'horizontal' | 'vertical' | 'x-aligned' | 'y-aligned' | 'z-aligned'
+    targetLength?: number
+    tolerance?: number
+  }
 }
 
 interface ImageViewerProps {
@@ -30,7 +34,9 @@ interface ImageViewerProps {
   worldPoints: Record<string, WorldPoint>
   lines?: Record<string, LineData>
   selectedPoints: string[]
+  selectedLines?: string[]
   hoveredConstraintId: string | null
+  hoveredWorldPointId?: string | null
   placementMode?: { active: boolean; worldPointId: string | null }
   activeConstraintType?: string | null
   constructionPreview?: {
@@ -40,8 +46,10 @@ interface ImageViewerProps {
     showToCursor?: boolean
   } | null
   onPointClick: (pointId: string, ctrlKey: boolean, shiftKey: boolean) => void
+  onLineClick?: (lineId: string, ctrlKey: boolean, shiftKey: boolean) => void
   onCreatePoint?: (u: number, v: number) => void
   onMovePoint?: (worldPointId: string, u: number, v: number) => void
+  onPointHover?: (pointId: string | null) => void
   onZoomFit?: () => void
   onZoomSelection?: () => void
   onScaleChange?: (scale: number) => void
@@ -52,13 +60,17 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
   worldPoints,
   lines = {},
   selectedPoints,
+  selectedLines = [],
   hoveredConstraintId,
+  hoveredWorldPointId,
   placementMode = { active: false, worldPointId: null },
   activeConstraintType = null,
   constructionPreview = null,
   onPointClick,
+  onLineClick,
   onCreatePoint,
   onMovePoint,
+  onPointHover,
   onZoomFit,
   onZoomSelection,
   onScaleChange
@@ -79,6 +91,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
   const [draggedPointId, setDraggedPointId] = useState<string | null>(null)
   const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 })
   const [hoveredPointId, setHoveredPointId] = useState<string | null>(null)
+  const [hoveredLineId, setHoveredLineId] = useState<string | null>(null)
   const [panVelocity, setPanVelocity] = useState({ x: 0, y: 0 })
   const [lastPanTime, setLastPanTime] = useState(0)
   const [isAltKeyPressed, setIsAltKeyPressed] = useState(false)
@@ -311,7 +324,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
         cancelAnimationFrame(animationId)
       }
     }
-  }, [imageLoaded, scale, offset, worldPoints, lines, selectedPoints, hoveredConstraintId, placementMode, isDraggingPoint, draggedPointId, hoveredPointId, isDragging, panVelocity, isAltKeyPressed, constructionPreview, currentMousePos])
+  }, [imageLoaded, scale, offset, worldPoints, lines, selectedPoints, selectedLines, hoveredConstraintId, hoveredWorldPointId, placementMode, isDraggingPoint, draggedPointId, hoveredPointId, hoveredLineId, isDragging, panVelocity, isAltKeyPressed, constructionPreview, currentMousePos])
 
   const renderWorldPoints = (ctx: CanvasRenderingContext2D) => {
     Object.values(worldPoints).forEach(wp => {
@@ -325,6 +338,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
       const isSelected = selectedPoints.includes(wp.id)
       const isBeingDragged = isDraggingPoint && draggedPointId === wp.id
       const isHovered = hoveredPointId === wp.id
+      const isGloballyHovered = hoveredWorldPointId === wp.id
 
       // Note: Removed green circle world point selection - only blue constraint selection is used
 
@@ -346,6 +360,17 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
         ctx.beginPath()
         ctx.arc(x, y, 10, 0, 2 * Math.PI)
         ctx.stroke()
+      }
+
+      // Draw global hover feedback (from other components)
+      if (isGloballyHovered && !isSelected && !isBeingDragged) {
+        ctx.strokeStyle = 'rgba(255, 193, 7, 0.8)' // Amber color for global hover
+        ctx.lineWidth = 3
+        ctx.setLineDash([2, 2])
+        ctx.beginPath()
+        ctx.arc(x, y, 12, 0, 2 * Math.PI)
+        ctx.stroke()
+        ctx.setLineDash([])
       }
 
       // Draw point
@@ -422,83 +447,6 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
       ctx.fillText((index + 1).toString(), numberX, numberY)
     })
 
-    // Draw constraint preview lines when constraints are available (not just when actively creating)
-    const lineBasedConstraints = ['points_distance', 'line_axis_aligned', 'line_axis_aligned', 'lines_parallel', 'lines_perpendicular']
-    const angleBasedConstraints = ['points_equal_distance']
-    const shapeBasedConstraints = ['points_coplanar']
-
-    // Show line preview when 2 points selected (line-based constraints available)
-    if (selectedPoints.length === 2) {
-      const wp1 = worldPoints[selectedPoints[0]]
-      const wp2 = worldPoints[selectedPoints[1]]
-      const ip1 = wp1?.imagePoints.find(ip => ip.imageId === image.id)
-      const ip2 = wp2?.imagePoints.find(ip => ip.imageId === image.id)
-
-      if (ip1 && ip2) {
-        const x1 = ip1.u * scale + offset.x
-        const y1 = ip1.v * scale + offset.y
-        const x2 = ip2.u * scale + offset.x
-        const y2 = ip2.v * scale + offset.y
-
-        ctx.strokeStyle = 'rgba(6, 150, 215, 0.5)'
-        ctx.lineWidth = 2
-        ctx.setLineDash([5, 5])
-        ctx.beginPath()
-        ctx.moveTo(x1, y1)
-        ctx.lineTo(x2, y2)
-        ctx.stroke()
-        ctx.setLineDash([])
-      }
-    } else if (selectedPoints.length === 3) {
-      // Draw angle visualization for 3 points (angle/collinear/plane constraints available)
-      const wps = selectedPoints.map(id => worldPoints[id])
-      const ips = wps.map(wp => wp?.imagePoints.find(ip => ip.imageId === image.id))
-
-      if (ips.every(ip => ip)) {
-        ctx.strokeStyle = 'rgba(6, 150, 215, 0.5)'
-        ctx.lineWidth = 2
-        ctx.setLineDash([5, 5])
-
-        // Draw lines forming the angle (vertex is middle point)
-        const coords = ips.map(ip => ({
-          x: ip!.u * scale + offset.x,
-          y: ip!.v * scale + offset.y
-        }))
-
-        ctx.beginPath()
-        ctx.moveTo(coords[0].x, coords[0].y)
-        ctx.lineTo(coords[1].x, coords[1].y)
-        ctx.moveTo(coords[1].x, coords[1].y)
-        ctx.lineTo(coords[2].x, coords[2].y)
-        ctx.stroke()
-        ctx.setLineDash([])
-      }
-    } else if (selectedPoints.length === 4) {
-      // Draw rectangle preview for 4 points (rectangle/plane constraints available)
-      const wps = selectedPoints.map(id => worldPoints[id])
-      const ips = wps.map(wp => wp?.imagePoints.find(ip => ip.imageId === image.id))
-
-      if (ips.every(ip => ip)) {
-        ctx.strokeStyle = 'rgba(6, 150, 215, 0.5)'
-        ctx.lineWidth = 2
-        ctx.setLineDash([5, 5])
-
-        const coords = ips.map(ip => ({
-          x: ip!.u * scale + offset.x,
-          y: ip!.v * scale + offset.y
-        }))
-
-        // Draw quad outline
-        ctx.beginPath()
-        ctx.moveTo(coords[0].x, coords[0].y)
-        ctx.lineTo(coords[1].x, coords[1].y)
-        ctx.lineTo(coords[2].x, coords[2].y)
-        ctx.lineTo(coords[3].x, coords[3].y)
-        ctx.closePath()
-        ctx.stroke()
-        ctx.setLineDash([])
-      }
-    }
   }
 
   const renderPanFeedback = (ctx: CanvasRenderingContext2D) => {
@@ -570,7 +518,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
 
   // Render completed lines on the image
   const renderLines = (ctx: CanvasRenderingContext2D) => {
-    Object.values(lines).forEach(line => {
+    Object.entries(lines).forEach(([lineId, line]) => {
       if (!line.isVisible) return
 
       const pointA = worldPoints[line.pointA]
@@ -590,9 +538,25 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
       const x2 = ipB.u * scale + offset.x
       const y2 = ipB.v * scale + offset.y
 
-      // Draw line
-      ctx.strokeStyle = line.isConstruction ? 'rgba(0, 150, 255, 0.6)' : line.color
-      ctx.lineWidth = line.isConstruction ? 1 : 2
+      // Check line states
+      const isSelected = selectedLines.includes(lineId)
+      const isHovered = hoveredLineId === lineId
+
+      // Draw line with hover/selection feedback
+      let strokeColor = line.isConstruction ? 'rgba(0, 150, 255, 0.6)' : line.color
+      let lineWidth = line.isConstruction ? 1 : 2
+
+      if (isSelected) {
+        strokeColor = '#FFC107' // Yellow for selection
+        lineWidth = 3
+      } else if (isHovered) {
+        strokeColor = '#42A5F5' // Light blue for hover
+        lineWidth = 3
+      }
+
+      ctx.strokeStyle = strokeColor
+      ctx.lineWidth = lineWidth
+
       if (line.isConstruction) {
         ctx.setLineDash([3, 3])
       }
@@ -605,6 +569,40 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
       if (line.isConstruction) {
         ctx.setLineDash([])
       }
+
+      // Always show line name and distance (if set)
+      const midX = (x1 + x2) / 2
+      const midY = (y1 + y2) / 2
+
+      // Show glyph with direction constraint if available
+      let directionGlyph = '↔' // Default glyph
+      if (line.constraints) {
+        switch (line.constraints.direction) {
+          case 'horizontal': directionGlyph = '↔'; break
+          case 'vertical': directionGlyph = '↕'; break
+          case 'x-aligned': directionGlyph = '→'; break
+          case 'y-aligned': directionGlyph = '↑'; break
+          case 'z-aligned': directionGlyph = '⬆'; break
+          case 'free': directionGlyph = '↔'; break
+        }
+      }
+
+      const displayText = line.constraints?.targetLength
+        ? `${line.name} ${directionGlyph} ${line.constraints.targetLength.toFixed(1)}m`
+        : `${line.name} ${directionGlyph}`
+
+      // Draw outlined text
+      ctx.font = '12px Arial'
+      ctx.textAlign = 'center'
+
+      // Draw text outline (stroke)
+      ctx.strokeStyle = 'white'
+      ctx.lineWidth = 3
+      ctx.strokeText(displayText, midX, midY - 2)
+
+      // Draw text fill
+      ctx.fillStyle = '#000'
+      ctx.fillText(displayText, midX, midY - 2)
     })
   }
 
@@ -699,6 +697,59 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     })
   }
 
+  // Find nearby line
+  const findNearbyLine = (canvasX: number, canvasY: number, threshold: number = 5) => {
+    for (const [lineId, line] of Object.entries(lines)) {
+      if (!line.isVisible) continue
+
+      const pointA = worldPoints[line.pointA]
+      const pointB = worldPoints[line.pointB]
+      if (!pointA || !pointB) continue
+
+      // Check if both points have image points in this image
+      const ipA = pointA.imagePoints.find(ip => ip.imageId === image.id)
+      const ipB = pointB.imagePoints.find(ip => ip.imageId === image.id)
+      if (!ipA || !ipB) continue
+
+      // Convert to canvas coordinates
+      const x1 = ipA.u * scale + offset.x
+      const y1 = ipA.v * scale + offset.y
+      const x2 = ipB.u * scale + offset.x
+      const y2 = ipB.v * scale + offset.y
+
+      // Calculate distance from point to line segment
+      const A = canvasX - x1
+      const B = canvasY - y1
+      const C = x2 - x1
+      const D = y2 - y1
+
+      const dot = A * C + B * D
+      const lenSq = C * C + D * D
+
+      if (lenSq === 0) {
+        // Line is a point
+        const distance = Math.sqrt(A * A + B * B)
+        if (distance <= threshold) return lineId
+        continue
+      }
+
+      let param = dot / lenSq
+
+      // All lines are segments, clamp parameter to [0, 1]
+      param = Math.max(0, Math.min(1, param))
+
+      const closestX = x1 + param * C
+      const closestY = y1 + param * D
+
+      const distance = Math.sqrt(
+        Math.pow(canvasX - closestX, 2) + Math.pow(canvasY - closestY, 2)
+      )
+
+      if (distance <= threshold) return lineId
+    }
+    return null
+  }
+
   // Handle mouse events
   const handleMouseDown = (event: React.MouseEvent) => {
     const canvas = canvasRef.current
@@ -725,15 +776,19 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
           onCreatePoint(imageCoords.u, imageCoords.v)
         }
       } else {
-        // Normal mode - check for nearby points first
+        // Normal mode - check for nearby entities first
         const nearbyPoint = findNearbyPoint(x, y)
+        const nearbyLine = findNearbyLine(x, y)
 
         if (nearbyPoint) {
-          // Prepare for potential drag, but also allow click selection
+          // Points have priority over lines
           setDragStartPos({ x, y })
           setDraggedPointId(nearbyPoint.id)
           // Don't start dragging immediately - wait for mouse movement
           onPointClick(nearbyPoint.id, event.ctrlKey, event.shiftKey)
+        } else if (nearbyLine && onLineClick) {
+          // Handle line click
+          onLineClick(nearbyLine, event.ctrlKey, event.shiftKey)
         } else if (onCreatePoint) {
           // Click on empty space - create new point
           const imageCoords = canvasToImageCoords(x, y)
@@ -797,9 +852,18 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
         }
       }
     } else {
-      // Check for nearby points to show hover cursor
+      // Check for nearby entities to show hover cursor
       const nearbyPoint = findNearbyPoint(x, y)
-      setHoveredPointId(nearbyPoint?.id || null)
+      const nearbyLine = findNearbyLine(x, y)
+
+      const newHoveredPointId = nearbyPoint?.id || null
+      setHoveredPointId(newHoveredPointId)
+      setHoveredLineId(nearbyLine || null)
+
+      // Notify parent of hover changes
+      if (onPointHover) {
+        onPointHover(newHoveredPointId)
+      }
     }
   }
 
@@ -817,7 +881,13 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
   const handleMouseLeave = () => {
     setIsDragging(false)
     setHoveredPointId(null)
+    setHoveredLineId(null)
     setPanVelocity({ x: 0, y: 0 })
+
+    // Clear hover state
+    if (onPointHover) {
+      onPointHover(null)
+    }
 
     // End point dragging
     if (isDraggingPoint) {
@@ -933,6 +1003,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
           cursor: isDragging ? 'grabbing' :
                   isDraggingPoint ? 'move' :
                   hoveredPointId && onMovePoint ? 'move' :
+                  (hoveredPointId || hoveredLineId) ? 'pointer' :
                   placementMode.active ? 'copy' :
                   isAltKeyPressed ? 'grab' : 'crosshair',
           display: 'block',

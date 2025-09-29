@@ -21,25 +21,17 @@ const getCategoryForConstraintType = (type: string): string => {
     case 'points_distance':
     case 'points_equal':
     case 'points_coincident':
-    case 'points_distance':
       return 'points_distance'
-    case 'lines_parallel':
-    case 'lines_perpendicular':
     case 'lines_parallel':
     case 'lines_perpendicular':
       return 'alignment'
     case 'point_fixed_coord':
     case 'point_locked':
-    case 'point_fixed_coord':
       return 'positioning'
     case 'points_equal_distance':
       return 'angular'
     case 'points_coplanar':
-    case 'points_equal_distance':
       return 'geometry'
-    case 'line_axis_aligned':
-    case 'line_axis_aligned':
-      return 'orientation'
     default:
       return 'uncategorized'
   }

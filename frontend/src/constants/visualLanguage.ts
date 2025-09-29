@@ -144,7 +144,7 @@ export function getConstraintGlyph(constraintType: string): string {
     case 'planes_perpendicular':
       return CONSTRAINT_GLYPHS.perpendicular
 
-    case 'line_axis_aligned':
+    // NOTE: line_axis_aligned constraint moved to Line entity properties
     case 'plane_parallel_to_axis':
       return CONSTRAINT_GLYPHS.axisAligned
 

@@ -1,15 +1,17 @@
-// Main layout with new workspace paradigm
+﻿// Main layout with new workspace paradigm
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useProject } from '../hooks/useProject'
 import { useSelection, useSelectionKeyboard } from '../hooks/useSelection'
 import { useConstraints } from '../hooks/useConstraints'
 import { useEnhancedProject } from '../hooks/useEnhancedProject'
-import { Line, AvailableConstraint } from '../types/project'
+import { Line, AvailableConstraint, WorldPoint as LegacyWorldPoint } from '../types/project'
 import { Line as LineEntity } from '../entities/line'
 import { WorldPoint } from '../entities/world-point'
 import { EnhancedConstraint, ConstraintType as GeometryConstraintType } from '../types/geometry'
 import { VisualLanguageManager } from '../utils/visualLanguage'
+import { COMPONENT_OVERLAY_EVENT, isComponentOverlayEnabled, setComponentOverlayEnabled } from '../utils/componentNameOverlay'
+
 
 // UI Components
 import ConstraintToolbar from './ConstraintToolbar'
@@ -19,7 +21,8 @@ import ConstraintTimeline from './ConstraintTimeline'
 import ImageViewer, { ImageViewerRef } from './ImageViewer'
 import WorldView, { WorldViewRef } from './WorldView'
 import WorldPointPanel from './WorldPointPanel'
-import EditLineWindow from './EditLineWindow'
+import LineCreationTool from './tools/LineCreationTool'
+import FloatingWindow from './FloatingWindow'
 
 // Enhanced workspace components
 import {
@@ -31,6 +34,11 @@ import {
 
 // Creation Tools
 import CreationToolsManager from './tools/CreationToolsManager'
+import LinesPopup from './LinesPopup'
+import PlanesPopup from './PlanesPopup'
+import ImagePointsPopup from './ImagePointsPopup'
+import ConstraintsPopup from './ConstraintsPopup'
+import WorldPointEditWindow from './WorldPointEditWindow'
 
 // Styles
 import '../styles/enhanced-workspace.css'
@@ -79,7 +87,10 @@ export const MainLayout: React.FC = () => {
     addImagePointToWorldPoint,
     createLine,
     updateLine,
-    deleteLine
+    deleteLine,
+    getWorldPointEntity,
+    getLineEntity,
+    clearProject
   } = legacyProject
 
   // Pure object-based selection
@@ -176,17 +187,93 @@ export const MainLayout: React.FC = () => {
     keepBackups: 5
   })
 
+  const [showComponentNames, setShowComponentNames] = useState(() => isComponentOverlayEnabled())
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    const listener = (event: Event) => {
+      const customEvent = event as CustomEvent<{ enabled: boolean }>
+      if (typeof customEvent.detail?.enabled === 'boolean') {
+        setShowComponentNames(customEvent.detail.enabled)
+      }
+    }
+
+    window.addEventListener(COMPONENT_OVERLAY_EVENT, listener)
+    return () => {
+      window.removeEventListener(COMPONENT_OVERLAY_EVENT, listener)
+    }
+  }, [])
+
+  const handleComponentOverlayToggle = useCallback(() => {
+    const nextValue = !showComponentNames
+    setShowComponentNames(nextValue)
+    setComponentOverlayEnabled(nextValue)
+  }, [showComponentNames])
+
   // UI state
   const [placementMode, setPlacementMode] = useState<{
     active: boolean
     worldPointId: string | null
   }>({ active: false, worldPointId: null })
 
+  // Hover state for world points
+  const [hoveredWorldPointId, setHoveredWorldPointId] = useState<string | null>(null)
+
+  // Sidebar width state with persistence
+  const [leftSidebarWidth, setLeftSidebarWidth] = useState(() => {
+    const saved = localStorage.getItem('pictorigo-left-sidebar-width')
+    return saved ? parseInt(saved, 10) : 180
+  })
+
+  // Image heights state with persistence
+  const [imageHeights, setImageHeights] = useState<Record<string, number>>(() => {
+    const saved = localStorage.getItem('pictorigo-image-heights')
+    return saved ? JSON.parse(saved) : {}
+  })
+
+  const handleImageHeightChange = (imageId: string, height: number) => {
+    const newHeights = { ...imageHeights, [imageId]: height }
+    setImageHeights(newHeights)
+    localStorage.setItem('pictorigo-image-heights', JSON.stringify(newHeights))
+  }
+
+  // Image sort order state with project persistence
+  const [imageSortOrder, setImageSortOrder] = useState<string[]>(() => {
+    // Try to get from project settings first, then localStorage
+    const projectOrder = project?.settings?.imageSortOrder
+    if (projectOrder) return projectOrder
+
+    const saved = localStorage.getItem('pictorigo-image-sort-order')
+    return saved ? JSON.parse(saved) : []
+  })
+
+  const handleImageReorder = (newOrder: string[]) => {
+    setImageSortOrder(newOrder)
+    // Save to localStorage for immediate persistence
+    localStorage.setItem('pictorigo-image-sort-order', JSON.stringify(newOrder))
+    // TODO: Also save to project settings when project update is available
+  }
+
   // Edit Line Window state
   const [editLineState, setEditLineState] = useState<{
     isOpen: boolean
     lineId: string | null
   }>({ isOpen: false, lineId: null })
+
+  // Entity popup states
+  const [showLinesPopup, setShowLinesPopup] = useState(false)
+  const [showPlanesPopup, setShowPlanesPopup] = useState(false)
+  const [showImagePointsPopup, setShowImagePointsPopup] = useState(false)
+  const [showConstraintsPopup, setShowConstraintsPopup] = useState(false)
+
+  // World point edit window state
+  const [worldPointEditWindow, setWorldPointEditWindow] = useState<{
+    isOpen: boolean
+    worldPointId: string | null
+  }>({ isOpen: false, worldPointId: null })
 
   // Refs for viewer components
   const imageViewerRef = useRef<ImageViewerRef>(null)
@@ -257,8 +344,11 @@ export const MainLayout: React.FC = () => {
       return // Don't do normal selection when line tool is active
     }
 
-    // Normal selection behavior - need entity object, not ID
-    // TODO: Get actual WorldPoint entity and call handleEntityClick
+    // Normal selection behavior - get entity object and call selection handler
+    const pointEntity = getWorldPointEntity(pointId)
+    if (pointEntity) {
+      handleEntityClick(pointEntity, ctrlKey, shiftKey)
+    }
   }
 
   // Placement mode handlers
@@ -303,14 +393,36 @@ export const MainLayout: React.FC = () => {
     deleteLine(lineId)
   }
 
-  // Enhanced line click handler to open EditLineWindow
+  // World point edit handlers
+  const handleWorldPointEdit = (worldPointId: string) => {
+    setWorldPointEditWindow({ isOpen: true, worldPointId })
+  }
+
+  const handleWorldPointUpdate = (updatedPoint: LegacyWorldPoint) => {
+    // For now, just update the name if that's different
+    const currentPoint = Object.values(worldPoints).find(p => p.id === updatedPoint.id)
+    if (currentPoint && currentPoint.name !== updatedPoint.name) {
+      renameWorldPoint(updatedPoint.id, updatedPoint.name)
+    }
+    // TODO: Implement full world point update when available
+  }
+
+  const handleWorldPointEditClose = () => {
+    setWorldPointEditWindow({ isOpen: false, worldPointId: null })
+  }
+
+  // Enhanced line click handler for selection and editing
   const handleEnhancedLineClick = (lineId: string, ctrlKey: boolean, shiftKey: boolean) => {
-    // If not holding modifier keys, open edit window
-    if (!ctrlKey && !shiftKey) {
-      setEditLineState({ isOpen: true, lineId })
+    const lineEntity = getLineEntity(lineId)
+    if (!lineEntity) return
+
+    if (ctrlKey || shiftKey) {
+      // Selection behavior with modifiers
+      handleEntityClick(lineEntity, ctrlKey, shiftKey)
     } else {
-      // Use constraint selection for multi-selection
-      // TODO: Wire up line selection for constraints
+      // No modifiers - both select the line AND open edit window for immediate editing
+      handleEntityClick(lineEntity, false, false) // Select the line first
+      setEditLineState({ isOpen: true, lineId }) // Then open edit window
     }
   }
 
@@ -390,20 +502,23 @@ export const MainLayout: React.FC = () => {
                 id,
                 {
                   ...line,
-                  geometry: line.type, // Convert 'type' to 'geometry' for ImageViewer
                   isConstruction: line.isConstruction ?? false,
                   createdAt: line.createdAt ?? new Date().toISOString()
                 }
               ])
             )}
             selectedPoints={selectedPointEntities.map(p => p.getId())}
+            selectedLines={selectedLineEntities.map(l => l.getId())}
             hoveredConstraintId={hoveredConstraintId}
+            hoveredWorldPointId={hoveredWorldPointId}
             placementMode={placementMode}
             activeConstraintType={activeConstraintType}
             constructionPreview={constructionPreview}
             onPointClick={handleEnhancedPointClick}
+            onLineClick={handleEnhancedLineClick}
             onCreatePoint={handleImageClick}
             onMovePoint={handleMovePoint}
+            onPointHover={setHoveredWorldPointId}
           />
         </div>
       ) : (
@@ -417,7 +532,7 @@ export const MainLayout: React.FC = () => {
                 // TODO: Trigger image add dialog
               }}
             >
-              📷 Add First Image
+              ðŸ“· Add First Image
             </button>
           </div>
         </div>
@@ -489,21 +604,19 @@ export const MainLayout: React.FC = () => {
             />
 
             <div className="toolbar-section">
-              <button className="btn-tool">📁 Open</button>
-              <button className="btn-tool">💾 Save</button>
-              <button className="btn-tool">📤 Export</button>
-
-              {/* DEBUG: Manual trigger for floating window */}
+              <button className="btn-tool">ðŸ“ Open</button>
+              <button className="btn-tool">ðŸ’¾ Save</button>
+              <button className="btn-tool">ðŸ“¤ Export</button>
               <button
-                className="btn-tool"
+                className="btn-tool btn-clear-project"
                 onClick={() => {
-                  // Use first available line or create a test line entry
-                  const lineIds = Object.keys(project?.lines || {})
-                  const testLineId = lineIds.length > 0 ? lineIds[0] : 'test-line-123'
-                  setEditLineState({ isOpen: true, lineId: testLineId })
+                  if (confirm('Are you sure you want to clear the entire project?\n\nThis will remove all world points, images, lines, planes, and constraints. This action cannot be undone.')) {
+                    clearProject()
+                  }
                 }}
+                title="Clear entire project"
               >
-                🔥 TEST FLOAT
+                ðŸ—‘ï¸ Clear
               </button>
             </div>
 
@@ -542,12 +655,16 @@ export const MainLayout: React.FC = () => {
           {/* Main content area */}
           <div className="content-area">
             {/* Left sidebar: Image Navigation */}
-            <div className="sidebar-left">
+            <div
+              className="sidebar-left"
+              style={{ width: `${leftSidebarWidth}px` }}
+            >
               <ImageNavigationToolbar
                 images={project.images}
                 currentImageId={currentImageId}
                 worldPoints={worldPoints}
                 selectedWorldPointIds={selectedPointEntities.map(p => p.getId())}
+                hoveredWorldPointId={hoveredWorldPointId}
                 isCreatingConstraint={!!activeConstraintType}
                 onImageSelect={setCurrentImageId}
                 onImageAdd={addImage}
@@ -555,7 +672,44 @@ export const MainLayout: React.FC = () => {
                 onImageDelete={deleteImage}
                 getImagePointCount={getImagePointCount}
                 getSelectedPointsInImage={(imageId) => getSelectedPointsInImage(imageId, selectedPointEntities.map(p => p.getId()))}
+                imageHeights={imageHeights}
+                onImageHeightChange={handleImageHeightChange}
+                imageSortOrder={imageSortOrder}
+                onImageReorder={handleImageReorder}
+                onWorldPointHover={setHoveredWorldPointId}
+                onWorldPointClick={handleEnhancedPointClick}
               />
+              {/* Resize handle */}
+              <div
+                className="sidebar-resize-handle sidebar-resize-handle-right"
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  const startX = e.clientX
+                  const startWidth = leftSidebarWidth
+
+                  let currentWidth = startWidth
+
+                  const handleMouseMove = (e: MouseEvent) => {
+                    currentWidth = Math.max(120, Math.min(400, startWidth + (e.clientX - startX)))
+                    setLeftSidebarWidth(currentWidth)
+                  }
+
+                  const handleMouseUp = () => {
+                    document.removeEventListener('mousemove', handleMouseMove)
+                    document.removeEventListener('mouseup', handleMouseUp)
+                    // Save the final width to localStorage
+                    localStorage.setItem('pictorigo-left-sidebar-width', currentWidth.toString())
+                  }
+
+                  document.addEventListener('mousemove', handleMouseMove)
+                  document.addEventListener('mouseup', handleMouseUp)
+                }}
+              />
+
+              {/* Resize hint panel */}
+              <div className="resize-hint-panel">
+                Drag to resize â†’
+              </div>
             </div>
 
             {/* Center: Workspace-specific viewer */}
@@ -592,7 +746,7 @@ export const MainLayout: React.FC = () => {
                         console.log('Line created with constraints:', lineId, constraints)
                       }
                       // Beep on successful creation
-                      console.log('🔔 Line created successfully!')
+                      console.log('ðŸ”” Line created successfully!')
                       // Sound notification for completed task
                       if (window.navigator.platform.startsWith('Win')) {
                         try {
@@ -623,7 +777,7 @@ export const MainLayout: React.FC = () => {
                         (line.pointA === pointB && line.pointB === pointA)
                       )
                       if (existingLine) {
-                        console.log(`⚠️ Line already exists: ${existingLine.name}`)
+                        console.log(`âš ï¸ Line already exists: ${existingLine.name}`)
                         // TODO: Show user notification about existing line
                         // TODO: Optionally highlight the existing line
                       }
@@ -669,29 +823,68 @@ export const MainLayout: React.FC = () => {
                 worldPoints={worldPoints}
                 constraints={constraints}
                 selectedWorldPointIds={selectedPointEntities.map(p => p.getId())}
+                hoveredWorldPointId={hoveredWorldPointId}
                 currentImageId={currentImageId}
                 placementMode={placementMode}
                 onSelectWorldPoint={(pointId: string, ctrlKey: boolean, shiftKey: boolean) =>
                   handleEnhancedPointClick(pointId, ctrlKey, shiftKey)
                 }
                 onHighlightWorldPoint={() => {}}
+                onHoverWorldPoint={setHoveredWorldPointId}
                 onRenameWorldPoint={renameWorldPoint}
                 onDeleteWorldPoint={deleteWorldPoint}
+                onEditWorldPoint={handleWorldPointEdit}
                 onStartPlacement={startPlacementMode}
                 onCancelPlacement={cancelPlacementMode}
               />
 
-              <ConstraintTimeline
-                constraints={enhancedConstraints}
-                hoveredConstraintId={hoveredConstraintId}
-                onHover={setHoveredConstraintId}
-                onEdit={(constraint) => {
-                  // TODO: Implement constraint editing
-                }}
-                onDelete={deleteConstraint}
-                onToggle={toggleConstraint}
-                visualManager={visualManager}
-              />
+              {/* Entity Management Buttons */}
+              <div className="entity-management-panel">
+                <div className="panel-header">
+                  <h3>Entity Management</h3>
+                </div>
+                <div className="entity-buttons">
+                  <button
+                    className="entity-button"
+                    onClick={() => setShowLinesPopup(true)}
+                    title="Manage lines"
+                  >
+                    <span className="button-icon">ðŸ“</span>
+                    <span className="button-label">Lines</span>
+                    <span className="button-count">{Object.keys(project?.lines || {}).length}</span>
+                  </button>
+
+                  <button
+                    className="entity-button"
+                    onClick={() => setShowPlanesPopup(true)}
+                    title="Manage planes"
+                  >
+                    <span className="button-icon">ðŸŸ¨</span>
+                    <span className="button-label">Planes</span>
+                    <span className="button-count">{Object.keys(project?.planes || {}).length}</span>
+                  </button>
+
+                  <button
+                    className="entity-button"
+                    onClick={() => setShowImagePointsPopup(true)}
+                    title="Manage image points"
+                  >
+                    <span className="button-icon">ðŸ“·</span>
+                    <span className="button-label">Image Points</span>
+                    <span className="button-count">{Object.values(worldPoints || {}).reduce((total, wp) => total + wp.imagePoints.length, 0)}</span>
+                  </button>
+
+                  <button
+                    className="entity-button"
+                    onClick={() => setShowConstraintsPopup(true)}
+                    title="Manage constraints"
+                  >
+                    <span className="button-icon">âš™ï¸</span>
+                    <span className="button-label">Constraints</span>
+                    <span className="button-count">{constraints.length}</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -718,25 +911,192 @@ export const MainLayout: React.FC = () => {
               )}
             </div>
 
-            <span style={{marginLeft: 'auto', color: '#888'}}>v0.3-ENHANCED</span>
+            <button
+              type="button"
+              className="status-bar__toggle"
+              data-active={showComponentNames}
+              aria-pressed={showComponentNames}
+              onClick={handleComponentOverlayToggle}
+              title="Toggle component label overlay"
+            >
+              <span className="status-bar__toggle-indicator" aria-hidden="true" />
+              <span className="status-bar__toggle-label">Component labels</span>
+              <span className="status-bar__toggle-state">{showComponentNames ? 'ON' : 'OFF'}</span>
+            </button>
+
+            <span style={{ marginLeft: '12px', color: '#888' }}>v0.3-ENHANCED</span>
           </div>
         </div>
       )}
     </WorkspaceManager>
 
-    {/* Edit Line Window - Truly free floating over entire viewport */}
-    <EditLineWindow
-      line={editLineState.lineId && project?.lines[editLineState.lineId] ? {
-        ...project.lines[editLineState.lineId],
-        type: 'segment' as const
-      } : null}
-      isOpen={editLineState.isOpen}
-      onClose={handleEditLineClose}
-      onSave={handleEditLineSave}
-      onDelete={handleEditLineDelete}
+    {/* Edit Line Window - Using enhanced LineCreationTool */}
+    {editLineState.isOpen && editLineState.lineId && project?.lines[editLineState.lineId] && (
+      <FloatingWindow
+        title={`Edit Line: ${project.lines[editLineState.lineId].name}`}
+        isOpen={editLineState.isOpen}
+        onClose={handleEditLineClose}
+        width={380}
+        minHeight={520}
+        storageKey="edit-line"
+        className="edit-line-window"
+        showOkCancel={false}
+      >
+        <LineCreationTool
+          selectedPoints={[]}
+          worldPointNames={worldPointNames}
+          existingLines={project?.lines || {}}
+          onCreateLine={() => {}} // Not used in edit mode
+          onCancel={handleEditLineClose}
+          isActive={true}
+          showHeader={false}
+          editMode={true}
+          existingLine={project.lines[editLineState.lineId]}
+          existingConstraints={
+            project?.constraints && editLineState.lineId
+              ? Object.values(project.constraints).filter(c => {
+                  // Find constraints that reference this line
+                  const lineId = editLineState.lineId!
+                  const line = project.lines[lineId]
+                  if (!line) return false
+
+                  // Check if constraint references this line's entities
+                  const constraintLineIds = c.entities?.lines || []
+                  const constraintPointIds = c.entities?.points || []
+
+                  return constraintLineIds.includes(lineId) ||
+                         (constraintPointIds.includes(line.pointA) && constraintPointIds.includes(line.pointB))
+                })
+              : []
+          }
+          onUpdateLine={handleEditLineSave}
+          onDeleteLine={handleEditLineDelete}
+        />
+      </FloatingWindow>
+    )}
+
+    {/* Entity Management Popups */}
+    <LinesPopup
+      isOpen={showLinesPopup}
+      onClose={() => setShowLinesPopup(false)}
+      lines={project?.lines || {}}
+      worldPointNames={worldPointNames}
+      selectedLines={selectedLineEntities.map(l => l.getId())}
+      onEditLine={(lineId) => {
+        setEditLineState({ isOpen: true, lineId })
+        setShowLinesPopup(false)
+      }}
+      onDeleteLine={(lineId) => {
+        if (project?.lines[lineId]) {
+          deleteLine(lineId)
+        }
+      }}
+      onUpdateLine={(updatedLine) => {
+        // TODO: Implement line update through enhanced project
+        console.log('Update line:', updatedLine)
+      }}
+      onToggleLineVisibility={(lineId) => {
+        // TODO: Implement line visibility toggle
+        console.log('Toggle line visibility:', lineId)
+      }}
+      onSelectLine={(lineId) => {
+        const lineEntity = getLineEntity(lineId)
+        if (lineEntity) {
+          handleEntityClick(lineEntity, false, false)
+        }
+      }}
+      onCreateLine={(pointIds, constraints) => {
+        const lineId = createLine(pointIds, 'segment')
+        if (lineId && constraints) {
+          // TODO: Apply constraints
+          console.log('Line created with constraints:', lineId, constraints)
+        }
+      }}
     />
+
+    <PlanesPopup
+      isOpen={showPlanesPopup}
+      onClose={() => setShowPlanesPopup(false)}
+      planes={project?.planes || {}}
+      worldPointNames={worldPointNames}
+      selectedPlanes={selectedPlaneEntities.map(p => p.getId())}
+      onEditPlane={(planeId) => {
+        // TODO: Implement plane editing
+        console.log('Edit plane:', planeId)
+      }}
+      onDeletePlane={(planeId) => {
+        // TODO: Implement plane deletion
+        console.log('Delete plane:', planeId)
+      }}
+      onTogglePlaneVisibility={(planeId) => {
+        // TODO: Implement plane visibility toggle
+        console.log('Toggle plane visibility:', planeId)
+      }}
+      onSelectPlane={(planeId) => {
+        // TODO: Implement plane selection
+        console.log('Select plane:', planeId)
+      }}
+    />
+
+    <ImagePointsPopup
+      isOpen={showImagePointsPopup}
+      onClose={() => setShowImagePointsPopup(false)}
+      worldPoints={worldPoints}
+      images={project?.images || {}}
+      onEditImagePoint={(imagePointId) => {
+        // TODO: Implement image point editing
+        console.log('Edit image point:', imagePointId)
+      }}
+      onDeleteImagePoint={(imagePointId) => {
+        // TODO: Implement image point deletion
+        console.log('Delete image point:', imagePointId)
+      }}
+      onSelectImagePoint={(imagePointId) => {
+        // TODO: Implement image point selection
+        console.log('Select image point:', imagePointId)
+      }}
+    />
+
+    <ConstraintsPopup
+      isOpen={showConstraintsPopup}
+      onClose={() => setShowConstraintsPopup(false)}
+      constraints={constraints}
+      worldPointNames={worldPointNames}
+      lineNames={Object.fromEntries(Object.entries(project?.lines || {}).map(([id, line]) => [id, line.name]))}
+      onEditConstraint={(constraintId) => {
+        // TODO: Implement constraint editing
+        console.log('Edit constraint:', constraintId)
+      }}
+      onDeleteConstraint={(constraintId) => {
+        deleteConstraint(constraintId)
+      }}
+      onToggleConstraint={(constraintId) => {
+        toggleConstraint(constraintId)
+      }}
+      onSelectConstraint={(constraintId) => {
+        // TODO: Implement constraint selection
+        console.log('Select constraint:', constraintId)
+      }}
+    />
+
+    {/* World Point Edit Window */}
+    {worldPointEditWindow.worldPointId && (
+      <WorldPointEditWindow
+        isOpen={worldPointEditWindow.isOpen}
+        onClose={handleWorldPointEditClose}
+        worldPoint={Object.values(worldPoints).find(p => p.id === worldPointEditWindow.worldPointId)!}
+        onUpdateWorldPoint={handleWorldPointUpdate}
+        onDeleteWorldPoint={(pointId) => {
+          deleteWorldPoint(pointId)
+          handleWorldPointEditClose()
+        }}
+      />
+    )}
   </>
   )
 }
 
 export default MainLayout
+
+
+

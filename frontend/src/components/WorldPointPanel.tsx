@@ -9,17 +9,21 @@ import {
   OptimisticFeedback,
   useCelebration
 } from './DelightfulComponents'
+import ContextMenu, { ContextMenuItem } from './ContextMenu'
 
 interface WorldPointPanelProps {
   worldPoints: Record<string, WorldPoint>
   constraints: Constraint[]
   selectedWorldPointIds: string[]
+  hoveredWorldPointId?: string | null
   currentImageId: string | null
   placementMode: { active: boolean; worldPointId: string | null }
   onSelectWorldPoint: (id: string, ctrlKey: boolean, shiftKey: boolean) => void
   onRenameWorldPoint: (id: string, newName: string) => void
   onDeleteWorldPoint: (id: string) => void
+  onEditWorldPoint?: (id: string) => void
   onHighlightWorldPoint: (id: string | null) => void
+  onHoverWorldPoint?: (id: string | null) => void
   onStartPlacement: (worldPointId: string) => void
   onCancelPlacement: () => void
 }
@@ -28,12 +32,15 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
   worldPoints,
   constraints,
   selectedWorldPointIds,
+  hoveredWorldPointId,
   currentImageId,
   placementMode,
   onSelectWorldPoint,
   onRenameWorldPoint,
   onDeleteWorldPoint,
+  onEditWorldPoint,
   onHighlightWorldPoint,
+  onHoverWorldPoint,
   onStartPlacement,
   onCancelPlacement
 }) => {
@@ -41,6 +48,17 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
   const [editingName, setEditingName] = useState('')
   const [recentlyCreated, setRecentlyCreated] = useState<Set<string>>(new Set())
   const [justPlaced, setJustPlaced] = useState<Set<string>>(new Set())
+
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{
+    isOpen: boolean
+    position: { x: number; y: number }
+    worldPointId: string | null
+  }>({
+    isOpen: false,
+    position: { x: 0, y: 0 },
+    worldPointId: null
+  })
   const { triggerAchievement, triggerProgress } = useCelebration()
 
   // Track newly created world points for celebration
@@ -137,13 +155,72 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
     setEditingName('')
   }
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      saveEdit()
-    } else if (e.key === 'Escape') {
-      cancelEdit()
-    }
+  // Context menu handlers
+  const handleContextMenu = (e: React.MouseEvent, worldPointId: string) => {
+    e.preventDefault()
+    setContextMenu({
+      isOpen: true,
+      position: { x: e.clientX, y: e.clientY },
+      worldPointId
+    })
   }
+
+  const closeContextMenu = () => {
+    setContextMenu(prev => ({ ...prev, isOpen: false }))
+  }
+
+  const getContextMenuItems = (worldPoint: WorldPoint): ContextMenuItem[] => {
+    const items: ContextMenuItem[] = []
+    const isMissingFromImage = currentImageId && !worldPoint.imagePoints.some(ip => ip.imageId === currentImageId)
+
+    // Edit (full properties)
+    if (onEditWorldPoint) {
+      items.push({
+        id: 'edit-properties',
+        label: 'Edit Properties',
+        icon: '⚙️',
+        onClick: () => onEditWorldPoint(worldPoint.id)
+      })
+    }
+
+    // Removed rename from context menu - use edit properties instead
+
+    // Place on image
+    if (isMissingFromImage) {
+      items.push({
+        id: 'place',
+        label: 'Place on Image',
+        icon: '📍',
+        onClick: () => onStartPlacement(worldPoint.id)
+      })
+    }
+
+    // Separator before danger actions
+    if (items.length > 0) {
+      items.push({
+        id: 'separator',
+        label: '',
+        separator: true,
+        onClick: () => {}
+      })
+    }
+
+    // Delete
+    items.push({
+      id: 'delete',
+      label: 'Delete',
+      icon: '🗑️',
+      onClick: () => {
+        if (confirm(`Delete world point "${worldPoint.name}"?\n\nThis will also delete any constraints that reference this point.`)) {
+          onDeleteWorldPoint(worldPoint.id)
+        }
+      }
+    })
+
+    return items
+  }
+
+  // Removed handleKeyPress - no longer needed for inline editing
 
   const handleDelete = (wpId: string) => {
     const wp = worldPoints[wpId]
@@ -244,11 +321,12 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
             const isSelected = selectedWorldPointIds.includes(wp.id)
             const involvedConstraints = getConstraintsForWorldPoint(wp.id)
             const hasBroken = hasBrokenConstraints(wp.id)
-            const isEditing = editingId === wp.id
+            const isEditing = false // Removed inline editing
             const isMissingFromImage = isWorldPointMissingFromImage(wp)
             const isInPlacementMode = placementMode.worldPointId === wp.id
             const wasRecentlyCreated = recentlyCreated.has(wp.id)
             const wasJustPlaced = justPlaced.has(wp.id)
+            const isGloballyHovered = hoveredWorldPointId === wp.id
 
             return (
               <EnhancedWorldPointItem
@@ -256,7 +334,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
                 worldPoint={wp}
                 isSelected={isSelected}
                 isEditing={isEditing}
-                editingName={editingName}
+                editingName=""
                 involvedConstraints={involvedConstraints}
                 hasBrokenConstraints={hasBroken}
                 isMissingFromImage={isMissingFromImage}
@@ -264,15 +342,18 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
                 placementModeActive={placementMode.active}
                 wasRecentlyCreated={wasRecentlyCreated}
                 wasJustPlaced={wasJustPlaced}
+                isGloballyHovered={isGloballyHovered}
                 onSelect={(ctrlKey, shiftKey) => onSelectWorldPoint(wp.id, ctrlKey, shiftKey)}
-                onEdit={() => startEditing(wp)}
+                onEdit={() => onEditWorldPoint?.(wp.id)}
                 onDelete={() => handleDelete(wp.id)}
                 onHighlight={onHighlightWorldPoint}
+                onHover={onHoverWorldPoint}
                 onStartPlacement={() => handlePlacement(wp.id)}
-                onNameChange={setEditingName}
-                onSaveEdit={saveEdit}
-                onCancelEdit={cancelEdit}
-                onKeyPress={handleKeyPress}
+                onContextMenu={(e) => handleContextMenu(e, wp.id)}
+                onNameChange={() => {}}
+                onSaveEdit={() => {}}
+                onCancelEdit={() => {}}
+                onKeyPress={() => {}}
               />
             )
           })
@@ -289,6 +370,16 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
           </div>
         )}
       </div>
+
+      {/* Context Menu */}
+      {contextMenu.worldPointId && (
+        <ContextMenu
+          isOpen={contextMenu.isOpen}
+          position={contextMenu.position}
+          items={getContextMenuItems(worldPoints[contextMenu.worldPointId])}
+          onClose={closeContextMenu}
+        />
+      )}
     </div>
   )
 }
@@ -305,11 +396,14 @@ interface EnhancedWorldPointItemProps {
   placementModeActive: boolean
   wasRecentlyCreated: boolean
   wasJustPlaced: boolean
+  isGloballyHovered: boolean
   onSelect: (ctrlKey: boolean, shiftKey: boolean) => void
   onEdit: () => void
   onDelete: () => void
   onHighlight: (id: string | null) => void
+  onHover?: (id: string | null) => void
   onStartPlacement: () => void
+  onContextMenu: (e: React.MouseEvent) => void
   onNameChange: (name: string) => void
   onSaveEdit: () => void
   onCancelEdit: () => void
@@ -328,11 +422,14 @@ const EnhancedWorldPointItem: React.FC<EnhancedWorldPointItemProps> = ({
   placementModeActive,
   wasRecentlyCreated,
   wasJustPlaced,
+  isGloballyHovered,
   onSelect,
   onEdit,
   onDelete,
   onHighlight,
+  onHover,
   onStartPlacement,
+  onContextMenu,
   onNameChange,
   onSaveEdit,
   onCancelEdit,
@@ -348,7 +445,8 @@ const EnhancedWorldPointItem: React.FC<EnhancedWorldPointItemProps> = ({
     isMissingFromImage ? 'missing-from-image' : '',
     isInPlacementMode ? 'in-placement-mode' : '',
     wasRecentlyCreated ? 'just-created' : '',
-    wasJustPlaced ? 'optimistic-feedback' : ''
+    wasJustPlaced ? 'optimistic-feedback' : '',
+    isGloballyHovered ? 'globally-hovered' : ''
   ].filter(Boolean).join(' ')
 
   const constraintsText = involvedConstraints.length > 0
@@ -363,66 +461,47 @@ const EnhancedWorldPointItem: React.FC<EnhancedWorldPointItemProps> = ({
           if (e.shiftKey) e.preventDefault()
           onSelect(e.ctrlKey || e.metaKey, e.shiftKey)
         }}
+        onContextMenu={onContextMenu}
         onMouseEnter={() => {
           setShowActions(true)
           onHighlight(worldPoint.id)
+          if (onHover) {
+            onHover(worldPoint.id)
+          }
         }}
         onMouseLeave={() => {
           setShowActions(false)
           onHighlight(null)
+          if (onHover) {
+            onHover(null)
+          }
         }}
       >
         <div className="wp-item-main">
           <div className="wp-item-content">
-            <DelightfulTooltip content={`Point ID: ${worldPoint.id}`}>
-              <div className="wp-color-dot world-point-hover" style={{ backgroundColor: worldPoint.color }} />
-            </DelightfulTooltip>
+            <div className="wp-color-dot world-point-hover" style={{ backgroundColor: worldPoint.color }} title={`Point ID: ${worldPoint.id}`} />
 
-            {isEditing ? (
-              <input
-                type="text"
-                value={editingName}
-                onChange={(e) => onNameChange(e.target.value)}
-                onKeyDown={onKeyPress}
-                onBlur={onSaveEdit}
-                onClick={(e) => e.stopPropagation()}
-                className="wp-name-input delightful-focus"
-                autoFocus
-                placeholder="Enter descriptive name..."
-              />
-            ) : (
-              <DelightfulTooltip content={constraintsText}>
-                <div className="wp-name">{worldPoint.name}</div>
-              </DelightfulTooltip>
-            )}
+            <div className="wp-name" title={constraintsText}>{worldPoint.name}</div>
 
             <div className="wp-info">
-              <DelightfulTooltip content={`Visible in ${worldPoint.imagePoints.length} image${worldPoint.imagePoints.length !== 1 ? 's' : ''}`}>
-                <span className="image-count">
-                  <span className="count-icon">📷</span>
-                  <span>{worldPoint.imagePoints.length}</span>
-                </span>
-              </DelightfulTooltip>
+              <span className="image-count" title={`Visible in ${worldPoint.imagePoints.length} image${worldPoint.imagePoints.length !== 1 ? 's' : ''}`}>
+                <span className="count-icon">📷</span>
+                <span>{worldPoint.imagePoints.length}</span>
+              </span>
 
               {involvedConstraints.length > 0 && (
-                <DelightfulTooltip content={constraintsText}>
-                  <span className="constraint-count">
-                    <span className="count-icon">⚙</span>
-                    <span>{involvedConstraints.length}</span>
-                  </span>
-                </DelightfulTooltip>
+                <span className="constraint-count" title={constraintsText}>
+                  <span className="count-icon">⚙</span>
+                  <span>{involvedConstraints.length}</span>
+                </span>
               )}
 
               {hasBrokenConstraints && (
-                <DelightfulTooltip content="Some constraints are broken - check connections">
-                  <span className="broken-indicator" title="Has broken constraints">⚠️</span>
-                </DelightfulTooltip>
+                <span className="broken-indicator" title="Some constraints are broken - check connections">⚠️</span>
               )}
 
               {isInPlacementMode && (
-                <DelightfulTooltip content="Click on image to place this point">
-                  <span className="placement-indicator">🎯</span>
-                </DelightfulTooltip>
+                <span className="placement-indicator" title="Click on image to place this point">🎯</span>
               )}
             </div>
           </div>
@@ -430,31 +509,33 @@ const EnhancedWorldPointItem: React.FC<EnhancedWorldPointItemProps> = ({
           <div className={`wp-item-actions ${showActions ? 'visible' : ''}`}>
             {!isEditing && !placementModeActive && (
               <>
-                <DelightfulTooltip content={isMissingFromImage ? "Place this point on current image" : "Point already in current image"}>
-                  <RippleButton
-                    onClick={() => {
-                      if (isMissingFromImage) onStartPlacement()
-                    }}
-                    className={`btn-place ${!isMissingFromImage ? 'disabled' : ''}`}
-                    disabled={!isMissingFromImage}
-                    variant="tool"
-                  >
-                    +
-                  </RippleButton>
-                </DelightfulTooltip>
+                {/* Quick placement button for missing points */}
+                {isMissingFromImage && (
+                  <div onClick={(e) => e.stopPropagation()} title="Place this point on current image">
+                    <RippleButton
+                      onClick={() => onStartPlacement()}
+                      className="btn-place"
+                      variant="tool"
+                    >
+                      📍
+                    </RippleButton>
+                  </div>
+                )}
 
-                <DelightfulTooltip content="Rename world point">
+                {/* Edit button - opens properties window */}
+                <div onClick={(e) => e.stopPropagation()} title="Edit world point properties">
                   <RippleButton
                     onClick={() => onEdit()}
                     className="btn-edit"
                     variant="tool"
                   >
-                    ✎
+                    ⚙️
                   </RippleButton>
-                </DelightfulTooltip>
+                </div>
 
+                {/* Constraint visibility toggle */}
                 {involvedConstraints.length > 0 && (
-                  <DelightfulTooltip content="Show involved constraints">
+                  <div onClick={(e) => e.stopPropagation()} title="Show involved constraints">
                     <RippleButton
                       onClick={() => setShowConstraints(!showConstraints)}
                       className="btn-constraints"
@@ -462,18 +543,11 @@ const EnhancedWorldPointItem: React.FC<EnhancedWorldPointItemProps> = ({
                     >
                       ⟷
                     </RippleButton>
-                  </DelightfulTooltip>
+                  </div>
                 )}
 
-                <DelightfulTooltip content="Delete world point">
-                  <RippleButton
-                    onClick={() => onDelete()}
-                    className="btn-delete"
-                    variant="tool"
-                  >
-                    ×
-                  </RippleButton>
-                </DelightfulTooltip>
+                {/* Context menu hint */}
+                <div className="context-menu-hint" title="Right-click for more options">⋯</div>
               </>
             )}
           </div>
@@ -504,7 +578,12 @@ function getConstraintDisplayName(constraint: Constraint): string {
     case 'points_distance':
       return `Distance Constraint`
     case 'points_equal_distance':
-      return `Angle: ${constraint.parameters?.angle_degrees || constraint.parameters?.angle || 'unspecified'}°`
+      // Determine if it's angle or circle based on parameters
+      if (constraint.parameters?.angle !== undefined || constraint.parameters?.angle_degrees !== undefined) {
+        return `Angle: ${constraint.parameters?.angle_degrees || constraint.parameters?.angle || 'unspecified'}°`
+      } else {
+        return `Circle Constraint`
+      }
     case 'lines_perpendicular':
       return `Perpendicular Lines`
     case 'lines_parallel':
@@ -513,14 +592,8 @@ function getConstraintDisplayName(constraint: Constraint): string {
       return `Collinear Points`
     case 'points_coplanar':
       return `Rectangle Shape`
-    case 'points_equal_distance':
-      return `Circle Constraint`
     case 'point_fixed_coord':
       return `Fixed Position`
-    case 'line_axis_aligned':
-      return `Horizontal Alignment`
-    case 'line_axis_aligned':
-      return `Vertical Alignment`
     default:
       return `${constraint.type.charAt(0).toUpperCase()}${constraint.type.slice(1)} Constraint`
   }

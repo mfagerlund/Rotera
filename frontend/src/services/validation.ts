@@ -85,7 +85,12 @@ export class ConstraintValidator {
       case 'points_distance':
         return this.validateDistanceConstraint(constraint)
       case 'points_equal_distance':
-        return this.validateAngleConstraint(constraint)
+        // This handles both angle and circle constraints - determine by parameters
+        if (constraint.parameters.angle !== undefined || constraint.parameters.angle_degrees !== undefined) {
+          return this.validateAngleConstraint(constraint)
+        } else {
+          return this.validateCircleConstraint(constraint)
+        }
       case 'lines_perpendicular':
         return this.validatePerpendicularConstraint(constraint)
       case 'lines_parallel':
@@ -94,14 +99,8 @@ export class ConstraintValidator {
         return this.validateCollinearConstraint(constraint)
       case 'points_coplanar':
         return this.validateRectangleConstraint(constraint)
-      case 'points_equal_distance':
-        return this.validateCircleConstraint(constraint)
       case 'point_fixed_coord':
         return this.validateFixedConstraint(constraint)
-      case 'line_axis_aligned':
-        return this.validateHorizontalConstraint(constraint)
-      case 'line_axis_aligned':
-        return this.validateVerticalConstraint(constraint)
       default:
         errors.push({
           id: crypto.randomUUID(),
@@ -439,66 +438,6 @@ export class ConstraintValidator {
     return { isValid: errors.length === 0, errors, warnings, suggestions: [] }
   }
 
-  private validateHorizontalConstraint(constraint: any): ValidationResult {
-    return this.validateLineOrientationConstraint(constraint, 'line_axis_aligned')
-  }
-
-  private validateVerticalConstraint(constraint: any): ValidationResult {
-    return this.validateLineOrientationConstraint(constraint, 'line_axis_aligned')
-  }
-
-  private validateLineOrientationConstraint(constraint: any, orientation: 'line_axis_aligned' | 'line_axis_aligned'): ValidationResult {
-    const errors: ValidationError[] = []
-    const warnings: ValidationWarning[] = []
-
-    const pointA = this.worldPoints[constraint.pointA]
-    const pointB = this.worldPoints[constraint.pointB]
-
-    if (!pointA || !pointB || !pointA.xyz || !pointB.xyz) {
-      errors.push({
-        id: crypto.randomUUID(),
-        type: 'error',
-        severity: 'high',
-        constraintId: constraint.id,
-        message: `Missing data for ${orientation} constraint`,
-        description: `${orientation} constraint requires both points to exist and have 3D coordinates`
-      })
-      return { isValid: false, errors, warnings, suggestions: [] }
-    }
-
-    const vector = [
-      pointB.xyz[0] - pointA.xyz[0],
-      pointB.xyz[1] - pointA.xyz[1],
-      pointB.xyz[2] - pointA.xyz[2]
-    ]
-
-    let deviation: number
-    if (orientation === 'line_axis_aligned') {
-      // Check if Z component is near zero (horizontal in XY plane)
-      const horizontalLength = Math.sqrt(vector[0] * vector[0] + vector[1] * vector[1])
-      deviation = Math.abs(Math.atan2(Math.abs(vector[2]), horizontalLength) * 180 / Math.PI)
-    } else {
-      // Check if XY components are near zero (vertical in Z direction)
-      const horizontalLength = Math.sqrt(vector[0] * vector[0] + vector[1] * vector[1])
-      const totalLength = Math.sqrt(vector[0] * vector[0] + vector[1] * vector[1] + vector[2] * vector[2])
-      deviation = Math.abs(Math.atan2(horizontalLength, Math.abs(vector[2])) * 180 / Math.PI)
-    }
-
-    if (deviation > 1) { // 1 degree tolerance
-      const severity = deviation > 5 ? 'high' : 'medium'
-      errors.push({
-        id: crypto.randomUUID(),
-        type: 'error',
-        severity,
-        constraintId: constraint.id,
-        message: `${orientation} constraint violation`,
-        description: `Line deviates from ${orientation} by ${deviation.toFixed(1)}°`,
-        fixSuggestion: 'Run optimization to adjust point positions'
-      })
-    }
-
-    return { isValid: errors.length === 0, errors, warnings, suggestions: [] }
-  }
 
   private validateCollinearConstraint(constraint: any): ValidationResult {
     // Implementation for collinear constraint validation

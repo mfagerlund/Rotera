@@ -1,17 +1,19 @@
 """Tests for project model."""
 
-import pytest
 from datetime import datetime
-from pictorigo.core.models.entities import WorldPoint, Camera, Image, Line, Constraint
+
+import pytest
+from pydantic import ValidationError
+
+from pictorigo.core.models.entities import Camera, Constraint, Image, Line, WorldPoint
 from pictorigo.core.models.project import (
+    CoordinateSystem,
+    GroundPlane,
+    OptimizationInfo,
+    PointGroup,
     Project,
     ProjectSettings,
     SolveResult,
-    OptimizationInfo,
-    CoordinateSystem,
-    PointGroup,
-    GroundPlane,
-    ProjectHistoryEntry
 )
 
 
@@ -37,7 +39,7 @@ class TestProjectSettings:
             show_point_names=False,
             theme="light",
             measurement_units="feet",
-            precision_digits=2
+            precision_digits=2,
         )
         assert settings.show_point_names is False
         assert settings.theme == "light"
@@ -56,7 +58,7 @@ class TestSolveResult:
             final_cost=1.23,
             convergence_reason="Converged",
             computation_time=2.5,
-            residuals=0.1
+            residuals=0.1,
         )
         assert result.success
         assert result.iterations == 50
@@ -81,10 +83,7 @@ class TestOptimizationInfo:
         """Test custom optimization info."""
         timestamp = datetime.now().isoformat()
         opt = OptimizationInfo(
-            status="converged",
-            last_run=timestamp,
-            residuals=0.05,
-            iterations=25
+            status="converged", last_run=timestamp, residuals=0.05, iterations=25
         )
         assert opt.status == "converged"
         assert opt.last_run == timestamp
@@ -109,9 +108,7 @@ class TestPointGroup:
     def test_point_group_creation(self):
         """Test point group creation."""
         group = PointGroup(
-            name="Control Points",
-            color="#ff0000",
-            points=["wp1", "wp2", "wp3"]
+            name="Control Points", color="#ff0000", points=["wp1", "wp2", "wp3"]
         )
         assert group.name == "Control Points"
         assert group.color == "#ff0000"
@@ -124,11 +121,7 @@ class TestGroundPlane:
 
     def test_ground_plane_creation(self):
         """Test ground plane creation."""
-        gp = GroundPlane(
-            id="gp1",
-            name="Main Ground",
-            point_ids=["wp1", "wp2", "wp3"]
-        )
+        gp = GroundPlane(id="gp1", name="Main Ground", point_ids=["wp1", "wp2", "wp3"])
         assert gp.id == "gp1"
         assert gp.name == "Main Ground"
         assert gp.point_ids == ["wp1", "wp2", "wp3"]
@@ -136,11 +129,9 @@ class TestGroundPlane:
 
     def test_ground_plane_invalid_points(self):
         """Test validation of point count."""
-        with pytest.raises(Exception):  # Pydantic validation error
+        with pytest.raises(ValidationError):  # Pydantic validation error
             GroundPlane(
-                id="gp1",
-                name="Invalid",
-                point_ids=["wp1", "wp2"]  # Too few points
+                id="gp1", name="Invalid", point_ids=["wp1", "wp2"]  # Too few points
             )
 
 
@@ -163,10 +154,7 @@ class TestProject:
 
     def test_project_custom_creation(self):
         """Test project creation with custom values."""
-        project = Project(
-            id="test-project",
-            name="Test Project"
-        )
+        project = Project(id="test-project", name="Test Project")
         assert project.id == "test-project"
         assert project.name == "Test Project"
 
@@ -237,7 +225,7 @@ class TestProject:
             type="distance_point_point",
             status="satisfied",
             entities={"points": ["wp1", "wp2"]},
-            parameters={"targetValue": 5.0}
+            parameters={"targetValue": 5.0},
         )
         project.add_constraint(constraint)
 
@@ -266,7 +254,7 @@ class TestProject:
             type="distance_point_point",
             status="satisfied",
             entities={"points": ["wp1", "wp3"]},
-            parameters={"targetValue": 5.0}
+            parameters={"targetValue": 5.0},
         )
         project.add_constraint(constraint)
 
@@ -307,7 +295,7 @@ class TestProject:
             id="l1",
             name="Invalid Line",
             point_a="wp1",
-            point_b="nonexistent"  # Non-existent world point
+            point_b="nonexistent",  # Non-existent world point
         )
         project.lines["l1"] = invalid_line
 
@@ -371,7 +359,7 @@ class TestProject:
             image_id="img1",
             K=[500.0, 600.0, 320.0, 240.0, 0.1, 0.01],  # With distortion
             R=[0.1, 0.2, 0.3],
-            t=[1.0, 2.0, 3.0]
+            t=[1.0, 2.0, 3.0],
         )
 
         project.add_image(image)
@@ -405,19 +393,28 @@ class TestProject:
 
         # Add different constraint types
         constraint1 = Constraint(
-            id="c1", name="Distance", type="distance_point_point",
-            status="satisfied", entities={"points": ["wp1", "wp2"]},
-            parameters={"targetValue": 5.0}
+            id="c1",
+            name="Distance",
+            type="distance_point_point",
+            status="satisfied",
+            entities={"points": ["wp1", "wp2"]},
+            parameters={"targetValue": 5.0},
         )
         constraint2 = Constraint(
-            id="c2", name="Fixed", type="fixed_point",
-            status="satisfied", entities={"points": ["wp1"]},
-            parameters={"x": 0, "y": 0, "z": 0}
+            id="c2",
+            name="Fixed",
+            type="fixed_point",
+            status="satisfied",
+            entities={"points": ["wp1"]},
+            parameters={"x": 0, "y": 0, "z": 0},
         )
         constraint3 = Constraint(
-            id="c3", name="Distance2", type="distance_point_point",
-            status="satisfied", entities={"points": ["wp1", "wp2"]},
-            parameters={"targetValue": 3.0}
+            id="c3",
+            name="Distance2",
+            type="distance_point_point",
+            status="satisfied",
+            entities={"points": ["wp1", "wp2"]},
+            parameters={"targetValue": 3.0},
         )
 
         project.add_constraint(constraint1)

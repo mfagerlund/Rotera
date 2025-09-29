@@ -9,11 +9,9 @@ from .constraints import (
     EqualAnglesConstraint,
     EqualDistancesConstraint,
     FixedPointConstraint,
-    HorizontalLineConstraint,
     ImagePointConstraint,
     ParallelLinesConstraint,
     PerpendicularLinesConstraint,
-    VerticalLineConstraint,
     convert_frontend_constraint_to_backend,
     create_constraint_from_type,
 )
@@ -56,7 +54,6 @@ __all__ = [
     "Constraint",
     "CONSTRAINT_TYPES",
     "CONSTRAINT_STATUS_TYPES",
-
     # Project
     "Project",
     "ProjectSettings",
@@ -66,7 +63,6 @@ __all__ = [
     "SolveResult",
     "OptimizationInfo",
     "CoordinateSystem",
-
     # Constraints
     "ImagePointConstraint",
     "DistanceConstraint",
@@ -76,11 +72,9 @@ __all__ = [
     "FixedPointConstraint",
     "CollinearPointsConstraint",
     "CoplanarPointsConstraint",
-    "HorizontalLineConstraint",
-    "VerticalLineConstraint",
     "EqualDistancesConstraint",
     "EqualAnglesConstraint",
     "CONSTRAINT_CLASSES",
     "create_constraint_from_type",
-    "convert_frontend_constraint_to_backend"
+    "convert_frontend_constraint_to_backend",
 ]

@@ -43,8 +43,8 @@ class GroundPlane(BaseModel):
 
     id: str
     name: str
-    point_ids: list[str] = Field(min_items=3, max_items=3)
-    equation: list[float] | None = Field(None, min_items=4, max_items=4)
+    point_ids: list[str] = Field(min_length=3, max_length=3)
+    equation: list[float] | None = Field(None, min_length=4, max_length=4)
 
 
 class ProjectHistoryEntry(BaseModel):
@@ -83,7 +83,7 @@ class CoordinateSystem(BaseModel):
 
     origin: str  # World point ID
     scale: float | None = None
-    ground_plane: dict | None = None
+    ground_plane: dict[str, Any] | None = None
 
 
 class Project(BaseModel):
@@ -122,7 +122,7 @@ class Project(BaseModel):
     # Diagnostics (for solver results)
     diagnostics: SolveResult | None = None
 
-    def __init__(self, **data):
+    def __init__(self, **data: Any) -> None:
         super().__init__(**data)
         if not self.id:
             self.id = f"project_{int(datetime.now().timestamp())}"
@@ -134,31 +134,43 @@ class Project(BaseModel):
         # Check point references in lines
         for line_id, line in self.lines.items():
             if line.point_a not in self.world_points:
-                issues.append(f"Line {line_id} references non-existent point {line.point_a}")
+                issues.append(
+                    f"Line {line_id} references non-existent point {line.point_a}"
+                )
             if line.point_b not in self.world_points:
-                issues.append(f"Line {line_id} references non-existent point {line.point_b}")
+                issues.append(
+                    f"Line {line_id} references non-existent point {line.point_b}"
+                )
 
         # Check entity references in constraints
         for i, constraint in enumerate(self.constraints):
             # Check point references
             for point_id in constraint.get_point_ids():
                 if point_id not in self.world_points:
-                    issues.append(f"Constraint {i} references non-existent point {point_id}")
+                    issues.append(
+                        f"Constraint {i} references non-existent point {point_id}"
+                    )
 
             # Check line references
             for line_id in constraint.get_line_ids():
                 if line_id not in self.lines:
-                    issues.append(f"Constraint {i} references non-existent line {line_id}")
+                    issues.append(
+                        f"Constraint {i} references non-existent line {line_id}"
+                    )
 
             # Check plane references
             for plane_id in constraint.get_plane_ids():
                 if plane_id not in self.planes:
-                    issues.append(f"Constraint {i} references non-existent plane {plane_id}")
+                    issues.append(
+                        f"Constraint {i} references non-existent plane {plane_id}"
+                    )
 
         # Check camera-image associations
         for camera_id, camera in self.cameras.items():
             if camera.image_id not in self.images:
-                issues.append(f"Camera {camera_id} references non-existent image {camera.image_id}")
+                issues.append(
+                    f"Camera {camera_id} refs non-existent image {camera.image_id}"
+                )
 
         return issues
 
@@ -170,7 +182,7 @@ class Project(BaseModel):
             "planes": len(self.planes),
             "images": len(self.images),
             "cameras": len(self.cameras),
-            "constraints": len(self.constraints)
+            "constraints": len(self.constraints),
         }
 
     def add_world_point(self, point: WorldPoint) -> None:
@@ -231,13 +243,13 @@ class Project(BaseModel):
 
     def get_constraint_types_summary(self) -> dict[str, int]:
         """Get summary of constraint types."""
-        summary = {}
+        summary: dict[str, int] = {}
         for constraint in self.constraints:
             constraint_type = constraint.constraint_type()
             summary[constraint_type] = summary.get(constraint_type, 0) + 1
         return summary
 
-    def to_frontend_format(self) -> dict:
+    def to_frontend_format(self) -> dict[str, Any]:
         """Convert to frontend Project format."""
         return {
             "id": self.id,
@@ -252,23 +264,27 @@ class Project(BaseModel):
             "nextLineNumber": self.next_line_number,
             "nextPlaneNumber": self.next_plane_number,
             "settings": dict(self.settings),
-            "coordinateSystem": dict(self.coordinate_system) if self.coordinate_system else None,
+            "coordinateSystem": (
+                dict(self.coordinate_system) if self.coordinate_system else None
+            ),
             "pointGroups": {k: dict(v) for k, v in self.point_groups.items()},
             "optimization": dict(self.optimization) if self.optimization else None,
             "groundPlanes": [dict(gp) for gp in self.ground_planes],
             "history": [dict(h) for h in self.history],
             "createdAt": self.created_at,
-            "updatedAt": self.updated_at
+            "updatedAt": self.updated_at,
         }
 
     @classmethod
-    def from_frontend_format(cls, data: dict) -> 'Project':
+    def from_frontend_format(cls, data: dict[str, Any]) -> "Project":
         """Create project from frontend format."""
         # Convert frontend format to backend format
         project_data = {
             "id": data.get("id", ""),
             "name": data.get("name", "New Project"),
-            "world_points": {k: WorldPoint(**v) for k, v in data.get("worldPoints", {}).items()},
+            "world_points": {
+                k: WorldPoint(**v) for k, v in data.get("worldPoints", {}).items()
+            },
             "lines": {k: Line(**v) for k, v in data.get("lines", {}).items()},
             "planes": {k: Plane(**v) for k, v in data.get("planes", {}).items()},
             "images": {k: Image(**v) for k, v in data.get("images", {}).items()},
@@ -278,13 +294,23 @@ class Project(BaseModel):
             "next_line_number": data.get("nextLineNumber", 1),
             "next_plane_number": data.get("nextPlaneNumber", 1),
             "settings": ProjectSettings(**data.get("settings", {})),
-            "coordinate_system": CoordinateSystem(**data["coordinateSystem"]) if data.get("coordinateSystem") else None,
-            "point_groups": {k: PointGroup(**v) for k, v in data.get("pointGroups", {}).items()},
-            "optimization": OptimizationInfo(**data["optimization"]) if data.get("optimization") else OptimizationInfo(),
+            "coordinate_system": (
+                CoordinateSystem(**data["coordinateSystem"])
+                if data.get("coordinateSystem")
+                else None
+            ),
+            "point_groups": {
+                k: PointGroup(**v) for k, v in data.get("pointGroups", {}).items()
+            },
+            "optimization": (
+                OptimizationInfo(**data["optimization"])
+                if data.get("optimization")
+                else OptimizationInfo()
+            ),
             "ground_planes": [GroundPlane(**gp) for gp in data.get("groundPlanes", [])],
             "history": [ProjectHistoryEntry(**h) for h in data.get("history", [])],
             "created_at": data.get("createdAt", datetime.now().isoformat()),
-            "updated_at": data.get("updatedAt", datetime.now().isoformat())
+            "updated_at": data.get("updatedAt", datetime.now().isoformat()),
         }
 
         # Convert cameras from frontend format
@@ -296,7 +322,7 @@ class Project(BaseModel):
                 "image_id": v.get("imageId", ""),  # Handle different naming
                 "K": [],  # Will be filled from intrinsics
                 "R": v.get("extrinsics", {}).get("rotation", [0, 0, 0]),
-                "t": v.get("extrinsics", {}).get("translation", [0, 0, 0])
+                "t": v.get("extrinsics", {}).get("translation", [0, 0, 0]),
             }
 
             # Convert intrinsics to K format
@@ -306,7 +332,7 @@ class Project(BaseModel):
                     intrinsics.get("fx", 500.0),
                     intrinsics.get("fy", 500.0),
                     intrinsics.get("cx", 320.0),
-                    intrinsics.get("cy", 240.0)
+                    intrinsics.get("cy", 240.0),
                 ]
                 # Add distortion if present
                 if "k1" in intrinsics:

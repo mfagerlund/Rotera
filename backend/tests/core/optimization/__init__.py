@@ -1,1 +1,0 @@
-"""Tests for pictorigo.core.optimization package."""

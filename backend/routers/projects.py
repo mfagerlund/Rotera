@@ -5,7 +5,7 @@ import os
 import tempfile
 from typing import Any
 
-from fastapi import APIRouter, Body, File, HTTPException, UploadFile
+from fastapi import APIRouter, HTTPException, UploadFile
 
 from pictorigo.core.models.project import Project
 
@@ -36,7 +36,7 @@ async def get_project(project_id: str) -> dict:
 
 
 @router.put("/{project_id}")
-async def update_project(project_id: str, project_data: dict = Body(...)) -> dict[str, str]:
+async def update_project(project_id: str, project_data: dict) -> dict[str, str]:
     """Update project - accepts frontend format."""
     try:
         # Convert frontend format to backend Project
@@ -45,11 +45,15 @@ async def update_project(project_id: str, project_data: dict = Body(...)) -> dic
         projects_store[project_id] = project
         return {"status": "updated"}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Invalid project data: {str(e)}")
+        raise HTTPException(
+            status_code=400, detail=f"Invalid project data: {str(e)}"
+        ) from e
 
 
 @router.post("/{project_id}/from-frontend")
-async def create_project_from_frontend(project_id: str, project_data: dict = Body(...)) -> dict[str, str]:
+async def create_project_from_frontend(
+    project_id: str, project_data: dict
+) -> dict[str, str]:
     """Create/update project from frontend format."""
     try:
         project = Project.from_frontend_format(project_data)
@@ -57,7 +61,9 @@ async def create_project_from_frontend(project_id: str, project_data: dict = Bod
         projects_store[project_id] = project
         return {"status": "created", "project_id": project_id}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Invalid project data: {str(e)}")
+        raise HTTPException(
+            status_code=400, detail=f"Invalid project data: {str(e)}"
+        ) from e
 
 
 @router.delete("/{project_id}")
@@ -71,9 +77,7 @@ async def delete_project(project_id: str) -> dict[str, str]:
 
 
 @router.post("/{project_id}/upload")
-async def upload_project(
-    project_id: str, file: UploadFile = File(...)
-) -> dict[str, str]:
+async def upload_project(project_id: str, file: UploadFile) -> dict[str, str]:
     """Upload project from .pgo file."""
     try:
         content = await file.read()
@@ -104,7 +108,7 @@ async def upload_project(
             os.unlink(temp_path)
 
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Upload failed: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Upload failed: {str(e)}") from e
 
 
 @router.get("/{project_id}/summary")
