@@ -155,12 +155,12 @@ function getConstraintIcon(type: string): string {
 
 function getConstraintTooltip(constraint: Constraint): string {
   switch (constraint.type) {
-    case 'distance':
-      return `Distance: ${constraint.distance}m`
-    case 'angle':
-      return `Angle: ${constraint.angle_degrees || constraint.angle}°`
-    case 'fixed':
-      return `Fixed at (${constraint.x?.toFixed(2)}, ${constraint.y?.toFixed(2)}, ${constraint.z?.toFixed(2)})`
+    case 'points_distance':
+      return `Distance: ${constraint.parameters.distance || 'unspecified'}m`
+    case 'points_equal_distance': // TODO: Map angle to appropriate constraint
+      return `Angle: ${constraint.parameters.angle_degrees || constraint.parameters.angle || 'unspecified'}°`
+    case 'point_fixed_coord':
+      return `Fixed at (${constraint.parameters.x?.toFixed(2) || 'unspecified'}, ${constraint.parameters.y?.toFixed(2) || 'unspecified'}, ${constraint.parameters.z?.toFixed(2) || 'unspecified'})`
     default:
       return `${constraint.type} constraint`
   }

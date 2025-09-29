@@ -5,7 +5,8 @@ import os
 import tempfile
 from typing import Any
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, Body, File, HTTPException, UploadFile
+
 from pictorigo.core.models.project import Project
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -25,19 +26,38 @@ async def create_project() -> dict[str, str]:
 
 
 @router.get("/{project_id}")
-async def get_project(project_id: str) -> Project:
-    """Get project by ID."""
+async def get_project(project_id: str) -> dict:
+    """Get project by ID - returns frontend format."""
     if project_id not in projects_store:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    return projects_store[project_id]
+    project = projects_store[project_id]
+    return project.to_frontend_format()
 
 
 @router.put("/{project_id}")
-async def update_project(project_id: str, project: Project) -> dict[str, str]:
-    """Update project."""
-    projects_store[project_id] = project
-    return {"status": "updated"}
+async def update_project(project_id: str, project_data: dict = Body(...)) -> dict[str, str]:
+    """Update project - accepts frontend format."""
+    try:
+        # Convert frontend format to backend Project
+        project = Project.from_frontend_format(project_data)
+        project.id = project_id  # Ensure ID matches URL
+        projects_store[project_id] = project
+        return {"status": "updated"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid project data: {str(e)}")
+
+
+@router.post("/{project_id}/from-frontend")
+async def create_project_from_frontend(project_id: str, project_data: dict = Body(...)) -> dict[str, str]:
+    """Create/update project from frontend format."""
+    try:
+        project = Project.from_frontend_format(project_data)
+        project.id = project_id
+        projects_store[project_id] = project
+        return {"status": "created", "project_id": project_id}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid project data: {str(e)}")
 
 
 @router.delete("/{project_id}")
@@ -64,9 +84,18 @@ async def upload_project(
             temp_path = temp_file.name
 
         try:
-            # For now, assume .pgo is just JSON (will implement zip format later)
+            # Parse JSON data
             project_data = json.loads(content.decode("utf-8"))
-            project = Project(**project_data)
+
+            # Try to determine if this is frontend or backend format
+            if "worldPoints" in project_data or "nextWpNumber" in project_data:
+                # Frontend format
+                project = Project.from_frontend_format(project_data)
+            else:
+                # Backend format
+                project = Project(**project_data)
+
+            project.id = project_id  # Ensure ID matches
             projects_store[project_id] = project
 
             return {"status": "uploaded", "project_id": project_id}

@@ -200,7 +200,7 @@ const CONSTRAINT_TYPE_DEFINITIONS: Record<ConstraintType, ConstraintTypeDefiniti
 
   // Legacy constraints (for backwards compatibility)
   distance: {
-    type: 'distance',
+    type: 'points_distance',
     name: 'Distance (Legacy)',
     description: 'Legacy distance constraint',
     icon: '↔',
@@ -212,7 +212,7 @@ const CONSTRAINT_TYPE_DEFINITIONS: Record<ConstraintType, ConstraintTypeDefiniti
   },
 
   fixed: {
-    type: 'fixed',
+    type: 'point_fixed_coord',
     name: 'Fixed (Legacy)',
     description: 'Legacy fixed position constraint',
     icon: '📌',
@@ -226,12 +226,12 @@ const CONSTRAINT_TYPE_DEFINITIONS: Record<ConstraintType, ConstraintTypeDefiniti
   },
 
   // ... other legacy types
-  angle: { type: 'angle', name: 'Angle (Legacy)', description: '', icon: '∠', category: 'dimensioning', requirements: {}, parameterDefinitions: {} },
-  perpendicular: { type: 'perpendicular', name: 'Perpendicular (Legacy)', description: '', icon: '⊥', category: 'geometric', requirements: {}, parameterDefinitions: {} },
-  parallel: { type: 'parallel', name: 'Parallel (Legacy)', description: '', icon: '∥', category: 'geometric', requirements: {}, parameterDefinitions: {} },
-  collinear: { type: 'collinear', name: 'Collinear (Legacy)', description: '', icon: '─', category: 'geometric', requirements: {}, parameterDefinitions: {} },
-  rectangle: { type: 'rectangle', name: 'Rectangle (Legacy)', description: '', icon: '▭', category: 'geometric', requirements: {}, parameterDefinitions: {} },
-  circle: { type: 'circle', name: 'Circle (Legacy)', description: '', icon: '○', category: 'geometric', requirements: {}, parameterDefinitions: {} }
+  angle: { type: 'points_equal_distance', name: 'Angle (Legacy)', description: '', icon: '∠', category: 'dimensioning', requirements: {}, parameterDefinitions: {} },
+  perpendicular: { type: 'lines_perpendicular', name: 'Perpendicular (Legacy)', description: '', icon: '⊥', category: 'geometric', requirements: {}, parameterDefinitions: {} },
+  parallel: { type: 'lines_parallel', name: 'Parallel (Legacy)', description: '', icon: '∥', category: 'geometric', requirements: {}, parameterDefinitions: {} },
+  collinear: { type: 'points_colinear', name: 'Collinear (Legacy)', description: '', icon: '─', category: 'geometric', requirements: {}, parameterDefinitions: {} },
+  rectangle: { type: 'points_coplanar', name: 'Rectangle (Legacy)', description: '', icon: '▭', category: 'geometric', requirements: {}, parameterDefinitions: {} },
+  circle: { type: 'points_equal_distance', name: 'Circle (Legacy)', description: '', icon: '○', category: 'geometric', requirements: {}, parameterDefinitions: {} }
 } as any
 
 export const useEnhancedConstraints = (
@@ -260,7 +260,7 @@ export const useEnhancedConstraints = (
       points: selection.entities.filter(e => e.type === 'point').length,
       lines: selection.entities.filter(e => e.type === 'line').length,
       planes: selection.entities.filter(e => e.type === 'plane').length,
-      circles: selection.entities.filter(e => e.type === 'circle').length
+      circles: selection.entities.filter(e => e.type === 'points_equal_distance').length
     }
 
     // Check each requirement
@@ -375,7 +375,7 @@ export const useEnhancedConstraints = (
       points: selection.entities.filter(e => e.type === 'point').map(e => e.id),
       lines: selection.entities.filter(e => e.type === 'line').map(e => e.id),
       planes: selection.entities.filter(e => e.type === 'plane').map(e => e.id),
-      circles: selection.entities.filter(e => e.type === 'circle').map(e => e.id)
+      circles: selection.entities.filter(e => e.type === 'points_equal_distance').map(e => e.id)
     }
 
     const constraint: EnhancedConstraint = {

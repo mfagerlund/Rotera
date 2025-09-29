@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useMemo } from 'react'
 import { WorldPoint, ProjectImage, Constraint } from '../types/project'
 
-export type MeasurementType = 'distance' | 'angle' | 'area' | 'perimeter'
+export type MeasurementType = 'points_distance' | 'points_equal_distance' | 'area' | 'perimeter'
 
 export interface Measurement {
   id: string
@@ -151,7 +151,7 @@ export const MeasurementTools: React.FC<MeasurementToolsProps> = ({
     const isSelected = selectedPointIds.includes(pointId)
 
     switch (activeTool) {
-      case 'distance':
+      case 'points_distance':
         if (selectedPointIds.length === 0) {
           onPointSelect(pointId, false)
         } else if (selectedPointIds.length === 1 && !isSelected) {
@@ -163,7 +163,7 @@ export const MeasurementTools: React.FC<MeasurementToolsProps> = ({
 
           const measurement: Measurement = {
             id: crypto.randomUUID(),
-            type: 'distance',
+            type: 'points_distance',
             pointIds: [selectedPointIds[0], pointId],
             value: distance,
             unit,
@@ -177,7 +177,7 @@ export const MeasurementTools: React.FC<MeasurementToolsProps> = ({
         }
         break
 
-      case 'angle':
+      case 'points_equal_distance':
         if (selectedPointIds.length === 0) {
           onPointSelect(pointId, false)
         } else if (selectedPointIds.length === 1 && !isSelected) {
@@ -192,7 +192,7 @@ export const MeasurementTools: React.FC<MeasurementToolsProps> = ({
 
           const measurement: Measurement = {
             id: crypto.randomUUID(),
-            type: 'angle',
+            type: 'points_equal_distance',
             pointIds: [selectedPointIds[0], selectedPointIds[1], pointId],
             value: angle,
             unit: '°',
@@ -293,15 +293,15 @@ export const MeasurementTools: React.FC<MeasurementToolsProps> = ({
 
       <div className="tool-buttons">
         <button
-          className={`tool-btn ${activeTool === 'distance' ? 'active' : ''}`}
-          onClick={() => onToolChange(activeTool === 'distance' ? null : 'distance')}
+          className={`tool-btn ${activeTool === 'points_distance' ? 'active' : ''}`}
+          onClick={() => onToolChange(activeTool === 'points_distance' ? null : 'points_distance')}
           disabled={availablePoints.length < 2}
         >
           📏 Distance
         </button>
         <button
-          className={`tool-btn ${activeTool === 'angle' ? 'active' : ''}`}
-          onClick={() => onToolChange(activeTool === 'angle' ? null : 'angle')}
+          className={`tool-btn ${activeTool === 'points_equal_distance' ? 'active' : ''}`}
+          onClick={() => onToolChange(activeTool === 'points_equal_distance' ? null : 'points_equal_distance')}
           disabled={availablePoints.length < 3}
         >
           📐 Angle
@@ -326,8 +326,8 @@ export const MeasurementTools: React.FC<MeasurementToolsProps> = ({
         <div className="active-measurement">
           <div className="measurement-status">
             <span className="status-text">
-              {activeTool === 'distance' && `Select 2 points (${selectedPointIds.length}/2)`}
-              {activeTool === 'angle' && `Select 3 points (${selectedPointIds.length}/3)`}
+              {activeTool === 'points_distance' && `Select 2 points (${selectedPointIds.length}/2)`}
+              {activeTool === 'points_equal_distance' && `Select 3 points (${selectedPointIds.length}/3)`}
               {(activeTool === 'area' || activeTool === 'perimeter') &&
                 `Select points for polygon (${selectedPointIds.length} selected)`}
             </span>
@@ -380,8 +380,8 @@ export const MeasurementTools: React.FC<MeasurementToolsProps> = ({
                 <div key={measurement.id} className="measurement-item">
                   <div className="measurement-main">
                     <div className="measurement-icon">
-                      {measurement.type === 'distance' && '📏'}
-                      {measurement.type === 'angle' && '📐'}
+                      {measurement.type === 'points_distance' && '📏'}
+                      {measurement.type === 'points_equal_distance' && '📐'}
                       {measurement.type === 'area' && '🔳'}
                       {measurement.type === 'perimeter' && '⭕'}
                     </div>

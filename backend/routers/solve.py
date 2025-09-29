@@ -5,10 +5,11 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pictorigo.core.initialization.incremental import IncrementalSolver
-from pictorigo.core.models.project import SolveResult
 from pictorigo.core.optimization.problem import OptimizationProblem
 from pictorigo.core.solver.scipy_solver import SciPySolver, SolverOptions
 from pydantic import BaseModel
+
+from pictorigo.core.models.project import SolveResult
 
 from .projects import projects_store
 

@@ -22,43 +22,43 @@ export const useConstraints = (
 
     return [
       {
-        type: 'fixed',
+        type: 'point_fixed_coord',
         icon: '📌',
         tooltip: 'Fix point position in 3D space',
         enabled: pointCount === 1 && lineCount === 0
       },
       {
-        type: 'distance',
+        type: 'points_distance',
         icon: '↔',
         tooltip: 'Set distance between points',
         enabled: pointCount === 2 && lineCount === 0
       },
       {
-        type: 'horizontal',
+        type: 'line_axis_aligned',
         icon: '⟷',
         tooltip: 'Make points horizontally aligned',
         enabled: pointCount === 2 && lineCount === 0
       },
       {
-        type: 'vertical',
+        type: 'line_axis_aligned',
         icon: '↕',
         tooltip: 'Make points vertically aligned',
         enabled: pointCount === 2 && lineCount === 0
       },
       {
-        type: 'collinear',
+        type: 'points_colinear',
         icon: '─',
         tooltip: 'Make points lie on same line',
         enabled: pointCount === 3 && lineCount === 0
       },
       {
-        type: 'angle',
+        type: 'points_equal_distance',
         icon: '∠',
         tooltip: 'Set angle between points/lines',
         enabled: (pointCount === 3 && lineCount === 0) || lineCount === 2
       },
       {
-        type: 'rectangle',
+        type: 'points_coplanar',
         icon: '▭',
         tooltip: 'Form rectangle with four corners',
         enabled: pointCount === 4 && lineCount === 0
@@ -70,19 +70,19 @@ export const useConstraints = (
         enabled: pointCount >= 3 && lineCount === 0
       },
       {
-        type: 'parallel',
+        type: 'lines_parallel',
         icon: '∥',
         tooltip: 'Make lines parallel',
         enabled: lineCount === 2
       },
       {
-        type: 'perpendicular',
+        type: 'lines_perpendicular',
         icon: '⊥',
         tooltip: 'Make lines perpendicular',
         enabled: lineCount === 2
       },
       {
-        type: 'circle',
+        type: 'points_equal_distance',
         icon: '○',
         tooltip: `Make points lie on circle`,
         enabled: pointCount >= 3
@@ -99,7 +99,7 @@ export const useConstraints = (
     // 1 point selected
     if (pointCount === 1 && lineCount === 0) {
       constraints.push({
-        type: 'fixed',
+        type: 'point_fixed_coord',
         icon: '📌',
         tooltip: 'Fix point position in 3D space',
         enabled: true
@@ -110,19 +110,19 @@ export const useConstraints = (
     if (pointCount === 2 && lineCount === 0) {
       constraints.push(
         {
-          type: 'distance',
+          type: 'points_distance',
           icon: '↔',
           tooltip: 'Set distance between points',
           enabled: true
         },
         {
-          type: 'horizontal',
+          type: 'line_axis_aligned',
           icon: '⟷',
           tooltip: 'Make points horizontally aligned',
           enabled: true
         },
         {
-          type: 'vertical',
+          type: 'line_axis_aligned',
           icon: '↕',
           tooltip: 'Make points vertically aligned',
           enabled: true
@@ -134,13 +134,13 @@ export const useConstraints = (
     if (pointCount === 3 && lineCount === 0) {
       constraints.push(
         {
-          type: 'collinear',
+          type: 'points_colinear',
           icon: '─',
           tooltip: 'Make points lie on same line',
           enabled: true
         },
         {
-          type: 'angle',
+          type: 'points_equal_distance',
           icon: '∠',
           tooltip: 'Set angle between three points',
           enabled: true
@@ -158,7 +158,7 @@ export const useConstraints = (
     if (pointCount === 4 && lineCount === 0) {
       constraints.push(
         {
-          type: 'rectangle',
+          type: 'points_coplanar',
           icon: '▭',
           tooltip: 'Form rectangle with four corners',
           enabled: true
@@ -188,19 +188,19 @@ export const useConstraints = (
     if (lineCount === 2) {
       constraints.push(
         {
-          type: 'parallel',
+          type: 'lines_parallel',
           icon: '∥',
           tooltip: 'Make lines parallel',
           enabled: true
         },
         {
-          type: 'perpendicular',
+          type: 'lines_perpendicular',
           icon: '⊥',
           tooltip: 'Make lines perpendicular',
           enabled: true
         },
         {
-          type: 'angle',
+          type: 'points_equal_distance',
           icon: '∠',
           tooltip: 'Set angle between lines',
           enabled: true
@@ -211,7 +211,7 @@ export const useConstraints = (
     // Circle constraints (3+ points)
     if (pointCount >= 3) {
       constraints.push({
-        type: 'circle',
+        type: 'points_equal_distance',
         icon: '○',
         tooltip: `Make ${pointCount} points lie on circle`,
         enabled: true
@@ -281,23 +281,23 @@ export const useConstraints = (
     if (!activeConstraintType) return false
 
     switch (activeConstraintType) {
-      case 'distance':
+      case 'points_distance':
         return !!constraintParameters.distance
-      case 'angle':
+      case 'points_equal_distance':
         return !!constraintParameters.angle
-      case 'fixed': {
+      case 'point_fixed_coord': {
         // Allow 0 values and require at least one coordinate to be set
         const hasX = constraintParameters.x !== undefined && constraintParameters.x !== null && constraintParameters.x !== ''
         const hasY = constraintParameters.y !== undefined && constraintParameters.y !== null && constraintParameters.y !== ''
         const hasZ = constraintParameters.z !== undefined && constraintParameters.z !== null && constraintParameters.z !== ''
         return hasX || hasY || hasZ
       }
-      case 'rectangle':
+      case 'points_coplanar':
         return true // No additional parameters required
-      case 'parallel':
-      case 'perpendicular':
-      case 'collinear':
-      case 'circle':
+      case 'lines_parallel':
+      case 'lines_perpendicular':
+      case 'points_colinear':
+      case 'points_equal_distance':
       case 'plane':
         return true // No additional parameters required
       default:
@@ -308,21 +308,21 @@ export const useConstraints = (
   // Constraint display helpers
   const getConstraintDisplayName = useCallback((constraint: Constraint) => {
     switch (constraint.type) {
-      case 'distance':
+      case 'points_distance':
         return `Distance: ${constraint.pointA} ↔ ${constraint.pointB}`
-      case 'angle':
+      case 'points_equal_distance':
         return `Angle: ${constraint.angle_degrees || constraint.angle}°`
-      case 'perpendicular':
+      case 'lines_perpendicular':
         return `Perpendicular Lines`
-      case 'parallel':
+      case 'lines_parallel':
         return `Parallel Lines`
-      case 'collinear':
+      case 'points_colinear':
         return `Collinear Points`
-      case 'rectangle':
+      case 'points_coplanar':
         return `Rectangle Shape`
-      case 'circle':
+      case 'points_equal_distance':
         return `Circle Constraint`
-      case 'fixed':
+      case 'point_fixed_coord':
         return `Fixed Point`
       default:
         return `${constraint.type.charAt(0).toUpperCase()}${constraint.type.slice(1)} Constraint`
@@ -331,21 +331,21 @@ export const useConstraints = (
 
   const getConstraintSummary = useCallback((constraint: Constraint) => {
     switch (constraint.type) {
-      case 'distance':
+      case 'points_distance':
         return `${constraint.distance}m between points`
-      case 'angle':
+      case 'points_equal_distance':
         return `${constraint.angle_degrees || constraint.angle}° angle constraint`
-      case 'perpendicular':
+      case 'lines_perpendicular':
         return `Perpendicular line relationship`
-      case 'parallel':
+      case 'lines_parallel':
         return `Parallel line relationship`
-      case 'collinear':
+      case 'points_colinear':
         return `Points on same line`
-      case 'rectangle':
+      case 'points_coplanar':
         return `4-corner rectangle shape`
-      case 'circle':
+      case 'points_equal_distance':
         return `Points on circle boundary`
-      case 'fixed':
+      case 'point_fixed_coord':
         return `Fixed position constraint`
       default:
         return 'Geometric constraint'
@@ -395,14 +395,14 @@ function getInitialConstraintParameters(
   const params: ConstraintParameters = {}
 
   switch (type) {
-    case 'distance':
+    case 'points_distance':
       if (selectedPoints.length >= 2) {
         params.pointA = selectedPoints[0]
         params.pointB = selectedPoints[1]
       }
       break
 
-    case 'angle':
+    case 'points_equal_distance':
       if (selectedPoints.length >= 3) {
         params.vertex = selectedPoints[1] // Middle point is vertex
         params.line1_end = selectedPoints[0]
@@ -416,8 +416,8 @@ function getInitialConstraintParameters(
       }
       break
 
-    case 'perpendicular':
-    case 'parallel':
+    case 'lines_perpendicular':
+    case 'lines_parallel':
       if (selectedLines.length >= 2) {
         params.line1_wp_a = selectedLines[0].pointA
         params.line1_wp_b = selectedLines[0].pointB
@@ -426,11 +426,11 @@ function getInitialConstraintParameters(
       }
       break
 
-    case 'collinear':
+    case 'points_colinear':
       params.wp_ids = selectedPoints
       break
 
-    case 'rectangle':
+    case 'points_coplanar':
       if (selectedPoints.length >= 4) {
         params.cornerA = selectedPoints[0]
         params.cornerB = selectedPoints[1]
@@ -439,11 +439,11 @@ function getInitialConstraintParameters(
       }
       break
 
-    case 'circle':
+    case 'points_equal_distance':
       params.point_ids = selectedPoints
       break
 
-    case 'fixed':
+    case 'point_fixed_coord':
       if (selectedPoints.length >= 1) {
         params.point_id = selectedPoints[0]
       }

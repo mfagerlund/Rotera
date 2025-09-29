@@ -28,8 +28,6 @@ export interface ProjectImage {
   width: number
   height: number
   cameraId?: string
-  // Legacy compatibility
-  url?: string
 }
 
 export interface CameraIntrinsics {
@@ -56,8 +54,6 @@ export interface Camera {
   extrinsics?: CameraExtrinsics
   calibrationQuality?: number
   calibrationMethod?: 'auto' | 'manual' | 'chessboard'
-  // Legacy compatibility
-  make?: string
 }
 
 export interface Constraint {
@@ -76,34 +72,6 @@ export interface Constraint {
   parameters: Record<string, any>  // Constraint-specific parameters
   createdAt: string
 
-  // Legacy compatibility properties (for backwards compatibility with old constraint system)
-  pointA?: string
-  pointB?: string
-  pointC?: string
-  point_id?: string
-  vertex?: string
-  line1_end?: string
-  line2_end?: string
-  line1_wp_a?: string
-  line1_wp_b?: string
-  line2_wp_a?: string
-  line2_wp_b?: string
-  wp_ids?: string[]
-  point_ids?: string[]
-  cornerA?: string
-  cornerB?: string
-  cornerC?: string
-  cornerD?: string
-  distance?: number
-  angle?: number
-  angle_degrees?: number
-  x?: number
-  y?: number
-  z?: number
-  pointIds?: string[]
-  value?: number
-  radius?: number
-  tolerance?: number
 }
 
 export type ConstraintType =
@@ -118,9 +86,8 @@ export type ConstraintType =
   | 'planes_parallel' | 'planes_perpendicular' | 'planes_coincident'
   // Multi-entity constraints
   | 'points_colinear' | 'points_coplanar' | 'points_equal_distance'
-  // Legacy constraints (for backwards compatibility)
-  | 'horizontal' | 'vertical' | 'distance' | 'angle' | 'perpendicular' | 'parallel'
-  | 'collinear' | 'rectangle' | 'circle' | 'coplanar' | 'symmetry' | 'fixed'
+  // Special constraints
+  | 'symmetry'
 
 export interface ProjectSettings {
   showPointNames: boolean
@@ -283,7 +250,7 @@ export interface ProjectHistoryEntry {
 // Measurement tools
 export interface Measurement {
   id: string
-  type: 'distance' | 'angle' | 'area'
+  type: 'points_distance' | 'points_equal_distance' | 'area'
   pointIds: string[]
   value?: number
   units?: string
@@ -332,6 +299,8 @@ export interface OptimizationService {
 export interface SymmetryConstraint extends Constraint {
   type: 'symmetry'
   pointPairs: Array<[string, string]>
+  symmetricPairs: Array<[string, string]>  // Legacy alias
+  symmetryType: 'mirror' | 'rotational' | 'translational'
   symmetryPlane: {
     pointA: string
     pointB: string

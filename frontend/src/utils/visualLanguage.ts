@@ -5,7 +5,7 @@ import { ConstraintStatus } from '../types/geometry'
 import { EnhancedProjectSettings } from '../types/enhanced-project'
 
 // Entity type definitions
-export type EntityType = 'point' | 'line' | 'plane' | 'circle'
+export type EntityType = 'point' | 'line' | 'plane' | 'points_equal_distance'
 export type EntityState = 'default' | 'selected' | 'highlighted' | 'construction'
 export type WorkspaceType = 'image' | 'world' | 'split'
 export type FeedbackLevel = 'minimal' | 'standard' | 'detailed'
@@ -200,25 +200,25 @@ export class VisualLanguageManager {
   // Get constraint glyph
   getConstraintGlyph(constraintType: string): string {
     const glyphMap: Record<string, string> = {
-      'distance': '↔',
+      'points_distance': '↔',
       'distance_point_point': '↔',
-      'angle': '∠',
+      'points_equal_distance': '∠',
       'angle_three_points': '∠',
-      'parallel': '∥',
       'lines_parallel': '∥',
-      'perpendicular': '⊥',
+      'lines_parallel': '∥',
       'lines_perpendicular': '⊥',
-      'fixed': '📌',
+      'lines_perpendicular': '⊥',
+      'point_fixed_coord': '📌',
       'point_fixed_position': '📌',
-      'horizontal': '⟷',
+      'line_axis_aligned': '⟷',
       'points_horizontal': '⟷',
-      'vertical': '↕',
+      'line_axis_aligned': '↕',
       'points_vertical': '↕',
-      'collinear': '─',
+      'points_colinear': '─',
       'points_collinear': '─',
-      'circle': '○',
+      'points_equal_distance': '○',
       'shape_circle': '○',
-      'rectangle': '▭',
+      'points_coplanar': '▭',
       'shape_rectangle': '▭',
       'coplanar': '◱',
       'points_coplanar': '◱',

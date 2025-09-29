@@ -1,19 +1,101 @@
 """Tests for constraint models."""
 
 import pytest
+from pictorigo.core.models.entities import Constraint, CONSTRAINT_TYPES, CONSTRAINT_STATUS_TYPES
 from pictorigo.core.models.constraints import (
-    AxisAlignConstraint,
-    ConstraintRegistry,
-    CoplanarConstraint,
-    DistanceConstraint,
-    EqualityConstraint,
-    GaugeFixConstraint,
     ImagePointConstraint,
-    KnownCoordConstraint,
-    PlaneFromThreeConstraint,
-    create_constraint,
+    DistanceConstraint,
+    AngleConstraint,
+    ParallelLinesConstraint,
+    PerpendicularLinesConstraint,
+    FixedPointConstraint,
+    CollinearPointsConstraint,
+    CoplanarPointsConstraint,
+    HorizontalLineConstraint,
+    VerticalLineConstraint,
+    EqualDistancesConstraint,
+    EqualAnglesConstraint,
+    create_constraint_from_type,
+    convert_frontend_constraint_to_backend
 )
 from pydantic import ValidationError
+
+
+class TestConstraintEntity:
+    """Test the main Constraint entity model."""
+
+    def test_constraint_creation(self):
+        """Test basic constraint creation."""
+        constraint = Constraint(
+            id="c1",
+            name="Test Constraint",
+            type="distance_point_point",
+            status="satisfied",
+            entities={"points": ["wp1", "wp2"]},
+            parameters={"targetValue": 5.0}
+        )
+        assert constraint.id == "c1"
+        assert constraint.name == "Test Constraint"
+        assert constraint.type == "distance_point_point"
+        assert constraint.status == "satisfied"
+        assert constraint.is_enabled is True
+        assert constraint.is_driving is False
+
+    def test_constraint_invalid_type(self):
+        """Test validation of constraint type."""
+        with pytest.raises(ValidationError):
+            Constraint(
+                id="c1",
+                name="Invalid",
+                type="invalid_type",  # Invalid type
+                status="satisfied",
+                entities={"points": ["wp1", "wp2"]},
+                parameters={}
+            )
+
+    def test_constraint_invalid_status(self):
+        """Test validation of constraint status."""
+        with pytest.raises(ValidationError):
+            Constraint(
+                id="c1",
+                name="Invalid Status",
+                type="distance_point_point",
+                status="invalid_status",  # Invalid status
+                entities={"points": ["wp1", "wp2"]},
+                parameters={}
+            )
+
+    def test_constraint_get_methods(self):
+        """Test constraint getter methods."""
+        constraint = Constraint(
+            id="c1",
+            name="Test",
+            type="distance_point_point",
+            status="satisfied",
+            entities={
+                "points": ["wp1", "wp2"],
+                "lines": ["l1"],
+                "planes": ["p1"]
+            },
+            parameters={"targetValue": 5.0}
+        )
+
+        assert constraint.get_point_ids() == ["wp1", "wp2"]
+        assert constraint.get_line_ids() == ["l1"]
+        assert constraint.get_plane_ids() == ["p1"]
+        assert constraint.constraint_type() == "distance_point_point"
+
+    def test_constraint_types_constants(self):
+        """Test constraint type constants."""
+        assert "distance_point_point" in CONSTRAINT_TYPES
+        assert "angle_point_point_point" in CONSTRAINT_TYPES
+        assert "parallel_lines" in CONSTRAINT_TYPES
+        assert "fixed_point" in CONSTRAINT_TYPES
+
+        assert "satisfied" in CONSTRAINT_STATUS_TYPES
+        assert "violated" in CONSTRAINT_STATUS_TYPES
+        assert "warning" in CONSTRAINT_STATUS_TYPES
+        assert "disabled" in CONSTRAINT_STATUS_TYPES
 
 
 class TestImagePointConstraint:
@@ -22,62 +104,35 @@ class TestImagePointConstraint:
     def test_image_point_constraint_creation(self):
         """Test basic image point constraint creation."""
         constraint = ImagePointConstraint(
-            image_id="img1", wp_id="wp1", u=100.0, v=200.0
+            id="ip1",
+            world_point_id="wp1",
+            image_id="img1",
+            camera_id="cam1",
+            u=100.0,
+            v=200.0
         )
-        assert constraint.type == "image_point"
+        assert constraint.id == "ip1"
+        assert constraint.world_point_id == "wp1"
         assert constraint.image_id == "img1"
-        assert constraint.wp_id == "wp1"
+        assert constraint.camera_id == "cam1"
         assert constraint.u == 100.0
         assert constraint.v == 200.0
-        assert constraint.sigma == 1.0  # Default value
+        assert constraint.weight == 1.0
+        assert constraint.enabled is True
+        assert constraint.constraint_type() == "image_point"
 
-    def test_image_point_constraint_with_sigma(self):
-        """Test image point constraint with custom sigma."""
+    def test_image_point_constraint_with_custom_weight(self):
+        """Test image point constraint with custom weight."""
         constraint = ImagePointConstraint(
-            image_id="img1", wp_id="wp1", u=100.0, v=200.0, sigma=0.5
+            id="ip1",
+            world_point_id="wp1",
+            image_id="img1",
+            camera_id="cam1",
+            u=100.0,
+            v=200.0,
+            weight=0.5
         )
-        assert constraint.sigma == 0.5
-
-    def test_image_point_constraint_invalid_sigma(self):
-        """Test validation of sigma parameter."""
-        with pytest.raises(ValidationError):
-            ImagePointConstraint(
-                image_id="img1",
-                wp_id="wp1",
-                u=100.0,
-                v=200.0,
-                sigma=0.0,  # Must be positive
-            )
-
-
-class TestKnownCoordConstraint:
-    """Test KnownCoordConstraint model."""
-
-    def test_known_coord_constraint_creation(self):
-        """Test basic known coordinate constraint creation."""
-        constraint = KnownCoordConstraint(
-            wp_id="wp1", mask_xyz=[True, False, True], values=[1.0, 0.0, 3.0]
-        )
-        assert constraint.type == "known_coord"
-        assert constraint.wp_id == "wp1"
-        assert constraint.mask_xyz == [True, False, True]
-        assert constraint.values == [1.0, 0.0, 3.0]
-
-    def test_known_coord_constraint_invalid_mask_length(self):
-        """Test validation of mask length."""
-        with pytest.raises(ValidationError):
-            KnownCoordConstraint(
-                wp_id="wp1", mask_xyz=[True, False], values=[1.0, 0.0, 3.0]  # Too short
-            )
-
-    def test_known_coord_constraint_no_constrained_coords(self):
-        """Test validation that at least one coordinate is constrained."""
-        with pytest.raises(ValidationError):
-            KnownCoordConstraint(
-                wp_id="wp1",
-                mask_xyz=[False, False, False],  # No constraints
-                values=[1.0, 0.0, 3.0],
-            )
+        assert constraint.weight == 0.5
 
 
 class TestDistanceConstraint:
@@ -85,231 +140,426 @@ class TestDistanceConstraint:
 
     def test_distance_constraint_creation(self):
         """Test basic distance constraint creation."""
-        constraint = DistanceConstraint(wp_i="wp1", wp_j="wp2", distance=5.0)
-        assert constraint.type == "distance"
-        assert constraint.wp_i == "wp1"
-        assert constraint.wp_j == "wp2"
-        assert constraint.distance == 5.0
+        constraint = DistanceConstraint(
+            id="d1",
+            point_a_id="wp1",
+            point_b_id="wp2",
+            target_distance=5.0
+        )
+        assert constraint.id == "d1"
+        assert constraint.point_a_id == "wp1"
+        assert constraint.point_b_id == "wp2"
+        assert constraint.target_distance == 5.0
+        assert constraint.constraint_type() == "distance_point_point"
 
     def test_distance_constraint_negative_distance(self):
         """Test validation of non-negative distance."""
         with pytest.raises(ValidationError):
             DistanceConstraint(
-                wp_i="wp1", wp_j="wp2", distance=-1.0  # Must be non-negative
+                id="d1",
+                point_a_id="wp1",
+                point_b_id="wp2",
+                target_distance=-1.0  # Must be non-negative
             )
 
-    def test_distance_constraint_same_points(self):
-        """Test validation that points are different."""
-        constraint = DistanceConstraint(
-            wp_i="wp1", wp_j="wp1", distance=5.0  # Same point
+
+class TestAngleConstraint:
+    """Test AngleConstraint model."""
+
+    def test_angle_constraint_creation(self):
+        """Test basic angle constraint creation."""
+        constraint = AngleConstraint(
+            id="a1",
+            point_a_id="wp1",
+            vertex_id="wp2",
+            point_c_id="wp3",
+            target_angle=90.0
         )
-        with pytest.raises(ValueError):
-            constraint.validate_constraint()
+        assert constraint.id == "a1"
+        assert constraint.point_a_id == "wp1"
+        assert constraint.vertex_id == "wp2"
+        assert constraint.point_c_id == "wp3"
+        assert constraint.target_angle == 90.0
+        assert constraint.constraint_type() == "angle_point_point_point"
 
 
-class TestAxisAlignConstraint:
-    """Test AxisAlignConstraint model."""
+class TestParallelLinesConstraint:
+    """Test ParallelLinesConstraint model."""
 
-    def test_axis_align_constraint_standard_axis(self):
-        """Test axis alignment with standard axes."""
-        constraint = AxisAlignConstraint(wp_i="wp1", wp_j="wp2", axis="x")
-        assert constraint.type == "axis_align"
-        assert constraint.axis == "x"
+    def test_parallel_lines_constraint_creation(self):
+        """Test basic parallel lines constraint creation."""
+        constraint = ParallelLinesConstraint(
+            id="pl1",
+            line_a_id="l1",
+            line_b_id="l2"
+        )
+        assert constraint.id == "pl1"
+        assert constraint.line_a_id == "l1"
+        assert constraint.line_b_id == "l2"
+        assert constraint.constraint_type() == "parallel_lines"
 
-    def test_axis_align_constraint_custom_axis(self):
-        """Test axis alignment with custom axis vector."""
-        constraint = AxisAlignConstraint(wp_i="wp1", wp_j="wp2", axis=[1.0, 0.0, 0.0])
-        assert constraint.axis == [1.0, 0.0, 0.0]
 
-    def test_axis_align_constraint_invalid_custom_axis(self):
-        """Test validation of custom axis vector."""
+class TestPerpendicularLinesConstraint:
+    """Test PerpendicularLinesConstraint model."""
+
+    def test_perpendicular_lines_constraint_creation(self):
+        """Test basic perpendicular lines constraint creation."""
+        constraint = PerpendicularLinesConstraint(
+            id="perp1",
+            line_a_id="l1",
+            line_b_id="l2"
+        )
+        assert constraint.id == "perp1"
+        assert constraint.line_a_id == "l1"
+        assert constraint.line_b_id == "l2"
+        assert constraint.constraint_type() == "perpendicular_lines"
+
+
+class TestFixedPointConstraint:
+    """Test FixedPointConstraint model."""
+
+    def test_fixed_point_constraint_creation(self):
+        """Test basic fixed point constraint creation."""
+        constraint = FixedPointConstraint(
+            id="fp1",
+            point_id="wp1",
+            target_xyz=[1.0, 2.0, 3.0]
+        )
+        assert constraint.id == "fp1"
+        assert constraint.point_id == "wp1"
+        assert constraint.target_xyz == [1.0, 2.0, 3.0]
+        assert constraint.constraint_type() == "fixed_point"
+
+    def test_fixed_point_constraint_invalid_xyz_length(self):
+        """Test validation of xyz coordinate length."""
         with pytest.raises(ValidationError):
-            AxisAlignConstraint(wp_i="wp1", wp_j="wp2", axis=[1.0, 0.0])  # Wrong length
-
-        with pytest.raises(ValidationError):
-            AxisAlignConstraint(
-                wp_i="wp1", wp_j="wp2", axis=[2.0, 0.0, 0.0]  # Not unit vector
+            FixedPointConstraint(
+                id="fp1",
+                point_id="wp1",
+                target_xyz=[1.0, 2.0]  # Too few coordinates
             )
 
-    def test_axis_align_constraint_same_points(self):
-        """Test validation that points are different."""
-        constraint = AxisAlignConstraint(wp_i="wp1", wp_j="wp1", axis="x")  # Same point
-        with pytest.raises(ValueError):
-            constraint.validate_constraint()
 
+class TestCollinearPointsConstraint:
+    """Test CollinearPointsConstraint model."""
 
-class TestCoplanarConstraint:
-    """Test CoplanarConstraint model."""
+    def test_collinear_points_constraint_creation(self):
+        """Test basic collinear points constraint creation."""
+        constraint = CollinearPointsConstraint(
+            id="col1",
+            point_ids=["wp1", "wp2", "wp3"]
+        )
+        assert constraint.id == "col1"
+        assert constraint.point_ids == ["wp1", "wp2", "wp3"]
+        assert constraint.constraint_type() == "collinear_points"
 
-    def test_coplanar_constraint_creation(self):
-        """Test basic coplanar constraint creation."""
-        constraint = CoplanarConstraint(wp_ids=["wp1", "wp2", "wp3", "wp4"])
-        assert constraint.type == "coplanar"
-        assert constraint.wp_ids == ["wp1", "wp2", "wp3", "wp4"]
-
-    def test_coplanar_constraint_minimum_points(self):
+    def test_collinear_points_constraint_minimum_points(self):
         """Test validation of minimum number of points."""
         with pytest.raises(ValidationError):
-            CoplanarConstraint(wp_ids=["wp1", "wp2"])  # Too few points
-
-    def test_coplanar_constraint_duplicate_points(self):
-        """Test validation against duplicate points."""
-        constraint = CoplanarConstraint(wp_ids=["wp1", "wp2", "wp1"])  # Duplicate
-        with pytest.raises(ValueError):
-            constraint.validate_constraint()
-
-
-class TestPlaneFromThreeConstraint:
-    """Test PlaneFromThreeConstraint model."""
-
-    def test_plane_from_three_constraint_creation(self):
-        """Test basic plane from three constraint creation."""
-        constraint = PlaneFromThreeConstraint(wp_a="wp1", wp_b="wp2", wp_c="wp3")
-        assert constraint.type == "plane_from_three"
-        assert constraint.wp_a == "wp1"
-        assert constraint.wp_b == "wp2"
-        assert constraint.wp_c == "wp3"
-        assert constraint.members == []
-
-    def test_plane_from_three_constraint_with_members(self):
-        """Test plane constraint with additional members."""
-        constraint = PlaneFromThreeConstraint(
-            wp_a="wp1", wp_b="wp2", wp_c="wp3", members=["wp4", "wp5"]
-        )
-        assert constraint.members == ["wp4", "wp5"]
-
-    def test_plane_from_three_constraint_duplicate_defining_points(self):
-        """Test validation against duplicate defining points."""
-        constraint = PlaneFromThreeConstraint(
-            wp_a="wp1", wp_b="wp1", wp_c="wp3"  # Duplicate
-        )
-        with pytest.raises(ValueError):
-            constraint.validate_constraint()
-
-    def test_plane_from_three_constraint_duplicate_members(self):
-        """Test validation against duplicate members."""
-        constraint = PlaneFromThreeConstraint(
-            wp_a="wp1",
-            wp_b="wp2",
-            wp_c="wp3",
-            members=["wp1", "wp4"],  # wp1 already used as defining point
-        )
-        with pytest.raises(ValueError):
-            constraint.validate_constraint()
-
-
-class TestEqualityConstraint:
-    """Test EqualityConstraint model."""
-
-    def test_equality_constraint_creation(self):
-        """Test basic equality constraint creation."""
-        constraint = EqualityConstraint(wp_a="wp1", wp_b="wp2")
-        assert constraint.type == "equality"
-        assert constraint.wp_a == "wp1"
-        assert constraint.wp_b == "wp2"
-
-    def test_equality_constraint_same_points(self):
-        """Test validation that points are different."""
-        constraint = EqualityConstraint(wp_a="wp1", wp_b="wp1")  # Same point
-        with pytest.raises(ValueError):
-            constraint.validate_constraint()
-
-
-class TestGaugeFixConstraint:
-    """Test GaugeFixConstraint model."""
-
-    def test_gauge_fix_constraint_creation(self):
-        """Test basic gauge fix constraint creation."""
-        constraint = GaugeFixConstraint(
-            origin_wp="wp1", x_wp="wp2", xy_wp="wp3", scale_d=5.0
-        )
-        assert constraint.type == "gauge_fix"
-        assert constraint.origin_wp == "wp1"
-        assert constraint.x_wp == "wp2"
-        assert constraint.xy_wp == "wp3"
-        assert constraint.scale_d == 5.0
-
-    def test_gauge_fix_constraint_negative_scale(self):
-        """Test validation of positive scale."""
-        with pytest.raises(ValidationError):
-            GaugeFixConstraint(
-                origin_wp="wp1",
-                x_wp="wp2",
-                xy_wp="wp3",
-                scale_d=-1.0,  # Must be positive
+            CollinearPointsConstraint(
+                id="col1",
+                point_ids=["wp1", "wp2"]  # Too few points
             )
 
-    def test_gauge_fix_constraint_duplicate_points(self):
-        """Test validation against duplicate points."""
-        constraint = GaugeFixConstraint(
-            origin_wp="wp1", x_wp="wp1", xy_wp="wp3", scale_d=5.0  # Duplicate
+
+class TestCoplanarPointsConstraint:
+    """Test CoplanarPointsConstraint model."""
+
+    def test_coplanar_points_constraint_creation(self):
+        """Test basic coplanar points constraint creation."""
+        constraint = CoplanarPointsConstraint(
+            id="cop1",
+            point_ids=["wp1", "wp2", "wp3", "wp4"]
         )
-        with pytest.raises(ValueError):
-            constraint.validate_constraint()
+        assert constraint.id == "cop1"
+        assert constraint.point_ids == ["wp1", "wp2", "wp3", "wp4"]
+        assert constraint.constraint_type() == "coplanar_points"
+
+    def test_coplanar_points_constraint_minimum_points(self):
+        """Test validation of minimum number of points."""
+        with pytest.raises(ValidationError):
+            CoplanarPointsConstraint(
+                id="cop1",
+                point_ids=["wp1", "wp2", "wp3"]  # Too few points
+            )
+
+
+class TestHorizontalLineConstraint:
+    """Test HorizontalLineConstraint model."""
+
+    def test_horizontal_line_constraint_creation(self):
+        """Test basic horizontal line constraint creation."""
+        constraint = HorizontalLineConstraint(
+            id="hl1",
+            line_id="l1"
+        )
+        assert constraint.id == "hl1"
+        assert constraint.line_id == "l1"
+        assert constraint.constraint_type() == "horizontal_line"
+
+
+class TestVerticalLineConstraint:
+    """Test VerticalLineConstraint model."""
+
+    def test_vertical_line_constraint_creation(self):
+        """Test basic vertical line constraint creation."""
+        constraint = VerticalLineConstraint(
+            id="vl1",
+            line_id="l1"
+        )
+        assert constraint.id == "vl1"
+        assert constraint.line_id == "l1"
+        assert constraint.constraint_type() == "vertical_line"
+
+
+class TestEqualDistancesConstraint:
+    """Test EqualDistancesConstraint model."""
+
+    def test_equal_distances_constraint_creation(self):
+        """Test basic equal distances constraint creation."""
+        constraint = EqualDistancesConstraint(
+            id="ed1",
+            distance_pairs=[
+                ["wp1", "wp2"],
+                ["wp3", "wp4"]
+            ]
+        )
+        assert constraint.id == "ed1"
+        assert len(constraint.distance_pairs) == 2
+        assert constraint.distance_pairs[0] == ["wp1", "wp2"]
+        assert constraint.distance_pairs[1] == ["wp3", "wp4"]
+        assert constraint.constraint_type() == "equal_distances"
+
+    def test_equal_distances_constraint_minimum_pairs(self):
+        """Test validation of minimum number of pairs."""
+        with pytest.raises(ValidationError):
+            EqualDistancesConstraint(
+                id="ed1",
+                distance_pairs=[["wp1", "wp2"]]  # Too few pairs
+            )
+
+
+class TestEqualAnglesConstraint:
+    """Test EqualAnglesConstraint model."""
+
+    def test_equal_angles_constraint_creation(self):
+        """Test basic equal angles constraint creation."""
+        constraint = EqualAnglesConstraint(
+            id="ea1",
+            angle_triplets=[
+                ["wp1", "wp2", "wp3"],
+                ["wp4", "wp5", "wp6"]
+            ]
+        )
+        assert constraint.id == "ea1"
+        assert len(constraint.angle_triplets) == 2
+        assert constraint.angle_triplets[0] == ["wp1", "wp2", "wp3"]
+        assert constraint.angle_triplets[1] == ["wp4", "wp5", "wp6"]
+        assert constraint.constraint_type() == "equal_angles"
+
+    def test_equal_angles_constraint_minimum_triplets(self):
+        """Test validation of minimum number of triplets."""
+        with pytest.raises(ValidationError):
+            EqualAnglesConstraint(
+                id="ea1",
+                angle_triplets=[["wp1", "wp2", "wp3"]]  # Too few triplets
+            )
 
 
 class TestConstraintFactory:
     """Test constraint factory functions."""
 
-    def test_create_constraint_image_point(self):
-        """Test creating image point constraint from dict."""
-        data = {
-            "type": "image_point",
-            "image_id": "img1",
-            "wp_id": "wp1",
-            "u": 100.0,
-            "v": 200.0,
-        }
-        constraint = create_constraint(data)
-        assert isinstance(constraint, ImagePointConstraint)
-        assert constraint.image_id == "img1"
+    def test_create_constraint_from_type_distance(self):
+        """Test creating distance constraint from type."""
+        constraint = create_constraint_from_type(
+            "distance_point_point",
+            id="d1",
+            point_a_id="wp1",
+            point_b_id="wp2",
+            target_distance=5.0
+        )
+        assert isinstance(constraint, DistanceConstraint)
+        assert constraint.id == "d1"
+        assert constraint.target_distance == 5.0
 
-    def test_create_constraint_unknown_type(self):
+    def test_create_constraint_from_type_angle(self):
+        """Test creating angle constraint from type."""
+        constraint = create_constraint_from_type(
+            "angle_point_point_point",
+            id="a1",
+            point_a_id="wp1",
+            vertex_id="wp2",
+            point_c_id="wp3",
+            target_angle=90.0
+        )
+        assert isinstance(constraint, AngleConstraint)
+        assert constraint.target_angle == 90.0
+
+    def test_create_constraint_from_type_parallel_lines(self):
+        """Test creating parallel lines constraint from type."""
+        constraint = create_constraint_from_type(
+            "parallel_lines",
+            id="pl1",
+            line_a_id="l1",
+            line_b_id="l2"
+        )
+        assert isinstance(constraint, ParallelLinesConstraint)
+        assert constraint.line_a_id == "l1"
+        assert constraint.line_b_id == "l2"
+
+    def test_create_constraint_from_type_unknown(self):
         """Test error handling for unknown constraint type."""
-        data = {"type": "unknown_type", "param": "value"}
         with pytest.raises(ValueError):
-            create_constraint(data)
+            create_constraint_from_type("unknown_type", id="u1")
 
 
-class TestConstraintRegistry:
-    """Test ConstraintRegistry functionality."""
+class TestFrontendConstraintConversion:
+    """Test frontend constraint conversion."""
 
-    def test_get_constraint_class(self):
-        """Test getting constraint class by type."""
-        cls = ConstraintRegistry.get_constraint_class("image_point")
-        assert cls == ImagePointConstraint
-
-    def test_get_constraint_class_unknown(self):
-        """Test error handling for unknown constraint type."""
-        with pytest.raises(ValueError):
-            ConstraintRegistry.get_constraint_class("unknown_type")
-
-    def test_list_constraint_types(self):
-        """Test listing all constraint types."""
-        types = ConstraintRegistry.list_constraint_types()
-        expected_types = [
-            "image_point",
-            "known_coord",
-            "distance",
-            "axis_align",
-            "coplanar",
-            "plane_from_three",
-            "equality",
-            "gauge_fix",
-        ]
-        assert all(t in types for t in expected_types)
-
-    def test_validate_constraint_data_valid(self):
-        """Test validation of valid constraint data."""
-        data = {"type": "distance", "wp_i": "wp1", "wp_j": "wp2", "distance": 5.0}
-        assert ConstraintRegistry.validate_constraint_data(data)
-
-    def test_validate_constraint_data_invalid(self):
-        """Test validation of invalid constraint data."""
-        data = {
-            "type": "distance",
-            "wp_i": "wp1",
-            "wp_j": "wp1",  # Same point - invalid
-            "distance": 5.0,
+    def test_convert_frontend_distance_constraint(self):
+        """Test converting frontend distance constraint."""
+        frontend_constraint = {
+            "id": "c1",
+            "type": "distance_point_point",
+            "entities": {"points": ["wp1", "wp2"]},
+            "parameters": {"targetValue": 5.0, "priority": 2.0},
+            "isEnabled": True
         }
-        assert not ConstraintRegistry.validate_constraint_data(data)
+
+        backend_constraint = convert_frontend_constraint_to_backend(frontend_constraint)
+        assert isinstance(backend_constraint, DistanceConstraint)
+        assert backend_constraint.id == "c1"
+        assert backend_constraint.point_a_id == "wp1"
+        assert backend_constraint.point_b_id == "wp2"
+        assert backend_constraint.target_distance == 5.0
+        assert backend_constraint.weight == 2.0
+        assert backend_constraint.enabled is True
+
+    def test_convert_frontend_angle_constraint(self):
+        """Test converting frontend angle constraint."""
+        frontend_constraint = {
+            "id": "c1",
+            "type": "angle_point_point_point",
+            "entities": {"points": ["wp1", "wp2", "wp3"]},
+            "parameters": {"targetValue": 90.0},
+            "isEnabled": True
+        }
+
+        backend_constraint = convert_frontend_constraint_to_backend(frontend_constraint)
+        assert isinstance(backend_constraint, AngleConstraint)
+        assert backend_constraint.point_a_id == "wp1"
+        assert backend_constraint.vertex_id == "wp2"
+        assert backend_constraint.point_c_id == "wp3"
+        assert backend_constraint.target_angle == 90.0
+
+    def test_convert_frontend_parallel_lines_constraint(self):
+        """Test converting frontend parallel lines constraint."""
+        frontend_constraint = {
+            "id": "c1",
+            "type": "parallel_lines",
+            "entities": {"lines": ["l1", "l2"]},
+            "parameters": {},
+            "isEnabled": True
+        }
+
+        backend_constraint = convert_frontend_constraint_to_backend(frontend_constraint)
+        assert isinstance(backend_constraint, ParallelLinesConstraint)
+        assert backend_constraint.line_a_id == "l1"
+        assert backend_constraint.line_b_id == "l2"
+
+    def test_convert_frontend_perpendicular_lines_constraint(self):
+        """Test converting frontend perpendicular lines constraint."""
+        frontend_constraint = {
+            "id": "c1",
+            "type": "perpendicular_lines",
+            "entities": {"lines": ["l1", "l2"]},
+            "parameters": {},
+            "isEnabled": True
+        }
+
+        backend_constraint = convert_frontend_constraint_to_backend(frontend_constraint)
+        assert isinstance(backend_constraint, PerpendicularLinesConstraint)
+        assert backend_constraint.line_a_id == "l1"
+        assert backend_constraint.line_b_id == "l2"
+
+    def test_convert_frontend_fixed_point_constraint(self):
+        """Test converting frontend fixed point constraint."""
+        frontend_constraint = {
+            "id": "c1",
+            "type": "fixed_point",
+            "entities": {"points": ["wp1"]},
+            "parameters": {"x": 1.0, "y": 2.0, "z": 3.0},
+            "isEnabled": True
+        }
+
+        backend_constraint = convert_frontend_constraint_to_backend(frontend_constraint)
+        assert isinstance(backend_constraint, FixedPointConstraint)
+        assert backend_constraint.point_id == "wp1"
+        assert backend_constraint.target_xyz == [1.0, 2.0, 3.0]
+
+    def test_convert_frontend_collinear_points_constraint(self):
+        """Test converting frontend collinear points constraint."""
+        frontend_constraint = {
+            "id": "c1",
+            "type": "collinear_points",
+            "entities": {"points": ["wp1", "wp2", "wp3"]},
+            "parameters": {},
+            "isEnabled": True
+        }
+
+        backend_constraint = convert_frontend_constraint_to_backend(frontend_constraint)
+        assert isinstance(backend_constraint, CollinearPointsConstraint)
+        assert backend_constraint.point_ids == ["wp1", "wp2", "wp3"]
+
+    def test_convert_frontend_horizontal_line_constraint(self):
+        """Test converting frontend horizontal line constraint."""
+        frontend_constraint = {
+            "id": "c1",
+            "type": "horizontal_line",
+            "entities": {"lines": ["l1"]},
+            "parameters": {},
+            "isEnabled": True
+        }
+
+        backend_constraint = convert_frontend_constraint_to_backend(frontend_constraint)
+        assert isinstance(backend_constraint, HorizontalLineConstraint)
+        assert backend_constraint.line_id == "l1"
+
+    def test_convert_frontend_vertical_line_constraint(self):
+        """Test converting frontend vertical line constraint."""
+        frontend_constraint = {
+            "id": "c1",
+            "type": "vertical_line",
+            "entities": {"lines": ["l1"]},
+            "parameters": {},
+            "isEnabled": True
+        }
+
+        backend_constraint = convert_frontend_constraint_to_backend(frontend_constraint)
+        assert isinstance(backend_constraint, VerticalLineConstraint)
+        assert backend_constraint.line_id == "l1"
+
+    def test_convert_frontend_constraint_missing_type(self):
+        """Test error handling for missing constraint type."""
+        frontend_constraint = {
+            "id": "c1",
+            "entities": {"points": ["wp1", "wp2"]},
+            "parameters": {},
+            "isEnabled": True
+        }
+
+        with pytest.raises(ValueError):
+            convert_frontend_constraint_to_backend(frontend_constraint)
+
+    def test_convert_frontend_constraint_unknown_type(self):
+        """Test error handling for unknown constraint type."""
+        frontend_constraint = {
+            "id": "c1",
+            "type": "unknown_constraint_type",
+            "entities": {"points": ["wp1", "wp2"]},
+            "parameters": {},
+            "isEnabled": True
+        }
+
+        with pytest.raises(ValueError):
+            convert_frontend_constraint_to_backend(frontend_constraint)

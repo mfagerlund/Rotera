@@ -501,25 +501,25 @@ const EnhancedWorldPointItem: React.FC<EnhancedWorldPointItemProps> = ({
 // Helper functions (same as original, but with enhanced UI feedback)
 function getConstraintDisplayName(constraint: Constraint): string {
   switch (constraint.type) {
-    case 'distance':
+    case 'points_distance':
       return `Distance Constraint`
-    case 'angle':
-      return `Angle: ${constraint.angle_degrees || constraint.angle}°`
-    case 'perpendicular':
+    case 'points_equal_distance':
+      return `Angle: ${constraint.parameters?.angle_degrees || constraint.parameters?.angle || 'unspecified'}°`
+    case 'lines_perpendicular':
       return `Perpendicular Lines`
-    case 'parallel':
+    case 'lines_parallel':
       return `Parallel Lines`
-    case 'collinear':
+    case 'points_colinear':
       return `Collinear Points`
-    case 'rectangle':
+    case 'points_coplanar':
       return `Rectangle Shape`
-    case 'circle':
+    case 'points_equal_distance':
       return `Circle Constraint`
-    case 'fixed':
+    case 'point_fixed_coord':
       return `Fixed Position`
-    case 'horizontal':
+    case 'line_axis_aligned':
       return `Horizontal Alignment`
-    case 'vertical':
+    case 'line_axis_aligned':
       return `Vertical Alignment`
     default:
       return `${constraint.type.charAt(0).toUpperCase()}${constraint.type.slice(1)} Constraint`

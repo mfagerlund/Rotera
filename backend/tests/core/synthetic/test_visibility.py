@@ -1,8 +1,6 @@
 """Tests for visibility checking utilities."""
 
 import numpy as np
-from pictorigo.core.models.constraints import ImagePointConstraint
-from pictorigo.core.models.entities import Camera, Image, WorldPoint
 from pictorigo.core.synthetic.visibility import (
     add_projection_noise,
     analyze_scene_coverage,
@@ -11,6 +9,9 @@ from pictorigo.core.synthetic.visibility import (
     filter_visible_points,
     simulate_outliers,
 )
+
+from pictorigo.core.models.constraints import ImagePointConstraint
+from pictorigo.core.models.entities import Camera, Image, WorldPoint
 
 
 class TestVisibilityChecking:

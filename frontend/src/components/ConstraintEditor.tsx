@@ -63,16 +63,16 @@ export const ConstraintEditor: React.FC<ConstraintEditorProps> = ({
 
   const getConstraintDisplayName = (c: Constraint) => {
     switch (c.type) {
-      case 'distance': return 'Distance'
-      case 'angle': return 'Angle'
-      case 'fixed': return 'Fixed Position'
-      case 'parallel': return 'Parallel'
-      case 'perpendicular': return 'Perpendicular'
-      case 'rectangle': return 'Rectangle'
-      case 'collinear': return 'Collinear'
-      case 'circle': return 'Circle'
-      case 'horizontal': return 'Horizontal'
-      case 'vertical': return 'Vertical'
+      case 'points_distance': return 'Distance'
+      case 'points_equal_distance': return 'Angle' // TODO: Map angle to appropriate constraint
+      case 'point_fixed_coord': return 'Fixed Position'
+      case 'lines_parallel': return 'Parallel'
+      case 'lines_perpendicular': return 'Perpendicular'
+      case 'points_coplanar': return 'Rectangle' // TODO: Map rectangle to appropriate constraint
+      case 'points_colinear': return 'Collinear'
+      case 'points_equal_distance': return 'Circle' // TODO: Map circle to appropriate constraint
+      case 'line_axis_aligned': return 'Horizontal' // TODO: Horizontal/Vertical might need different types
+      case 'line_axis_aligned': return 'Vertical' // TODO: Need different type for vertical
       default: return c.type
     }
   }
@@ -81,7 +81,7 @@ export const ConstraintEditor: React.FC<ConstraintEditorProps> = ({
 
   const renderConstraintForm = () => {
     switch (constraint.type) {
-      case 'distance':
+      case 'points_distance':
         return (
           <div className="constraint-edit-form">
             <div className="form-section">
@@ -121,7 +121,7 @@ export const ConstraintEditor: React.FC<ConstraintEditorProps> = ({
                   type="number"
                   step="0.001"
                   value={localParams.distance || ''}
-                  onChange={(e) => handleParamChange('distance', parseFloat(e.target.value))}
+                  onChange={(e) => handleParamChange('points_distance', parseFloat(e.target.value))}
                   onKeyDown={handleKeyDown}
                 />
               </div>
@@ -129,7 +129,7 @@ export const ConstraintEditor: React.FC<ConstraintEditorProps> = ({
           </div>
         )
 
-      case 'angle':
+      case 'points_equal_distance': // TODO: Map angle to appropriate constraint
         return (
           <div className="constraint-edit-form">
             <div className="form-section">
@@ -191,7 +191,7 @@ export const ConstraintEditor: React.FC<ConstraintEditorProps> = ({
           </div>
         )
 
-      case 'fixed':
+      case 'point_fixed_coord':
         return (
           <div className="constraint-edit-form">
             <div className="form-section">
@@ -247,8 +247,8 @@ export const ConstraintEditor: React.FC<ConstraintEditorProps> = ({
           </div>
         )
 
-      case 'parallel':
-      case 'perpendicular':
+      case 'lines_parallel':
+      case 'lines_perpendicular':
         return (
           <div className="constraint-edit-form">
             <div className="form-section">
@@ -312,7 +312,7 @@ export const ConstraintEditor: React.FC<ConstraintEditorProps> = ({
           </div>
         )
 
-      case 'rectangle':
+      case 'points_coplanar': // TODO: Map rectangle to appropriate constraint
         return (
           <div className="constraint-edit-form">
             <div className="form-section">

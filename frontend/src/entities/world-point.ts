@@ -5,7 +5,7 @@ import type { ISelectable, SelectableType } from '../types/selectable'
 import type { IValidatable, ValidationContext, ValidationResult, ValidationError } from '../validation/validator'
 import { ValidationHelpers } from '../validation/validator'
 
-// DTO for storage (clean, no legacy)
+// DTO for frontend storage (rich metadata)
 export interface WorldPointDto {
   id: PointId
   name: string
@@ -20,42 +20,57 @@ export interface WorldPointDto {
   updatedAt: string
 }
 
-// Repository interface (to avoid circular dependency)
-export interface WorldPointRepository {
-  getLinesByPoint(pointId: PointId): EntityId[]
-  getConstraintsByPoint(pointId: PointId): EntityId[]
-  entityExists(id: EntityId): boolean
-  // Enhanced methods for smart references
-  getReferenceManager?(): { resolve<T extends ISelectable>(id: EntityId, type: string): T | undefined }
+// DTO for backend communication (minimal mathematical data)
+export interface WorldPointSolverDto {
+  id: PointId
+  xyz?: [number, number, number]
 }
 
 // Domain class with runtime behavior
 export class WorldPoint implements ISelectable, IValidatable {
-  private selected = false
-
-  // Smart reference caching for performance optimization
-  private _linesRef?: any[] // Array of Line references
-  private _constraintsRef?: any[] // Array of Constraint references
+  private _selected = false
+  private _connectedLines: Set<any> = new Set() // Will be typed as Line when Line class is ready
+  private _referencingConstraints: Set<any> = new Set() // Will be typed as Constraint when ready
 
   private constructor(
-    private repo: WorldPointRepository,
-    private data: WorldPointDto
+    private _id: PointId,
+    private _name: string,
+    private _xyz: [number, number, number] | undefined,
+    private _color: string,
+    private _isVisible: boolean,
+    private _isOrigin: boolean,
+    private _isLocked: boolean,
+    private _group: string | undefined,
+    private _tags: string[],
+    private _createdAt: string,
+    private _updatedAt: string
   ) {}
 
   // Factory methods
-  static fromDTO(dto: WorldPointDto, repo: WorldPointRepository): WorldPoint {
+  static fromDTO(dto: WorldPointDto): WorldPoint {
     // Validate DTO structure
     const validation = WorldPoint.validateDto(dto)
     if (!validation.isValid) {
       throw new Error(`Invalid WorldPoint DTO: ${validation.errors.map(e => e.message).join(', ')}`)
     }
-    return new WorldPoint(repo, { ...dto })
+    return new WorldPoint(
+      dto.id,
+      dto.name,
+      dto.xyz,
+      dto.color,
+      dto.isVisible,
+      dto.isOrigin,
+      dto.isLocked,
+      dto.group,
+      dto.tags || [],
+      dto.createdAt,
+      dto.updatedAt
+    )
   }
 
   static create(
     id: PointId,
     name: string,
-    repo: WorldPointRepository,
     options: {
       xyz?: [number, number, number]
       color?: string
@@ -67,30 +82,49 @@ export class WorldPoint implements ISelectable, IValidatable {
     } = {}
   ): WorldPoint {
     const now = new Date().toISOString()
-    const dto: WorldPointDto = {
+    return new WorldPoint(
       id,
       name,
-      xyz: options.xyz,
-      color: options.color || '#ffffff',
-      isVisible: options.isVisible ?? true,
-      isOrigin: options.isOrigin ?? false,
-      isLocked: options.isLocked ?? false,
-      group: options.group,
-      tags: options.tags,
-      createdAt: now,
-      updatedAt: now
-    }
-    return new WorldPoint(repo, dto)
+      options.xyz,
+      options.color || '#ffffff',
+      options.isVisible ?? true,
+      options.isOrigin ?? false,
+      options.isLocked ?? false,
+      options.group,
+      options.tags || [],
+      now,
+      now
+    )
   }
 
   // Serialization
   toDTO(): WorldPointDto {
-    return { ...this.data }
+    return {
+      id: this._id,
+      name: this._name,
+      xyz: this._xyz,
+      color: this._color,
+      isVisible: this._isVisible,
+      isOrigin: this._isOrigin,
+      isLocked: this._isLocked,
+      group: this._group,
+      tags: [...this._tags],
+      createdAt: this._createdAt,
+      updatedAt: this._updatedAt
+    }
+  }
+
+  // Backend solver DTO (minimal mathematical data)
+  toSolverDTO(): WorldPointSolverDto {
+    return {
+      id: this._id,
+      xyz: this._xyz
+    }
   }
 
   // ISelectable implementation
   getId(): PointId {
-    return this.data.id
+    return this._id
   }
 
   getType(): SelectableType {
@@ -98,15 +132,15 @@ export class WorldPoint implements ISelectable, IValidatable {
   }
 
   getName(): string {
-    return this.data.name
+    return this._name
   }
 
   isVisible(): boolean {
-    return this.data.isVisible
+    return this._isVisible
   }
 
   isLocked(): boolean {
-    return this.data.isLocked
+    return this._isLocked
   }
 
   getDependencies(): EntityId[] {
@@ -115,44 +149,40 @@ export class WorldPoint implements ISelectable, IValidatable {
   }
 
   getDependents(): EntityId[] {
-    // Lines and constraints that depend on this point
+    // Return IDs of connected entities for backwards compatibility
     const dependents: EntityId[] = []
-    dependents.push(...this.repo.getLinesByPoint(this.data.id))
-    dependents.push(...this.repo.getConstraintsByPoint(this.data.id))
+    this._connectedLines.forEach(line => dependents.push(line.getId()))
+    this._referencingConstraints.forEach(constraint => dependents.push(constraint.getId()))
     return dependents
   }
 
   isSelected(): boolean {
-    return this.selected
+    return this._selected
   }
 
   setSelected(selected: boolean): void {
-    this.selected = selected
+    this._selected = selected
   }
 
   canDelete(): boolean {
     // Can delete if no other entities depend on this point
-    return this.getDependents().length === 0
+    return this._connectedLines.size === 0 && this._referencingConstraints.size === 0
   }
 
   getDeleteWarning(): string | null {
-    const dependents = this.getDependents()
-    if (dependents.length === 0) {
+    if (this._connectedLines.size === 0 && this._referencingConstraints.size === 0) {
       return null
     }
 
-    const lines = this.repo.getLinesByPoint(this.data.id)
-    const constraints = this.repo.getConstraintsByPoint(this.data.id)
-
     const parts: string[] = []
-    if (lines.length > 0) {
-      parts.push(`${lines.length} line${lines.length === 1 ? '' : 's'}`)
+    if (this._connectedLines.size > 0) {
+      parts.push(`${this._connectedLines.size} line${this._connectedLines.size === 1 ? '' : 's'}`)
     }
-    if (constraints.length > 0) {
-      parts.push(`${constraints.length} constraint${constraints.length === 1 ? '' : 's'}`)
+    if (this._referencingConstraints.size > 0) {
+      parts.push(`${this._referencingConstraints.size} constraint${this._referencingConstraints.size === 1 ? '' : 's'}`)
     }
 
-    return `Deleting point "${this.data.name}" will also delete ${parts.join(' and ')}`
+    return `Deleting point "${this._name}" will also delete ${parts.join(' and ')}`
   }
 
   // IValidatable implementation
@@ -162,31 +192,31 @@ export class WorldPoint implements ISelectable, IValidatable {
 
     // Required field validation
     const nameError = ValidationHelpers.validateRequiredField(
-      this.data.name,
+      this._name,
       'name',
-      this.data.id,
+      this._id,
       'point'
     )
     if (nameError) errors.push(nameError)
 
-    const idError = ValidationHelpers.validateIdFormat(this.data.id, 'point')
+    const idError = ValidationHelpers.validateIdFormat(this._id, 'point')
     if (idError) errors.push(idError)
 
     // Coordinate validation
-    if (this.data.xyz) {
-      if (!Array.isArray(this.data.xyz) || this.data.xyz.length !== 3) {
+    if (this._xyz) {
+      if (!Array.isArray(this._xyz) || this._xyz.length !== 3) {
         errors.push(ValidationHelpers.createError(
           'INVALID_COORDINATES',
           'xyz must be an array of 3 numbers',
-          this.data.id,
+          this._id,
           'point',
           'xyz'
         ))
-      } else if (!this.data.xyz.every(coord => typeof coord === 'number' && !isNaN(coord))) {
+      } else if (!this._xyz.every(coord => typeof coord === 'number' && !isNaN(coord))) {
         errors.push(ValidationHelpers.createError(
           'INVALID_COORDINATES',
           'xyz coordinates must be valid numbers',
-          this.data.id,
+          this._id,
           'point',
           'xyz'
         ))
@@ -194,11 +224,11 @@ export class WorldPoint implements ISelectable, IValidatable {
     }
 
     // Color validation
-    if (this.data.color && !/^#[0-9A-Fa-f]{6}$/.test(this.data.color)) {
+    if (this._color && !/^#[0-9A-Fa-f]{6}$/.test(this._color)) {
       errors.push(ValidationHelpers.createError(
         'INVALID_COLOR',
         'color must be a valid hex color',
-        this.data.id,
+        this._id,
         'point',
         'color'
       ))
@@ -211,7 +241,7 @@ export class WorldPoint implements ISelectable, IValidatable {
         warnings.push(ValidationHelpers.createWarning(
           'DEPENDENT_NOT_FOUND',
           `Dependent entity ${depId} not found`,
-          this.data.id,
+          this._id,
           'point'
         ))
       }
@@ -269,125 +299,112 @@ export class WorldPoint implements ISelectable, IValidatable {
 
   // Domain methods (getters/setters)
   get name(): string {
-    return this.data.name
+    return this._name
   }
 
   set name(value: string) {
-    this.data.name = value
+    this._name = value
     this.updateTimestamp()
   }
 
   get xyz(): [number, number, number] | undefined {
-    return this.data.xyz ? [...this.data.xyz] : undefined
+    return this._xyz ? [...this._xyz] : undefined
   }
 
   set xyz(value: [number, number, number] | undefined) {
-    this.data.xyz = value ? [...value] : undefined
+    this._xyz = value ? [...value] : undefined
     this.updateTimestamp()
   }
 
   get color(): string {
-    return this.data.color
+    return this._color
   }
 
   set color(value: string) {
-    this.data.color = value
+    this._color = value
     this.updateTimestamp()
   }
 
   get isOrigin(): boolean {
-    return this.data.isOrigin
+    return this._isOrigin
   }
 
   set isOrigin(value: boolean) {
-    this.data.isOrigin = value
+    this._isOrigin = value
     this.updateTimestamp()
   }
 
   get group(): string | undefined {
-    return this.data.group
+    return this._group
   }
 
   set group(value: string | undefined) {
-    this.data.group = value
+    this._group = value
     this.updateTimestamp()
   }
 
   get tags(): string[] {
-    return this.data.tags ? [...this.data.tags] : []
+    return [...this._tags]
   }
 
   set tags(value: string[]) {
-    this.data.tags = [...value]
+    this._tags = [...value]
     this.updateTimestamp()
   }
 
   get createdAt(): string {
-    return this.data.createdAt
+    return this._createdAt
   }
 
   get updatedAt(): string {
-    return this.data.updatedAt
+    return this._updatedAt
   }
 
-  // Smart reference getters for performance optimization
-  // Direct object access instead of ID-based repository lookups
-
-  /**
-   * Get all lines connected to this point as Line objects (direct references)
-   * Uses smart caching to avoid repeated repository lookups
-   */
-  get linesConnected(): any[] {
-    if (!this._linesRef) {
-      const refManager = this.repo.getReferenceManager?.()
-      if (refManager) {
-        const lineIds = this.repo.getLinesByPoint(this.data.id)
-        this._linesRef = lineIds.map(id => refManager.resolve(id, 'line')).filter(Boolean)
-      } else {
-        this._linesRef = []
-      }
-    }
-    return this._linesRef
+  // Direct object references (no repository needed)
+  get connectedLines(): any[] {
+    return Array.from(this._connectedLines)
   }
 
-  /**
-   * Get all constraints referencing this point as Constraint objects (direct references)
-   * Uses smart caching to avoid repeated repository lookups
-   */
-  get constraintsReferencing(): any[] {
-    if (!this._constraintsRef) {
-      const refManager = this.repo.getReferenceManager?.()
-      if (refManager) {
-        const constraintIds = this.repo.getConstraintsByPoint(this.data.id)
-        this._constraintsRef = constraintIds.map(id => refManager.resolve(id, 'constraint')).filter(Boolean)
-      } else {
-        this._constraintsRef = []
-      }
-    }
-    return this._constraintsRef
+  get referencingConstraints(): any[] {
+    return Array.from(this._referencingConstraints)
+  }
+
+  // Internal methods for managing relationships
+  addConnectedLine(line: any): void {
+    this._connectedLines.add(line)
+  }
+
+  removeConnectedLine(line: any): void {
+    this._connectedLines.delete(line)
+  }
+
+  addReferencingConstraint(constraint: any): void {
+    this._referencingConstraints.add(constraint)
+  }
+
+  removeReferencingConstraint(constraint: any): void {
+    this._referencingConstraints.delete(constraint)
   }
 
   /**
-   * Get all connected points through lines (smart traversal)
+   * Get all connected points through lines (direct object traversal)
    * Returns unique WorldPoint objects connected via lines
    */
   get connectedPoints(): any[] {
     const connectedPoints: any[] = []
-    const seenIds = new Set<EntityId>()
+    const seenPoints = new Set<any>()
 
-    for (const line of this.linesConnected) {
-      if (line && line.pointA !== this.data.id) {
-        const pointA = line.pointAEntity
-        if (pointA && !seenIds.has(pointA.id)) {
-          connectedPoints.push(pointA)
-          seenIds.add(pointA.id)
+    for (const line of this._connectedLines) {
+      if (line.pointA !== this) {
+        if (!seenPoints.has(line.pointA)) {
+          connectedPoints.push(line.pointA)
+          seenPoints.add(line.pointA)
         }
       }
-      if (line && line.pointB !== this.data.id) {
-        const pointB = line.pointBEntity
-        if (pointB && !seenIds.has(pointB.id)) {
-          connectedPoints.push(pointB)
-          seenIds.add(pointB.id)
+      if (line.pointB !== this) {
+        if (!seenPoints.has(line.pointB)) {
+          connectedPoints.push(line.pointB)
+          seenPoints.add(line.pointB)
         }
       }
     }
@@ -397,32 +414,24 @@ export class WorldPoint implements ISelectable, IValidatable {
 
   /**
    * Get IDs of connected lines (backward compatibility)
-   * Legacy method - prefer linesConnected for object access
+   * Legacy method - prefer connectedLines for object access
    */
   getConnectedLineIds(): EntityId[] {
-    return this.repo.getLinesByPoint(this.data.id)
+    return Array.from(this._connectedLines).map(line => line.getId())
   }
 
   /**
    * Get IDs of referencing constraints (backward compatibility)
-   * Legacy method - prefer constraintsReferencing for object access
+   * Legacy method - prefer referencingConstraints for object access
    */
   getReferencingConstraintIds(): EntityId[] {
-    return this.repo.getConstraintsByPoint(this.data.id)
+    return Array.from(this._referencingConstraints).map(constraint => constraint.getId())
   }
 
-  /**
-   * Invalidate cached references when underlying data changes
-   * Called automatically on updates that might affect relationships
-   */
-  private invalidateReferences(): void {
-    this._linesRef = undefined
-    this._constraintsRef = undefined
-  }
 
-  // Enhanced utility methods using smart references
+  // Enhanced utility methods using direct references
   hasCoordinates(): boolean {
-    return this.data.xyz !== undefined
+    return this._xyz !== undefined
   }
 
   distanceTo(other: WorldPoint): number | null {
@@ -430,7 +439,7 @@ export class WorldPoint implements ISelectable, IValidatable {
       return null
     }
 
-    const [x1, y1, z1] = this.data.xyz!
+    const [x1, y1, z1] = this._xyz!
     const [x2, y2, z2] = other.xyz!
 
     return Math.sqrt(
@@ -442,7 +451,7 @@ export class WorldPoint implements ISelectable, IValidatable {
 
   /**
    * Calculate the centroid of this point and all connected points
-   * Uses smart references for efficient access
+   * Uses direct references for efficient access
    */
   getCentroidWithConnected(): [number, number, number] | null {
     if (!this.hasCoordinates()) {
@@ -475,7 +484,7 @@ export class WorldPoint implements ISelectable, IValidatable {
       return false
     }
 
-    const [x1, y1, z1] = this.data.xyz!
+    const [x1, y1, z1] = this._xyz!
     const [x2, y2, z2] = pointA.xyz!
     const [x3, y3, z3] = pointB.xyz!
 
@@ -499,7 +508,7 @@ export class WorldPoint implements ISelectable, IValidatable {
    * More efficient than getting line IDs and counting
    */
   getDegree(): number {
-    return this.linesConnected.length
+    return this._connectedLines.size
   }
 
   /**
@@ -524,28 +533,40 @@ export class WorldPoint implements ISelectable, IValidatable {
   }
 
   clone(newId: PointId, newName?: string): WorldPoint {
-    const clonedData: WorldPointDto = {
-      ...this.data,
-      id: newId,
-      name: newName || `${this.data.name} (copy)`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-    return new WorldPoint(this.repo, clonedData)
+    const now = new Date().toISOString()
+    return new WorldPoint(
+      newId,
+      newName || `${this._name} (copy)`,
+      this._xyz ? [...this._xyz] : undefined,
+      this._color,
+      this._isVisible,
+      this._isOrigin,
+      this._isLocked,
+      this._group,
+      [...this._tags],
+      now,
+      now
+    )
   }
 
   private updateTimestamp(): void {
-    this.data.updatedAt = new Date().toISOString()
+    this._updatedAt = new Date().toISOString()
   }
 
   // Override visibility and lock state
   setVisible(visible: boolean): void {
-    this.data.isVisible = visible
+    this._isVisible = visible
     this.updateTimestamp()
   }
 
   setLocked(locked: boolean): void {
-    this.data.isLocked = locked
+    this._isLocked = locked
+    this.updateTimestamp()
+  }
+
+  // Update from optimization results
+  applyOptimizationResult(result: { xyz: [number, number, number], residual?: number }): void {
+    this._xyz = [...result.xyz]
     this.updateTimestamp()
   }
 }

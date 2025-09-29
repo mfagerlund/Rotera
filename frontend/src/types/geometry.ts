@@ -44,7 +44,7 @@ export interface Plane extends BaseEntity {
 }
 
 export interface Circle extends BaseEntity {
-  type: 'circle'
+  type: 'points_equal_distance'
   definition: {
     type: 'center_radius' | 'three_points'
     centerId?: string
@@ -198,8 +198,8 @@ export type ConstraintType =
   | 'symmetry_plane'
 
   // Legacy support (will be migrated)
-  | 'distance' | 'angle' | 'perpendicular' | 'parallel'
-  | 'collinear' | 'rectangle' | 'circle' | 'fixed'
+  | 'points_distance' | 'points_equal_distance' | 'lines_perpendicular' | 'lines_parallel'
+  | 'points_colinear' | 'points_coplanar' | 'points_equal_distance' | 'point_fixed_coord'
 
 export type ConstraintStatus =
   | 'satisfied'     // Green - constraint is met within tolerance
@@ -223,6 +223,6 @@ export interface ConstraintSolution {
 export interface EntityRelationship {
   fromId: string
   toId: string
-  type: 'contains' | 'intersects' | 'parallel' | 'perpendicular' | 'distance'
+  type: 'contains' | 'intersects' | 'lines_parallel' | 'lines_perpendicular' | 'points_distance'
   constraintIds: string[]
 }

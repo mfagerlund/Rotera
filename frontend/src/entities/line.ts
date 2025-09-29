@@ -4,8 +4,18 @@ import type { LineId, PointId, EntityId } from '../types/ids'
 import type { ISelectable, SelectableType } from '../types/selectable'
 import type { IValidatable, ValidationContext, ValidationResult, ValidationError } from '../validation/validator'
 import { ValidationHelpers } from '../validation/validator'
+import type { WorldPoint } from './world-point'
 
-// DTO for storage (clean, no legacy)
+// Forward declarations to avoid circular imports
+interface IConstraint extends ISelectable {
+  getId(): EntityId
+}
+
+interface IPlane extends ISelectable {
+  getId(): EntityId
+}
+
+// DTO for frontend storage (rich metadata)
 export interface LineDto {
   id: LineId
   name: string
@@ -22,45 +32,67 @@ export interface LineDto {
   updatedAt: string
 }
 
-// Repository interface (to avoid circular dependency)
-export interface LineRepository {
-  getPoint(pointId: PointId): EntityId | undefined
-  getConstraintsByLine(lineId: LineId): EntityId[]
-  getPlanesByLine(lineId: LineId): EntityId[]
-  entityExists(id: EntityId): boolean
-  pointExists(pointId: PointId): boolean
-  // Enhanced methods for smart references
-  getReferenceManager?(): { resolve<T extends ISelectable>(id: EntityId, type: string): T | undefined }
+// DTO for backend communication (minimal mathematical data)
+export interface LineSolverDto {
+  id: LineId
+  pointA: PointId
+  pointB: PointId
 }
 
 // Domain class with runtime behavior
 export class Line implements ISelectable, IValidatable {
-  private selected = false
-
-  // Smart reference caching for performance optimization
-  private _pointARef?: any // WorldPoint reference cache
-  private _pointBRef?: any // WorldPoint reference cache
+  private _selected = false
+  private _referencingConstraints: Set<IConstraint> = new Set()
+  private _referencingPlanes: Set<IPlane> = new Set()
 
   private constructor(
-    private repo: LineRepository,
-    private data: LineDto
-  ) {}
+    private _id: LineId,
+    private _name: string,
+    private _pointA: WorldPoint,
+    private _pointB: WorldPoint,
+    private _color: string,
+    private _isVisible: boolean,
+    private _isConstruction: boolean,
+    private _lineStyle: 'solid' | 'dashed' | 'dotted',
+    private _thickness: number,
+    private _group: string | undefined,
+    private _tags: string[],
+    private _createdAt: string,
+    private _updatedAt: string
+  ) {
+    // Establish bidirectional relationships
+    this._pointA.addConnectedLine(this)
+    this._pointB.addConnectedLine(this)
+  }
 
   // Factory methods
-  static fromDTO(dto: LineDto, repo: LineRepository): Line {
+  static fromDTO(dto: LineDto, pointA: WorldPoint, pointB: WorldPoint): Line {
     const validation = Line.validateDto(dto)
     if (!validation.isValid) {
       throw new Error(`Invalid Line DTO: ${validation.errors.map(e => e.message).join(', ')}`)
     }
-    return new Line(repo, { ...dto })
+    return new Line(
+      dto.id,
+      dto.name,
+      pointA,
+      pointB,
+      dto.color,
+      dto.isVisible,
+      dto.isConstruction,
+      dto.lineStyle,
+      dto.thickness,
+      dto.group,
+      dto.tags || [],
+      dto.createdAt,
+      dto.updatedAt
+    )
   }
 
   static create(
     id: LineId,
     name: string,
-    pointA: PointId,
-    pointB: PointId,
-    repo: LineRepository,
+    pointA: WorldPoint,
+    pointB: WorldPoint,
     options: {
       color?: string
       isVisible?: boolean
@@ -72,32 +104,54 @@ export class Line implements ISelectable, IValidatable {
     } = {}
   ): Line {
     const now = new Date().toISOString()
-    const dto: LineDto = {
+    return new Line(
       id,
       name,
       pointA,
       pointB,
-      color: options.color || '#ffffff',
-      isVisible: options.isVisible ?? true,
-      isConstruction: options.isConstruction ?? false,
-      lineStyle: options.lineStyle || 'solid',
-      thickness: options.thickness || 1,
-      group: options.group,
-      tags: options.tags,
-      createdAt: now,
-      updatedAt: now
-    }
-    return new Line(repo, dto)
+      options.color || '#ffffff',
+      options.isVisible ?? true,
+      options.isConstruction ?? false,
+      options.lineStyle || 'solid',
+      options.thickness || 1,
+      options.group,
+      options.tags || [],
+      now,
+      now
+    )
   }
 
   // Serialization
   toDTO(): LineDto {
-    return { ...this.data }
+    return {
+      id: this._id,
+      name: this._name,
+      pointA: this._pointA.getId(),
+      pointB: this._pointB.getId(),
+      color: this._color,
+      isVisible: this._isVisible,
+      isConstruction: this._isConstruction,
+      lineStyle: this._lineStyle,
+      thickness: this._thickness,
+      group: this._group,
+      tags: [...this._tags],
+      createdAt: this._createdAt,
+      updatedAt: this._updatedAt
+    }
+  }
+
+  // Backend solver DTO (minimal mathematical data)
+  toSolverDTO(): LineSolverDto {
+    return {
+      id: this._id,
+      pointA: this._pointA.getId(),
+      pointB: this._pointB.getId()
+    }
   }
 
   // ISelectable implementation
   getId(): LineId {
-    return this.data.id
+    return this._id
   }
 
   getType(): SelectableType {
@@ -105,62 +159,82 @@ export class Line implements ISelectable, IValidatable {
   }
 
   getName(): string {
-    return this.data.name
+    return this._name
   }
 
   isVisible(): boolean {
-    return this.data.isVisible
+    return this._isVisible
   }
 
   isLocked(): boolean {
-    // Lines aren't directly lockable, but depend on their points
-    return false
+    // Lines are locked if either point is locked
+    return this._pointA.isLocked() || this._pointB.isLocked()
   }
 
   getDependencies(): EntityId[] {
     // Lines depend on their two points
-    return [this.data.pointA as EntityId, this.data.pointB as EntityId]
+    return [this._pointA.getId(), this._pointB.getId()]
   }
 
   getDependents(): EntityId[] {
-    // Constraints and planes that depend on this line
+    // Return IDs of dependent entities
     const dependents: EntityId[] = []
-    dependents.push(...this.repo.getConstraintsByLine(this.data.id))
-    dependents.push(...this.repo.getPlanesByLine(this.data.id))
+    this._referencingConstraints.forEach(constraint => dependents.push(constraint.getId()))
+    this._referencingPlanes.forEach(plane => dependents.push(plane.getId()))
     return dependents
   }
 
   isSelected(): boolean {
-    return this.selected
+    return this._selected
   }
 
   setSelected(selected: boolean): void {
-    this.selected = selected
+    this._selected = selected
   }
 
   canDelete(): boolean {
     // Can delete if no other entities depend on this line
-    return this.getDependents().length === 0
+    return this._referencingConstraints.size === 0 && this._referencingPlanes.size === 0
   }
 
   getDeleteWarning(): string | null {
-    const dependents = this.getDependents()
-    if (dependents.length === 0) {
+    if (this._referencingConstraints.size === 0 && this._referencingPlanes.size === 0) {
       return null
     }
 
-    const constraints = this.repo.getConstraintsByLine(this.data.id)
-    const planes = this.repo.getPlanesByLine(this.data.id)
-
     const parts: string[] = []
-    if (constraints.length > 0) {
-      parts.push(`${constraints.length} constraint${constraints.length === 1 ? '' : 's'}`)
+    if (this._referencingConstraints.size > 0) {
+      parts.push(`${this._referencingConstraints.size} constraint${this._referencingConstraints.size === 1 ? '' : 's'}`)
     }
-    if (planes.length > 0) {
-      parts.push(`${planes.length} plane${planes.length === 1 ? '' : 's'}`)
+    if (this._referencingPlanes.size > 0) {
+      parts.push(`${this._referencingPlanes.size} plane${this._referencingPlanes.size === 1 ? '' : 's'}`)
     }
 
-    return `Deleting line "${this.data.name}" will also delete ${parts.join(' and ')}`
+    return `Deleting line "${this._name}" will also delete ${parts.join(' and ')}`
+  }
+
+  // Internal methods for managing relationships
+  addReferencingConstraint(constraint: IConstraint): void {
+    this._referencingConstraints.add(constraint)
+  }
+
+  removeReferencingConstraint(constraint: IConstraint): void {
+    this._referencingConstraints.delete(constraint)
+  }
+
+  addReferencingPlane(plane: IPlane): void {
+    this._referencingPlanes.add(plane)
+  }
+
+  removeReferencingPlane(plane: IPlane): void {
+    this._referencingPlanes.delete(plane)
+  }
+
+  // Cleanup method called when line is deleted
+  cleanup(): void {
+    // Remove self from points
+    this._pointA.removeConnectedLine(this)
+    this._pointB.removeConnectedLine(this)
   }
 
   // IValidatable implementation
@@ -170,80 +244,64 @@ export class Line implements ISelectable, IValidatable {
 
     // Required field validation
     const nameError = ValidationHelpers.validateRequiredField(
-      this.data.name,
+      this._name,
       'name',
-      this.data.id,
+      this._id,
       'line'
     )
     if (nameError) errors.push(nameError)
 
-    const idError = ValidationHelpers.validateIdFormat(this.data.id, 'line')
+    const idError = ValidationHelpers.validateIdFormat(this._id, 'line')
     if (idError) errors.push(idError)
 
-    // Point validation
-    if (!this.data.pointA) {
+    // Point validation (objects must exist)
+    if (!this._pointA) {
       errors.push(ValidationHelpers.createError(
         'MISSING_POINT',
         'pointA is required',
-        this.data.id,
-        'line',
-        'pointA'
-      ))
-    } else if (!context.pointExists(this.data.pointA as EntityId)) {
-      errors.push(ValidationHelpers.createError(
-        'INVALID_POINT_REFERENCE',
-        `pointA references non-existent point: ${this.data.pointA}`,
-        this.data.id,
+        this._id,
         'line',
         'pointA'
       ))
     }
 
-    if (!this.data.pointB) {
+    if (!this._pointB) {
       errors.push(ValidationHelpers.createError(
         'MISSING_POINT',
         'pointB is required',
-        this.data.id,
-        'line',
-        'pointB'
-      ))
-    } else if (!context.pointExists(this.data.pointB as EntityId)) {
-      errors.push(ValidationHelpers.createError(
-        'INVALID_POINT_REFERENCE',
-        `pointB references non-existent point: ${this.data.pointB}`,
-        this.data.id,
+        this._id,
         'line',
         'pointB'
       ))
     }
 
     // Check for self-referencing line
-    if (this.data.pointA === this.data.pointB) {
+    if (this._pointA === this._pointB) {
       errors.push(ValidationHelpers.createError(
         'SELF_REFERENCING_LINE',
         'Line cannot reference the same point twice',
-        this.data.id,
+        this._id,
         'line'
       ))
     }
 
     // Color validation
-    if (this.data.color && !/^#[0-9A-Fa-f]{6}$/.test(this.data.color)) {
+    if (this._color && !/^#[0-9A-Fa-f]{6}$/.test(this._color)) {
       errors.push(ValidationHelpers.createError(
         'INVALID_COLOR',
         'color must be a valid hex color',
-        this.data.id,
+        this._id,
         'line',
         'color'
       ))
     }
 
     // Thickness validation
-    if (this.data.thickness <= 0) {
+    if (this._thickness <= 0) {
       errors.push(ValidationHelpers.createError(
         'INVALID_THICKNESS',
         'thickness must be greater than 0',
-        this.data.id,
+        this._id,
         'line',
         'thickness'
       ))
@@ -320,154 +378,109 @@ export class Line implements ISelectable, IValidatable {
 
   // Domain methods (getters/setters)
   get name(): string {
-    return this.data.name
+    return this._name
   }
 
   set name(value: string) {
-    this.data.name = value
+    this._name = value
     this.updateTimestamp()
   }
 
-  get pointA(): PointId {
-    return this.data.pointA
+  // Direct object access (primary interface)
+  get pointA(): WorldPoint {
+    return this._pointA
   }
 
-  get pointB(): PointId {
-    return this.data.pointB
+  get pointB(): WorldPoint {
+    return this._pointB
   }
 
-  // Smart reference getters for performance optimization
-  // Direct object access instead of ID-based repository lookups
-
-  /**
-   * Get the first point as a WorldPoint object (direct reference)
-   * Uses smart caching to avoid repeated repository lookups
-   */
-  get pointAEntity(): any {
-    if (!this._pointARef) {
-      const refManager = this.repo.getReferenceManager?.()
-      if (refManager) {
-        this._pointARef = refManager.resolve(this.data.pointA as EntityId, 'point')
-      }
-    }
-    return this._pointARef
+  // Direct object access (no caching needed)
+  get points(): [WorldPoint, WorldPoint] {
+    return [this._pointA, this._pointB]
   }
 
-  /**
-   * Get the second point as a WorldPoint object (direct reference)
-   * Uses smart caching to avoid repeated repository lookups
-   */
-  get pointBEntity(): any {
-    if (!this._pointBRef) {
-      const refManager = this.repo.getReferenceManager?.()
-      if (refManager) {
-        this._pointBRef = refManager.resolve(this.data.pointB as EntityId, 'point')
-      }
-    }
-    return this._pointBRef
+  get referencingConstraints(): IConstraint[] {
+    return Array.from(this._referencingConstraints)
   }
 
-  /**
-   * Get both points as an array of WorldPoint objects
-   * More efficient than individual lookups for operations needing both points
-   */
-  get points(): [any, any] {
-    return [this.pointAEntity, this.pointBEntity]
-  }
-
-  /**
-   * Get both point IDs (backward compatibility)
-   * Legacy method - prefer pointA/pointB for ID access or pointAEntity/pointBEntity for objects
-   */
-  getPointIds(): [PointId, PointId] {
-    return [this.data.pointA, this.data.pointB]
-  }
-
-  /**
-   * Invalidate cached references when underlying data changes
-   * Called automatically on updates that might affect relationships
-   */
-  private invalidateReferences(): void {
-    this._pointARef = undefined
-    this._pointBRef = undefined
+  get referencingPlanes(): IPlane[] {
+    return Array.from(this._referencingPlanes)
   }
 
   get color(): string {
-    return this.data.color
+    return this._color
   }
 
   set color(value: string) {
-    this.data.color = value
+    this._color = value
     this.updateTimestamp()
   }
 
   get isConstruction(): boolean {
-    return this.data.isConstruction
+    return this._isConstruction
   }
 
   set isConstruction(value: boolean) {
-    this.data.isConstruction = value
+    this._isConstruction = value
     this.updateTimestamp()
   }
 
   get lineStyle(): 'solid' | 'dashed' | 'dotted' {
-    return this.data.lineStyle
+    return this._lineStyle
   }
 
   set lineStyle(value: 'solid' | 'dashed' | 'dotted') {
-    this.data.lineStyle = value
+    this._lineStyle = value
     this.updateTimestamp()
   }
 
   get thickness(): number {
-    return this.data.thickness
+    return this._thickness
   }
 
   set thickness(value: number) {
     if (value <= 0) {
       throw new Error('Thickness must be greater than 0')
     }
-    this.data.thickness = value
+    this._thickness = value
     this.updateTimestamp()
   }
 
   get group(): string | undefined {
-    return this.data.group
+    return this._group
   }
 
   set group(value: string | undefined) {
-    this.data.group = value
+    this._group = value
     this.updateTimestamp()
   }
 
   get tags(): string[] {
-    return this.data.tags ? [...this.data.tags] : []
+    return [...this._tags]
   }
 
   set tags(value: string[]) {
-    this.data.tags = [...value]
+    this._tags = [...value]
     this.updateTimestamp()
   }
 
   get createdAt(): string {
-    return this.data.createdAt
+    return this._createdAt
   }
 
   get updatedAt(): string {
-    return this.data.updatedAt
+    return this._updatedAt
   }
 
-  // Enhanced utility methods using smart references
+  // Enhanced utility methods using direct references
   length(): number | null {
-    const pointA = this.pointAEntity
-    const pointB = this.pointBEntity
-
-    if (!pointA?.xyz || !pointB?.xyz) {
+    if (!this._pointA.xyz || !this._pointB.xyz) {
       return null
     }
 
-    const [x1, y1, z1] = pointA.xyz
-    const [x2, y2, z2] = pointB.xyz
+    const [x1, y1, z1] = this._pointA.xyz
+    const [x2, y2, z2] = this._pointB.xyz
 
     return Math.sqrt(
       Math.pow(x2 - x1, 2) +
@@ -477,15 +490,12 @@ export class Line implements ISelectable, IValidatable {
   }
 
   getDirection(): [number, number, number] | null {
-    const pointA = this.pointAEntity
-    const pointB = this.pointBEntity
-
-    if (!pointA?.xyz || !pointB?.xyz) {
+    if (!this._pointA.xyz || !this._pointB.xyz) {
       return null
     }
 
-    const [x1, y1, z1] = pointA.xyz
-    const [x2, y2, z2] = pointB.xyz
+    const [x1, y1, z1] = this._pointA.xyz
+    const [x2, y2, z2] = this._pointB.xyz
 
     // Calculate direction vector
     const dx = x2 - x1
@@ -503,15 +513,12 @@ export class Line implements ISelectable, IValidatable {
    * Get the midpoint of the line
    */
   getMidpoint(): [number, number, number] | null {
-    const pointA = this.pointAEntity
-    const pointB = this.pointBEntity
-
-    if (!pointA?.xyz || !pointB?.xyz) {
+    if (!this._pointA.xyz || !this._pointB.xyz) {
       return null
     }
 
-    const [x1, y1, z1] = pointA.xyz
-    const [x2, y2, z2] = pointB.xyz
+    const [x1, y1, z1] = this._pointA.xyz
+    const [x2, y2, z2] = this._pointB.xyz
 
     return [
       (x1 + x2) / 2,
@@ -524,16 +531,13 @@ export class Line implements ISelectable, IValidatable {
    * Check if a point lies on this line (within tolerance)
    */
   containsPoint(point: [number, number, number], tolerance: number = 1e-6): boolean {
-    const pointA = this.pointAEntity
-    const pointB = this.pointBEntity
-
-    if (!pointA?.xyz || !pointB?.xyz) {
+    if (!this._pointA.xyz || !this._pointB.xyz) {
       return false
     }
 
     const [x, y, z] = point
-    const [x1, y1, z1] = pointA.xyz
-    const [x2, y2, z2] = pointB.xyz
+    const [x1, y1, z1] = this._pointA.xyz
+    const [x2, y2, z2] = this._pointB.xyz
 
     // Calculate cross product to check if point is collinear
     const crossProduct = [
@@ -552,37 +556,45 @@ export class Line implements ISelectable, IValidatable {
   }
 
   clone(newId: LineId, newName?: string): Line {
-    const clonedData: LineDto = {
-      ...this.data,
-      id: newId,
-      name: newName || `${this.data.name} (copy)`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-    return new Line(this.repo, clonedData)
+    const now = new Date().toISOString()
+    return new Line(
+      newId,
+      newName || `${this._name} (copy)`,
+      this._pointA,
+      this._pointB,
+      this._color,
+      this._isVisible,
+      this._isConstruction,
+      this._lineStyle,
+      this._thickness,
+      this._group,
+      [...this._tags],
+      now,
+      now
+    )
   }
 
   private updateTimestamp(): void {
-    this.data.updatedAt = new Date().toISOString()
+    this._updatedAt = new Date().toISOString()
   }
 
   // Override visibility
   setVisible(visible: boolean): void {
-    this.data.isVisible = visible
+    this._isVisible = visible
     this.updateTimestamp()
   }
 
   // Check if line connects to a specific point
-  connectsTo(pointId: PointId): boolean {
-    return this.data.pointA === pointId || this.data.pointB === pointId
+  connectsTo(point: WorldPoint): boolean {
+    return this._pointA === point || this._pointB === point
   }
 
   // Get the other endpoint
-  getOtherPoint(pointId: PointId): PointId | null {
-    if (this.data.pointA === pointId) {
-      return this.data.pointB
-    } else if (this.data.pointB === pointId) {
-      return this.data.pointA
+  getOtherPoint(point: WorldPoint): WorldPoint | null {
+    if (this._pointA === point) {
+      return this._pointB
+    } else if (this._pointB === point) {
+      return this._pointA
     }
     return null
   }

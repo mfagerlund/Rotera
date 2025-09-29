@@ -1,246 +1,120 @@
-// Entity-first multi-selection system with Ctrl/Shift support for new UI paradigm
+// Unified entity selection system with ISelectable interface
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { SelectionState } from '../types/project'
+import { EntitySelection, EntitySelectionImpl, ISelectable, SelectableType, getSelectionStats } from '../types/selectable'
 
 export const useSelection = () => {
-  const [selectionState, setSelectionState] = useState<SelectionState>({
-    selectedPoints: [],
-    selectedLines: [],
-    selectedPlanes: [],
-    selectedImagePoints: [],
-    primarySelection: null,
-    primaryType: null,
-    selectionFilters: {
-      points: true,
-      lines: true,
-      planes: true,
-      imagePoints: true
-    }
+  // Pure object-based selection state
+  const [selection, setSelection] = useState<EntitySelection>(new EntitySelectionImpl())
+
+  // Entity type filters
+  const [filters, setFilters] = useState({
+    points: true,
+    lines: true,
+    planes: true,
+    constraints: true,
+    cameras: true,
+    images: true
   })
 
-  // Point selection handler
-  const handlePointClick = useCallback((pointId: string, ctrlKey: boolean = false, shiftKey: boolean = false) => {
-    if (!selectionState.selectionFilters.points) return
 
-    setSelectionState(prev => {
+  // Pure entity selection handler
+  const handleEntityClick = useCallback((entity: ISelectable, ctrlKey: boolean = false, shiftKey: boolean = false) => {
+    const entityType = entity.getType()
+
+    // Check if this entity type is filtered
+    const filterKey = entityType === 'point' ? 'points' :
+                     entityType === 'line' ? 'lines' :
+                     entityType === 'plane' ? 'planes' :
+                     entityType === 'constraint' ? 'constraints' :
+                     entityType === 'camera' ? 'cameras' :
+                     entityType === 'image' ? 'images' :
+                     'points' // fallback
+
+    if (!filters[filterKey as keyof typeof filters]) {
+      return
+    }
+
+    setSelection(prev => {
+      const newSelection = new EntitySelectionImpl()
+
       if (ctrlKey) {
-        // Add/remove from selection (Fusion 360 style multi-select)
-        const isSelected = prev.selectedPoints.includes(pointId)
-        return {
-          ...prev,
-          selectedPoints: isSelected
-            ? prev.selectedPoints.filter(id => id !== pointId)
-            : [...prev.selectedPoints, pointId],
-          primarySelection: isSelected ? prev.primarySelection : pointId,
-          primaryType: isSelected ? prev.primaryType : 'point'
+        // Add/remove from selection (multi-select)
+        if (prev.has(entity)) {
+          // Remove the entity
+          for (const item of prev.items) {
+            if (item !== entity) {
+              newSelection.add(item)
+            }
+          }
+        } else {
+          // Add the entity
+          newSelection.addMultiple([...Array.from(prev.items), entity])
         }
-      } else if (shiftKey && prev.selectedPoints.length > 0) {
-        // Range selection - for now just add the point
-        // TODO: Implement proper range selection based on point ordering
-        return {
-          ...prev,
-          selectedPoints: prev.selectedPoints.includes(pointId)
-            ? prev.selectedPoints
-            : [...prev.selectedPoints, pointId],
-          primarySelection: pointId,
-          primaryType: 'point'
+      } else if (shiftKey && prev.count > 0) {
+        // Range selection - for now just add the entity
+        if (!prev.has(entity)) {
+          newSelection.addMultiple([...Array.from(prev.items), entity])
+        } else {
+          newSelection.addMultiple(Array.from(prev.items))
         }
       } else {
         // Single selection - replace current selection
-        return {
-          ...prev,
-          selectedPoints: [pointId],
-          selectedLines: [],
-          selectedPlanes: [],
-          selectedImagePoints: [],
-          primarySelection: pointId,
-          primaryType: 'point'
-        }
+        newSelection.add(entity)
       }
+
+      return newSelection
     })
-  }, [selectionState.selectionFilters.points])
+  }, [filters])
 
-  // Line selection handler
-  const handleLineClick = useCallback((lineId: string, ctrlKey: boolean = false, shiftKey: boolean = false) => {
-    if (!selectionState.selectionFilters.lines) return
-
-    setSelectionState(prev => {
-      if (ctrlKey) {
-        // Add/remove from selection
-        const isSelected = prev.selectedLines.includes(lineId)
-        return {
-          ...prev,
-          selectedLines: isSelected
-            ? prev.selectedLines.filter(id => id !== lineId)
-            : [...prev.selectedLines, lineId],
-          primarySelection: isSelected ? prev.primarySelection : lineId,
-          primaryType: isSelected ? prev.primaryType : 'line'
-        }
-      } else if (shiftKey && prev.selectedLines.length > 0) {
-        // Range selection
-        return {
-          ...prev,
-          selectedLines: prev.selectedLines.includes(lineId)
-            ? prev.selectedLines
-            : [...prev.selectedLines, lineId],
-          primarySelection: lineId,
-          primaryType: 'line'
-        }
-      } else {
-        // Single selection
-        return {
-          ...prev,
-          selectedPoints: [],
-          selectedLines: [lineId],
-          selectedPlanes: [],
-          selectedImagePoints: [],
-          primarySelection: lineId,
-          primaryType: 'line'
-        }
-      }
-    })
-  }, [selectionState.selectionFilters.lines])
-
-  // Plane selection handler
-  const handlePlaneClick = useCallback((planeId: string, ctrlKey: boolean = false, shiftKey: boolean = false) => {
-    if (!selectionState.selectionFilters.planes) return
-
-    setSelectionState(prev => {
-      if (ctrlKey) {
-        // Add/remove from selection
-        const isSelected = prev.selectedPlanes.includes(planeId)
-        return {
-          ...prev,
-          selectedPlanes: isSelected
-            ? prev.selectedPlanes.filter(id => id !== planeId)
-            : [...prev.selectedPlanes, planeId],
-          primarySelection: isSelected ? prev.primarySelection : planeId,
-          primaryType: isSelected ? prev.primaryType : 'plane'
-        }
-      } else {
-        // Single selection
-        return {
-          ...prev,
-          selectedPoints: [],
-          selectedLines: [],
-          selectedPlanes: [planeId],
-          selectedImagePoints: [],
-          primarySelection: planeId,
-          primaryType: 'plane'
-        }
-      }
-    })
-  }, [selectionState.selectionFilters.planes])
-
-  // Image point selection handler
-  const handleImagePointClick = useCallback((imagePointId: string, ctrlKey: boolean = false) => {
-    if (!selectionState.selectionFilters.imagePoints) return
-
-    setSelectionState(prev => {
-      if (ctrlKey) {
-        // Add/remove from selection
-        const isSelected = prev.selectedImagePoints.includes(imagePointId)
-        return {
-          ...prev,
-          selectedImagePoints: isSelected
-            ? prev.selectedImagePoints.filter(id => id !== imagePointId)
-            : [...prev.selectedImagePoints, imagePointId],
-          primarySelection: isSelected ? prev.primarySelection : imagePointId,
-          primaryType: isSelected ? prev.primaryType : 'imagepoint'
-        }
-      } else {
-        // Single selection
-        return {
-          ...prev,
-          selectedPoints: [],
-          selectedLines: [],
-          selectedPlanes: [],
-          selectedImagePoints: [imagePointId],
-          primarySelection: imagePointId,
-          primaryType: 'imagepoint'
-        }
-      }
-    })
-  }, [selectionState.selectionFilters.imagePoints])
 
   // Selection filter toggles
-  const toggleSelectionFilter = useCallback((entityType: keyof SelectionState['selectionFilters']) => {
-    setSelectionState(prev => ({
+  const toggleSelectionFilter = useCallback((entityType: keyof typeof filters) => {
+    setFilters(prev => ({
       ...prev,
-      selectionFilters: {
-        ...prev.selectionFilters,
-        [entityType]: !prev.selectionFilters[entityType]
-      }
+      [entityType]: !prev[entityType]
     }))
   }, [])
 
   // Clear selection
   const clearSelection = useCallback(() => {
-    setSelectionState(prev => ({
-      ...prev,
-      selectedPoints: [],
-      selectedLines: [],
-      selectedPlanes: [],
-      selectedImagePoints: [],
-      primarySelection: null,
-      primaryType: null
-    }))
+    setSelection(new EntitySelectionImpl())
   }, [])
 
   // Select all entities of specific type
-  const selectAllPoints = useCallback((allPointIds: string[]) => {
-    setSelectionState(prev => ({
-      ...prev,
-      selectedPoints: allPointIds,
-      selectedLines: [],
-      selectedPlanes: [],
-      selectedImagePoints: [],
-      primarySelection: allPointIds[allPointIds.length - 1] || null,
-      primaryType: allPointIds.length > 0 ? 'point' : null
-    }))
+  const selectAllEntities = useCallback((entities: ISelectable[]) => {
+    const newSelection = new EntitySelectionImpl()
+    newSelection.addMultiple(entities)
+    setSelection(newSelection)
   }, [])
 
-  const selectAllLines = useCallback((allLineIds: string[]) => {
-    setSelectionState(prev => ({
-      ...prev,
-      selectedPoints: [],
-      selectedLines: allLineIds,
-      selectedPlanes: [],
-      selectedImagePoints: [],
-      primarySelection: allLineIds[allLineIds.length - 1] || null,
-      primaryType: allLineIds.length > 0 ? 'line' : null
-    }))
-  }, [])
+  const selectAllByType = useCallback((entities: ISelectable[], entityType: SelectableType) => {
+    selectAllEntities(entities.filter(e => e.getType() === entityType))
+  }, [selectAllEntities])
 
-  // Computed values
-  const hasSelection = selectionState.selectedPoints.length > 0 ||
-                     selectionState.selectedLines.length > 0 ||
-                     selectionState.selectedPlanes.length > 0 ||
-                     selectionState.selectedImagePoints.length > 0
+  // Computed values using selection
+  const hasSelection = selection.count > 0
+  const totalSelected = selection.count
+  const selectionStats = useMemo(() => getSelectionStats(selection), [selection])
 
-  const totalSelected = selectionState.selectedPoints.length +
-                       selectionState.selectedLines.length +
-                       selectionState.selectedPlanes.length +
-                       selectionState.selectedImagePoints.length
-
-  const selectionSummary = (() => {
+  const selectionSummary = useMemo(() => {
     const parts = []
 
-    if (selectionState.selectedPoints.length > 0) {
-      parts.push(`${selectionState.selectedPoints.length} point${selectionState.selectedPoints.length !== 1 ? 's' : ''}`)
+    if (selectionStats.point > 0) {
+      parts.push(`${selectionStats.point} point${selectionStats.point !== 1 ? 's' : ''}`)
     }
 
-    if (selectionState.selectedLines.length > 0) {
-      parts.push(`${selectionState.selectedLines.length} line${selectionState.selectedLines.length !== 1 ? 's' : ''}`)
+    if (selectionStats.line > 0) {
+      parts.push(`${selectionStats.line} line${selectionStats.line !== 1 ? 's' : ''}`)
     }
 
-    if (selectionState.selectedPlanes.length > 0) {
-      parts.push(`${selectionState.selectedPlanes.length} plane${selectionState.selectedPlanes.length !== 1 ? 's' : ''}`)
+    if (selectionStats.plane > 0) {
+      parts.push(`${selectionStats.plane} plane${selectionStats.plane !== 1 ? 's' : ''}`)
     }
 
-    if (selectionState.selectedImagePoints.length > 0) {
-      parts.push(`${selectionState.selectedImagePoints.length} image point${selectionState.selectedImagePoints.length !== 1 ? 's' : ''}`)
+    if (selectionStats.image > 0) {
+      parts.push(`${selectionStats.image} image point${selectionStats.image !== 1 ? 's' : ''}`)
     }
 
     if (parts.length === 0) {
@@ -248,39 +122,29 @@ export const useSelection = () => {
     }
 
     return `Selected: ${parts.join(', ')}`
-  })()
+  }, [selectionStats])
 
   return {
-    // State
-    ...selectionState,
+    // Pure object-based selection API
+    selection,
+    handleEntityClick,
+    selectAllEntities,
+    selectAllByType,
+    selectionStats,
     hasSelection,
     totalSelected,
     selectionSummary,
-
-    // Actions
-    handlePointClick,
-    handleLineClick,
-    handlePlaneClick,
-    handleImagePointClick,
     toggleSelectionFilter,
     clearSelection,
-    selectAllPoints,
-    selectAllLines,
+    filters,
 
-    // Legacy support (for backwards compatibility)
-    selectedPoints: selectionState.selectedPoints,
-    selectedLines: selectionState.selectedLines.map(lineId => ({ id: lineId, pointA: '', pointB: '' })), // Simplified for compatibility
-    pointCount: selectionState.selectedPoints.length,
-    lineCount: selectionState.selectedLines.length,
-
-    // Manual setters for backwards compatibility
-    setSelectedPoints: (points: string[]) => setSelectionState(prev => ({
-      ...prev,
-      selectedPoints: points,
-      primarySelection: points[points.length - 1] || null,
-      primaryType: points.length > 0 ? 'point' : null
-    })),
-    setSelectedLines: () => {} // Legacy - not used in new paradigm
+    // Filtering helpers
+    getSelectedByType: <T extends ISelectable>(type: SelectableType): T[] =>
+      selection.getByType<T>(type),
+    getSelectedEntities: (): ISelectable[] =>
+      Array.from(selection.items),
+    getSelectedIds: (): string[] =>
+      selection.items.map(e => e.getId()),
   }
 }
 

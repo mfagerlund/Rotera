@@ -82,25 +82,25 @@ export class ConstraintValidator {
     const warnings: ValidationWarning[] = []
 
     switch (constraint.type) {
-      case 'distance':
+      case 'points_distance':
         return this.validateDistanceConstraint(constraint)
-      case 'angle':
+      case 'points_equal_distance':
         return this.validateAngleConstraint(constraint)
-      case 'perpendicular':
+      case 'lines_perpendicular':
         return this.validatePerpendicularConstraint(constraint)
-      case 'parallel':
+      case 'lines_parallel':
         return this.validateParallelConstraint(constraint)
-      case 'collinear':
+      case 'points_colinear':
         return this.validateCollinearConstraint(constraint)
-      case 'rectangle':
+      case 'points_coplanar':
         return this.validateRectangleConstraint(constraint)
-      case 'circle':
+      case 'points_equal_distance':
         return this.validateCircleConstraint(constraint)
-      case 'fixed':
+      case 'point_fixed_coord':
         return this.validateFixedConstraint(constraint)
-      case 'horizontal':
+      case 'line_axis_aligned':
         return this.validateHorizontalConstraint(constraint)
-      case 'vertical':
+      case 'line_axis_aligned':
         return this.validateVerticalConstraint(constraint)
       default:
         errors.push({
@@ -440,14 +440,14 @@ export class ConstraintValidator {
   }
 
   private validateHorizontalConstraint(constraint: any): ValidationResult {
-    return this.validateLineOrientationConstraint(constraint, 'horizontal')
+    return this.validateLineOrientationConstraint(constraint, 'line_axis_aligned')
   }
 
   private validateVerticalConstraint(constraint: any): ValidationResult {
-    return this.validateLineOrientationConstraint(constraint, 'vertical')
+    return this.validateLineOrientationConstraint(constraint, 'line_axis_aligned')
   }
 
-  private validateLineOrientationConstraint(constraint: any, orientation: 'horizontal' | 'vertical'): ValidationResult {
+  private validateLineOrientationConstraint(constraint: any, orientation: 'line_axis_aligned' | 'line_axis_aligned'): ValidationResult {
     const errors: ValidationError[] = []
     const warnings: ValidationWarning[] = []
 
@@ -473,7 +473,7 @@ export class ConstraintValidator {
     ]
 
     let deviation: number
-    if (orientation === 'horizontal') {
+    if (orientation === 'line_axis_aligned') {
       // Check if Z component is near zero (horizontal in XY plane)
       const horizontalLength = Math.sqrt(vector[0] * vector[0] + vector[1] * vector[1])
       deviation = Math.abs(Math.atan2(Math.abs(vector[2]), horizontalLength) * 180 / Math.PI)

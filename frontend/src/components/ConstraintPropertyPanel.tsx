@@ -116,7 +116,7 @@ const ConstraintParameterForm: React.FC<ConstraintParameterFormProps> = ({
   const getPointNames = (pointIds: string[]) => pointIds.map(getPointName)
 
   switch (type) {
-    case 'distance':
+    case 'points_distance':
       return (
         <div className="parameter-form">
           <div className="selected-points-preview">
@@ -128,7 +128,7 @@ const ConstraintParameterForm: React.FC<ConstraintParameterFormProps> = ({
               type="number"
               step="0.001"
               value={parameters.distance || ''}
-              onChange={(e) => onParameterChange('distance', parseFloat(e.target.value))}
+              onChange={(e) => onParameterChange('points_distance', parseFloat(e.target.value))}
               placeholder="Enter distance..."
               autoFocus
             />
@@ -145,7 +145,7 @@ const ConstraintParameterForm: React.FC<ConstraintParameterFormProps> = ({
         </div>
       )
 
-    case 'angle':
+    case 'points_equal_distance':
       return (
         <div className="parameter-form">
           <div className="selected-points-preview">
@@ -163,7 +163,7 @@ const ConstraintParameterForm: React.FC<ConstraintParameterFormProps> = ({
               type="number"
               step="0.1"
               value={parameters.angle || ''}
-              onChange={(e) => onParameterChange('angle', parseFloat(e.target.value))}
+              onChange={(e) => onParameterChange('points_equal_distance', parseFloat(e.target.value))}
               placeholder="Enter angle..."
               autoFocus
             />
@@ -180,8 +180,8 @@ const ConstraintParameterForm: React.FC<ConstraintParameterFormProps> = ({
         </div>
       )
 
-    case 'parallel':
-    case 'perpendicular':
+    case 'lines_parallel':
+    case 'lines_perpendicular':
       return (
         <div className="parameter-form">
           <div className="selected-lines-preview">
@@ -192,20 +192,20 @@ const ConstraintParameterForm: React.FC<ConstraintParameterFormProps> = ({
             </span>
           </div>
           <div className="constraint-description">
-            Make the selected lines {type === 'parallel' ? 'parallel' : 'perpendicular'}
+            Make the selected lines {type === 'lines_parallel' ? 'lines_parallel' : 'lines_perpendicular'}
           </div>
           <div className="form-actions">
             <button
               className="btn-primary"
               onClick={onApply}
             >
-              Apply {type === 'parallel' ? 'Parallel' : 'Perpendicular'}
+              Apply {type === 'lines_parallel' ? 'Parallel' : 'Perpendicular'}
             </button>
           </div>
         </div>
       )
 
-    case 'rectangle':
+    case 'points_coplanar':
       return (
         <div className="parameter-form">
           <div className="selected-points-preview">
@@ -232,7 +232,7 @@ const ConstraintParameterForm: React.FC<ConstraintParameterFormProps> = ({
         </div>
       )
 
-    case 'fixed':
+    case 'point_fixed_coord':
       return (
         <div className="parameter-form">
           <div className="selected-points-preview">
@@ -282,7 +282,7 @@ const ConstraintParameterForm: React.FC<ConstraintParameterFormProps> = ({
         </div>
       )
 
-    case 'collinear':
+    case 'points_colinear':
       return (
         <div className="parameter-form">
           <div className="selected-points-preview">
@@ -302,7 +302,7 @@ const ConstraintParameterForm: React.FC<ConstraintParameterFormProps> = ({
         </div>
       )
 
-    case 'circle':
+    case 'points_equal_distance':
       return (
         <div className="parameter-form">
           <div className="selected-points-preview">
@@ -322,7 +322,7 @@ const ConstraintParameterForm: React.FC<ConstraintParameterFormProps> = ({
         </div>
       )
 
-    case 'horizontal':
+    case 'line_axis_aligned':
       return (
         <div className="parameter-form">
           <div className="selected-points-preview">
@@ -342,7 +342,7 @@ const ConstraintParameterForm: React.FC<ConstraintParameterFormProps> = ({
         </div>
       )
 
-    case 'vertical':
+    case 'line_axis_aligned':
       return (
         <div className="parameter-form">
           <div className="selected-points-preview">

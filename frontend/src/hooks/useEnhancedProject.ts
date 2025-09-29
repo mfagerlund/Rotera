@@ -90,7 +90,7 @@ const DEFAULT_WORKSPACE_STATE: WorkspaceState = {
     showCameras: true
   },
   splitWorkspace: {
-    splitDirection: 'horizontal',
+    splitDirection: 'line_axis_aligned',
     splitRatio: 0.5,
     syncSelection: true,
     syncNavigation: false

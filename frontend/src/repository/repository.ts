@@ -9,12 +9,12 @@ import { ValidationEngine } from '../validation/validator'
 import { ReferenceManager, createReferenceManager, type IEntityRepository } from '../services/ReferenceManager'
 
 // Import our DTOs and domain classes
-import { WorldPoint, type WorldPointDto, type WorldPointRepository } from '../entities/world-point'
-import { Line, type LineDto, type LineRepository } from '../entities/line'
-import { Plane, type PlaneDto, type PlaneRepository } from '../entities/plane'
-import { Camera, type CameraDto, type CameraRepository } from '../entities/camera'
-import { Image, type ImageDto, type ImageRepository } from '../entities/image'
-import { Constraint, type ConstraintDto, type ConstraintRepository } from '../entities/constraint'
+import { WorldPoint, type WorldPointDto } from '../entities/world-point'
+import { Line, type LineDto } from '../entities/line'
+import { Plane, type PlaneDto } from '../entities/plane'
+import { Camera, type CameraDto } from '../entities/camera'
+import { Image, type ImageDto } from '../entities/image'
+import { Constraint, type ConstraintDto } from '../entities/constraint'
 
 // Project DTO (storage only - no runtime state)
 export interface ProjectDto {

@@ -77,7 +77,7 @@ export const mockProject: Project = {
   constraints: [
     {
       id: 'constraint-1',
-      type: 'distance',
+      type: 'points_distance',
       enabled: true,
       isDriving: true,
       weight: 1.0,
@@ -90,7 +90,7 @@ export const mockProject: Project = {
     },
     {
       id: 'constraint-2',
-      type: 'parallel',
+      type: 'lines_parallel',
       enabled: true,
       isDriving: true,
       weight: 1.0,
@@ -146,7 +146,7 @@ export const mockWorldPoint: WorldPoint = {
 
 export const mockConstraint: Constraint = {
   id: 'test-constraint',
-  type: 'distance',
+  type: 'points_distance',
   enabled: true,
   isDriving: true,
   weight: 1.0,

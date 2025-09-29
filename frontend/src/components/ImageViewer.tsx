@@ -423,9 +423,9 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     })
 
     // Draw constraint preview lines when constraints are available (not just when actively creating)
-    const lineBasedConstraints = ['distance', 'horizontal', 'vertical', 'parallel', 'perpendicular']
-    const angleBasedConstraints = ['angle']
-    const shapeBasedConstraints = ['rectangle']
+    const lineBasedConstraints = ['points_distance', 'line_axis_aligned', 'line_axis_aligned', 'lines_parallel', 'lines_perpendicular']
+    const angleBasedConstraints = ['points_equal_distance']
+    const shapeBasedConstraints = ['points_coplanar']
 
     // Show line preview when 2 points selected (line-based constraints available)
     if (selectedPoints.length === 2) {

@@ -5,7 +5,9 @@ import { useProject } from '../hooks/useProject'
 import { useSelection, useSelectionKeyboard } from '../hooks/useSelection'
 import { useConstraints } from '../hooks/useConstraints'
 import { useEnhancedProject } from '../hooks/useEnhancedProject'
-import { Line } from '../types/project'
+import { Line, AvailableConstraint } from '../types/project'
+import { Line as LineEntity } from '../entities/line'
+import { WorldPoint } from '../entities/world-point'
 import { EnhancedConstraint, ConstraintType as GeometryConstraintType } from '../types/geometry'
 import { VisualLanguageManager } from '../utils/visualLanguage'
 
@@ -80,17 +82,15 @@ export const MainLayout: React.FC = () => {
     deleteLine
   } = legacyProject
 
-  // Selection and constraints
+  // Pure object-based selection
   const {
-    selectedPoints,
-    selectedLines,
-    selectedPlanes,
+    selection,
     selectionSummary,
-    handlePointClick,
-    handleLineClick,
-    handlePlaneClick,
+    handleEntityClick,
     clearSelection,
-    selectAllPoints
+    selectAllByType,
+    getSelectedByType,
+    selectionStats
   } = useSelection()
 
   const {
@@ -232,28 +232,17 @@ export const MainLayout: React.FC = () => {
     }))
   }, [currentImageId])
 
-  // Constraint logic - Convert selectedLines to both IDs and objects
-  const selectedLineIds = selectedLines.map(lineObj => lineObj.id)
+  // Get actual entity objects from selection
+  const selectedLineEntities = getSelectedByType<LineEntity>('line')
+  const selectedPointEntities = getSelectedByType<WorldPoint>('point')
+  const selectedPlaneEntities = getSelectedByType('plane')
 
-  // Helper to convert LineData to Line interface with defaults
-  const createLineFromData = (lineData: any, lineObj: any): Line => ({
-    id: lineObj.id,
-    name: lineData?.name || `L${lineObj.id.slice(-4)}`,
-    pointA: lineObj.pointA,
-    pointB: lineObj.pointB,
-    type: lineData?.type || 'segment',
-    isVisible: lineData?.isVisible ?? true,
-    color: lineData?.color || '#0696d7',
-    isConstruction: lineData?.isConstruction || false,
-    createdAt: lineData?.createdAt || new Date().toISOString()
-  })
-
-  const selectedLineObjects = selectedLines.map(lineObj => {
-    const lineData = project?.lines[lineObj.id]
-    return createLineFromData(lineData, lineObj)
-  })
-  const allConstraints = getAllConstraints(selectedPoints, selectedLineObjects)
-  const availableConstraints = getAvailableConstraints(selectedPoints, selectedLineObjects)
+  // TODO: Remove this legacy function - use entity objects directly
+  // TODO: Update constraint system to use entity objects
+  // const allConstraints = getAllConstraints(selectedPointEntities.map(p => p.getId()), selectedLineEntities)
+  // const availableConstraints = getAvailableConstraints(selectedPointEntities.map(p => p.getId()), selectedLineEntities)
+  const allConstraints: AvailableConstraint[] = []
+  const availableConstraints: AvailableConstraint[] = []
 
   const worldPointNames = Object.fromEntries(
     Object.entries(worldPoints).map(([id, wp]) => [id, wp.name])
@@ -268,8 +257,8 @@ export const MainLayout: React.FC = () => {
       return // Don't do normal selection when line tool is active
     }
 
-    // Normal selection behavior
-    handlePointClick(pointId, ctrlKey, shiftKey)
+    // Normal selection behavior - need entity object, not ID
+    // TODO: Get actual WorldPoint entity and call handleEntityClick
   }
 
   // Placement mode handlers
@@ -316,23 +305,18 @@ export const MainLayout: React.FC = () => {
 
   // Enhanced line click handler to open EditLineWindow
   const handleEnhancedLineClick = (lineId: string, ctrlKey: boolean, shiftKey: boolean) => {
-    console.log('🔥 ENHANCED LINE CLICK DEBUG:')
-    console.log('  - lineId:', lineId)
-    console.log('  - ctrlKey:', ctrlKey)
-    console.log('  - shiftKey:', shiftKey)
-    console.log('  - lines available:', Object.keys(project?.lines || {}).length)
-    console.log('  - line exists:', !!(project?.lines[lineId]))
-
     // If not holding modifier keys, open edit window
     if (!ctrlKey && !shiftKey) {
-      console.log('  - Opening edit window for line:', lineId)
       setEditLineState({ isOpen: true, lineId })
-      console.log('  - Edit state set to:', { isOpen: true, lineId })
     } else {
       // Use constraint selection for multi-selection
       // TODO: Wire up line selection for constraints
-      console.log('  - Multi-selection not yet implemented in Enhanced layout')
     }
+  }
+
+  const handlePlaneClick = (planeId: string, ctrlKey: boolean, shiftKey: boolean) => {
+    // TODO: Implement plane selection/editing
+    console.log('Plane clicked:', planeId, { ctrlKey, shiftKey })
   }
 
   // Workspace data for status display
@@ -350,7 +334,11 @@ export const MainLayout: React.FC = () => {
 
   // Keyboard shortcuts
   useSelectionKeyboard(
-    () => selectAllPoints(Object.keys(worldPoints)),
+    () => {
+      // TODO: Implement select all functionality with actual entity objects
+      // For now, just clear selection as a safe fallback
+      console.log('Select All not yet implemented - needs entity objects')
+    },
     clearSelection,
     () => {} // Delete handler
   )
@@ -375,7 +363,7 @@ export const MainLayout: React.FC = () => {
             setActiveTool(activeTool === 'point' ? 'select' : 'point')
             break
           case 'l':
-            if (selectedPoints.length <= 2) { // Only activate if valid selection
+            if (selectedPointEntities.map(p => p.getId()).length <= 2) { // Only activate if valid selection
               setActiveTool(activeTool === 'line' ? 'select' : 'line')
             }
             break
@@ -386,7 +374,7 @@ export const MainLayout: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [placementMode.active, activeTool, selectedPoints.length])
+  }, [placementMode.active, activeTool, selectedPointEntities.map(p => p.getId()).length])
 
   // Content for different workspaces
   const renderImageWorkspace = () => (
@@ -408,7 +396,7 @@ export const MainLayout: React.FC = () => {
                 }
               ])
             )}
-            selectedPoints={selectedPoints}
+            selectedPoints={selectedPointEntities.map(p => p.getId())}
             hoveredConstraintId={hoveredConstraintId}
             placementMode={placementMode}
             activeConstraintType={activeConstraintType}
@@ -442,9 +430,9 @@ export const MainLayout: React.FC = () => {
       <WorldView
         ref={worldViewRef}
         project={project!}
-        selectedPoints={selectedPoints}
-        selectedLines={selectedLineIds}
-        selectedPlanes={selectedPlanes}
+        selectedPoints={selectedPointEntities.map(p => p.getId())}
+        selectedLines={selectedLineEntities.map(l => l.getId())}
+        selectedPlanes={selectedPlaneEntities.map(p => p.getId())}
         hoveredConstraintId={hoveredConstraintId}
         onPointClick={handleEnhancedPointClick}
         onLineClick={handleEnhancedLineClick}
@@ -509,7 +497,6 @@ export const MainLayout: React.FC = () => {
               <button
                 className="btn-tool"
                 onClick={() => {
-                  console.log('🔥 ENHANCED MANUAL TRIGGER CLICKED')
                   // Use first available line or create a test line entry
                   const lineIds = Object.keys(project?.lines || {})
                   const testLineId = lineIds.length > 0 ? lineIds[0] : 'test-line-123'
@@ -522,10 +509,19 @@ export const MainLayout: React.FC = () => {
 
             {/* Context-sensitive constraint toolbar */}
             <ConstraintToolbar
-              selectedPoints={selectedPoints}
-              selectedLines={selectedLineObjects}
+              selectedPoints={selectedPointEntities.map(p => p.getId())}
+              selectedLines={selectedLineEntities.map(l => ({
+                id: l.getId(),
+                name: l.name,
+                pointA: l.pointA.getId(),
+                pointB: l.pointB.getId(),
+                type: 'segment' as const,
+                isVisible: l.isVisible(),
+                color: l.color,
+                isConstruction: l.isConstruction
+              }))}
               availableConstraints={allConstraints}
-              selectionSummary={selectionSummary}
+              selectionSummary="" // Remove redundant selection display
               onConstraintClick={startConstraintCreation}
             />
 
@@ -551,14 +547,14 @@ export const MainLayout: React.FC = () => {
                 images={project.images}
                 currentImageId={currentImageId}
                 worldPoints={worldPoints}
-                selectedWorldPointIds={selectedPoints}
+                selectedWorldPointIds={selectedPointEntities.map(p => p.getId())}
                 isCreatingConstraint={!!activeConstraintType}
                 onImageSelect={setCurrentImageId}
                 onImageAdd={addImage}
                 onImageRename={renameImage}
                 onImageDelete={deleteImage}
                 getImagePointCount={getImagePointCount}
-                getSelectedPointsInImage={(imageId) => getSelectedPointsInImage(imageId, selectedPoints)}
+                getSelectedPointsInImage={(imageId) => getSelectedPointsInImage(imageId, selectedPointEntities.map(p => p.getId()))}
               />
             </div>
 
@@ -573,9 +569,9 @@ export const MainLayout: React.FC = () => {
             <div className="sidebar-right">
               {/* Creation Tools */}
               <CreationToolsManager
-                selectedPoints={selectedPoints}
-                selectedLines={selectedLineIds}
-                selectedPlanes={selectedPlanes}
+                selectedPoints={selectedPointEntities.map(p => p.getId())}
+                selectedLines={selectedLineEntities.map(l => l.getId())}
+                selectedPlanes={selectedPlaneEntities.map(p => p.getId())}
                 activeTool={activeTool}
                 onToolChange={setActiveTool}
                 worldPointNames={worldPointNames}
@@ -650,8 +646,17 @@ export const MainLayout: React.FC = () => {
 
               <ConstraintPropertyPanel
                 activeConstraintType={activeConstraintType}
-                selectedPoints={selectedPoints}
-                selectedLines={selectedLineObjects}
+                selectedPoints={selectedPointEntities.map(p => p.getId())}
+                selectedLines={selectedLineEntities.map(l => ({
+                  id: l.getId(),
+                  name: l.name,
+                  pointA: l.pointA.getId(),
+                  pointB: l.pointB.getId(),
+                  type: 'segment' as const,
+                  isVisible: l.isVisible(),
+                  color: l.color,
+                  isConstruction: l.isConstruction
+                }))}
                 parameters={constraintParameters}
                 isComplete={isConstraintComplete()}
                 worldPointNames={worldPointNames}
@@ -663,11 +668,11 @@ export const MainLayout: React.FC = () => {
               <WorldPointPanel
                 worldPoints={worldPoints}
                 constraints={constraints}
-                selectedWorldPointIds={selectedPoints}
+                selectedWorldPointIds={selectedPointEntities.map(p => p.getId())}
                 currentImageId={currentImageId}
                 placementMode={placementMode}
                 onSelectWorldPoint={(pointId: string, ctrlKey: boolean, shiftKey: boolean) =>
-                  handlePointClick(pointId, ctrlKey, shiftKey)
+                  handleEnhancedPointClick(pointId, ctrlKey, shiftKey)
                 }
                 onHighlightWorldPoint={() => {}}
                 onRenameWorldPoint={renameWorldPoint}
@@ -697,7 +702,6 @@ export const MainLayout: React.FC = () => {
               imageInfo={imageInfo}
               worldInfo={worldInfo}
             />
-            <span className="selection-summary">{selectionSummary}</span>
 
             {/* Object counts */}
             <div style={{display: 'flex', gap: '12px', fontSize: '12px', color: '#888'}}>
@@ -706,6 +710,12 @@ export const MainLayout: React.FC = () => {
               <span>Lines: {Object.keys(project?.lines || {}).length}</span>
               <span>Planes: {Object.keys(project?.planes || {}).length}</span>
               <span>Constraints: {constraints.length}</span>
+              {/* Enhanced selection stats */}
+              {selection.count > 0 && (
+                <span style={{ color: '#0696d7', fontWeight: 'bold' }}>
+                  Selected: {selectionStats.point}p {selectionStats.line}l {selectionStats.plane}pl {selectionStats.constraint}c
+                </span>
+              )}
             </div>
 
             <span style={{marginLeft: 'auto', color: '#888'}}>v0.3-ENHANCED</span>

@@ -5,12 +5,18 @@ import { Project, WorldPoint, ProjectImage, Camera, Constraint, Line } from '../
 import { ProjectStorage } from '../utils/storage'
 import { ImageUtils } from '../utils/imageUtils'
 import { getConstraintPointIds } from '../types/utils'
+import { WorldPoint as WorldPointEntity } from '../entities/world-point'
+import { Line as LineEntity } from '../entities/line'
 
 export const useProject = () => {
   const [project, setProject] = useState<Project | null>(null)
   const [currentImageId, setCurrentImageId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Entity management - convert legacy data to entities
+  const [worldPointEntities] = useState<Map<string, WorldPointEntity>>(new Map())
+  const [lineEntities] = useState<Map<string, LineEntity>>(new Map())
 
   // Load project from localStorage on mount
   useEffect(() => {
@@ -374,7 +380,7 @@ export const useProject = () => {
       // Remove any constraints that reference this line
       const filteredConstraints = prev.constraints.filter(constraint => {
         // Check if constraint references this line
-        if (constraint.type === 'parallel' || constraint.type === 'perpendicular') {
+        if (constraint.type === 'lines_parallel' || constraint.type === 'lines_perpendicular') {
           return !(
             (constraint.line1_wp_a === deleted?.pointA && constraint.line1_wp_b === deleted?.pointB) ||
             (constraint.line2_wp_a === deleted?.pointA && constraint.line2_wp_b === deleted?.pointB)
@@ -429,7 +435,73 @@ export const useProject = () => {
     getImagePointCount,
     getSelectedPointsInImage,
 
-    // Computed values
+    // Entity getters - return actual entity objects
+    getWorldPointEntity: (id: string): WorldPointEntity | undefined => {
+      if (!worldPointEntities.has(id) && project?.worldPoints[id]) {
+        const wp = project.worldPoints[id]
+        const entity = WorldPointEntity.create(id, wp.name, {
+          xyz: wp.xyz,
+          color: wp.color,
+          isVisible: wp.isVisible
+        })
+        worldPointEntities.set(id, entity)
+      }
+      return worldPointEntities.get(id)
+    },
+
+    getLineEntity: (id: string): LineEntity | undefined => {
+      if (!lineEntities.has(id) && project?.lines?.[id]) {
+        const line = project.lines[id]
+        const pointA = worldPointEntities.get(line.pointA)
+        const pointB = worldPointEntities.get(line.pointB)
+        if (pointA && pointB) {
+          const entity = LineEntity.create(id, line.name || 'Line', pointA, pointB, {
+            color: line.color,
+            isVisible: line.isVisible
+          })
+          lineEntities.set(id, entity)
+        }
+      }
+      return lineEntities.get(id)
+    },
+
+    getAllWorldPointEntities: (): WorldPointEntity[] => {
+      if (!project) return []
+      return Object.keys(project.worldPoints).map(id => {
+        const entity = worldPointEntities.get(id)
+        if (entity) return entity
+        const wp = project.worldPoints[id]
+        const newEntity = WorldPointEntity.create(id, wp.name, {
+          xyz: wp.xyz,
+          color: wp.color,
+          isVisible: wp.isVisible
+        })
+        worldPointEntities.set(id, newEntity)
+        return newEntity
+      })
+    },
+
+    getAllLineEntities: (): LineEntity[] => {
+      if (!project?.lines) return []
+      return Object.keys(project.lines).map(id => {
+        const entity = lineEntities.get(id)
+        if (entity) return entity
+        const line = project.lines[id]
+        const pointA = worldPointEntities.get(line.pointA)
+        const pointB = worldPointEntities.get(line.pointB)
+        if (pointA && pointB) {
+          const newEntity = LineEntity.create(id, line.name || 'Line', pointA, pointB, {
+            color: line.color,
+            isVisible: line.isVisible
+          })
+          lineEntities.set(id, newEntity)
+          return newEntity
+        }
+        return null
+      }).filter(Boolean) as LineEntity[]
+    },
+
+    // Legacy computed values (backwards compatibility)
     worldPoints: project?.worldPoints || {},
     lines: project?.lines || {},
     images: project?.images || {},

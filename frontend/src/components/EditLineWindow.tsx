@@ -120,32 +120,9 @@ export const EditLineWindow: React.FC<EditLineWindowProps> = ({
   }, [line, onDelete, onClose])
 
   if (!line) {
-    // Show debug info when line is null
-    console.log('🔥 EDIT LINE WINDOW: Line is null/undefined')
-    return (
-      <FloatingWindow
-        title="DEBUG: No Line Found"
-        isOpen={isOpen}
-        onClose={() => {}}
-        width={380}
-        height={200}
-        className="edit-line-window"
-      >
-        <div style={{
-          padding: '20px',
-          textAlign: 'center'
-        }}>
-          No line data available for editing.
-        </div>
-      </FloatingWindow>
-    )
+    return null // Don't render anything if no line data
   }
 
-  // DEBUG OUTPUT FOR EDIT LINE WINDOW
-  console.log('🔥 EDIT LINE WINDOW DEBUG:')
-  console.log('  - line:', line)
-  console.log('  - isOpen:', isOpen)
-  console.log('  - hasChanges:', hasChanges)
 
   return (
     <FloatingWindow

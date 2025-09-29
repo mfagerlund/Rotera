@@ -313,7 +313,7 @@ export interface EntityLayer {
   opacity: number  // 0-1
 
   // Entity filters
-  entityTypes: Array<'point' | 'line' | 'plane' | 'circle'>
+  entityTypes: Array<'point' | 'line' | 'plane' | 'points_equal_distance'>
 
   // Metadata
   createdAt: string

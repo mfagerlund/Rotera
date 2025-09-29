@@ -13,7 +13,7 @@ export interface EntityCollection {
 // Entity references for constraint system
 export interface EntityReference {
   id: string
-  type: 'point' | 'line' | 'plane' | 'circle'
+  type: 'point' | 'line' | 'plane' | 'points_equal_distance'
   role?: string  // e.g., 'start', 'end', 'center', 'vertex'
 }
 
@@ -32,7 +32,7 @@ export interface EntitySelection {
 
 // Entity creation parameters
 export interface EntityCreationParams {
-  type: 'point' | 'line' | 'plane' | 'circle'
+  type: 'point' | 'line' | 'plane' | 'points_equal_distance'
   name?: string
   definition: any  // Type-specific definition
   properties?: {
@@ -65,7 +65,7 @@ export interface EntityOperations {
   updateBatch: (updates: Array<{ id: string; updates: Partial<GeometricEntity> }>) => boolean
 
   // Query operations
-  getByType: (type: 'point' | 'line' | 'plane' | 'circle') => GeometricEntity[]
+  getByType: (type: 'point' | 'line' | 'plane' | 'points_equal_distance') => GeometricEntity[]
   getByIds: (ids: string[]) => GeometricEntity[]
   getVisible: () => GeometricEntity[]
   getConstruction: () => GeometricEntity[]
@@ -82,7 +82,7 @@ export interface EntityOperations {
 
   // Spatial queries
   getEntitiesInRegion: (bounds: BoundingBox) => GeometricEntity[]
-  findNearestEntity: (point: [number, number, number], type?: 'point' | 'line' | 'plane' | 'circle') => GeometricEntity | null
+  findNearestEntity: (point: [number, number, number], type?: 'point' | 'line' | 'plane' | 'points_equal_distance') => GeometricEntity | null
   getIntersections: (entityA: string, entityB: string) => [number, number, number][]
 }
 
@@ -132,7 +132,7 @@ export interface EntityManager {
   dispatchEvent: (event: EntityEvent) => void
 
   // Naming and counters
-  generateName: (type: 'point' | 'line' | 'plane' | 'circle') => string
+  generateName: (type: 'point' | 'line' | 'plane' | 'points_equal_distance') => string
   resetCounters: () => void
 
   // Import/Export
@@ -187,7 +187,7 @@ export type CreatePlaneParams = {
 }
 
 export type CreateCircleParams = {
-  type: 'circle'
+  type: 'points_equal_distance'
   definition: {
     type: 'center_radius'
     centerId: string

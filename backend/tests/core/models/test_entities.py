@@ -2,8 +2,9 @@
 
 import numpy as np
 import pytest
-from pictorigo.core.models.entities import Camera, CameraLockFlags, Image, WorldPoint
 from pydantic import ValidationError
+
+from pictorigo.core.models.entities import Camera, CameraLockFlags, Image, WorldPoint
 
 
 class TestWorldPoint:

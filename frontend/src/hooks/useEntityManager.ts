@@ -76,7 +76,7 @@ export const useEntityManager = (
   }, [eventListeners])
 
   // Name generation
-  const generateName = useCallback((type: 'point' | 'line' | 'plane' | 'circle'): string => {
+  const generateName = useCallback((type: 'point' | 'line' | 'plane' | 'points_equal_distance'): string => {
     const counter = nextCounters[type]
     const prefix = type === 'point' ? 'WP' : type === 'line' ? 'L' : type === 'plane' ? 'P' : 'C'
     return `${prefix}${counter}`
@@ -137,11 +137,11 @@ export const useEntityManager = (
         } as Plane
         break
 
-      case 'circle':
+      case 'points_equal_distance':
         entity = {
           id,
           name,
-          type: 'circle',
+          type: 'points_equal_distance',
           definition: params.definition,
           isVisible: params.properties?.isVisible ?? true,
           color: params.properties?.color || '#2196F3',
@@ -282,7 +282,7 @@ export const useEntityManager = (
   }, [update, dispatchEvent])
 
   // Query operations
-  const getByType = useCallback((type: 'point' | 'line' | 'plane' | 'circle'): GeometricEntity[] => {
+  const getByType = useCallback((type: 'point' | 'line' | 'plane' | 'points_equal_distance'): GeometricEntity[] => {
     const collectionKey = type + 's' as keyof EntityCollection
     return Object.values(entities[collectionKey])
   }, [entities])
@@ -376,7 +376,7 @@ export const useEntityManager = (
           dependencies.push(entity.definition.pointId)
         }
         break
-      case 'circle':
+      case 'points_equal_distance':
         if (entity.definition.centerId) {
           dependencies.push(entity.definition.centerId)
         }

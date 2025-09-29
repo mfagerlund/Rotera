@@ -81,10 +81,10 @@ export interface ConstraintRepository {
 export class Constraint implements ISelectable, IValidatable {
   private selected = false
 
-  // Smart reference caching for performance optimization
-  private _pointsRef?: any[] // Array of WorldPoint references
-  private _linesRef?: any[] // Array of Line references
-  private _planesRef?: any[] // Array of Plane references
+  // Direct object references
+  private _points: Set<any> = new Set() // WorldPoint references
+  private _lines: Set<any> = new Set() // Line references
+  private _planes: Set<any> = new Set() // Plane references
   private _entitiesPreloaded = false
 
   private constructor(
@@ -672,16 +672,7 @@ export class Constraint implements ISelectable, IValidatable {
    * This is the core optimization that eliminates the constraint evaluation bottleneck!
    */
   get points(): any[] {
-    if (!this._pointsRef) {
-      const refManager = this.repo.getReferenceManager?.()
-      if (refManager) {
-        const pointIds = this.getPointIds()
-        this._pointsRef = refManager.batchResolve(pointIds as EntityId[], 'point')
-      } else {
-        this._pointsRef = []
-      }
-    }
-    return this._pointsRef
+    return Array.from(this._points)
   }
 
   /**
@@ -689,16 +680,17 @@ export class Constraint implements ISelectable, IValidatable {
    * Uses smart caching and batch loading for performance
    */
   get lines(): any[] {
-    if (!this._linesRef) {
+    if (!this._lines) {
       const refManager = this.repo.getReferenceManager?.()
       if (refManager) {
         const lineIds = this.getLineIds()
-        this._linesRef = refManager.batchResolve(lineIds as EntityId[], 'line')
+        const resolvedLines = refManager.batchResolve(lineIds as EntityId[], 'line')
+        this._lines = new Set(resolvedLines)
       } else {
-        this._linesRef = []
+        this._lines = new Set()
       }
     }
-    return this._linesRef
+    return Array.from(this._lines)
   }
 
   /**
@@ -706,16 +698,16 @@ export class Constraint implements ISelectable, IValidatable {
    * Uses smart caching and batch loading for performance
    */
   get planes(): any[] {
-    if (!this._planesRef) {
+    if (!this._planes) {
       const refManager = this.repo.getReferenceManager?.()
       if (refManager) {
         const planeIds = this.getPlaneIds()
-        this._planesRef = refManager.batchResolve(planeIds as EntityId[], 'plane')
+        this._planes = refManager.batchResolve(planeIds as EntityId[], 'plane')
       } else {
-        this._planesRef = []
+        this._planes = []
       }
     }
-    return this._planesRef
+    return this._planes
   }
 
   /**
@@ -761,9 +753,9 @@ export class Constraint implements ISelectable, IValidatable {
    * Called automatically on updates that might affect relationships
    */
   private invalidateReferences(): void {
-    this._pointsRef = undefined
-    this._linesRef = undefined
-    this._planesRef = undefined
+    this._points = undefined
+    this._lines = undefined
+    this._planes = undefined
     this._entitiesPreloaded = false
   }
 

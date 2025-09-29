@@ -2,14 +2,15 @@
 
 import numpy as np
 import pytest
-from pictorigo.core.models.constraints import ImagePointConstraint
-from pictorigo.core.models.entities import Camera, Image, WorldPoint
 from pictorigo.core.synthetic.scene_gen import (
     SceneGenerator,
     make_box_room,
     make_grid_plane,
     make_two_view,
 )
+
+from pictorigo.core.models.constraints import ImagePointConstraint
+from pictorigo.core.models.entities import Camera, Image, WorldPoint
 
 
 class TestSceneGenerator:
