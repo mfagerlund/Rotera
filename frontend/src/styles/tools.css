@@ -630,3 +630,231 @@
     flex-direction: column;
   }
 }
+
+/* Loop Trace Tool Styles */
+.loop-trace-tool {
+  /* No extra styling - already inside FloatingWindow */
+}
+
+.loop-trace-tool .tool-section {
+  margin-bottom: 16px;
+}
+
+.loop-trace-tool .tool-section.compact {
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.loop-trace-tool .tool-section:last-child {
+  margin-bottom: 0;
+}
+
+.loop-trace-tool .tool-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.loop-trace-tool .tool-label-inline {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  min-width: 40px;
+  flex-shrink: 0;
+}
+
+.loop-trace-tool .tool-input-small {
+  flex: 1;
+  padding: 4px 8px;
+  font-size: 11px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+}
+
+.loop-trace-tool .tool-checkbox-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.loop-trace-tool .tool-checkbox-inline input[type="checkbox"] {
+  margin: 0;
+  cursor: pointer;
+}
+
+.loop-trace-tool .status-text {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* Orientation Buttons */
+.orientation-buttons {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.orientation-buttons.compact {
+  gap: 4px;
+  flex: 1;
+  flex-wrap: nowrap;
+}
+
+.orientation-buttons.compact .orientation-btn {
+  min-width: 0;
+  flex: 1;
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.orientation-btn {
+  flex: 1;
+  min-width: 60px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.orientation-btn:hover {
+  background: var(--surface-3);
+  border-color: var(--border-hover);
+}
+
+.orientation-btn.active {
+  background: var(--primary);
+  color: var(--primary-text);
+  border-color: var(--primary);
+}
+
+/* Coplanar Checkbox */
+.tool-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.tool-checkbox.disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.tool-checkbox input[type="checkbox"] {
+  cursor: inherit;
+}
+
+.tool-checkbox input[type="checkbox"]:disabled {
+  opacity: 0.5;
+}
+
+/* Chain Display */
+.chain-display {
+  padding: 12px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--text-primary);
+  font-family: monospace;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+}
+
+/* Status Summary */
+.status-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.status-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.status-item.new {
+  background: rgba(92, 184, 92, 0.1);
+  border-left: 3px solid #5cb85c;
+}
+
+.status-item.existing {
+  background: rgba(102, 102, 102, 0.1);
+  border-left: 3px solid #666;
+}
+
+.status-label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.status-count {
+  color: var(--text-primary);
+  font-weight: 600;
+  background: var(--surface-3);
+  padding: 2px 8px;
+  border-radius: 10px;
+  min-width: 24px;
+  text-align: center;
+}
+
+/* Button styles for loop trace */
+.loop-trace-tool .btn-primary {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  background: var(--primary);
+  color: var(--primary-text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.loop-trace-tool .btn-primary:hover:not(:disabled) {
+  background: var(--primary-dark);
+}
+
+.loop-trace-tool .btn-primary:disabled {
+  background: var(--surface-3);
+  color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.loop-trace-tool .btn-secondary {
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.loop-trace-tool .btn-secondary:hover {
+  background: var(--surface-3);
+  border-color: var(--border-hover);
+}

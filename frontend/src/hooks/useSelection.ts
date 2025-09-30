@@ -75,6 +75,21 @@ export const useSelection = () => {
     setSelection(new EntitySelectionImpl())
   }, [])
 
+  // Add to selection without toggle (for loop tool)
+  const addToSelection = useCallback((entity: ISelectable) => {
+    setSelection(prev => {
+      const wasAlreadySelected = prev.has(entity)
+
+      if (wasAlreadySelected) {
+        return prev // Already selected - don't toggle
+      }
+
+      const newSelection = new EntitySelectionImpl()
+      newSelection.addMultiple([...Array.from(prev.items), entity])
+      return newSelection
+    })
+  }, [])
+
   // Select all entities of specific type
   const selectAllEntities = useCallback((entities: ISelectable[]) => {
     const newSelection = new EntitySelectionImpl()
@@ -121,6 +136,7 @@ export const useSelection = () => {
     // Pure object-based selection API
     selection,
     handleEntityClick,
+    addToSelection,
     selectAllEntities,
     selectAllByType,
     selectionStats,

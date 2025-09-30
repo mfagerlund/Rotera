@@ -6,6 +6,7 @@ import { ProjectImage, WorldPoint } from '../../types/project'
 
 interface ImageWorkspaceProps {
   isPointCreationActive: boolean
+  isLoopTraceActive: boolean
   image: ProjectImage | null
   imageViewerRef: React.RefObject<ImageViewerRef>
   worldPoints: Record<string, WorldPoint>
@@ -49,7 +50,8 @@ const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({
   onLineRightClick,
   onEmptySpaceClick,
   onRequestAddImage,
-  isPointCreationActive
+  isPointCreationActive,
+  isLoopTraceActive
 }) => {
   if (!image) {
     return (
@@ -94,6 +96,7 @@ const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({
           onLineRightClick={onLineRightClick}
           onEmptySpaceClick={onEmptySpaceClick}
           isPointCreationActive={isPointCreationActive}
+          isLoopTraceActive={isLoopTraceActive}
         />
       </div>
     </div>

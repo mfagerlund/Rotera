@@ -14,6 +14,7 @@ interface LinesPopupProps {
   selectedLines?: string[]
   onEditLine?: (lineId: string) => void
   onDeleteLine?: (lineId: string) => void
+  onDeleteAllLines?: () => void
   onUpdateLine?: (updatedLine: Line) => void
   onToggleLineVisibility?: (lineId: string) => void
   onSelectLine?: (lineId: string) => void
@@ -28,6 +29,7 @@ export const LinesPopup: React.FC<LinesPopupProps> = ({
   selectedLines = [],
   onEditLine,
   onDeleteLine,
+  onDeleteAllLines,
   onUpdateLine,
   onToggleLineVisibility,
   onSelectLine,
@@ -80,6 +82,7 @@ export const LinesPopup: React.FC<LinesPopupProps> = ({
         height={500}
         onEdit={handleEdit}
         onDelete={onDeleteLine}
+        onDeleteAll={onDeleteAllLines}
         onToggleVisibility={onToggleLineVisibility}
         onSelect={onSelectLine}
         renderEntityDetails={(entity) => {

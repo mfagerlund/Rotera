@@ -28,6 +28,7 @@ interface EntityListPopupProps {
   height?: number
   onEdit?: (id: string) => void
   onDelete?: (id: string) => void
+  onDeleteAll?: () => void
   onToggleVisibility?: (id: string) => void
   onSelect?: (id: string) => void
   renderCustomActions?: (entity: EntityListItem) => React.ReactNode
@@ -45,6 +46,7 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
   height = 500,
   onEdit,
   onDelete,
+  onDeleteAll,
   onToggleVisibility,
   onSelect,
   renderCustomActions,
@@ -64,6 +66,12 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
   const handleDelete = async (id: string, name: string) => {
     if (await confirm(`Are you sure you want to delete "${name}"?\n\nThis action cannot be undone.`)) {
       onDelete?.(id)
+    }
+  }
+
+  const handleDeleteAll = async () => {
+    if (await confirm(`Are you sure you want to delete ALL ${entities.length} ${title.toLowerCase()}?\n\nThis action cannot be undone.`)) {
+      onDeleteAll?.()
     }
   }
 
@@ -135,6 +143,20 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
         showOkCancel={false}
       >
         <div className="entity-list-popup">
+        {/* Delete All Button */}
+        {entities.length > 0 && onDeleteAll && (
+          <div className="entity-list-header">
+            <button
+              className="btn-delete-all"
+              onClick={handleDeleteAll}
+              title={`Delete all ${entities.length} ${title.toLowerCase()}`}
+            >
+              <FontAwesomeIcon icon={faTrash} />
+              <span>Delete All ({entities.length})</span>
+            </button>
+          </div>
+        )}
+
         {entities.length === 0 ? (
           <div className="empty-state">
             <span>{emptyMessage}</span>
@@ -177,7 +199,7 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
                         }}
                         title="Edit"
                       >
-                        
+                        <FontAwesomeIcon icon={faPencil} />
                       </button>
                     )}
 
@@ -191,7 +213,7 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
                         }}
                         title="Delete"
                       >
-                        
+                        <FontAwesomeIcon icon={faTrash} />
                       </button>
                     )}
 

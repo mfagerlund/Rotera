@@ -309,7 +309,14 @@ export const useProject = () => {
   const createLine = useCallback((
     pointIds: [string, string],
     geometry: 'segment' | 'infinite' = 'segment',
-    name?: string
+    name?: string,
+    constraints?: {
+      direction?: 'free' | 'horizontal' | 'vertical' | 'x-aligned' | 'z-aligned'
+      targetLength?: number
+      tolerance?: number
+    },
+    color?: string,
+    isConstruction?: boolean
   ): string | null => {
     if (!project) return null
 
@@ -349,10 +356,12 @@ export const useProject = () => {
       pointA,
       pointB,
       type: 'segment',
-      color: '#4CAF50', // Green for lines according to visual language
+      color: color || '#4CAF50', // Green for lines according to visual language
       isVisible: true,
-      isConstruction: false,
-      createdAt: timestamp
+      isConstruction: isConstruction || false,
+      createdAt: timestamp,
+      // Only add constraints if they're provided
+      ...(constraints && { constraints })
     }
 
     console.log('useProject: Creating new line:', newLine)

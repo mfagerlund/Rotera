@@ -187,7 +187,7 @@ export interface Line {
   isConstruction?: boolean  // Construction vs driving geometry
   createdAt?: string   // Creation timestamp
   constraints?: {      // Embedded constraints
-    direction: 'free' | 'horizontal' | 'vertical' | 'x-aligned' | 'z-aligned'
+    direction?: 'free' | 'horizontal' | 'vertical' | 'x-aligned' | 'z-aligned'
     targetLength?: number
     tolerance?: number
   }

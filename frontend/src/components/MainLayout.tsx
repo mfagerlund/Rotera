@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faFolderOpen, faFloppyDisk, faFileExport, faTrash, faRuler, faGear, faArrowRight, faCamera } from '@fortawesome/free-solid-svg-icons'
+import { faFolderOpen, faFloppyDisk, faFileExport, faTrash, faRuler, faGear, faArrowRight, faCamera, faSquare } from '@fortawesome/free-solid-svg-icons'
 import { useProject } from '../hooks/useProject'
 import { useSelection, useSelectionKeyboard } from '../hooks/useSelection'
 import { useConstraints } from '../hooks/useConstraints'
@@ -49,7 +49,7 @@ import WorldPointEditWindow from './WorldPointEditWindow'
 import '../styles/enhanced-workspace.css'
 import '../styles/tools.css'
 
-type ActiveTool = 'select' | 'point' | 'line' | 'plane' | 'circle'
+type ActiveTool = 'select' | 'point' | 'line' | 'plane' | 'circle' | 'loop'
 
 export const MainLayout: React.FC = () => {
   // Legacy project system (for now)
@@ -100,6 +100,7 @@ export const MainLayout: React.FC = () => {
     selection,
     selectionSummary,
     handleEntityClick,
+    addToSelection,
     clearSelection,
     selectAllByType,
     getSelectedByType,
@@ -340,6 +341,29 @@ export const MainLayout: React.FC = () => {
       return // Don't do normal selection when line tool is active
     }
 
+    // If Loop tool is active, treat normal clicks as additive only
+    // shift+click removes from selection
+    if (activeTool === 'loop') {
+      const pointEntity = getWorldPointEntity(pointId)
+      if (pointEntity) {
+        if (shiftKey) {
+          // Shift removes from selection
+          handleEntityClick(pointEntity, false, true)
+        } else {
+          // Check if clicking the first selected point (to close loop)
+          const firstSelectedId = selectedPointEntities.length > 0 ? selectedPointEntities[0].getId() : null
+          if (firstSelectedId && pointId === firstSelectedId && selectedPointEntities.length >= 3) {
+            // Dispatch event to toggle closed loop
+            window.dispatchEvent(new CustomEvent('loopToolSetClosed', { detail: { closed: true } }))
+          } else {
+            // Normal click: only add if not already selected (don't toggle)
+            addToSelection(pointEntity)
+          }
+        }
+      }
+      return
+    }
+
     // Normal selection behavior - get entity object and call selection handler
     const pointEntity = getWorldPointEntity(pointId)
     if (pointEntity) {
@@ -363,9 +387,21 @@ export const MainLayout: React.FC = () => {
       cancelPlacementMode()
     } else if (activeTool === 'point' && currentImage) {
       // NEW: Only create world point when WP tool is explicitly active
-      createWorldPoint(currentImage.id, u, v)
+      const newWp = createWorldPoint(currentImage.id, u, v)
       // Auto-deactivate tool after point creation
       setActiveTool('select')
+    } else if (activeTool === 'loop' && currentImage) {
+      // Create world point and auto-select it for loop tool
+      const newWp = createWorldPoint(currentImage.id, u, v)
+      if (newWp) {
+        // Create entity directly from the returned data
+        const pointEntity = WorldPoint.create(newWp.id, newWp.name, {
+          xyz: newWp.xyz,
+          color: newWp.color,
+          isVisible: newWp.isVisible
+        })
+        addToSelection(pointEntity)
+      }
     }
     // Default behavior: do nothing (selection only)
   }
@@ -406,16 +442,10 @@ export const MainLayout: React.FC = () => {
 
   // World point edit handlers
   const handleWorldPointEdit = useCallback((worldPointId: string) => {
-    console.log('=== MainLayout: handleWorldPointEdit called ===')
-    console.log('World point ID:', worldPointId)
-    console.log('Active tool:', activeTool)
-
     // Don't allow editing while line tool is active
     if (activeTool === 'line') {
-      console.log('✗ BLOCKED: Line tool is active')
       return
     }
-    console.log('✓ Opening world point edit window')
     setWorldPointEditWindow({ isOpen: true, worldPointId })
   }, [activeTool])
 
@@ -437,6 +467,11 @@ export const MainLayout: React.FC = () => {
     const lineEntity = getLineEntity(lineId)
     if (!lineEntity) return
 
+    // Don't allow line switching during edit mode
+    if (editingLineId && lineId !== editingLineId) {
+      return
+    }
+
     if (ctrlKey || shiftKey) {
       // Selection behavior with modifiers
       handleEntityClick(lineEntity, ctrlKey, shiftKey)
@@ -449,15 +484,18 @@ export const MainLayout: React.FC = () => {
 
   const handlePlaneClick = (planeId: string, ctrlKey: boolean, shiftKey: boolean) => {
     // TODO: Implement plane selection/editing
-    console.log('Plane clicked:', planeId, { ctrlKey, shiftKey })
   }
 
   const handleEmptySpaceClick = useCallback((shiftKey: boolean) => {
+    // Don't clear selection if loop tool is active (creating new points)
+    if (activeTool === 'loop') {
+      return
+    }
     // Clear selection unless holding shift
     if (!shiftKey) {
       clearSelection()
     }
-  }, [clearSelection])
+  }, [clearSelection, activeTool])
 
   // Workspace data for status display
   const imageInfo = {
@@ -476,8 +514,6 @@ export const MainLayout: React.FC = () => {
   useSelectionKeyboard(
     () => {
       // TODO: Implement select all functionality with actual entity objects
-      // For now, just clear selection as a safe fallback
-      console.log('Select All not yet implemented - needs entity objects')
     },
     clearSelection,
     () => {} // Delete handler
@@ -513,6 +549,9 @@ export const MainLayout: React.FC = () => {
               }
             }
             break
+          case 'o':
+            setActiveTool(activeTool === 'loop' ? 'select' : 'loop')
+            break
           // Add more shortcuts later for P (plane), C (circle), etc.
         }
       }
@@ -537,6 +576,7 @@ export const MainLayout: React.FC = () => {
       activeConstraintType={activeConstraintType}
       constructionPreview={constructionPreview}
       isPointCreationActive={activeTool === 'point'}
+      isLoopTraceActive={activeTool === 'loop'}
       onPointClick={handleEnhancedPointClick}
       onLineClick={handleEnhancedLineClick}
       onCreatePoint={handleImageClick}
@@ -780,24 +820,21 @@ export const MainLayout: React.FC = () => {
                 worldPointNames={worldPointNames}
                 existingLines={project?.lines || {}}
                 onCreatePoint={(imageId: string, u: number, v: number) => handleImageClick(u, v)}
-                onCreateLine={(pointIds, constraints) => {
+                onCreateLine={(pointIds, lineConstraints) => {
                   try {
-                    console.log('MainLayout: Creating line with points:', pointIds, 'constraints:', constraints)
-
                     // Enhanced line creation with constraints
-                    const lineId = createLine(pointIds, 'segment')
-                    console.log('MainLayout: createLine returned:', lineId)
+                    const lineId = createLine(
+                      pointIds,
+                      'segment',
+                      lineConstraints?.name,
+                      lineConstraints?.constraints,
+                      lineConstraints?.color,
+                      lineConstraints?.isConstruction
+                    )
 
                     if (lineId) {
-                      console.log('MainLayout: Line created successfully with ID:', lineId)
                       // Clear construction preview
                       setConstructionPreview(null)
-                      if (constraints) {
-                        // TODO: Apply line-local constraints
-                        console.log('Line created with constraints:', lineId, constraints)
-                      }
-                      // Beep on successful creation
-                      console.log(' Line created successfully!')
                       // Sound notification for completed task
                       if (window.navigator.platform.startsWith('Win')) {
                         try {
@@ -816,36 +853,22 @@ export const MainLayout: React.FC = () => {
                             oscillator.stop(audioContext.currentTime + 0.2)
                           })
                         } catch (e) {
-                          console.log('Could not play sound notification')
+                          // Silently fail
                         }
-                      }
-                    } else {
-                      console.error('MainLayout: createLine failed - no line ID returned')
-                      // Check if it's a duplicate line issue
-                      const [pointA, pointB] = pointIds
-                      const existingLine = Object.values(project?.lines || {}).find(line =>
-                        (line.pointA === pointA && line.pointB === pointB) ||
-                        (line.pointA === pointB && line.pointB === pointA)
-                      )
-                      if (existingLine) {
-                        console.log(`Warning: Line already exists: ${existingLine.name}`)
-                        // TODO: Show user notification about existing line
-                        // TODO: Optionally highlight the existing line
                       }
                     }
                   } catch (error) {
-                    console.error('MainLayout: Error creating line:', error)
+                    // Silently fail
                   }
                 }}
                 onCreatePlane={(definition) => {
                   // TODO: Implement plane creation
-                  console.log('Create plane:', definition)
                 }}
                 onCreateCircle={(definition) => {
                   // TODO: Implement circle creation
-                  console.log('Create circle:', definition)
                 }}
                 onConstructionPreviewChange={setConstructionPreview}
+                onClearSelection={clearSelection}
                 currentImageId={currentImageId || undefined}
                 editingLineId={editingLineId}
                 onUpdateLine={handleEditLineSave}
@@ -905,7 +928,7 @@ export const MainLayout: React.FC = () => {
                     onClick={() => setShowLinesPopup(true)}
                     title="Manage lines"
                   >
-                    <span className="button-icon">??</span>
+                    <span className="button-icon"><FontAwesomeIcon icon={faRuler} /></span>
                     <span className="button-label">Lines</span>
                     <span className="button-count">{Object.keys(project?.lines || {}).length}</span>
                   </button>
@@ -915,7 +938,7 @@ export const MainLayout: React.FC = () => {
                     onClick={() => setShowPlanesPopup(true)}
                     title="Manage planes"
                   >
-                    <span className="button-icon">??</span>
+                    <span className="button-icon"><FontAwesomeIcon icon={faSquare} /></span>
                     <span className="button-label">Planes</span>
                     <span className="button-count">{Object.keys(project?.planes || {}).length}</span>
                   </button>
@@ -925,7 +948,7 @@ export const MainLayout: React.FC = () => {
                     onClick={() => setShowImagePointsPopup(true)}
                     title="Manage image points"
                   >
-                    <span className="button-icon">??</span>
+                    <span className="button-icon"><FontAwesomeIcon icon={faCamera} /></span>
                     <span className="button-label">Image Points</span>
                     <span className="button-count">{Object.values(worldPoints || {}).reduce((total, wp) => total + wp.imagePoints.length, 0)}</span>
                   </button>
@@ -935,7 +958,7 @@ export const MainLayout: React.FC = () => {
                     onClick={() => setShowConstraintsPopup(true)}
                     title="Manage constraints"
                   >
-                    <span className="button-icon">??</span>
+                    <span className="button-icon"><FontAwesomeIcon icon={faGear} /></span>
                     <span className="button-label">Constraints</span>
                     <span className="button-count">{constraints.length}</span>
                   </button>
@@ -1020,13 +1043,16 @@ export const MainLayout: React.FC = () => {
           deleteLine(lineId)
         }
       }}
+      onDeleteAllLines={() => {
+        Object.keys(project?.lines || {}).forEach(lineId => {
+          deleteLine(lineId)
+        })
+      }}
       onUpdateLine={(updatedLine) => {
         // TODO: Implement line update through enhanced project
-        console.log('Update line:', updatedLine)
       }}
       onToggleLineVisibility={(lineId) => {
         // TODO: Implement line visibility toggle
-        console.log('Toggle line visibility:', lineId)
       }}
       onSelectLine={(lineId) => {
         const lineEntity = getLineEntity(lineId)
@@ -1034,12 +1060,15 @@ export const MainLayout: React.FC = () => {
           handleEntityClick(lineEntity, false, false)
         }
       }}
-      onCreateLine={(pointIds, constraints) => {
-        const lineId = createLine(pointIds, 'segment')
-        if (lineId && constraints) {
-          // TODO: Apply constraints
-          console.log('Line created with constraints:', lineId, constraints)
-        }
+      onCreateLine={(pointIds, lineConstraints) => {
+        createLine(
+          pointIds,
+          'segment',
+          lineConstraints?.name,
+          lineConstraints?.constraints,
+          lineConstraints?.color,
+          lineConstraints?.isConstruction
+        )
       }}
     />
 
@@ -1051,19 +1080,15 @@ export const MainLayout: React.FC = () => {
       selectedPlanes={selectedPlaneEntities.map(p => p.getId())}
       onEditPlane={(planeId) => {
         // TODO: Implement plane editing
-        console.log('Edit plane:', planeId)
       }}
       onDeletePlane={(planeId) => {
         // TODO: Implement plane deletion
-        console.log('Delete plane:', planeId)
       }}
       onTogglePlaneVisibility={(planeId) => {
         // TODO: Implement plane visibility toggle
-        console.log('Toggle plane visibility:', planeId)
       }}
       onSelectPlane={(planeId) => {
         // TODO: Implement plane selection
-        console.log('Select plane:', planeId)
       }}
     />
 
@@ -1074,15 +1099,12 @@ export const MainLayout: React.FC = () => {
       images={project?.images || {}}
       onEditImagePoint={(imagePointId) => {
         // TODO: Implement image point editing
-        console.log('Edit image point:', imagePointId)
       }}
       onDeleteImagePoint={(imagePointId) => {
         // TODO: Implement image point deletion
-        console.log('Delete image point:', imagePointId)
       }}
       onSelectImagePoint={(imagePointId) => {
         // TODO: Implement image point selection
-        console.log('Select image point:', imagePointId)
       }}
     />
 
@@ -1094,7 +1116,6 @@ export const MainLayout: React.FC = () => {
       lineNames={Object.fromEntries(Object.entries(project?.lines || {}).map(([id, line]) => [id, line.name]))}
       onEditConstraint={(constraintId) => {
         // TODO: Implement constraint editing
-        console.log('Edit constraint:', constraintId)
       }}
       onDeleteConstraint={(constraintId) => {
         deleteConstraint(constraintId)
@@ -1104,7 +1125,6 @@ export const MainLayout: React.FC = () => {
       }}
       onSelectConstraint={(constraintId) => {
         // TODO: Implement constraint selection
-        console.log('Select constraint:', constraintId)
       }}
     />
 
