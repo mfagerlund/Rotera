@@ -38,6 +38,7 @@ interface ImageViewerProps extends ImageViewerPropsBase {
   onZoomFit?: () => void
   onZoomSelection?: () => void
   onScaleChange?: (scale: number) => void
+  isLoopTraceActive?: boolean
 }
 
 export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
@@ -62,7 +63,8 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
   onEmptySpaceClick,
   onZoomFit,
   onZoomSelection,
-  onScaleChange
+  onScaleChange,
+  isLoopTraceActive = false
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -294,7 +296,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
   }), [offset.x, offset.y, scale])
 
   const placementModeActive = placementMode?.active ?? false
-  const creationContextActive = placementModeActive || isPointCreationActive
+  const creationContextActive = placementModeActive || isPointCreationActive || isLoopTraceActive
   const isPlacementInteractionActive = isDraggingPoint || isDragDropActive || creationContextActive
 
   const renderState = useMemo<ImageViewerRenderState>(() => ({
@@ -318,7 +320,8 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     isPrecisionDrag,
     isDragDropActive,
     isPlacementModeActive: placementModeActive,
-    isPointCreationActive
+    isPointCreationActive,
+    isLoopTraceActive
   }), [
     constructionPreview,
     currentMousePos,
@@ -334,6 +337,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     isPrecisionDrag,
     placementModeActive,
     isPointCreationActive,
+    isLoopTraceActive,
     lines,
     offset,
     panVelocity,
@@ -470,6 +474,8 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
           setDragStartPos({ x, y })
           setDraggedPointId(nearbyPoint.id)
           // Don't start dragging immediately - wait for mouse movement
+
+          // Loop trace uses normal point clicks (selection system)
           onPointClick(nearbyPoint.id, event.ctrlKey, event.shiftKey)
         } else if (nearbyLine && onLineClick) {
           // Handle line click
@@ -488,7 +494,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
             onEmptySpaceClick(event.shiftKey)
           }
 
-          // Create point if tool is active
+          // Create point if tool is active (loop trace or point tool)
           if (onCreatePoint) {
             const imageCoords = canvasToImageCoords(x, y)
             if (imageCoords) {

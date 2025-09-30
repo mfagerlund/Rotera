@@ -64,6 +64,39 @@
   padding: 8px;
 }
 
+.entity-list-header {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 0 12px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+
+.btn-delete-all {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-delete-all:hover {
+  background: var(--error);
+  border-color: var(--error);
+  color: white;
+}
+
+.btn-delete-all svg {
+  font-size: 14px;
+}
+
 .entity-list {
   flex: 1;
   overflow-y: auto;

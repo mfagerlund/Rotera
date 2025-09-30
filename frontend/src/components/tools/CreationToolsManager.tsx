@@ -4,11 +4,13 @@ import React, { useState, useCallback } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faLocationDot, faRuler, faSquare } from '@fortawesome/free-solid-svg-icons'
 import LineCreationTool from './LineCreationTool'
+import LoopTraceTool from './LoopTraceTool'
 import FloatingWindow from '../FloatingWindow'
 import { LineConstraintSettings } from '../../entities/line'
+import { ConstructionPreview } from '../image-viewer/types'
 import '../../styles/tools.css'
 
-type ToolType = 'select' | 'point' | 'line' | 'plane' | 'circle'
+type ToolType = 'select' | 'point' | 'line' | 'plane' | 'circle' | 'loop'
 
 interface LineConstraints {
   name?: string
@@ -30,12 +32,8 @@ interface CreationToolsManagerProps {
   onCreateLine: (pointIds: [string, string], constraints?: LineConstraints) => void
   onCreatePlane: (definition: any) => void
   onCreateCircle: (definition: any) => void
-  onConstructionPreviewChange?: (preview: {
-    type: 'line'
-    pointA?: string
-    pointB?: string
-    showToCursor?: boolean
-  } | null) => void
+  onConstructionPreviewChange?: (preview: ConstructionPreview | null) => void
+  onClearSelection?: () => void
   currentImageId?: string
   editingLineId?: string | null
   onUpdateLine?: (updatedLine: any) => void
@@ -57,6 +55,7 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
   onCreatePlane,
   onCreateCircle,
   onConstructionPreviewChange,
+  onClearSelection,
   currentImageId,
   editingLineId = null,
   onUpdateLine,
@@ -74,6 +73,9 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
       if (tool === 'line' && onClearEditingLine) {
         onClearEditingLine()
       }
+      if (tool === 'loop' && onConstructionPreviewChange) {
+        onConstructionPreviewChange(null)
+      }
     } else {
       // Activating a new tool - clear editing state for line tool
       if (tool === 'line' && onClearEditingLine) {
@@ -82,16 +84,19 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
       onToolChange(tool)
       setToolMessage('')
     }
-  }, [activeTool, onToolChange, onClearEditingLine])
+  }, [activeTool, onToolChange, onClearEditingLine, onConstructionPreviewChange])
 
   const handleToolCancel = useCallback(() => {
+    if (activeTool === 'loop' && onClearSelection) {
+      onClearSelection()
+    }
     onToolChange('select')
     setToolMessage('')
     // Clear construction preview when canceling
     if (onConstructionPreviewChange) {
       onConstructionPreviewChange(null)
     }
-  }, [onToolChange, onConstructionPreviewChange])
+  }, [onToolChange, onConstructionPreviewChange, activeTool, onClearSelection])
 
   const handleToolStateChange = useCallback((isActive: boolean, message?: string) => {
     if (message) {
@@ -185,6 +190,16 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
           <span className="tool-icon">⭕</span>
           <span className="tool-label">Circle</span>
           <span className="tool-shortcut">C</span>
+        </button>
+
+        <button
+          className={`tool-button ${activeTool === 'loop' ? 'active' : ''}`}
+          onClick={() => handleToolActivation('loop')}
+          title="Loop trace - String together points and create lines"
+        >
+          <span className="tool-icon">🔗</span>
+          <span className="tool-label">Loop</span>
+          <span className="tool-shortcut">O</span>
         </button>
       </div>
 
@@ -304,6 +319,36 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
           }
           onUpdateLine={onUpdateLine}
           onDeleteLine={onDeleteLine}
+        />
+      </FloatingWindow>
+
+      {/* Floating Loop Trace Tool */}
+      <FloatingWindow
+        title="Loop Trace"
+        isOpen={activeTool === 'loop'}
+        onClose={handleToolCancel}
+        width={400}
+        storageKey="loop-trace-tool"
+        showOkCancel={true}
+        onOk={() => {
+          // Trigger save via custom event
+          window.dispatchEvent(new CustomEvent('loopToolSave'))
+        }}
+        onCancel={handleToolCancel}
+        okText="Complete"
+        cancelText="Cancel"
+      >
+        <LoopTraceTool
+          selectedPoints={selectedPoints}
+          worldPointNames={worldPointNames}
+          existingLines={existingLines}
+          onCreateLine={onCreateLine}
+          onCancel={handleToolCancel}
+          onConstructionPreviewChange={onConstructionPreviewChange}
+          onClearSelection={onClearSelection}
+          isActive={activeTool === 'loop'}
+          showHeader={false}
+          showActionButtons={false}
         />
       </FloatingWindow>
     </div>

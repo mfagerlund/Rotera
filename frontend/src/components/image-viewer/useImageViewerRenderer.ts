@@ -49,10 +49,11 @@ export const useImageViewerRenderer = ({
     isPrecisionDrag,
     isDragDropActive,
     isPlacementModeActive,
-    isPointCreationActive
+    isPointCreationActive,
+    isLoopTraceActive
   } = renderState
 
-  const isPlacementInteractionActive = isDraggingPoint || isDragDropActive || isPlacementModeActive || isPointCreationActive
+  const isPlacementInteractionActive = isDraggingPoint || isDragDropActive || isPlacementModeActive || isPointCreationActive || isLoopTraceActive
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -414,20 +415,23 @@ export const useImageViewerRenderer = ({
         const midX = (x1 + x2) / 2
         const midY = (y1 + y2) / 2
 
-        let directionGlyph = '↔'
-        if (line.constraints) {
+        let directionGlyph = ''
+        if (line.constraints?.direction && line.constraints.direction !== 'free') {
           switch (line.constraints.direction) {
             case 'horizontal': directionGlyph = '↔'; break
             case 'vertical': directionGlyph = '↕'; break
             case 'x-aligned': directionGlyph = 'X'; break
             case 'z-aligned': directionGlyph = 'Z'; break
-            case 'free': directionGlyph = '↔'; break
           }
         }
 
         const displayText = line.constraints?.targetLength
-          ? `${line.name} ${directionGlyph} ${line.constraints.targetLength.toFixed(1)}m`
-          : `${line.name} ${directionGlyph}`
+          ? directionGlyph
+            ? `${line.name} ${directionGlyph} ${line.constraints.targetLength.toFixed(1)}m`
+            : `${line.name} ${line.constraints.targetLength.toFixed(1)}m`
+          : directionGlyph
+            ? `${line.name} ${directionGlyph}`
+            : `${line.name}`
 
         ctx.font = '12px Arial'
         ctx.textAlign = 'center'
@@ -442,7 +446,77 @@ export const useImageViewerRenderer = ({
     }
 
     const renderConstructionPreview = () => {
-      if (!constructionPreview || constructionPreview.type !== 'line') {
+      if (!constructionPreview) {
+        return
+      }
+
+      // Handle loop-chain preview
+      if (constructionPreview.type === 'loop-chain') {
+        const segments = constructionPreview.segments || []
+
+        segments.forEach(segment => {
+          const wpA = worldPoints[segment.pointA]
+          const wpB = worldPoints[segment.pointB]
+          if (!wpA || !wpB) return
+
+          const ipA = wpA.imagePoints.find(ip => ip.imageId === imageId)
+          const ipB = wpB.imagePoints.find(ip => ip.imageId === imageId)
+          if (!ipA || !ipB) return
+
+          const x1 = ipA.u * scale + offset.x
+          const y1 = ipA.v * scale + offset.y
+          const x2 = ipB.u * scale + offset.x
+          const y2 = ipB.v * scale + offset.y
+
+          // Color based on status
+          if (segment.status === 'new') {
+            ctx.strokeStyle = 'rgba(92, 184, 92, 0.8)' // Green for new lines
+          } else if (segment.status === 'exists') {
+            ctx.strokeStyle = 'rgba(102, 102, 102, 0.6)' // Gray for existing
+          } else if (segment.status === 'building') {
+            ctx.strokeStyle = 'rgba(6, 150, 215, 0.8)' // Blue for building
+          }
+
+          ctx.lineWidth = 2
+          ctx.setLineDash([8, 4])
+
+          ctx.beginPath()
+          ctx.moveTo(x1, y1)
+          ctx.lineTo(x2, y2)
+          ctx.stroke()
+          ctx.setLineDash([])
+        })
+
+        // Show line to cursor from last point if there's a chain
+        if (segments.length > 0 && currentMousePos) {
+          const lastSegment = segments[segments.length - 1]
+          const lastPoint = worldPoints[lastSegment.pointB]
+          if (lastPoint) {
+            const ipLast = lastPoint.imagePoints.find(ip => ip.imageId === imageId)
+            if (ipLast) {
+              const x1 = ipLast.u * scale + offset.x
+              const y1 = ipLast.v * scale + offset.y
+              const x2 = currentMousePos.x
+              const y2 = currentMousePos.y
+
+              ctx.strokeStyle = 'rgba(6, 150, 215, 0.6)' // Blue for cursor line
+              ctx.lineWidth = 2
+              ctx.setLineDash([8, 4])
+
+              ctx.beginPath()
+              ctx.moveTo(x1, y1)
+              ctx.lineTo(x2, y2)
+              ctx.stroke()
+              ctx.setLineDash([])
+            }
+          }
+        }
+
+        return
+      }
+
+      // Handle regular line preview
+      if (constructionPreview.type !== 'line') {
         return
       }
       if (!currentMousePos) {
@@ -561,6 +635,7 @@ export const useImageViewerRenderer = ({
     isDragDropActive,
     isPlacementModeActive,
     isPointCreationActive,
+    isLoopTraceActive,
     canvasToImageCoords,
     imageToCanvasCoords,
     precisionCanvasPosRef,

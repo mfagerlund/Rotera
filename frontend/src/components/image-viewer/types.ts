@@ -15,10 +15,16 @@ export interface CanvasOffset extends CanvasPoint {}
 export interface PanVelocity extends CanvasPoint {}
 
 export interface ConstructionPreview {
-  type: 'line'
+  type: 'line' | 'loop-chain'
   pointA?: string
   pointB?: string
   showToCursor?: boolean
+  // For loop-chain type
+  segments?: Array<{
+    pointA: string
+    pointB: string
+    status: 'new' | 'exists' | 'building'
+  }>
 }
 
 export interface LineData {
@@ -75,6 +81,7 @@ export interface ImageViewerRenderState {
   isDragDropActive: boolean
   isPlacementModeActive: boolean
   isPointCreationActive: boolean
+  isLoopTraceActive: boolean
 }
 
 export type CanvasToImage = (canvasX: number, canvasY: number) => ImageCoords | null
