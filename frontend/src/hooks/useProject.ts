@@ -138,6 +138,58 @@ export const useProject = () => {
     })
   }, [updateProject])
 
+  const copyPointsFromImageToImage = useCallback((sourceImageId: string, targetImageId: string) => {
+    updateProject(prev => {
+      const sourceImage = prev.images[sourceImageId]
+      const targetImage = prev.images[targetImageId]
+
+      if (!sourceImage || !targetImage) return prev
+
+      // Get all world points that have image points in the source image
+      const updatedWorldPoints = { ...prev.worldPoints }
+
+      Object.values(prev.worldPoints).forEach(wp => {
+        const sourceImagePoint = wp.imagePoints.find(ip => ip.imageId === sourceImageId)
+
+        // Only copy if the world point has a point in the source image
+        if (sourceImagePoint) {
+          // Check if the target image already has this point
+          const hasTargetPoint = wp.imagePoints.some(ip => ip.imageId === targetImageId)
+
+          // Skip if target already has this point
+          if (!hasTargetPoint) {
+            // Convert source point to percentage
+            const uPercent = sourceImagePoint.u / sourceImage.width
+            const vPercent = sourceImagePoint.v / sourceImage.height
+
+            // Map to target image coordinates
+            const targetU = uPercent * targetImage.width
+            const targetV = vPercent * targetImage.height
+
+            // Add the new image point to this world point
+            updatedWorldPoints[wp.id] = {
+              ...updatedWorldPoints[wp.id],
+              imagePoints: [
+                ...updatedWorldPoints[wp.id].imagePoints,
+                {
+                  imageId: targetImageId,
+                  u: targetU,
+                  v: targetV,
+                  wpId: wp.id
+                }
+              ]
+            }
+          }
+        }
+      })
+
+      return {
+        ...prev,
+        worldPoints: updatedWorldPoints
+      }
+    })
+  }, [updateProject])
+
   const renameWorldPoint = useCallback((id: string, newName: string) => {
     updateProject(prev => {
       const worldPoint = prev.worldPoints[id]
@@ -430,6 +482,7 @@ export const useProject = () => {
     // World Points
     createWorldPoint,
     addImagePointToWorldPoint,
+    copyPointsFromImageToImage,
     renameWorldPoint,
     deleteWorldPoint,
 

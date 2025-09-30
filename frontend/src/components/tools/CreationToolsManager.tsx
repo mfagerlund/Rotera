@@ -290,6 +290,12 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
           window.dispatchEvent(new CustomEvent('lineToolSave'))
         }}
         onCancel={handleToolCancel}
+        onDelete={editingLineId && onDeleteLine ? () => {
+          if (editingLineId) {
+            onDeleteLine(editingLineId)
+            handleToolCancel()
+          }
+        } : undefined}
         okText={editingLineId ? "Save" : "Create"}
         cancelText="Cancel"
       >

@@ -2,7 +2,7 @@
 
 import React, { useRef } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowsUpDown, faCheck, faPlus, faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
+import { faArrowsUpDown, faCheck, faPlus, faPencil, faTrash, faCopy } from '@fortawesome/free-solid-svg-icons'
 import { faCircle } from '@fortawesome/free-regular-svg-icons'
 import { ProjectImage, WorldPoint } from '../types/project'
 import { ImageUtils } from '../utils/imageUtils'
@@ -28,6 +28,7 @@ interface ImageNavigationToolbarProps {
   onImageReorder: (newOrder: string[]) => void
   onWorldPointHover?: (pointId: string | null) => void
   onWorldPointClick?: (pointId: string, ctrlKey: boolean, shiftKey: boolean) => void
+  onCopyPointsToCurrentImage?: (sourceImageId: string) => void
 }
 
 export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
@@ -48,7 +49,8 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
   imageSortOrder,
   onImageReorder,
   onWorldPointHover,
-  onWorldPointClick
+  onWorldPointClick,
+  onCopyPointsToCurrentImage
 }) => {
   const { confirm, dialog } = useConfirm()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -216,6 +218,8 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
               onDrop={() => handleDrop(image.id)}
               onWorldPointHover={onWorldPointHover}
               onWorldPointClick={onWorldPointClick}
+              onCopyPointsToCurrentImage={onCopyPointsToCurrentImage}
+              currentImageId={currentImageId}
             />
           ))
         ) : (
@@ -256,6 +260,8 @@ interface ImageNavigationItemProps {
   onDrop: () => void
   onWorldPointHover?: (pointId: string | null) => void
   onWorldPointClick?: (pointId: string, ctrlKey: boolean, shiftKey: boolean) => void
+  onCopyPointsToCurrentImage?: (sourceImageId: string) => void
+  currentImageId: string | null
 }
 
 const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
@@ -281,7 +287,9 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
   onDragLeave,
   onDrop,
   onWorldPointHover,
-  onWorldPointClick
+  onWorldPointClick,
+  onCopyPointsToCurrentImage,
+  currentImageId
 }) => {
   const imgRef = React.useRef<HTMLImageElement>(null)
   const [imgBounds, setImgBounds] = React.useState({ width: 0, height: 0, offsetX: 0, offsetY: 0 })
@@ -377,6 +385,28 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
 
           {/* Action buttons */}
           <div className="image-top-actions">
+            {/* Copy points button */}
+            <button
+              className="btn-image-top-action"
+              disabled={!currentImageId || image.id === currentImageId || pointCount === 0}
+              onClick={(e) => {
+                e.stopPropagation()
+                if (onCopyPointsToCurrentImage) {
+                  onCopyPointsToCurrentImage(image.id)
+                }
+              }}
+              title={
+                !currentImageId
+                  ? 'Select a target image first'
+                  : image.id === currentImageId
+                  ? "Can't copy to self"
+                  : pointCount === 0
+                  ? 'No points to copy'
+                  : `Copy ${pointCount} point${pointCount === 1 ? '' : 's'} to current image`
+              }
+            >
+              <FontAwesomeIcon icon={faCopy} />
+            </button>
             <button
               className="btn-image-top-action"
               onClick={(e) => {

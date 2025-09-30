@@ -87,6 +87,7 @@ export const MainLayout: React.FC = () => {
     renameWorldPoint,
     deleteWorldPoint,
     addImagePointToWorldPoint,
+    copyPointsFromImageToImage,
     createLine,
     updateLine,
     deleteLine,
@@ -803,6 +804,11 @@ export const MainLayout: React.FC = () => {
                 onImageReorder={handleImageReorder}
                 onWorldPointHover={setHoveredWorldPointId}
                 onWorldPointClick={handleEnhancedPointClick}
+                onCopyPointsToCurrentImage={(sourceImageId) => {
+                  if (currentImageId) {
+                    copyPointsFromImageToImage(sourceImageId, currentImageId)
+                  }
+                }}
               />
               {/* Resize handle */}
               <div
