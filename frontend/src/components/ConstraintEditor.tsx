@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Constraint, WorldPoint } from '../types/project'
+import { useConfirm } from './ConfirmDialog'
 
 interface ConstraintEditorProps {
   constraint: Constraint | null
@@ -22,6 +23,7 @@ export const ConstraintEditor: React.FC<ConstraintEditorProps> = ({
 }) => {
   const [localParams, setLocalParams] = useState<Record<string, any>>({})
   const [isDirty, setIsDirty] = useState(false)
+  const { confirm, dialog } = useConfirm()
 
   // Initialize local params when constraint changes
   useEffect(() => {
@@ -45,8 +47,8 @@ export const ConstraintEditor: React.FC<ConstraintEditorProps> = ({
     setIsDirty(false)
   }
 
-  const handleDelete = () => {
-    if (constraint && confirm(`Delete ${getConstraintDisplayName(constraint)} constraint?`)) {
+  const handleDelete = async () => {
+    if (constraint && await confirm(`Delete ${getConstraintDisplayName(constraint)} constraint?`)) {
       onDelete()
     }
   }
@@ -362,8 +364,10 @@ export const ConstraintEditor: React.FC<ConstraintEditorProps> = ({
   }
 
   return (
-    <div className="constraint-editor-overlay" onClick={onCancel}>
-      <div className="constraint-editor-modal" onClick={e => e.stopPropagation()}>
+    <>
+      {dialog}
+      <div className="constraint-editor-overlay" onClick={onCancel}>
+        <div className="constraint-editor-modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h3>Edit {getConstraintDisplayName(constraint)} Constraint</h3>
           <div className="modal-controls">
@@ -410,6 +414,7 @@ export const ConstraintEditor: React.FC<ConstraintEditorProps> = ({
         </div>
       </div>
     </div>
+    </>
   )
 }
 

@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
 import FloatingWindow from './FloatingWindow'
 import { WorldPoint } from '../types/project'
+import { useConfirm } from './ConfirmDialog'
 
 interface WorldPointEditWindowProps {
   isOpen: boolean
@@ -19,6 +20,7 @@ export const WorldPointEditWindow: React.FC<WorldPointEditWindowProps> = ({
   onUpdateWorldPoint,
   onDeleteWorldPoint
 }) => {
+  const { confirm, dialog } = useConfirm()
   const [editedPoint, setEditedPoint] = useState<WorldPoint>(worldPoint)
   const [hasChanges, setHasChanges] = useState(false)
 
@@ -53,9 +55,9 @@ export const WorldPointEditWindow: React.FC<WorldPointEditWindowProps> = ({
     onClose()
   }
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
     if (hasChanges) {
-      if (confirm('You have unsaved changes. Are you sure you want to cancel?')) {
+      if (await confirm('You have unsaved changes. Are you sure you want to cancel?')) {
         setEditedPoint(worldPoint)
         setHasChanges(false)
         onClose()
@@ -65,8 +67,8 @@ export const WorldPointEditWindow: React.FC<WorldPointEditWindowProps> = ({
     }
   }
 
-  const handleDelete = () => {
-    if (confirm(`Are you sure you want to delete world point "${worldPoint.name}"?`)) {
+  const handleDelete = async () => {
+    if (await confirm(`Are you sure you want to delete world point "${worldPoint.name}"?`)) {
       onDeleteWorldPoint?.(worldPoint.id)
       onClose()
     }
@@ -77,7 +79,8 @@ export const WorldPointEditWindow: React.FC<WorldPointEditWindowProps> = ({
   }
 
   return (
-    <FloatingWindow
+    <>
+      <FloatingWindow
       title={`Edit World Point: ${worldPoint.name}`}
       isOpen={isOpen}
       onClose={handleCancel}
@@ -275,6 +278,8 @@ export const WorldPointEditWindow: React.FC<WorldPointEditWindowProps> = ({
         )}
       </div>
     </FloatingWindow>
+    {dialog}
+    </>
   )
 }
 

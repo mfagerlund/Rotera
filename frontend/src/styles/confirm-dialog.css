@@ -1,0 +1,219 @@
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.5) translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes exitConfirm {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0) rotate(0deg);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.5) translateY(-30px) rotate(15deg);
+  }
+}
+
+@keyframes exitCancel {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0) rotate(0deg);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.3) translateY(20px) rotate(-10deg);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(220, 53, 69, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(220, 53, 69, 0.6);
+  }
+}
+
+.confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(3px);
+  z-index: 10000;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+
+.confirm-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.confirm-overlay.exit-confirm,
+.confirm-overlay.exit-cancel {
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: auto;
+}
+
+.confirm-popover {
+  background: linear-gradient(135deg, #2d2d2d 0%, #262626 100%);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  padding: 8px;
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.confirm-popover.visible {
+  animation: popIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.confirm-popover.exit-confirm {
+  animation: exitConfirm 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55) both !important;
+}
+
+.confirm-popover.exit-cancel {
+  animation: exitCancel 0.25s cubic-bezier(0.55, 0.085, 0.68, 0.53) both !important;
+}
+
+.confirm-message {
+  display: none;
+}
+
+.confirm-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.confirm-buttons button {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 600;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  border: none;
+}
+
+.confirm-buttons button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.5s, height 0.5s;
+}
+
+.confirm-buttons button:active::before {
+  width: 100px;
+  height: 100px;
+}
+
+.confirm-buttons .btn-icon {
+  font-size: 20px;
+  line-height: 1;
+  position: relative;
+  z-index: 1;
+}
+
+.confirm-buttons .btn-cancel {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e0e0e0;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.confirm-buttons .btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  transform: translateY(-2px) scale(1.05);
+  box-shadow:
+    0 6px 16px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.confirm-buttons .btn-confirm {
+  color: white;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.confirm-buttons .btn-confirm.danger {
+  background: linear-gradient(135deg, #ff4757 0%, #dc3545 100%);
+}
+
+.confirm-buttons .btn-confirm.danger:hover {
+  background: linear-gradient(135deg, #ff3547 0%, #c82333 100%);
+  transform: translateY(-3px) scale(1.08);
+  box-shadow:
+    0 8px 20px rgba(220, 53, 69, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  animation: pulseGlow 1.5s infinite;
+}
+
+.confirm-buttons .btn-confirm.primary {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0696d7 100%);
+}
+
+.confirm-buttons .btn-confirm.primary:hover {
+  background: linear-gradient(135deg, #0284c7 0%, #0582bd 100%);
+  transform: translateY(-3px) scale(1.08);
+  box-shadow:
+    0 8px 20px rgba(6, 150, 215, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.confirm-buttons button:active {
+  transform: scale(0.92) !important;
+}
+
+/* Add a subtle glow effect on confirm button hover */
+.confirm-buttons .btn-confirm:hover::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  animation: shimmer 2s infinite;
+}

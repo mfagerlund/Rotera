@@ -4,6 +4,7 @@ import React, { useState, useCallback, useMemo } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faEye, faEyeSlash, faFolderOpen, faLocationDot, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons'
 import { Project, WorldPoint } from '../types/project'
+import { useConfirm } from './ConfirmDialog'
 
 export interface PointGroup {
   id: string
@@ -41,6 +42,7 @@ export const PointGroupsPanel: React.FC<PointGroupsPanelProps> = ({
   selectedPointIds,
   selectedGroupId
 }) => {
+  const { confirm, dialog } = useConfirm()
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [editingGroup, setEditingGroup] = useState<string | null>(null)
   const [newGroupForm, setNewGroupForm] = useState({
@@ -159,7 +161,9 @@ export const PointGroupsPanel: React.FC<PointGroupsPanelProps> = ({
   ]
 
   return (
-    <div className="point-groups-panel">
+    <>
+      {dialog}
+      <div className="point-groups-panel">
       <div className="panel-header">
         <h3>Point Groups</h3>
         <div className="header-actions">
@@ -397,9 +401,9 @@ export const PointGroupsPanel: React.FC<PointGroupsPanelProps> = ({
                 />
                 <button
                   className="control-btn delete-btn"
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation()
-                    if (confirm(`Delete group "${group.name}"? Points will become ungrouped.`)) {
+                    if (await confirm(`Delete group "${group.name}"? Points will become ungrouped.`)) {
                       onGroupDelete(group.id)
                     }
                   }}
@@ -444,6 +448,7 @@ export const PointGroupsPanel: React.FC<PointGroupsPanelProps> = ({
         </button>
       </div>
     </div>
+    </>
   )
 }
 
