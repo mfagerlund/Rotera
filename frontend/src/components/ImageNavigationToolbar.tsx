@@ -478,6 +478,17 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
                     backgroundColor: wp.color
                   }}
                   title={wp.name}
+                  draggable={true}
+                  onDragStart={(e) => {
+                    e.stopPropagation()
+                    // Set drag data
+                    e.dataTransfer.setData('application/json', JSON.stringify({
+                      type: 'world-point',
+                      worldPointId: wp.id,
+                      action: wp.imagePoints.length > 0 ? 'move' : 'place'
+                    }))
+                    e.dataTransfer.effectAllowed = 'copy'
+                  }}
                   onMouseEnter={() => onWorldPointHover?.(wp.id)}
                   onMouseLeave={() => onWorldPointHover?.(null)}
                   onClick={(e) => {
