@@ -13,6 +13,7 @@ import {
   useCelebration
 } from './DelightfulComponents'
 import ContextMenu, { ContextMenuItem } from './ContextMenu'
+import { useConfirm } from './ConfirmDialog'
 
 interface WorldPointPanelProps {
   worldPoints: Record<string, WorldPoint>
@@ -47,6 +48,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
   onStartPlacement,
   onCancelPlacement
 }) => {
+  const { confirm, dialog } = useConfirm()
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState('')
   const [recentlyCreated, setRecentlyCreated] = useState<Set<string>>(new Set())
@@ -213,8 +215,8 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
       id: 'delete',
       label: 'Delete',
       icon: 'faTrash',
-      onClick: () => {
-        if (confirm(`Delete world point "${worldPoint.name}"?\n\nThis will also delete any constraints that reference this point.`)) {
+      onClick: async () => {
+        if (await confirm(`Delete world point "${worldPoint.name}"?\n\nThis will also delete any constraints that reference this point.`)) {
           onDeleteWorldPoint(worldPoint.id)
         }
       }
@@ -225,7 +227,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
 
   // Removed handleKeyPress - no longer needed for inline editing
 
-  const handleDelete = (wpId: string) => {
+  const handleDelete = async (wpId: string) => {
     const wp = worldPoints[wpId]
     const involvedConstraints = getConstraintsForWorldPoint(wpId)
 
@@ -237,7 +239,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
       })
     }
 
-    if (confirm(message)) {
+    if (await confirm(message)) {
       onDeleteWorldPoint(wpId)
     }
   }
@@ -272,7 +274,9 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
   const worldPointsList = [...presentWPs, ...missingWPs].sort((a, b) => a.name.localeCompare(b.name))
 
   return (
-    <div className="world-point-panel">
+    <>
+      {dialog}
+      <div className="world-point-panel">
       {/* Enhanced placement mode header */}
       {placementMode.active && (
         <div className="placement-mode-header constraint-step">
@@ -384,6 +388,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
         />
       )}
     </div>
+    </>
   )
 }
 

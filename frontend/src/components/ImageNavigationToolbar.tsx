@@ -6,6 +6,7 @@ import { faArrowsUpDown, faCheck, faPlus, faXmark } from '@fortawesome/free-soli
 import { faCircle } from '@fortawesome/free-regular-svg-icons'
 import { ProjectImage, WorldPoint } from '../types/project'
 import { ImageUtils } from '../utils/imageUtils'
+import { useConfirm } from './ConfirmDialog'
 
 interface ImageNavigationToolbarProps {
   images: Record<string, ProjectImage>
@@ -48,6 +49,7 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
   onWorldPointHover,
   onWorldPointClick
 }) => {
+  const { confirm, dialog } = useConfirm()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [draggedImageId, setDraggedImageId] = React.useState<string | null>(null)
   const [dragOverImageId, setDragOverImageId] = React.useState<string | null>(null)
@@ -139,7 +141,9 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
   }
 
   return (
-    <div className="image-toolbar">
+    <>
+      {dialog}
+      <div className="image-toolbar">
       <div className="image-toolbar-header">
         <h3>Images</h3>
         <button
@@ -175,8 +179,8 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
               selectedWorldPointCount={getSelectedWorldPointsInImage(image.id)}
               onClick={() => onImageSelect(image.id)}
               onRename={(newName) => onImageRename(image.id, newName)}
-              onDelete={() => {
-                if (confirm(`Delete image "${image.name}"?`)) {
+              onDelete={async () => {
+                if (await confirm(`Delete image "${image.name}"?`)) {
                   onImageDelete(image.id)
                 }
               }}
@@ -206,6 +210,7 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
       </div>
 
     </div>
+    </>
   )
 }
 

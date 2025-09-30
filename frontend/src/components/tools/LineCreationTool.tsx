@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowRight, faBullseye, faMagnifyingGlass, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
+import { useConfirm } from '../ConfirmDialog'
 
 const PRESET_COLORS = [
   { value: '#0696d7', name: 'Blue' },
@@ -68,6 +69,8 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
   onUpdateLine,
   onDeleteLine
 }) => {
+  const { confirm, dialog } = useConfirm()
+
   // Point slots state
   const [pointSlot1, setPointSlot1] = useState<string>('')
   const [pointSlot2, setPointSlot2] = useState<string>('')
@@ -351,9 +354,9 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
     }
   }
 
-  const handleDeleteLine = () => {
+  const handleDeleteLine = async () => {
     if (editMode && existingLine && onDeleteLine) {
-      if (confirm(`Are you sure you want to delete line "${existingLine.name}"?\n\nThis action cannot be undone.`)) {
+      if (await confirm(`Are you sure you want to delete line "${existingLine.name}"?\n\nThis action cannot be undone.`)) {
         onDeleteLine(existingLine.id)
         onCancel()
       }
@@ -370,6 +373,7 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
 
   return (
     <>
+      {dialog}
       {showHeader && (
         <div className="tool-header">
           <h4>{editMode ? `Edit Line: ${existingLine?.name || 'Line'}` : 'Line Creation'}</h4>

@@ -12,6 +12,7 @@ import { Line as LineEntity } from '../entities/line'
 import { WorldPoint } from '../entities/world-point'
 import { EnhancedConstraint, ConstraintType as GeometryConstraintType } from '../types/geometry'
 import { COMPONENT_OVERLAY_EVENT, isComponentOverlayEnabled, setComponentOverlayEnabled } from '../utils/componentNameOverlay'
+import { useConfirm } from './ConfirmDialog'
 
 
 // UI Components
@@ -55,6 +56,9 @@ export const MainLayout: React.FC = () => {
   const legacyProject = useProject()
 
   // Enhanced project system (future)
+
+  // Confirm dialog
+  const { confirm, dialog } = useConfirm()
 
   // Tool state management
   const [activeTool, setActiveTool] = useState<ActiveTool>('select')
@@ -625,6 +629,7 @@ export const MainLayout: React.FC = () => {
 
   return (
     <>
+    {dialog}
     <WorkspaceManager
       workspaceState={localWorkspaceState}
       onWorkspaceStateChange={(updates) =>
@@ -647,9 +652,18 @@ export const MainLayout: React.FC = () => {
               <button className="btn-tool"><FontAwesomeIcon icon={faFloppyDisk} /> Save</button>
               <button className="btn-tool"><FontAwesomeIcon icon={faFileExport} /> Export</button>
               <button
+                className="btn-tool"
+                onClick={async () => {
+                  await confirm('Test confirm dialog')
+                }}
+                title="Test confirm dialog"
+              >
+                Test
+              </button>
+              <button
                 className="btn-tool btn-clear-project"
-                onClick={() => {
-                  if (confirm('Are you sure you want to clear the entire project?\n\nThis will remove all world points, images, lines, planes, and constraints. This action cannot be undone.')) {
+                onClick={async () => {
+                  if (await confirm('Are you sure you want to clear the entire project?\n\nThis will remove all world points, images, lines, planes, and constraints. This action cannot be undone.')) {
                     clearProject()
                   }
                 }}
@@ -745,10 +759,6 @@ export const MainLayout: React.FC = () => {
                 }}
               />
 
-              {/* Resize hint panel */}
-              <div className="resize-hint-panel">
-                Drag to resize <FontAwesomeIcon icon={faArrowRight} />
-              </div>
             </div>
 
             {/* Center: Workspace-specific viewer */}
@@ -969,6 +979,22 @@ export const MainLayout: React.FC = () => {
               <span className="status-bar__toggle-label">Component labels</span>
               <span className="status-bar__toggle-state">{showComponentNames ? 'ON' : 'OFF'}</span>
             </button>
+
+            {/* Worktree Identifier Badge */}
+            <div style={{
+              marginLeft: '12px',
+              padding: '4px 12px',
+              backgroundColor: __WORKTREE_NAME__ === 'main' ? '#1a4d2e' : '#8b4513',
+              color: '#fff',
+              borderRadius: '4px',
+              fontWeight: 'bold',
+              fontSize: '13px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              border: '2px solid ' + (__WORKTREE_NAME__ === 'main' ? '#2d7a4d' : '#d2691e')
+            }}>
+              {__WORKTREE_NAME__}
+            </div>
 
             <span style={{ marginLeft: '12px', color: '#888' }}>v0.3-ENHANCED</span>
           </div>

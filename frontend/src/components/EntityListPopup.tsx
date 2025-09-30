@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faEye, faEyeSlash, faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
 import FloatingWindow from './FloatingWindow'
 import ContextMenu, { ContextMenuItem } from './ContextMenu'
+import { useConfirm } from './ConfirmDialog'
 
 export interface EntityListItem {
   id: string
@@ -49,6 +50,7 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
   renderCustomActions,
   renderEntityDetails
 }) => {
+  const { confirm, dialog } = useConfirm()
   const [contextMenu, setContextMenu] = useState<{
     isOpen: boolean
     position: { x: number; y: number }
@@ -59,8 +61,8 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
     entityId: ''
   })
 
-  const handleDelete = (id: string, name: string) => {
-    if (confirm(`Are you sure you want to delete "${name}"?\n\nThis action cannot be undone.`)) {
+  const handleDelete = async (id: string, name: string) => {
+    if (await confirm(`Are you sure you want to delete "${name}"?\n\nThis action cannot be undone.`)) {
       onDelete?.(id)
     }
   }
@@ -121,16 +123,18 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
   }
 
   return (
-    <FloatingWindow
-      title={title}
-      isOpen={isOpen}
-      onClose={onClose}
-      width={width}
-      height={height}
-      storageKey={storageKey}
-      showOkCancel={false}
-    >
-      <div className="entity-list-popup">
+    <>
+      {dialog}
+      <FloatingWindow
+        title={title}
+        isOpen={isOpen}
+        onClose={onClose}
+        width={width}
+        height={height}
+        storageKey={storageKey}
+        showOkCancel={false}
+      >
+        <div className="entity-list-popup">
         {entities.length === 0 ? (
           <div className="empty-state">
             <span>{emptyMessage}</span>
@@ -222,6 +226,7 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
         )}
       </div>
     </FloatingWindow>
+    </>
   )
 }
 
