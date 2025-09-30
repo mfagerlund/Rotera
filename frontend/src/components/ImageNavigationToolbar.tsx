@@ -2,11 +2,12 @@
 
 import React, { useRef } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowsUpDown, faCheck, faPlus, faXmark } from '@fortawesome/free-solid-svg-icons'
+import { faArrowsUpDown, faCheck, faPlus, faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
 import { faCircle } from '@fortawesome/free-regular-svg-icons'
 import { ProjectImage, WorldPoint } from '../types/project'
 import { ImageUtils } from '../utils/imageUtils'
 import { useConfirm } from './ConfirmDialog'
+import ImageEditWindow from './ImageEditWindow'
 
 interface ImageNavigationToolbarProps {
   images: Record<string, ProjectImage>
@@ -53,6 +54,7 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [draggedImageId, setDraggedImageId] = React.useState<string | null>(null)
   const [dragOverImageId, setDragOverImageId] = React.useState<string | null>(null)
+  const [editingImageId, setEditingImageId] = React.useState<string | null>(null)
 
   const handleAddImage = () => {
     fileInputRef.current?.click()
@@ -143,6 +145,21 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
   return (
     <>
       {dialog}
+      {editingImageId && images[editingImageId] && (
+        <ImageEditWindow
+          isOpen={true}
+          image={images[editingImageId]}
+          onClose={() => setEditingImageId(null)}
+          onUpdateImage={(updatedImage) => {
+            onImageRename(updatedImage.id, updatedImage.name)
+            setEditingImageId(null)
+          }}
+          onDeleteImage={(imageId) => {
+            onImageDelete(imageId)
+            setEditingImageId(null)
+          }}
+        />
+      )}
       <div className="image-toolbar">
       <div className="image-toolbar-header">
         <h3>Images</h3>
@@ -178,6 +195,7 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
               selectedPointCount={getSelectedPointsInImage(image.id)}
               selectedWorldPointCount={getSelectedWorldPointsInImage(image.id)}
               onClick={() => onImageSelect(image.id)}
+              onEdit={() => setEditingImageId(image.id)}
               onRename={(newName) => onImageRename(image.id, newName)}
               onDelete={async () => {
                 if (await confirm(`Delete image "${image.name}"?`)) {
@@ -224,6 +242,7 @@ interface ImageNavigationItemProps {
   selectedPointCount: number
   selectedWorldPointCount: number
   onClick: () => void
+  onEdit: () => void
   onRename: (newName: string) => void
   onDelete: () => void
   thumbnailHeight: number
@@ -249,6 +268,7 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
   selectedPointCount,
   selectedWorldPointCount,
   onClick,
+  onEdit,
   onRename,
   onDelete,
   thumbnailHeight,
@@ -263,11 +283,8 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
   onWorldPointHover,
   onWorldPointClick
 }) => {
-  const [isEditing, setIsEditing] = React.useState(false)
-  const [name, setName] = React.useState(image.name)
   const imgRef = React.useRef<HTMLImageElement>(null)
   const [imgBounds, setImgBounds] = React.useState({ width: 0, height: 0, offsetX: 0, offsetY: 0 })
-  const [isPanelCollapsed, setIsPanelCollapsed] = React.useState(false)
 
   // Update image bounds when thumbnail height changes or image loads
   React.useEffect(() => {
@@ -318,24 +335,6 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
     return () => observer.disconnect()
   }, [thumbnailHeight, image.width, image.height])
 
-  const handleNameSubmit = () => {
-    setIsEditing(false)
-    if (name.trim() !== image.name) {
-      onRename(name.trim())
-    } else {
-      setName(image.name) // Reset if no change
-    }
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleNameSubmit()
-    } else if (e.key === 'Escape') {
-      setIsEditing(false)
-      setName(image.name) // Reset to original
-    }
-  }
-
   return (
     <div
       className={`image-nav-item ${isActive ? 'active' : ''} ${isDragging ? 'dragging' : ''} ${isDragOver ? 'drag-over' : ''}`}
@@ -351,50 +350,75 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
         onDrop()
       }}
     >
-      {/* Image select button in top-right corner of outer panel */}
-      <button
-        className={`image-select-button ${isActive ? 'selected' : ''}`}
-        onClick={(e) => {
-          e.stopPropagation()
-          onClick()
-        }}
-        title={isActive ? "Currently selected" : "Click to select this image"}
-      >
-        {isActive ? <FontAwesomeIcon icon={faCheck} /> : <FontAwesomeIcon icon={faCircle} />}
-      </button>
+      {/* Top bar with name and controls */}
+      <div className="image-top-bar">
+        {/* Image name */}
+        <div className="image-name" title={image.name}>
+          {image.name}
+        </div>
 
-      {/* Selected world points indicator - moved outside thumbnail */}
+        {/* Right side controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {/* Drag handle */}
+          <div
+            className="image-drag-handle-top"
+            title="Drag to reorder images"
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.effectAllowed = 'move'
+              e.dataTransfer.setData('text/plain', image.id)
+              onDragStart()
+            }}
+            onDragEnd={onDragEnd}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <FontAwesomeIcon icon={faArrowsUpDown} />
+          </div>
+
+          {/* Action buttons */}
+          <div className="image-top-actions">
+            <button
+              className="btn-image-top-action"
+              onClick={(e) => {
+                e.stopPropagation()
+                onEdit()
+              }}
+              title="Edit image"
+            >
+              <FontAwesomeIcon icon={faPencil} />
+            </button>
+            <button
+              className="btn-image-top-action"
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete()
+              }}
+              title="Delete image"
+            >
+              <FontAwesomeIcon icon={faTrash} />
+            </button>
+          </div>
+
+          {/* Image select button */}
+          <button
+            className={`image-select-button ${isActive ? 'selected' : ''}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              onClick()
+            }}
+            title={isActive ? "Currently selected" : "Click to select this image"}
+          >
+            {isActive ? <FontAwesomeIcon icon={faCheck} /> : <FontAwesomeIcon icon={faCircle} />}
+          </button>
+        </div>
+      </div>
+
+      {/* Selected world points indicator */}
       {selectedWorldPointCount > 0 && (
         <div className="selected-wp-indicator">
           <span className="selected-wp-count">{selectedWorldPointCount}</span>
         </div>
       )}
-
-      {/* Image name at top center */}
-      <div className="image-name-overlay">
-        {isEditing ? (
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onBlur={handleNameSubmit}
-            onKeyDown={handleKeyDown}
-            onClick={(e) => e.stopPropagation()}
-            autoFocus
-            className="image-name-input"
-          />
-        ) : (
-          <div
-            className="image-name"
-            onDoubleClick={(e) => {
-              e.stopPropagation()
-              setIsEditing(true)
-            }}
-            title="Double-click to rename"
-          >
-            {image.name}
-          </div>
-        )}
-      </div>
 
       <div
         className="image-thumbnail"
@@ -465,86 +489,6 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
             })}
         </div>
 
-      </div>
-
-      {/* Right panel with stats and actions */}
-      <div className={`image-info-right ${isPanelCollapsed ? 'collapsed' : ''}`}>
-        {!isPanelCollapsed ? (
-          <>
-            <div className="image-stats">
-              <div className="stat-item">
-                <span className="stat-icon">•</span>
-                <span>{pointCount} pts</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-icon">□</span>
-                <span>{image.width}<FontAwesomeIcon icon={faXmark} />{image.height}</span>
-              </div>
-            </div>
-
-            {/* Drag handle */}
-            <div
-              className="image-drag-area"
-              title="Drag to reorder images"
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.effectAllowed = 'move'
-                e.dataTransfer.setData('text/plain', image.id)
-                onDragStart()
-              }}
-              onDragEnd={onDragEnd}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <FontAwesomeIcon icon={faArrowsUpDown} />
-            </div>
-
-            <div className="image-actions">
-                <button
-                  className="btn-image-action"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setIsEditing(true)
-                  }}
-                  title="Rename image"
-                >
-                  ✎
-                </button>
-                <button
-                  className="btn-image-action"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onDelete()
-                  }}
-                  title="Delete image"
-                >
-                  <FontAwesomeIcon icon={faXmark} />
-                </button>
-            </div>
-
-            {/* Collapse button */}
-            <button
-              className="btn-collapse-panel"
-              onClick={(e) => {
-                e.stopPropagation()
-                setIsPanelCollapsed(true)
-              }}
-              title="Hide panel"
-            >
-              ›
-            </button>
-          </>
-        ) : (
-          <button
-            className="btn-expand-panel"
-            onClick={(e) => {
-              e.stopPropagation()
-              setIsPanelCollapsed(false)
-            }}
-            title="Show panel"
-          >
-            ‹
-          </button>
-        )}
       </div>
     </div>
   )
