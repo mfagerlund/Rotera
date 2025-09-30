@@ -1,26 +1,26 @@
-# Pictorigo Backend
+# Pictorigo Backend API
 
-Backend API for Pictorigo - constraint-driven sparse Structure-from-Motion.
+FastAPI server for Pictorigo photogrammetry optimization.
 
-## Development Setup
+## Structure
+
+- `routers/` - API endpoints
+  - `solve.py` - Optimization solver endpoints
+  - `projects.py` - Project management endpoints
+  - `synthetic.py` - Synthetic scene generation endpoints
+- `main.py` - FastAPI application
+
+## Dependencies
+
+Uses the root `pictorigo` package for all optimization logic. The backend is a thin API layer that exposes the core optimization functionality via HTTP endpoints.
+
+## Running
 
 ```bash
-# Install dependencies
-pip install -e .[dev]
-
-# Run the development server
-python main.py
-
-# Run tests
-pytest
-
-# Lint and format
-ruff check .
-black .
-mypy pictorigo/
+cd backend
+uvicorn main:app --reload
 ```
 
-## API Endpoints
+The server will start on http://localhost:8000
 
-- `GET /healthz` - Health check
-- `GET /version` - Version information
+API documentation is available at http://localhost:8000/docs
