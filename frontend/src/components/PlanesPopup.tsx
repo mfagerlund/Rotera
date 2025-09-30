@@ -1,3 +1,4 @@
+// RENAME_TO: PlanesManager
 // Planes Management Popup
 
 import React from 'react'
