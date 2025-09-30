@@ -446,7 +446,7 @@
 }
 
 .image-point-item {
-  padding: 8px 12px;
+  padding: 6px 10px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -455,17 +455,64 @@
 }
 
 .image-point-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   font-size: 12px;
   color: var(--text-secondary);
   margin-bottom: 4px;
 }
 
-.image-point-coords {
+.image-point-info {
   display: flex;
-  gap: 12px;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.image-point-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.image-point-actions button {
+  padding: 1px 6px;
   font-size: 11px;
-  font-family: monospace;
+}
+
+.image-point-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
   color: var(--text-primary);
+  font-size: 11px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.image-point-chip svg {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.image-point-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.image-point-meta span {
+  white-space: nowrap;
+}
+
+.image-point-meta span:last-child {
+  color: var(--text-muted);
 }
 
 .no-image-points {

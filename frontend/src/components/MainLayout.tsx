@@ -1172,6 +1172,7 @@ export const MainLayout: React.FC = () => {
           deleteWorldPoint(pointId)
           handleWorldPointEditClose()
         }}
+        images={project?.images || {}}
       />
     )}
     {dialog}

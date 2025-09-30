@@ -6,6 +6,7 @@ import FloatingWindow from './FloatingWindow'
 import LineCreationTool from './tools/LineCreationTool'
 import { Line } from '../types/project'
 
+// RENAME_TO: LinesManager
 interface LinesPopupProps {
   isOpen: boolean
   onClose: () => void
@@ -21,6 +22,7 @@ interface LinesPopupProps {
   onCreateLine?: (pointIds: [string, string], constraints?: any) => void
 }
 
+// RENAME_TO: LinesManager
 export const LinesPopup: React.FC<LinesPopupProps> = ({
   isOpen,
   onClose,
@@ -119,6 +121,11 @@ export const LinesPopup: React.FC<LinesPopupProps> = ({
             window.dispatchEvent(event)
           }}
           onCancel={handleCloseEdit}
+          onDelete={onDeleteLine ? () => {
+            // Trigger delete through LineCreationTool's handler
+            const event = new CustomEvent('lineToolDelete')
+            window.dispatchEvent(event)
+          } : undefined}
         >
           <LineCreationTool
             selectedPoints={[editingLine.pointA, editingLine.pointB]}

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCheck, faXmark, faTrash } from '@fortawesome/free-solid-svg-icons'
 
 export interface FloatingWindowPosition {
   x: number
@@ -12,6 +14,7 @@ interface FloatingWindowProps {
   onClose: () => void
   onOk?: () => void
   onCancel?: () => void
+  onDelete?: () => void
   children: React.ReactNode
   initialPosition?: FloatingWindowPosition
   width?: number
@@ -36,6 +39,7 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
   onClose,
   onOk,
   onCancel,
+  onDelete,
   children,
   initialPosition,
   width,
@@ -278,39 +282,24 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
           ref={headerRef}
           className="floating-window-header"
           onMouseDown={handleMouseDown}
-          style={{padding: '4px 8px', minHeight: 'auto'}}
+          style={{padding: '4px 8px', minHeight: 'auto', display: 'flex', alignItems: 'center', gap: '8px'}}
         >
-          <h3 className="floating-window-title">{title}</h3>
-          <button
-            className="floating-window-close"
-            onClick={(e) => {
-              e.stopPropagation()
-              onClose()
-            }}
-            type="button"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="floating-window-content">
-          {children}
-        </div>
-
-        {showOkCancel && (
-          <div className="floating-window-footer">
-            <div className="floating-window-actions">
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  if (onCancel) onCancel()
-                  else onClose()
-                }}
-              >
-                {cancelText}
-              </button>
+          <h3 className="floating-window-title" style={{flex: 1}}>{title}</h3>
+          {onDelete && (
+            <button
+              type="button"
+              className="btn-danger"
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete()
+              }}
+              style={{minWidth: '80px', fontSize: '12px', padding: '4px 8px', height: '28px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px'}}
+            >
+              <FontAwesomeIcon icon={faTrash} /> Delete
+            </button>
+          )}
+          {showOkCancel && (
+            <div style={{display: 'flex', gap: '4px'}}>
               {onOk && (
                 <button
                   type="button"
@@ -320,13 +309,30 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
                     onOk()
                   }}
                   disabled={okDisabled}
+                  style={{minWidth: '80px', fontSize: '12px', padding: '4px 8px', height: '28px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px'}}
                 >
-                  {okText}
+                  <FontAwesomeIcon icon={faCheck} /> {okText}
                 </button>
               )}
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (onCancel) onCancel()
+                  else onClose()
+                }}
+                style={{minWidth: '80px', fontSize: '12px', padding: '4px 8px', height: '28px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px'}}
+              >
+                <FontAwesomeIcon icon={faXmark} /> {cancelText}
+              </button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
+
+        <div className="floating-window-content">
+          {children}
+        </div>
     </div>
   )
 

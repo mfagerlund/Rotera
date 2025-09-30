@@ -18,6 +18,7 @@ const PRESET_COLORS = [
   { value: '#95a5a6', name: 'Light Gray' }
 ]
 
+// RENAME_TO: LineEditor (handles both creation and editing)
 interface LineCreationToolProps {
   selectedPoints: string[]
   worldPointNames: Record<string, string> // Map of pointId -> pointName
@@ -52,6 +53,7 @@ interface LineConstraints {
   constraints?: LineConstraintSettings
 }
 
+// RENAME_TO: LineEditor
 export const LineCreationTool: React.FC<LineCreationToolProps> = ({
   selectedPoints,
   worldPointNames,
@@ -227,9 +229,17 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
       handleCreateLine()
     }
 
+    const handleExternalDelete = () => {
+      handleDeleteLine()
+    }
+
     window.addEventListener('lineToolSave', handleExternalSave)
-    return () => window.removeEventListener('lineToolSave', handleExternalSave)
-  }, [isActive, pointSlot1, pointSlot2, lineName, lineColor, isVisible, isConstruction, direction, lengthValue, editMode, existingLine, onUpdateLine, onCreateLine, onCancel, existingLines])
+    window.addEventListener('lineToolDelete', handleExternalDelete)
+    return () => {
+      window.removeEventListener('lineToolSave', handleExternalSave)
+      window.removeEventListener('lineToolDelete', handleExternalDelete)
+    }
+  }, [isActive, pointSlot1, pointSlot2, lineName, lineColor, isVisible, isConstruction, direction, lengthValue, editMode, existingLine, onUpdateLine, onCreateLine, onCancel, existingLines, onDeleteLine, confirm])
 
   // Update construction preview when slots change
   useEffect(() => {
@@ -601,29 +611,6 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
             color: '#856404'
           }}>
             <FontAwesomeIcon icon={faTriangleExclamation} /> Line "{lineCheck.lineName}" already exists between these points
-          </div>
-        )}
-
-        {/* Delete Button (Edit Mode Only) */}
-        {editMode && onDeleteLine && (
-          <div style={{marginTop: '8px', marginBottom: '8px'}}>
-            <button
-              onClick={handleDeleteLine}
-              style={{
-                width: '100%',
-                padding: '4px 8px',
-                fontSize: '12px',
-                backgroundColor: '#d9534f',
-                color: 'white',
-                border: 'none',
-                borderRadius: '3px'
-              }}
-            >
-              Delete Line
-            </button>
-            <p style={{fontSize: '11px', color: '#856404', margin: '4px 0 0 0', textAlign: 'center'}}>
-              This will permanently delete the line and cannot be undone.
-            </p>
           </div>
         )}
 

@@ -1,3 +1,4 @@
+// RENAME_TO: ConstraintsManager
 // Constraints Management Popup
 
 import React from 'react'

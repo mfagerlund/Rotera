@@ -1,3 +1,4 @@
+// RENAME_TO: LoopCreator (or LoopEditor if it also edits)
 // Loop Trace Tool - String together points and batch-create lines
 
 import React, { useEffect, useState, useRef } from 'react'

@@ -5,6 +5,7 @@ import FloatingWindow from './FloatingWindow'
 import { ProjectImage } from '../types/project'
 import { useConfirm } from './ConfirmDialog'
 
+// RENAME_TO: ImageEditor
 interface ImageEditWindowProps {
   isOpen: boolean
   onClose: () => void
@@ -13,6 +14,7 @@ interface ImageEditWindowProps {
   onDeleteImage?: (imageId: string) => void
 }
 
+// RENAME_TO: ImageEditor
 export const ImageEditWindow: React.FC<ImageEditWindowProps> = ({
   isOpen,
   onClose,
@@ -76,6 +78,7 @@ export const ImageEditWindow: React.FC<ImageEditWindowProps> = ({
         showOkCancel={true}
         onOk={handleSave}
         onCancel={handleCancel}
+        onDelete={onDeleteImage ? handleDelete : undefined}
         okText="Save"
         cancelText="Cancel"
         okDisabled={!hasChanges}
@@ -139,21 +142,6 @@ export const ImageEditWindow: React.FC<ImageEditWindowProps> = ({
               </div>
             </div>
           </div>
-
-          {/* Actions */}
-          {onDeleteImage && (
-            <div className="edit-section">
-              <div className="danger-zone">
-                <h4>Danger Zone</h4>
-                <button
-                  className="btn-danger"
-                  onClick={handleDelete}
-                >
-                  <FontAwesomeIcon icon={faTrash} /> Delete Image
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </FloatingWindow>
     </>

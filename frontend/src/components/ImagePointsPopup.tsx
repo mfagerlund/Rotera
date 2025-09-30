@@ -1,3 +1,4 @@
+// RENAME_TO: ImagePointsManager
 // Image Points Management Popup
 
 import React from 'react'
