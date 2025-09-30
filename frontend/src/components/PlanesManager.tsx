@@ -1,11 +1,10 @@
-// RENAME_TO: PlanesManager
 // Planes Management Popup
 
 import React from 'react'
 import EntityListPopup, { EntityListItem } from './EntityListPopup'
 import { Plane } from '../types/project'
 
-interface PlanesPopupProps {
+interface PlanesManagerProps {
   isOpen: boolean
   onClose: () => void
   planes: Record<string, Plane>
@@ -17,7 +16,7 @@ interface PlanesPopupProps {
   onSelectPlane?: (planeId: string) => void
 }
 
-export const PlanesPopup: React.FC<PlanesPopupProps> = ({
+export const PlanesManager: React.FC<PlanesManagerProps> = ({
   isOpen,
   onClose,
   planes,
@@ -101,4 +100,4 @@ export const PlanesPopup: React.FC<PlanesPopupProps> = ({
   )
 }
 
-export default PlanesPopup
+export default PlanesManager

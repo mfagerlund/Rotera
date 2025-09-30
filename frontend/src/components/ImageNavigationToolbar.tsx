@@ -7,7 +7,7 @@ import { faCircle } from '@fortawesome/free-regular-svg-icons'
 import { ProjectImage, WorldPoint } from '../types/project'
 import { ImageUtils } from '../utils/imageUtils'
 import { useConfirm } from './ConfirmDialog'
-import ImageEditWindow from './ImageEditWindow'
+import ImageEditor from './ImageEditor'
 
 interface ImageNavigationToolbarProps {
   images: Record<string, ProjectImage>
@@ -148,7 +148,7 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
     <>
       {dialog}
       {editingImageId && images[editingImageId] && (
-        <ImageEditWindow
+        <ImageEditor
           isOpen={true}
           image={images[editingImageId]}
           onClose={() => setEditingImageId(null)}

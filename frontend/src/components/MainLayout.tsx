@@ -40,11 +40,11 @@ import SplitWorkspace from './main-layout/SplitWorkspace'
 
 // Creation Tools
 import CreationToolsManager from './tools/CreationToolsManager'
-import LinesPopup from './LinesPopup'
-import PlanesPopup from './PlanesPopup'
-import ImagePointsPopup from './ImagePointsPopup'
-import ConstraintsPopup from './ConstraintsPopup'
-import WorldPointEditWindow from './WorldPointEditWindow'
+import LinesManager from './LinesManager'
+import PlanesManager from './PlanesManager'
+import ImagePointsManager from './ImagePointsManager'
+import ConstraintsManager from './ConstraintsManager'
+import WorldPointEditor from './WorldPointEditor'
 
 // Styles
 import '../styles/enhanced-workspace.css'
@@ -1096,7 +1096,7 @@ export const MainLayout: React.FC = () => {
     {/* Edit Line Window removed - now integrated into CreationToolsManager */}
 
     {/* Entity Management Popups */}
-    <LinesPopup
+    <LinesManager
       isOpen={showLinesPopup}
       onClose={() => setShowLinesPopup(false)}
       lines={project?.lines || {}}
@@ -1140,7 +1140,7 @@ export const MainLayout: React.FC = () => {
       }}
     />
 
-    <PlanesPopup
+    <PlanesManager
       isOpen={showPlanesPopup}
       onClose={() => setShowPlanesPopup(false)}
       planes={project?.planes || {}}
@@ -1160,7 +1160,7 @@ export const MainLayout: React.FC = () => {
       }}
     />
 
-    <ImagePointsPopup
+    <ImagePointsManager
       isOpen={showImagePointsPopup}
       onClose={() => setShowImagePointsPopup(false)}
       worldPoints={worldPoints}
@@ -1176,7 +1176,7 @@ export const MainLayout: React.FC = () => {
       }}
     />
 
-    <ConstraintsPopup
+    <ConstraintsManager
       isOpen={showConstraintsPopup}
       onClose={() => setShowConstraintsPopup(false)}
       constraints={constraints}
@@ -1198,7 +1198,7 @@ export const MainLayout: React.FC = () => {
 
     {/* World Point Edit Window */}
     {worldPointEditWindow.worldPointId && (
-      <WorldPointEditWindow
+      <WorldPointEditor
         isOpen={worldPointEditWindow.isOpen}
         onClose={handleWorldPointEditClose}
         worldPoint={Object.values(worldPoints).find(p => p.id === worldPointEditWindow.worldPointId)!}

@@ -1,4 +1,3 @@
-// RENAME_TO: ConstraintsManager
 // Constraints Management Popup
 
 import React from 'react'
@@ -20,7 +19,7 @@ interface ConstraintsPopupProps {
   onSelectConstraint?: (constraintId: string) => void
 }
 
-export const ConstraintsPopup: React.FC<ConstraintsPopupProps> = ({
+export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
   isOpen,
   onClose,
   constraints,
@@ -188,4 +187,4 @@ export const ConstraintsPopup: React.FC<ConstraintsPopupProps> = ({
   )
 }
 
-export default ConstraintsPopup
+export default ConstraintsManager

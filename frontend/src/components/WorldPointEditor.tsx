@@ -5,8 +5,7 @@ import FloatingWindow from './FloatingWindow'
 import { WorldPoint, ProjectImage } from '../types/project'
 import { useConfirm } from './ConfirmDialog'
 
-// RENAME_TO: WorldPointEditor
-interface WorldPointEditWindowProps {
+interface WorldPointEditorProps {
   isOpen: boolean
   onClose: () => void
   worldPoint: WorldPoint
@@ -15,8 +14,7 @@ interface WorldPointEditWindowProps {
   images: Record<string, ProjectImage>
 }
 
-// RENAME_TO: WorldPointEditor
-export const WorldPointEditWindow: React.FC<WorldPointEditWindowProps> = ({
+export const WorldPointEditor: React.FC<WorldPointEditorProps> = ({
   isOpen,
   onClose,
   worldPoint,
@@ -336,4 +334,4 @@ export const WorldPointEditWindow: React.FC<WorldPointEditWindowProps> = ({
   )
 }
 
-export default WorldPointEditWindow
+export default WorldPointEditor

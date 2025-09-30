@@ -6,8 +6,7 @@ import FloatingWindow from './FloatingWindow'
 import LineCreationTool from './tools/LineCreationTool'
 import { Line } from '../types/project'
 
-// RENAME_TO: LinesManager
-interface LinesPopupProps {
+interface LinesManagerProps {
   isOpen: boolean
   onClose: () => void
   lines: Record<string, Line>
@@ -22,8 +21,7 @@ interface LinesPopupProps {
   onCreateLine?: (pointIds: [string, string], constraints?: any) => void
 }
 
-// RENAME_TO: LinesManager
-export const LinesPopup: React.FC<LinesPopupProps> = ({
+export const LinesManager: React.FC<LinesManagerProps> = ({
   isOpen,
   onClose,
   lines,
@@ -147,4 +145,4 @@ export const LinesPopup: React.FC<LinesPopupProps> = ({
   )
 }
 
-export default LinesPopup
+export default LinesManager

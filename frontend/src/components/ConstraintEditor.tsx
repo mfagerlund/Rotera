@@ -1,4 +1,3 @@
-// RENAME_TO: Keep as ConstraintEditor (already good!)
 // Modal component for editing existing constraints
 
 import React, { useState, useEffect } from 'react'

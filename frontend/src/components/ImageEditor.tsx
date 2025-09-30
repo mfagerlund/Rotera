@@ -5,8 +5,7 @@ import FloatingWindow from './FloatingWindow'
 import { ProjectImage } from '../types/project'
 import { useConfirm } from './ConfirmDialog'
 
-// RENAME_TO: ImageEditor
-interface ImageEditWindowProps {
+interface ImageEditorProps {
   isOpen: boolean
   onClose: () => void
   image: ProjectImage
@@ -15,7 +14,7 @@ interface ImageEditWindowProps {
 }
 
 // RENAME_TO: ImageEditor
-export const ImageEditWindow: React.FC<ImageEditWindowProps> = ({
+export const ImageEditor: React.FC<ImageEditorProps> = ({
   isOpen,
   onClose,
   image,
@@ -148,4 +147,4 @@ export const ImageEditWindow: React.FC<ImageEditWindowProps> = ({
   )
 }
 
-export default ImageEditWindow
+export default ImageEditor
