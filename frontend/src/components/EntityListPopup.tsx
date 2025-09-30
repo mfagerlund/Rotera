@@ -137,8 +137,6 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
         title={title}
         isOpen={isOpen}
         onClose={onClose}
-        width={width}
-        height={height}
         storageKey={storageKey}
         showOkCancel={false}
       >

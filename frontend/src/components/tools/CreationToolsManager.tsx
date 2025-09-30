@@ -281,8 +281,6 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
         title={editingLineId && existingLines[editingLineId] ? `Edit Line: ${existingLines[editingLineId].name}` : "Create Line"}
         isOpen={activeTool === 'line'}
         onClose={handleToolCancel}
-        width={400}
-        minHeight={500}
         storageKey="line-tool"
         showOkCancel={true}
         onOk={() => {
@@ -327,7 +325,6 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
         title="Loop Trace"
         isOpen={activeTool === 'loop'}
         onClose={handleToolCancel}
-        width={400}
         storageKey="loop-trace-tool"
         showOkCancel={true}
         onOk={() => {

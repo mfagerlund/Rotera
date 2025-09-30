@@ -132,12 +132,13 @@ function refreshOverlay() {
   }
 
   rootElement.innerHTML = ''
-  const renderedFibers = new WeakSet<FiberNode>()
+  const componentFirstElements = new Map<FiberNode, HTMLElement>()
   const placedLabels: PlacedLabel[] = []
 
-  const walker = document.createTreeWalker(appRoot, NodeFilter.SHOW_ELEMENT)
-  while (walker.nextNode()) {
-    const element = walker.currentNode as HTMLElement
+  // First pass: find the first visible element for each component
+  const walker1 = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT)
+  while (walker1.nextNode()) {
+    const element = walker1.currentNode as HTMLElement
     if (!element || !element.offsetParent) {
       continue
     }
@@ -147,11 +148,19 @@ function refreshOverlay() {
       continue
     }
 
-    const ownerFiber = findNearestNamedFiber(fiber)
-    if (!ownerFiber || renderedFibers.has(ownerFiber)) {
-      continue
-    }
+    // Get ALL component fibers in the ancestry chain
+    const componentFibers = findAllComponentFibers(fiber)
 
+    // For each component in the chain, record this as a potential first element
+    for (const compFiber of componentFibers) {
+      if (!componentFirstElements.has(compFiber)) {
+        componentFirstElements.set(compFiber, element)
+      }
+    }
+  }
+
+  // Second pass: create labels for each component's first element
+  for (const [ownerFiber, element] of componentFirstElements.entries()) {
     const componentName = getFiberDisplayName(ownerFiber)
     if (!componentName) {
       continue
@@ -170,7 +179,6 @@ function refreshOverlay() {
     rootElement.appendChild(label)
     const placement = positionLabel(label, rect, placedLabels)
     placedLabels.push(placement)
-    renderedFibers.add(ownerFiber)
   }
 }
 
@@ -437,6 +445,37 @@ function getFiber(node: HTMLElement): FiberNode | null {
   return null
 }
 
+function findAllComponentFibers(fiber: FiberNode | null | undefined): FiberNode[] {
+  // Find all component fibers in the ancestry chain
+  const components: FiberNode[] = []
+  let current: FiberNode | null | undefined = fiber
+
+  while (current) {
+    const name = getFiberDisplayName(current)
+    if (name) {
+      components.push(current)
+    }
+    current = current.return
+  }
+
+  return components
+}
+
+function findImmediateComponentFiber(fiber: FiberNode | null | undefined): FiberNode | null {
+  // Find the most specific (closest) component fiber for this element
+  let current: FiberNode | null | undefined = fiber
+
+  while (current) {
+    const name = getFiberDisplayName(current)
+    if (name) {
+      return current
+    }
+    current = current.return
+  }
+
+  return null
+}
+
 function findNearestNamedFiber(fiber: FiberNode | null | undefined): FiberNode | null {
   let current: FiberNode | null | undefined = fiber
   while (current) {
@@ -463,6 +502,7 @@ function resolveComponentName(type: any): string | null {
   }
 
   if (typeof type === 'string') {
+    // Native HTML elements like <input>, <form>, etc.
     return null
   }
 
@@ -479,6 +519,10 @@ function resolveComponentName(type: any): string | null {
     }
     if (type.type) {
       return resolveComponentName(type.type)
+    }
+    // Check for $$typeof to identify React elements
+    if (type.$$typeof) {
+      return null
     }
   }
 

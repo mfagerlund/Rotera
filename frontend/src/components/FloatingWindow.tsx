@@ -38,8 +38,8 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
   onCancel,
   children,
   initialPosition,
-  width = 400,
-  height = 300,
+  width,
+  height,
   minWidth = 300,
   minHeight = 200,
   storageKey,
@@ -143,7 +143,8 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
       height: window.innerHeight
     }
 
-    newPosition.x = Math.max(0, Math.min(newPosition.x, viewport.width - (width || 300)))
+    const windowWidth = windowRef.current?.offsetWidth || width || 300
+    newPosition.x = Math.max(0, Math.min(newPosition.x, viewport.width - windowWidth))
     newPosition.y = Math.max(0, Math.min(newPosition.y, viewport.height - 100)) // Keep title bar visible
 
     setPosition(newPosition)
@@ -190,34 +191,52 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
   // Smart initial positioning to center window
   useEffect(() => {
     if (isOpen && !storageKey) {
-      const viewport = {
-        width: window.innerWidth,
-        height: window.innerHeight
-      }
+      // Wait for next frame to get actual window dimensions
+      requestAnimationFrame(() => {
+        if (!windowRef.current) return
 
-      // Center the window in the viewport
-      const centeredPosition = {
-        x: Math.max(20, (viewport.width - width) / 2),
-        y: Math.max(20, (viewport.height - height) / 2)
-      }
-
-      setPosition(centeredPosition)
-      setIsPositioned(true)
-    } else if (isOpen && storageKey) {
-      // Use saved position or center if no saved position
-      const savedPosition = localStorage.getItem(`floating-window-${storageKey}`)
-      if (!savedPosition) {
         const viewport = {
           width: window.innerWidth,
           height: window.innerHeight
         }
+
+        const actualWidth = width || windowRef.current.offsetWidth
+        const actualHeight = height || windowRef.current.offsetHeight
+
+        // Center the window in the viewport
         const centeredPosition = {
-          x: Math.max(20, (viewport.width - width) / 2),
-          y: Math.max(20, (viewport.height - height) / 2)
+          x: Math.max(20, (viewport.width - actualWidth) / 2),
+          y: Math.max(20, (viewport.height - actualHeight) / 2)
         }
+
         setPosition(centeredPosition)
+        setIsPositioned(true)
+      })
+    } else if (isOpen && storageKey) {
+      // Use saved position or center if no saved position
+      const savedPosition = localStorage.getItem(`floating-window-${storageKey}`)
+      if (!savedPosition) {
+        requestAnimationFrame(() => {
+          if (!windowRef.current) return
+
+          const viewport = {
+            width: window.innerWidth,
+            height: window.innerHeight
+          }
+
+          const actualWidth = width || windowRef.current.offsetWidth
+          const actualHeight = height || windowRef.current.offsetHeight
+
+          const centeredPosition = {
+            x: Math.max(20, (viewport.width - actualWidth) / 2),
+            y: Math.max(20, (viewport.height - actualHeight) / 2)
+          }
+          setPosition(centeredPosition)
+          setIsPositioned(true)
+        })
+      } else {
+        setIsPositioned(true)
       }
-      setIsPositioned(true)
     }
   }, [isOpen, width, height, storageKey])
 

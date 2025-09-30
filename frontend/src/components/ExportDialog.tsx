@@ -142,8 +142,9 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
               <h3>Format</h3>
               <div className="format-grid">
                 {formatOptions.map(format => (
-                  <label key={format.value} className="format-option">
+                  <label key={format.value} className="format-option" htmlFor={`format-${format.value}`}>
                     <input
+                      id={`format-${format.value}`}
                       type="radio"
                       name="format"
                       value={format.value}
@@ -162,24 +163,27 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
             <div className="option-section">
               <h3>Content Options</h3>
               <div className="content-options">
-                <label className="option-checkbox">
+                <label className="option-checkbox" htmlFor="include-constraints">
                   <input
+                    id="include-constraints"
                     type="checkbox"
                     checked={options.includeConstraints}
                     onChange={(e) => handleOptionChange('includeConstraints', e.target.checked)}
                   />
                   <span>Include constraints ({project.constraints?.length || 0})</span>
                 </label>
-                <label className="option-checkbox">
+                <label className="option-checkbox" htmlFor="include-images">
                   <input
+                    id="include-images"
                     type="checkbox"
                     checked={options.includeImages}
                     onChange={(e) => handleOptionChange('includeImages', e.target.checked)}
                   />
                   <span>Include image metadata ({Object.keys(project.images || {}).length})</span>
                 </label>
-                <label className="option-checkbox">
+                <label className="option-checkbox" htmlFor="include-metadata">
                   <input
+                    id="include-metadata"
                     type="checkbox"
                     checked={options.includeMetadata}
                     onChange={(e) => handleOptionChange('includeMetadata', e.target.checked)}
@@ -192,8 +196,9 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
             <div className="option-section">
               <h3>Coordinate System</h3>
               <div className="coordinate-options">
-                <label className="option-radio">
+                <label className="option-radio" htmlFor="coord-local">
                   <input
+                    id="coord-local"
                     type="radio"
                     name="coordinateSystem"
                     value="local"
@@ -202,8 +207,9 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
                   />
                   <span>Local coordinates (as measured)</span>
                 </label>
-                <label className="option-radio">
+                <label className="option-radio" htmlFor="coord-world">
                   <input
+                    id="coord-world"
                     type="radio"
                     name="coordinateSystem"
                     value="world"
@@ -222,9 +228,10 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
             <div className="option-section">
               <h3>Advanced Settings</h3>
               <div className="advanced-options">
-                <label className="option-field">
+                <label className="option-field" htmlFor="export-precision">
                   <span>Decimal precision:</span>
                   <input
+                    id="export-precision"
                     type="number"
                     min="0"
                     max="12"
@@ -232,9 +239,10 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
                     onChange={(e) => handleOptionChange('precision', parseInt(e.target.value))}
                   />
                 </label>
-                <label className="option-field">
+                <label className="option-field" htmlFor="export-units">
                   <span>Units:</span>
                   <select
+                    id="export-units"
                     value={options.units}
                     onChange={(e) => handleOptionChange('units', e.target.value)}
                   >

@@ -692,15 +692,6 @@ export const MainLayout: React.FC = () => {
               <button className="btn-tool"><FontAwesomeIcon icon={faFloppyDisk} /> Save</button>
               <button className="btn-tool"><FontAwesomeIcon icon={faFileExport} /> Export</button>
               <button
-                className="btn-tool"
-                onClick={async () => {
-                  await confirm('Test confirm dialog')
-                }}
-                title="Test confirm dialog"
-              >
-                Test
-              </button>
-              <button
                 className="btn-tool btn-clear-project"
                 onClick={async () => {
                   if (await confirm('Are you sure you want to clear the entire project?\n\nThis will remove all world points, images, lines, planes, and constraints. This action cannot be undone.')) {
@@ -918,17 +909,15 @@ export const MainLayout: React.FC = () => {
               />
 
               {/* Entity Management Buttons */}
-              <div className="entity-management-panel">
-                <div className="panel-header">
-                  <h3>Entity Management</h3>
-                </div>
-                <div className="entity-buttons">
+              <div className="entity-management-panel" style={{ padding: '4px', marginTop: '8px' }}>
+                <div className="entity-buttons" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                   <button
                     className="entity-button"
                     onClick={() => setShowLinesPopup(true)}
                     title="Manage lines"
+                    style={{ padding: '2px 6px', fontSize: '11px', minHeight: 'auto' }}
                   >
-                    <span className="button-icon"><FontAwesomeIcon icon={faRuler} /></span>
+                    <span className="button-icon" style={{ fontSize: '10px' }}><FontAwesomeIcon icon={faRuler} /></span>
                     <span className="button-label">Lines</span>
                     <span className="button-count">{Object.keys(project?.lines || {}).length}</span>
                   </button>
@@ -937,8 +926,9 @@ export const MainLayout: React.FC = () => {
                     className="entity-button"
                     onClick={() => setShowPlanesPopup(true)}
                     title="Manage planes"
+                    style={{ padding: '2px 6px', fontSize: '11px', minHeight: 'auto' }}
                   >
-                    <span className="button-icon"><FontAwesomeIcon icon={faSquare} /></span>
+                    <span className="button-icon" style={{ fontSize: '10px' }}><FontAwesomeIcon icon={faSquare} /></span>
                     <span className="button-label">Planes</span>
                     <span className="button-count">{Object.keys(project?.planes || {}).length}</span>
                   </button>
@@ -947,9 +937,10 @@ export const MainLayout: React.FC = () => {
                     className="entity-button"
                     onClick={() => setShowImagePointsPopup(true)}
                     title="Manage image points"
+                    style={{ padding: '2px 6px', fontSize: '11px', minHeight: 'auto' }}
                   >
-                    <span className="button-icon"><FontAwesomeIcon icon={faCamera} /></span>
-                    <span className="button-label">Image Points</span>
+                    <span className="button-icon" style={{ fontSize: '10px' }}><FontAwesomeIcon icon={faCamera} /></span>
+                    <span className="button-label">IPs</span>
                     <span className="button-count">{Object.values(worldPoints || {}).reduce((total, wp) => total + wp.imagePoints.length, 0)}</span>
                   </button>
 
@@ -957,9 +948,9 @@ export const MainLayout: React.FC = () => {
                     className="entity-button"
                     onClick={() => setShowConstraintsPopup(true)}
                     title="Manage constraints"
+                    style={{ padding: '2px 6px', fontSize: '11px', minHeight: 'auto' }}
                   >
-                    <span className="button-icon"><FontAwesomeIcon icon={faGear} /></span>
-                    <span className="button-label">Constraints</span>
+                    <span className="button-icon" style={{ fontSize: '10px' }}><FontAwesomeIcon icon={faGear} /></span>
                     <span className="button-count">{constraints.length}</span>
                   </button>
                 </div>
@@ -1016,7 +1007,7 @@ export const MainLayout: React.FC = () => {
               letterSpacing: '0.5px',
               border: '2px solid ' + (__WORKTREE_NAME__ === 'main' ? '#2d7a4d' : '#d2691e')
             }}>
-              {__WORKTREE_NAME__}
+              {__WORKTREE_NAME__ === 'main' ? __WORKTREE_NAME__ : __WORKTREE_NAME__.replace('Pictorigo-', '')}
             </div>
 
             <span style={{ marginLeft: '12px', color: '#888' }}>v0.3-ENHANCED</span>

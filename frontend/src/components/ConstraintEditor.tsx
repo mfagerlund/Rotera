@@ -88,8 +88,9 @@ export const ConstraintEditor: React.FC<ConstraintEditorProps> = ({
               <h4>Points</h4>
               <div className="point-assignment">
                 <div className="point-field">
-                  <label>Point A</label>
+                  <label htmlFor="distance-pointA">Point A</label>
                   <select
+                    id="distance-pointA"
                     value={localParams.pointA || ''}
                     onChange={(e) => handleParamChange('pointA', e.target.value)}
                   >
@@ -100,8 +101,9 @@ export const ConstraintEditor: React.FC<ConstraintEditorProps> = ({
                   </select>
                 </div>
                 <div className="point-field">
-                  <label>Point B</label>
+                  <label htmlFor="distance-pointB">Point B</label>
                   <select
+                    id="distance-pointB"
                     value={localParams.pointB || ''}
                     onChange={(e) => handleParamChange('pointB', e.target.value)}
                   >
@@ -116,8 +118,9 @@ export const ConstraintEditor: React.FC<ConstraintEditorProps> = ({
             <div className="form-section">
               <h4>Distance</h4>
               <div className="form-field">
-                <label>Distance (meters)</label>
+                <label htmlFor="distance-value">Distance (meters)</label>
                 <input
+                  id="distance-value"
                   type="number"
                   step="0.001"
                   value={localParams.distance || ''}
@@ -136,8 +139,9 @@ export const ConstraintEditor: React.FC<ConstraintEditorProps> = ({
               <h4>Points</h4>
               <div className="point-assignment">
                 <div className="point-field">
-                  <label>Vertex</label>
+                  <label htmlFor="angle-vertex">Vertex</label>
                   <select
+                    id="angle-vertex"
                     value={localParams.vertex || ''}
                     onChange={(e) => handleParamChange('vertex', e.target.value)}
                   >
@@ -148,8 +152,9 @@ export const ConstraintEditor: React.FC<ConstraintEditorProps> = ({
                   </select>
                 </div>
                 <div className="point-field">
-                  <label>Line 1 End</label>
+                  <label htmlFor="angle-line1-end">Line 1 End</label>
                   <select
+                    id="angle-line1-end"
                     value={localParams.line1_end || ''}
                     onChange={(e) => handleParamChange('line1_end', e.target.value)}
                   >
@@ -160,8 +165,9 @@ export const ConstraintEditor: React.FC<ConstraintEditorProps> = ({
                   </select>
                 </div>
                 <div className="point-field">
-                  <label>Line 2 End</label>
+                  <label htmlFor="angle-line2-end">Line 2 End</label>
                   <select
+                    id="angle-line2-end"
                     value={localParams.line2_end || ''}
                     onChange={(e) => handleParamChange('line2_end', e.target.value)}
                   >
@@ -176,8 +182,9 @@ export const ConstraintEditor: React.FC<ConstraintEditorProps> = ({
             <div className="form-section">
               <h4>Angle</h4>
               <div className="form-field">
-                <label>Angle (degrees)</label>
+                <label htmlFor="angle-value">Angle (degrees)</label>
                 <input
+                  id="angle-value"
                   type="number"
                   step="0.1"
                   min="0"
@@ -197,8 +204,9 @@ export const ConstraintEditor: React.FC<ConstraintEditorProps> = ({
             <div className="form-section">
               <h4>Point</h4>
               <div className="point-field">
-                <label>Fixed Point</label>
+                <label htmlFor="fixed-point">Fixed Point</label>
                 <select
+                  id="fixed-point"
                   value={localParams.point_id || ''}
                   onChange={(e) => handleParamChange('point_id', e.target.value)}
                 >
@@ -213,8 +221,9 @@ export const ConstraintEditor: React.FC<ConstraintEditorProps> = ({
               <h4>Position</h4>
               <div className="coordinate-inputs">
                 <div className="form-field">
-                  <label>X (m)</label>
+                  <label htmlFor="fixed-x">X (m)</label>
                   <input
+                    id="fixed-x"
                     type="number"
                     step="0.001"
                     value={localParams.x || ''}
@@ -223,8 +232,9 @@ export const ConstraintEditor: React.FC<ConstraintEditorProps> = ({
                   />
                 </div>
                 <div className="form-field">
-                  <label>Y (m)</label>
+                  <label htmlFor="fixed-y">Y (m)</label>
                   <input
+                    id="fixed-y"
                     type="number"
                     step="0.001"
                     value={localParams.y || ''}
@@ -233,8 +243,9 @@ export const ConstraintEditor: React.FC<ConstraintEditorProps> = ({
                   />
                 </div>
                 <div className="form-field">
-                  <label>Z (m)</label>
+                  <label htmlFor="fixed-z">Z (m)</label>
                   <input
+                    id="fixed-z"
                     type="number"
                     step="0.001"
                     value={localParams.z || ''}
@@ -255,8 +266,9 @@ export const ConstraintEditor: React.FC<ConstraintEditorProps> = ({
               <h4>Line 1</h4>
               <div className="line-points">
                 <div className="point-field">
-                  <label>Point A</label>
+                  <label htmlFor="line1-pointA">Point A</label>
                   <select
+                    id="line1-pointA"
                     value={localParams.line1_wp_a || ''}
                     onChange={(e) => handleParamChange('line1_wp_a', e.target.value)}
                   >
@@ -267,8 +279,9 @@ export const ConstraintEditor: React.FC<ConstraintEditorProps> = ({
                   </select>
                 </div>
                 <div className="point-field">
-                  <label>Point B</label>
+                  <label htmlFor="line1-pointB">Point B</label>
                   <select
+                    id="line1-pointB"
                     value={localParams.line1_wp_b || ''}
                     onChange={(e) => handleParamChange('line1_wp_b', e.target.value)}
                   >
@@ -284,8 +297,9 @@ export const ConstraintEditor: React.FC<ConstraintEditorProps> = ({
               <h4>Line 2</h4>
               <div className="line-points">
                 <div className="point-field">
-                  <label>Point A</label>
+                  <label htmlFor="line2-pointA">Point A</label>
                   <select
+                    id="line2-pointA"
                     value={localParams.line2_wp_a || ''}
                     onChange={(e) => handleParamChange('line2_wp_a', e.target.value)}
                   >
@@ -296,8 +310,9 @@ export const ConstraintEditor: React.FC<ConstraintEditorProps> = ({
                   </select>
                 </div>
                 <div className="point-field">
-                  <label>Point B</label>
+                  <label htmlFor="line2-pointB">Point B</label>
                   <select
+                    id="line2-pointB"
                     value={localParams.line2_wp_b || ''}
                     onChange={(e) => handleParamChange('line2_wp_b', e.target.value)}
                   >
@@ -320,8 +335,9 @@ export const ConstraintEditor: React.FC<ConstraintEditorProps> = ({
               <div className="corner-assignment">
                 {['cornerA', 'cornerB', 'cornerC', 'cornerD'].map((corner, index) => (
                   <div key={corner} className="point-field">
-                    <label>Corner {index + 1}</label>
+                    <label htmlFor={`rect-${corner}`}>Corner {index + 1}</label>
                     <select
+                      id={`rect-${corner}`}
                       value={localParams[corner] || ''}
                       onChange={(e) => handleParamChange(corner, e.target.value)}
                     >
@@ -337,8 +353,9 @@ export const ConstraintEditor: React.FC<ConstraintEditorProps> = ({
             <div className="form-section">
               <h4>Aspect Ratio (Optional)</h4>
               <div className="form-field">
-                <label>Ratio</label>
+                <label htmlFor="rect-aspect-ratio">Ratio</label>
                 <input
+                  id="rect-aspect-ratio"
                   type="number"
                   step="0.1"
                   value={localParams.aspectRatio || ''}
@@ -371,8 +388,9 @@ export const ConstraintEditor: React.FC<ConstraintEditorProps> = ({
         <div className="modal-header">
           <h3>Edit {getConstraintDisplayName(constraint)} Constraint</h3>
           <div className="modal-controls">
-            <label className="enable-toggle">
+            <label className="enable-toggle" htmlFor="constraint-enabled">
               <input
+                id="constraint-enabled"
                 type="checkbox"
                 checked={localParams.enabled || false}
                 onChange={(e) => handleParamChange('enabled', e.target.checked)}
