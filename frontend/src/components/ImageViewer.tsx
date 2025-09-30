@@ -448,7 +448,17 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
 
       if (placementMode.active && onCreatePoint) {
         // In placement mode, always create/place point regardless of nearby points
-        const imageCoords = canvasToImageCoords(x, y)
+        let imageCoords = canvasToImageCoords(x, y)
+
+        // Apply precision adjustment if precision toggle is active
+        if (isPrecisionToggleActive && precisionCanvasPosRef.current) {
+          const precisionPos: CanvasPoint = precisionCanvasPosRef.current
+          const precisionImageCoords = canvasToImageCoords(precisionPos.x, precisionPos.y)
+          if (precisionImageCoords) {
+            imageCoords = precisionImageCoords
+          }
+        }
+
         if (imageCoords) {
           onCreatePoint(imageCoords.u, imageCoords.v)
         }
@@ -496,7 +506,17 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
 
           // Create point if tool is active (loop trace or point tool)
           if (onCreatePoint) {
-            const imageCoords = canvasToImageCoords(x, y)
+            let imageCoords = canvasToImageCoords(x, y)
+
+            // Apply precision adjustment if precision toggle is active
+            if (isPrecisionToggleActive && precisionCanvasPosRef.current) {
+              const precisionPos: CanvasPoint = precisionCanvasPosRef.current
+              const precisionImageCoords = canvasToImageCoords(precisionPos.x, precisionPos.y)
+              if (precisionImageCoords) {
+                imageCoords = precisionImageCoords
+              }
+            }
+
             if (imageCoords) {
               onCreatePoint(imageCoords.u, imageCoords.v)
             }
@@ -605,10 +625,38 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
         setIsPrecisionDrag(false)
       }
     } else {
-      if (precisionCanvasPosRef.current) {
-        precisionCanvasPosRef.current = null
+      // Handle precision mode in placement contexts (without dragging)
+      if (isPlacementInteractionActive && isPrecisionToggleActive) {
+        setIsPrecisionDrag(true)
+        const imageCoords = canvasToImageCoords(x, y)
+        if (imageCoords) {
+          const previousPointer = precisionPointerRef.current || imageCoords
+          const deltaU = imageCoords.u - previousPointer.u
+          const deltaV = imageCoords.v - previousPointer.v
+          precisionPointerRef.current = imageCoords
+
+          const baseCoords = draggedPointImageCoordsRef.current || imageCoords
+          const targetCoords = {
+            u: baseCoords.u + deltaU * PRECISION_DRAG_RATIO,
+            v: baseCoords.v + deltaV * PRECISION_DRAG_RATIO
+          }
+
+          draggedPointImageCoordsRef.current = targetCoords
+          precisionCanvasPosRef.current = imageToCanvasCoords(targetCoords.u, targetCoords.v)
+        }
+      } else {
+        if (precisionCanvasPosRef.current) {
+          precisionCanvasPosRef.current = null
+        }
+        if (precisionPointerRef.current) {
+          precisionPointerRef.current = null
+        }
+        if (draggedPointImageCoordsRef.current) {
+          draggedPointImageCoordsRef.current = null
+        }
+        setIsPrecisionDrag(false)
       }
-      setIsPrecisionDrag(false)
+
       // Check for nearby entities to show hover cursor
       const nearbyPoint = findNearbyPoint(x, y)
       const nearbyLine = findNearbyLine(x, y)
