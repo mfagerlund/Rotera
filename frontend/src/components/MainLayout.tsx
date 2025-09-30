@@ -13,6 +13,7 @@ import { WorldPoint } from '../entities/world-point'
 import { EnhancedConstraint, ConstraintType as GeometryConstraintType } from '../types/geometry'
 import { COMPONENT_OVERLAY_EVENT, isComponentOverlayEnabled, setComponentOverlayEnabled } from '../utils/componentNameOverlay'
 import { useConfirm } from './ConfirmDialog'
+import { filterImageBlobs } from '../types/optimization-export'
 
 
 // UI Components
@@ -93,7 +94,8 @@ export const MainLayout: React.FC = () => {
     deleteLine,
     getWorldPointEntity,
     getLineEntity,
-    clearProject
+    clearProject,
+    exportOptimizationDto
   } = legacyProject
 
   // Pure object-based selection
@@ -732,7 +734,34 @@ export const MainLayout: React.FC = () => {
             <div className="toolbar-section">
               <button className="btn-tool"><FontAwesomeIcon icon={faFolderOpen} /> Open</button>
               <button className="btn-tool"><FontAwesomeIcon icon={faFloppyDisk} /> Save</button>
-              <button className="btn-tool"><FontAwesomeIcon icon={faFileExport} /> Export</button>
+              <button
+                className="btn-tool"
+                onClick={() => {
+                  const exportData = exportOptimizationDto()
+                  if (!exportData) {
+                    alert('No project data to export')
+                    return
+                  }
+
+                  // Filter out image blobs for smaller file size
+                  const filteredData = filterImageBlobs(exportData)
+
+                  // Create JSON blob and download
+                  const json = JSON.stringify(filteredData, null, 2)
+                  const blob = new Blob([json], { type: 'application/json' })
+                  const url = URL.createObjectURL(blob)
+                  const link = document.createElement('a')
+                  link.href = url
+                  link.download = `${project?.name || 'project'}-optimization-${new Date().toISOString().split('T')[0]}.json`
+                  document.body.appendChild(link)
+                  link.click()
+                  document.body.removeChild(link)
+                  URL.revokeObjectURL(url)
+                }}
+                title="Export project data for optimization (without image blobs)"
+              >
+                <FontAwesomeIcon icon={faFileExport} /> Export
+              </button>
               <button
                 className="btn-tool btn-clear-project"
                 onClick={async () => {

@@ -5,8 +5,12 @@ import { Project, WorldPoint, ProjectImage, Camera, Constraint, Line } from '../
 import { ProjectStorage } from '../utils/storage'
 import { ImageUtils } from '../utils/imageUtils'
 import { getConstraintPointIds } from '../types/utils'
-import { WorldPoint as WorldPointEntity } from '../entities/world-point'
-import { Line as LineEntity } from '../entities/line'
+import { WorldPoint as WorldPointEntity, WorldPointDto } from '../entities/world-point'
+import { Line as LineEntity, LineDto } from '../entities/line'
+import { CameraDto } from '../entities/camera'
+import { ImageDto } from '../entities/image'
+import { ConstraintDto, convertFrontendConstraintToDto } from '../entities/constraints'
+import { OptimizationExportDto, calculateExportStatistics } from '../types/optimization-export'
 
 export const useProject = () => {
   const [project, setProject] = useState<Project | null>(null)
@@ -570,6 +574,164 @@ export const useProject = () => {
         }
         return null
       }).filter(Boolean) as LineEntity[]
+    },
+
+    // Export to optimization DTO
+    exportOptimizationDto: (): OptimizationExportDto | null => {
+      if (!project) return null
+
+      // Convert world points to DTOs
+      const worldPointDtos: WorldPointDto[] = Object.values(project.worldPoints).map(wp => ({
+        id: wp.id,
+        name: wp.name,
+        xyz: wp.xyz,
+        color: wp.color || '#0696d7',
+        isVisible: wp.isVisible ?? true,
+        isOrigin: wp.isOrigin ?? false,
+        isLocked: wp.isLocked ?? false,
+        group: wp.group,
+        tags: wp.tags,
+        createdAt: wp.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }))
+
+      // Convert lines to DTOs
+      const lineDtos: LineDto[] = Object.values(project.lines || {}).map(line => ({
+        id: line.id,
+        name: line.name,
+        pointA: line.pointA,
+        pointB: line.pointB,
+        color: line.color || '#0696d7',
+        isVisible: line.isVisible ?? true,
+        isConstruction: line.isConstruction ?? false,
+        lineStyle: 'solid' as const,
+        thickness: 1,
+        constraints: {
+          direction: line.constraints?.direction || 'free',
+          targetLength: line.constraints?.targetLength,
+          tolerance: line.constraints?.tolerance
+        },
+        group: undefined,
+        tags: undefined,
+        createdAt: line.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }))
+
+      // Convert cameras to DTOs
+      const cameraDtos: CameraDto[] = Object.values(project.cameras || {}).map(camera => ({
+        id: camera.id,
+        name: camera.name,
+        focalLength: camera.intrinsics?.fx || 1000,
+        principalPointX: camera.intrinsics?.cx || 0,
+        principalPointY: camera.intrinsics?.cy || 0,
+        skewCoefficient: 0,
+        aspectRatio: camera.intrinsics?.fy && camera.intrinsics?.fx
+          ? camera.intrinsics.fy / camera.intrinsics.fx
+          : 1,
+        radialDistortion: [
+          camera.intrinsics?.k1 || 0,
+          camera.intrinsics?.k2 || 0,
+          camera.intrinsics?.k3 || 0
+        ],
+        tangentialDistortion: [
+          camera.intrinsics?.p1 || 0,
+          camera.intrinsics?.p2 || 0
+        ],
+        position: camera.extrinsics?.translation || [0, 0, 0],
+        rotation: camera.extrinsics?.rotation || [0, 0, 0],
+        imageWidth: 1920,
+        imageHeight: 1080,
+        calibrationAccuracy: camera.calibrationQuality || 0,
+        calibrationDate: undefined,
+        calibrationNotes: undefined,
+        isVisible: true,
+        color: '#ffff00',
+        group: undefined,
+        tags: undefined,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }))
+
+      // Convert images to DTOs
+      const imageDtos: ImageDto[] = Object.values(project.images || {}).map(image => {
+        // Extract image points for this image from world points
+        const imagePointsMap: Record<string, any> = {}
+        let imagePointCounter = 0
+        Object.values(project.worldPoints).forEach(wp => {
+          wp.imagePoints.forEach((ip) => {
+            if (ip.imageId === image.id) {
+              const imagePointId = `ip${imagePointCounter++}`
+              imagePointsMap[imagePointId] = {
+                id: imagePointId,
+                worldPointId: wp.id,
+                u: ip.u,
+                v: ip.v,
+                isVisible: true,
+                isManuallyPlaced: true,
+                confidence: 1.0,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+              }
+            }
+          })
+        })
+
+        return {
+          id: image.id,
+          name: image.name,
+          filename: image.name,
+          url: image.blob,
+          width: image.width,
+          height: image.height,
+          cameraId: image.cameraId,
+          imagePoints: imagePointsMap,
+          isProcessed: false,
+          isVisible: true,
+          opacity: 1.0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+      })
+
+      // Convert constraints to DTOs
+      const constraintDtos: ConstraintDto[] = (project.constraints || []).map(constraint =>
+        convertFrontendConstraintToDto(constraint)
+      )
+
+      // Calculate statistics
+      const statistics = calculateExportStatistics(
+        worldPointDtos,
+        lineDtos,
+        imageDtos,
+        constraintDtos
+      )
+
+      // Build export DTO
+      const exportDto: OptimizationExportDto = {
+        version: '1.0.0',
+        exportedAt: new Date().toISOString(),
+        worldPoints: worldPointDtos,
+        lines: lineDtos,
+        cameras: cameraDtos,
+        images: imageDtos,
+        constraints: constraintDtos,
+        metadata: {
+          projectName: project.name,
+          projectId: project.id,
+          totalWorldPoints: worldPointDtos.length,
+          totalLines: lineDtos.length,
+          totalCameras: cameraDtos.length,
+          totalImages: imageDtos.length,
+          totalConstraints: constraintDtos.length,
+          totalImagePoints: Object.values(imageDtos).reduce((sum, img) =>
+            sum + Object.keys(img.imagePoints).length, 0
+          )
+        },
+        coordinateSystem: project.coordinateSystem,
+        statistics
+      }
+
+      return exportDto
     },
 
     // Legacy computed values (backwards compatibility)
