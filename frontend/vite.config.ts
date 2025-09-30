@@ -9,6 +9,8 @@ const worktreeName = rootDir
 // Assign unique port based on worktree
 const portMap: Record<string, number> = {
   'Pictorigo-worktree': 5174,
+  'Pictorigo-scaramanga': 5175,
+  'Pictorigo-oddjob': 5176,
   'Pictorigo': 5173,
 }
 
