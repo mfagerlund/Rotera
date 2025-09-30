@@ -69,8 +69,8 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
     }
   }
 
-  const handleDeleteAll = () => {
-    if (confirm(`Are you sure you want to delete ALL ${entities.length} ${title.toLowerCase()}?\n\nThis action cannot be undone.`)) {
+  const handleDeleteAll = async () => {
+    if (await confirm(`Are you sure you want to delete ALL ${entities.length} ${title.toLowerCase()}?\n\nThis action cannot be undone.`)) {
       onDeleteAll?.()
     }
   }

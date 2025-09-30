@@ -80,6 +80,7 @@ export const WorldPointEditWindow: React.FC<WorldPointEditWindowProps> = ({
 
   return (
     <>
+      {dialog}
       <FloatingWindow
       title={`Edit World Point: ${worldPoint.name}`}
       isOpen={isOpen}
