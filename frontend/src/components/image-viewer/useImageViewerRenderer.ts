@@ -354,6 +354,15 @@ export const useImageViewerRenderer = ({
         ctx.lineWidth = 3
         ctx.strokeText('Precision', centerX, centerY + radius - 18)
         ctx.fillText('Precision', centerX, centerY + radius - 18)
+      } else {
+        ctx.font = '11px Arial'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.55)'
+        ctx.lineWidth = 3
+        ctx.strokeText('Tap Shift for precision', centerX, centerY + radius - 18)
+        ctx.fillText('Tap Shift for precision', centerX, centerY + radius - 18)
       }
     }
 
