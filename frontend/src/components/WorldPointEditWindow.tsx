@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
+import { faPencil, faTrash, faBullseye } from '@fortawesome/free-solid-svg-icons'
 import FloatingWindow from './FloatingWindow'
 import { WorldPoint } from '../types/project'
 import { useConfirm } from './ConfirmDialog'
@@ -124,7 +124,23 @@ export const WorldPointEditWindow: React.FC<WorldPointEditWindowProps> = ({
 
         {/* World Coordinates */}
         <div className="edit-section">
-          <h4>Position (Known World Coordinates)</h4>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h4>Position (Known World Coordinates)</h4>
+            <button
+              className="btn-icon"
+              onClick={() => {
+                setEditedPoint(prev => ({
+                  ...prev,
+                  xyz: [0, 0, 0]
+                }))
+                setHasChanges(true)
+              }}
+              title="Set as origin (0, 0, 0)"
+              style={{ padding: '4px 8px', fontSize: '0.9em' }}
+            >
+              <FontAwesomeIcon icon={faBullseye} /> Origin
+            </button>
+          </div>
 
           <div className="form-row">
             <label>X, Y, Z</label>
@@ -245,35 +261,15 @@ export const WorldPointEditWindow: React.FC<WorldPointEditWindowProps> = ({
           )}
         </div>
 
-        {/* Status Information */}
-        <div className="edit-section">
-          <h4>Status</h4>
-
-          <div className="status-grid">
-            <div className="status-item">
-              <label>Created</label>
-              <span>{editedPoint.createdAt ? new Date(editedPoint.createdAt).toLocaleString() : 'Unknown'}</span>
-            </div>
-
-            <div className="status-item">
-              <label>Visible</label>
-              <span>{editedPoint.isVisible ? 'Yes' : 'No'}</span>
-            </div>
-          </div>
-        </div>
-
         {/* Actions */}
         {onDeleteWorldPoint && (
           <div className="edit-section">
-            <div className="danger-zone">
-              <h4>Danger Zone</h4>
-              <button
-                className="btn-danger"
-                onClick={handleDelete}
-              >
-                Delete World Point
-              </button>
-            </div>
+            <button
+              className="btn-danger"
+              onClick={handleDelete}
+            >
+              Delete World Point
+            </button>
           </div>
         )}
       </div>
