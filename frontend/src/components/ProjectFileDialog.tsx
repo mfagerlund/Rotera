@@ -1,5 +1,7 @@
 // Project file management dialog
 import React, { useState, useCallback, useRef, useEffect } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faFolderOpen, faTriangleExclamation, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { Project } from '../types/project'
 import { FileManagerService, ProjectFile, ProjectFileMetadata } from '../services/fileManager'
 
@@ -189,7 +191,7 @@ export const ProjectFileDialog: React.FC<ProjectFileDialogProps> = ({
         <div className="dialog-content">
           {error && (
             <div className="error-message">
-              <span className="error-icon">⚠️</span>
+              <span className="error-icon"><FontAwesomeIcon icon={faTriangleExclamation} /></span>
               <span>{error}</span>
             </div>
           )}
@@ -250,7 +252,7 @@ export const ProjectFileDialog: React.FC<ProjectFileDialogProps> = ({
                     {(saveMetadata.tags || []).map(tag => (
                       <span key={tag} className="tag">
                         {tag}
-                        <button onClick={() => removeTag(tag)}>×</button>
+                        <button onClick={() => removeTag(tag)}><FontAwesomeIcon icon={faXmark} /></button>
                       </span>
                     ))}
                   </div>
@@ -293,7 +295,7 @@ export const ProjectFileDialog: React.FC<ProjectFileDialogProps> = ({
                   onClick={() => fileInputRef.current?.click()}
                   disabled={loading}
                 >
-                  📁 Select Project File
+                  <FontAwesomeIcon icon={faFolderOpen} /> Select Project File
                 </button>
                 <p className="file-info">
                   Select a .pictorigo file to load your project
@@ -402,7 +404,7 @@ export const ProjectFileDialog: React.FC<ProjectFileDialogProps> = ({
               </div>
 
               <div className="import-warning">
-                <span className="warning-icon">⚠️</span>
+                <span className="warning-icon"><FontAwesomeIcon icon={faTriangleExclamation} /></span>
                 <span>
                   Importing will replace the current project data.
                   Make sure to save your current work first.

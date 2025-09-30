@@ -56,7 +56,7 @@ async def create_box_room(request: BoxRoomRequest) -> dict[str, str]:
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Failed to create box room: {str(e)}"
-        )
+        ) from e
 
 
 @router.post("/grid-plane")
@@ -78,7 +78,7 @@ async def create_grid_plane(request: GridPlaneRequest) -> dict[str, str]:
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Failed to create grid plane: {str(e)}"
-        )
+        ) from e
 
 
 @router.post("/two-view")
@@ -97,4 +97,4 @@ async def create_two_view(request: TwoViewRequest) -> dict[str, str]:
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Failed to create two-view scene: {str(e)}"
-        )
+        ) from e

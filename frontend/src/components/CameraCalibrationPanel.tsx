@@ -1,6 +1,9 @@
 // Camera calibration panel for intrinsic and extrinsic parameters
 
 import React, { useState, useCallback, useMemo } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCamera, faCheck, faGear, faXmark } from '@fortawesome/free-solid-svg-icons'
+import { faCircle } from '@fortawesome/free-regular-svg-icons'
 import { Project, Camera, CameraIntrinsics, CameraExtrinsics } from '../types/project'
 
 export interface CalibrationPattern {
@@ -214,11 +217,11 @@ export const CameraCalibrationPanel: React.FC<CameraCalibrationPanelProps> = ({
   const getPatternDescription = useCallback((pattern: CalibrationPattern) => {
     switch (pattern.type) {
       case 'checkerboard':
-        return `${pattern.width}×${pattern.height} checkerboard, ${pattern.squareSize}${pattern.unit} squares`
+        return `${pattern.width}<FontAwesomeIcon icon={faXmark} />${pattern.height} checkerboard, ${pattern.squareSize}${pattern.unit} squares`
       case 'circles':
-        return `${pattern.width}×${pattern.height} circles, ${pattern.squareSize}${pattern.unit} spacing`
+        return `${pattern.width}<FontAwesomeIcon icon={faXmark} />${pattern.height} circles, ${pattern.squareSize}${pattern.unit} spacing`
       case 'asymmetric_circles':
-        return `${pattern.width}×${pattern.height} asymmetric circles, ${pattern.squareSize}${pattern.unit} spacing`
+        return `${pattern.width}<FontAwesomeIcon icon={faXmark} />${pattern.height} asymmetric circles, ${pattern.squareSize}${pattern.unit} spacing`
       default:
         return 'Unknown pattern'
     }
@@ -260,13 +263,13 @@ export const CameraCalibrationPanel: React.FC<CameraCalibrationPanelProps> = ({
                 <div className="status-grid">
                   <div className={`status-item ${status.hasIntrinsics ? 'calibrated' : 'not-calibrated'}`}>
                     <span className="status-icon">
-                      {status.hasIntrinsics ? '✓' : '○'}
+                      {status.hasIntrinsics ? '<FontAwesomeIcon icon={faCheck} />' : '<FontAwesomeIcon icon={faCircle} />'}
                     </span>
                     <span className="status-label">Intrinsic Parameters</span>
                   </div>
                   <div className={`status-item ${status.hasExtrinsics ? 'calibrated' : 'not-calibrated'}`}>
                     <span className="status-icon">
-                      {status.hasExtrinsics ? '✓' : '○'}
+                      {status.hasExtrinsics ? '<FontAwesomeIcon icon={faCheck} />' : '<FontAwesomeIcon icon={faCircle} />'}
                     </span>
                     <span className="status-label">Extrinsic Parameters</span>
                   </div>
@@ -396,7 +399,7 @@ export const CameraCalibrationPanel: React.FC<CameraCalibrationPanelProps> = ({
                     onClick={startIntrinsicCalibration}
                     disabled={cameraImages.length < 5}
                   >
-                    📷 Calibrate Intrinsics
+                    <FontAwesomeIcon icon={faCamera} /> Calibrate Intrinsics
                   </button>
                   <button
                     className="btn-reset"
@@ -449,7 +452,7 @@ export const CameraCalibrationPanel: React.FC<CameraCalibrationPanelProps> = ({
                   className="btn-advanced"
                   onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
                 >
-                  ⚙️ Advanced Settings
+                  <FontAwesomeIcon icon={faGear} /> Advanced Settings
                 </button>
               </div>
             </div>
@@ -623,14 +626,14 @@ export const CameraCalibrationPanel: React.FC<CameraCalibrationPanelProps> = ({
 
       {!selectedCameraId && cameras.length > 0 && (
         <div className="no-camera-selected">
-          <div className="no-camera-icon">📷</div>
+          <div className="no-camera-icon"><FontAwesomeIcon icon={faCamera} /></div>
           <div className="no-camera-text">Select a camera to begin calibration</div>
         </div>
       )}
 
       {cameras.length === 0 && (
         <div className="no-cameras">
-          <div className="no-cameras-icon">📷</div>
+          <div className="no-cameras-icon"><FontAwesomeIcon icon={faCamera} /></div>
           <div className="no-cameras-text">No cameras available</div>
           <div className="no-cameras-hint">
             Import images to automatically create cameras

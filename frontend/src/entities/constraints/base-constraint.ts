@@ -585,13 +585,17 @@ export abstract class Constraint implements ISelectable, IValidatable {
 
   // Helper method for calculating angle between three points (in degrees)
   protected calculateAngleBetweenPoints(pointA: WorldPoint, vertex: WorldPoint, pointC: WorldPoint): number {
-    if (!pointA.hasCoordinates() || !vertex.hasCoordinates() || !pointC.hasCoordinates()) {
+    const aCoords = pointA.getDefinedCoordinates()
+    const vCoords = vertex.getDefinedCoordinates()
+    const cCoords = pointC.getDefinedCoordinates()
+
+    if (!aCoords || !vCoords || !cCoords) {
       return 0
     }
 
-    const [x1, y1, z1] = pointA.xyz!
-    const [x2, y2, z2] = vertex.xyz!
-    const [x3, y3, z3] = pointC.xyz!
+    const [x1, y1, z1] = aCoords
+    const [x2, y2, z2] = vCoords
+    const [x3, y3, z3] = cCoords
 
     // Calculate vectors from vertex to other points
     const vec1 = [x1 - x2, y1 - y2, z1 - z2]

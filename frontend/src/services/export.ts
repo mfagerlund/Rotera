@@ -163,7 +163,9 @@ export class ExportService {
 
   private exportPLY(options: ExportOptions): ExportResult {
     const worldPoints = this.getFormattedWorldPoints(options)
-    const points = Object.values(worldPoints).filter(wp => wp.xyz)
+    const points = Object.values(worldPoints).filter(wp =>
+      wp.xyz && wp.xyz[0] !== null && wp.xyz[1] !== null && wp.xyz[2] !== null
+    )
 
     let plyContent = `ply
 format ascii 1.0
@@ -179,7 +181,7 @@ end_header
 `
 
     points.forEach(wp => {
-      const [x, y, z] = wp.xyz!
+      const [x, y, z] = wp.xyz as [number, number, number]
       const color = this.hexToRgb(wp.color || '#ffffff')
       plyContent += `${x.toFixed(options.precision)} ${y.toFixed(options.precision)} ${z.toFixed(options.precision)} ${color[0]} ${color[1]} ${color[2]}\n`
     })
@@ -197,7 +199,9 @@ end_header
 
   private exportOBJ(options: ExportOptions): ExportResult {
     const worldPoints = this.getFormattedWorldPoints(options)
-    const points = Object.values(worldPoints).filter(wp => wp.xyz)
+    const points = Object.values(worldPoints).filter(wp =>
+      wp.xyz && wp.xyz[0] !== null && wp.xyz[1] !== null && wp.xyz[2] !== null
+    )
 
     let objContent = `# Exported from Pictorigo
 # Project: ${this.project.name}
@@ -207,7 +211,7 @@ end_header
 
     // Export vertices
     points.forEach(wp => {
-      const [x, y, z] = wp.xyz!
+      const [x, y, z] = wp.xyz as [number, number, number]
       objContent += `v ${x.toFixed(options.precision)} ${y.toFixed(options.precision)} ${z.toFixed(options.precision)}\n`
     })
 
@@ -230,7 +234,9 @@ end_header
 
   private exportDXF(options: ExportOptions): ExportResult {
     const worldPoints = this.getFormattedWorldPoints(options)
-    const points = Object.values(worldPoints).filter(wp => wp.xyz)
+    const points = Object.values(worldPoints).filter(wp =>
+      wp.xyz && wp.xyz[0] !== null && wp.xyz[1] !== null && wp.xyz[2] !== null
+    )
 
     let dxfContent = `0
 SECTION
@@ -250,7 +256,7 @@ ENTITIES
 
     // Export points as DXF POINT entities
     points.forEach(wp => {
-      const [x, y, z] = wp.xyz!
+      const [x, y, z] = wp.xyz as [number, number, number]
       dxfContent += `0
 POINT
 8
@@ -363,13 +369,15 @@ EOF
     // Apply coordinate system transformation if needed
     if (options.coordinateSystem === 'world' && this.project.coordinateSystem?.origin) {
       const origin = worldPoints[this.project.coordinateSystem.origin]
-      if (origin?.xyz) {
+      const originXyz = origin?.xyz
+      if (originXyz && originXyz[0] !== null && originXyz[1] !== null && originXyz[2] !== null) {
         Object.values(worldPoints).forEach(wp => {
-          if (wp.xyz && wp.id !== this.project.coordinateSystem!.origin) {
+          const wpXyz = wp.xyz
+          if (wpXyz && wpXyz[0] !== null && wpXyz[1] !== null && wpXyz[2] !== null && wp.id !== this.project.coordinateSystem!.origin) {
             wp.xyz = [
-              wp.xyz[0] - origin.xyz![0],
-              wp.xyz[1] - origin.xyz![1],
-              wp.xyz[2] - origin.xyz![2]
+              wpXyz[0] - originXyz[0],
+              wpXyz[1] - originXyz[1],
+              wpXyz[2] - originXyz[2]
             ]
           }
         })

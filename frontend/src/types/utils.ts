@@ -118,5 +118,5 @@ export type RequiredDeep<T> = {
  */
 export function getConstraintPointIds(constraint: Constraint): string[] {
   // Use the entities structure instead of specific properties
-  return constraint.entities.points || []
+  return constraint.entities?.points || []
 }

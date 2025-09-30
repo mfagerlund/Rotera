@@ -332,10 +332,6 @@ export class Line implements ISelectable, IValidatable, ILine {
     return this._constraints.direction === 'x-aligned'
   }
 
-  isYAligned(): boolean {
-    return this._constraints.direction === 'y-aligned'
-  }
-
   isZAligned(): boolean {
     return this._constraints.direction === 'z-aligned'
   }
@@ -366,18 +362,13 @@ export class Line implements ISelectable, IValidatable, ILine {
             }
             break
           case 'vertical':
-            if (Math.abs(dx) > tol || Math.abs(dy) > tol) {
+            if (Math.abs(dx) > tol || Math.abs(dz) > tol) {
               violations.push('Line is not vertical')
             }
             break
           case 'x-aligned':
             if (Math.abs(dy) > tol || Math.abs(dz) > tol) {
               violations.push('Line is not X-axis aligned')
-            }
-            break
-          case 'y-aligned':
-            if (Math.abs(dx) > tol || Math.abs(dz) > tol) {
-              violations.push('Line is not Y-axis aligned')
             }
             break
           case 'z-aligned':

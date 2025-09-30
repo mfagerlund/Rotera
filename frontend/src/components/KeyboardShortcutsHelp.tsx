@@ -1,6 +1,8 @@
 // Keyboard shortcuts help dialog
 
 import React, { useState } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faArrowRight, faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
 
 interface KeyboardShortcut {
   category: string
@@ -20,7 +22,7 @@ const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
   {
     category: 'Navigation',
     shortcuts: [
-      { keys: '← → ↑ ↓', description: 'Navigate between points/items' },
+      { keys: '← <FontAwesomeIcon icon={faArrowRight} /> ↑ ↓', description: 'Navigate between points/items' },
       { keys: 'Home', description: 'Go to first item' },
       { keys: 'End', description: 'Go to last item' },
       { keys: 'Tab', description: 'Next selectable item' },
@@ -177,7 +179,7 @@ export const KeyboardShortcutsHelp: React.FC<KeyboardShortcutsHelpProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <div className="search-icon">🔍</div>
+            <div className="search-icon"><FontAwesomeIcon icon={faMagnifyingGlass} /></div>
           </div>
 
           <div className="shortcuts-layout">
@@ -268,7 +270,7 @@ export const KeyboardShortcutsHelp: React.FC<KeyboardShortcutsHelpProps> = ({
 
               {filteredShortcuts.length === 0 && (
                 <div className="no-results">
-                  <div className="no-results-icon">🔍</div>
+                  <div className="no-results-icon"><FontAwesomeIcon icon={faMagnifyingGlass} /></div>
                   <div className="no-results-text">No shortcuts found</div>
                   <div className="no-results-hint">
                     Try a different search term

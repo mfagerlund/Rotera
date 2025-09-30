@@ -1,6 +1,9 @@
 // Left sidebar image navigation toolbar
 
 import React, { useRef } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faArrowsUpDown, faCheck, faPlus, faXmark } from '@fortawesome/free-solid-svg-icons'
+import { faCircle } from '@fortawesome/free-regular-svg-icons'
 import { ProjectImage, WorldPoint } from '../types/project'
 import { ImageUtils } from '../utils/imageUtils'
 
@@ -197,7 +200,7 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
           <div className="empty-images-state">
             <div className="empty-icon">□</div>
             <div className="empty-text">No images yet</div>
-            <div className="empty-hint">Click ➕ to add images</div>
+            <div className="empty-hint">Click <FontAwesomeIcon icon={faPlus} /> to add images</div>
           </div>
         )}
       </div>
@@ -257,7 +260,58 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
 }) => {
   const [isEditing, setIsEditing] = React.useState(false)
   const [name, setName] = React.useState(image.name)
-  const [showHeightControl, setShowHeightControl] = React.useState(false)
+  const imgRef = React.useRef<HTMLImageElement>(null)
+  const [imgBounds, setImgBounds] = React.useState({ width: 0, height: 0, offsetX: 0, offsetY: 0 })
+  const [isPanelCollapsed, setIsPanelCollapsed] = React.useState(false)
+
+  // Update image bounds when thumbnail height changes or image loads
+  React.useEffect(() => {
+    const updateBounds = () => {
+      if (!imgRef.current) return
+
+      const parent = imgRef.current.parentElement
+      if (!parent) return
+
+      const parentRect = parent.getBoundingClientRect()
+
+      // For object-fit: contain, we need to calculate the actual rendered image size
+      // The image element itself has the container dimensions, but the visible image is scaled
+      const imgElement = imgRef.current
+      const containerWidth = parentRect.width
+      const containerHeight = parentRect.height
+      const imageNaturalWidth = image.width
+      const imageNaturalHeight = image.height
+
+      // Calculate the scale factor for object-fit: contain
+      const scaleX = containerWidth / imageNaturalWidth
+      const scaleY = containerHeight / imageNaturalHeight
+      const scale = Math.min(scaleX, scaleY)
+
+      // Actual rendered dimensions
+      const renderedWidth = imageNaturalWidth * scale
+      const renderedHeight = imageNaturalHeight * scale
+
+      // Centering offsets
+      const offsetX = (containerWidth - renderedWidth) / 2
+      const offsetY = (containerHeight - renderedHeight) / 2
+
+      setImgBounds({
+        width: renderedWidth,
+        height: renderedHeight,
+        offsetX,
+        offsetY
+      })
+    }
+
+    updateBounds()
+    // Update on resize or when thumbnail height changes
+    const observer = new ResizeObserver(updateBounds)
+    if (imgRef.current) {
+      observer.observe(imgRef.current)
+    }
+
+    return () => observer.disconnect()
+  }, [thumbnailHeight, image.width, image.height])
 
   const handleNameSubmit = () => {
     setIsEditing(false)
@@ -280,6 +334,7 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
   return (
     <div
       className={`image-nav-item ${isActive ? 'active' : ''} ${isDragging ? 'dragging' : ''} ${isDragOver ? 'drag-over' : ''}`}
+      onClick={onClick}
       onDragOver={(e) => {
         e.preventDefault()
         e.dataTransfer.dropEffect = 'move'
@@ -300,7 +355,7 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
         }}
         title={isActive ? "Currently selected" : "Click to select this image"}
       >
-        {isActive ? '✓' : '○'}
+        {isActive ? <FontAwesomeIcon icon={faCheck} /> : <FontAwesomeIcon icon={faCircle} />}
       </button>
 
       {/* Selected world points indicator - moved outside thumbnail */}
@@ -310,11 +365,62 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
         </div>
       )}
 
+      {/* Image name at top center */}
+      <div className="image-name-overlay">
+        {isEditing ? (
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onBlur={handleNameSubmit}
+            onKeyDown={handleKeyDown}
+            onClick={(e) => e.stopPropagation()}
+            autoFocus
+            className="image-name-input"
+          />
+        ) : (
+          <div
+            className="image-name"
+            onDoubleClick={(e) => {
+              e.stopPropagation()
+              setIsEditing(true)
+            }}
+            title="Double-click to rename"
+          >
+            {image.name}
+          </div>
+        )}
+      </div>
+
       <div
         className="image-thumbnail"
         style={{ height: `${thumbnailHeight}px` }}
       >
-        <img src={image.blob} alt={image.name} />
+        <img ref={imgRef} src={image.blob} alt={image.name} />
+
+        {/* Resize handle */}
+        <div
+          className="thumbnail-resize-handle"
+          onMouseDown={(e) => {
+            e.stopPropagation()
+            const startY = e.clientY
+            const startHeight = thumbnailHeight
+
+            const handleMouseMove = (moveEvent: MouseEvent) => {
+              const deltaY = moveEvent.clientY - startY
+              const newHeight = Math.max(60, Math.min(400, startHeight + deltaY))
+              onThumbnailHeightChange(newHeight)
+            }
+
+            const handleMouseUp = () => {
+              document.removeEventListener('mousemove', handleMouseMove)
+              document.removeEventListener('mouseup', handleMouseUp)
+            }
+
+            document.addEventListener('mousemove', handleMouseMove)
+            document.addEventListener('mouseup', handleMouseUp)
+          }}
+          title="Drag to resize"
+        />
 
         {/* World point locations overlay */}
         <div className="wp-locations-overlay">
@@ -322,14 +428,13 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
               const imagePoint = wp.imagePoints.find(ip => ip.imageId === image.id)
               if (!imagePoint) return null
 
-              // Convert world point coordinates to thumbnail coordinates
-              // Calculate thumbnail dimensions maintaining aspect ratio with current height
-              const imageAspectRatio = image.width / image.height
-              const currentThumbnailHeight = thumbnailHeight
-              const thumbnailWidth = Math.min(150, Math.max(75, currentThumbnailHeight * imageAspectRatio))
+              // Use actual rendered image bounds from the DOM
+              // This accounts for centering and actual size
+              if (imgBounds.width === 0 || imgBounds.height === 0) return null
 
-              const thumbnailX = (imagePoint.u / image.width) * thumbnailWidth
-              const thumbnailY = (imagePoint.v / image.height) * currentThumbnailHeight
+              // Calculate position as percentage of rendered image size, plus offset for centering
+              const thumbnailX = imgBounds.offsetX + (imagePoint.u / image.width) * imgBounds.width
+              const thumbnailY = imgBounds.offsetY + (imagePoint.v / image.height) * imgBounds.height
 
               const isSelected = selectedWorldPointIds.includes(wp.id)
               const isGloballyHovered = hoveredWorldPointId === wp.id
@@ -357,112 +462,83 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
 
       </div>
 
-      <div className="image-info">
-        {isEditing ? (
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onBlur={handleNameSubmit}
-            onKeyDown={handleKeyDown}
-            onClick={(e) => e.stopPropagation()}
-            autoFocus
-            className="image-name-input"
-          />
-        ) : (
-          <div
-            className="image-name"
-            onDoubleClick={(e) => {
-              e.stopPropagation()
-              setIsEditing(true)
-            }}
-            title="Double-click to rename"
-          >
-            {image.name}
-          </div>
-        )}
-
-        <div className="image-stats">
-          <div className="stat-item">
-            <span className="stat-icon">•</span>
-            <span>{pointCount} points</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-icon">□</span>
-            <span>{image.width}×{image.height}</span>
-          </div>
-        </div>
-
-        {/* Drag handle - moved to be more prominent */}
-        <div
-          className="image-drag-area"
-          title="Drag to reorder images"
-          draggable
-          onDragStart={(e) => {
-            e.dataTransfer.effectAllowed = 'move'
-            e.dataTransfer.setData('text/plain', image.id)
-            onDragStart()
-          }}
-          onDragEnd={onDragEnd}
-          onClick={(e) => e.stopPropagation()} // Prevent triggering image selection
-        >
-          <div className="drag-handle">
-            <div className="drag-dots">
-              <span style={{ '--dot-index': 0 } as any}></span>
-              <span style={{ '--dot-index': 1 } as any}></span>
-              <span style={{ '--dot-index': 2 } as any}></span>
-              <span style={{ '--dot-index': 3 } as any}></span>
-              <span style={{ '--dot-index': 4 } as any}></span>
-              <span style={{ '--dot-index': 5 } as any}></span>
+      {/* Right panel with stats and actions */}
+      <div className={`image-info-right ${isPanelCollapsed ? 'collapsed' : ''}`}>
+        {!isPanelCollapsed ? (
+          <>
+            <div className="image-stats">
+              <div className="stat-item">
+                <span className="stat-icon">•</span>
+                <span>{pointCount} pts</span>
+              </div>
+              <div className="stat-item">
+                <span className="stat-icon">□</span>
+                <span>{image.width}<FontAwesomeIcon icon={faXmark} />{image.height}</span>
+              </div>
             </div>
-          </div>
-        </div>
 
-        <div className="image-actions">
-            <button
-              className="btn-image-action"
-              onClick={(e) => {
-                e.stopPropagation()
-                setShowHeightControl(!showHeightControl)
+            {/* Drag handle */}
+            <div
+              className="image-drag-area"
+              title="Drag to reorder images"
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.effectAllowed = 'move'
+                e.dataTransfer.setData('text/plain', image.id)
+                onDragStart()
               }}
-              title="Adjust image size"
+              onDragEnd={onDragEnd}
+              onClick={(e) => e.stopPropagation()}
             >
-              ⟷
-            </button>
-            <button
-              className="btn-image-action"
-              onClick={(e) => {
-                e.stopPropagation()
-                setIsEditing(true)
-              }}
-              title="Rename image"
-            >
-              ✎
-            </button>
-            <button
-              className="btn-image-action"
-              onClick={(e) => {
-                e.stopPropagation()
-                onDelete()
-              }}
-              title="Delete image"
-            >
-              ×
-            </button>
-        </div>
+              <FontAwesomeIcon icon={faArrowsUpDown} />
+            </div>
 
-        {/* Height adjustment control */}
-        {showHeightControl && (
-          <div className="height-control" onClick={(e) => e.stopPropagation()}>
-            <label>Size: {thumbnailHeight}px</label>
-            <input
-              type="range"
-              min="60"
-              max="200"
-              value={thumbnailHeight}
-              onChange={(e) => onThumbnailHeightChange(parseInt(e.target.value))}
-              className="height-slider"
-            />
-          </div>
+            <div className="image-actions">
+                <button
+                  className="btn-image-action"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setIsEditing(true)
+                  }}
+                  title="Rename image"
+                >
+                  ✎
+                </button>
+                <button
+                  className="btn-image-action"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onDelete()
+                  }}
+                  title="Delete image"
+                >
+                  <FontAwesomeIcon icon={faXmark} />
+                </button>
+            </div>
+
+            {/* Collapse button */}
+            <button
+              className="btn-collapse-panel"
+              onClick={(e) => {
+                e.stopPropagation()
+                setIsPanelCollapsed(true)
+              }}
+              title="Hide panel"
+            >
+              ›
+            </button>
+          </>
+        ) : (
+          <button
+            className="btn-expand-panel"
+            onClick={(e) => {
+              e.stopPropagation()
+              setIsPanelCollapsed(false)
+            }}
+            title="Show panel"
+          >
+            ‹
+          </button>
         )}
       </div>
     </div>

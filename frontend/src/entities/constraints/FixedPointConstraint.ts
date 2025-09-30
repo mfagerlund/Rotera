@@ -57,7 +57,7 @@ export class FixedPointConstraint extends BaseConstraint {
       }
     }
 
-    const currentPos = this._point.xyz!
+    const currentPos = this._point.getDefinedCoordinates()!
     const [tx, ty, tz] = this._targetPosition
     const [cx, cy, cz] = currentPos
 

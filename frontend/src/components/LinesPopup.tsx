@@ -109,7 +109,15 @@ export const LinesPopup: React.FC<LinesPopupProps> = ({
           onClose={handleCloseEdit}
           width={350}
           storageKey="line-edit-popup"
-          showOkCancel={false}
+          showOkCancel={true}
+          okText="Update"
+          cancelText="Cancel"
+          onOk={() => {
+            // Let the LineCreationTool handle the update through its exposed handler
+            const event = new CustomEvent('lineToolSave')
+            window.dispatchEvent(event)
+          }}
+          onCancel={handleCloseEdit}
         >
           <LineCreationTool
             selectedPoints={[editingLine.pointA, editingLine.pointB]}
@@ -119,6 +127,7 @@ export const LinesPopup: React.FC<LinesPopupProps> = ({
             onCancel={handleCloseEdit}
             isActive={true}
             showHeader={false}
+            showActionButtons={false}
             editMode={true}
             existingLine={editingLine}
             onUpdateLine={handleUpdateLine}

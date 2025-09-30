@@ -1,6 +1,8 @@
 // Point merging dialog for combining duplicate or nearby points
 
 import React, { useState, useCallback, useMemo } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faArrowRight, faMagnifyingGlass, faRotate, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
 import { Project, WorldPoint, Constraint } from '../types/project'
 
 interface MergeCandidate {
@@ -359,7 +361,7 @@ export const PointMergeDialog: React.FC<PointMergeDialogProps> = ({
 
           {isAnalyzing && (
             <div className="analysis-progress">
-              <div className="progress-spinner">🔄</div>
+              <div className="progress-spinner"><FontAwesomeIcon icon={faRotate} /></div>
               <span>Analyzing point similarities...</span>
             </div>
           )}
@@ -383,7 +385,7 @@ export const PointMergeDialog: React.FC<PointMergeDialogProps> = ({
 
               {getConflicts.length > 0 && (
                 <div className="merge-conflicts">
-                  <h4>⚠️ Conflicts Detected</h4>
+                  <h4><FontAwesomeIcon icon={faTriangleExclamation} /> Conflicts Detected</h4>
                   <ul>
                     {getConflicts.map((conflict, index) => (
                       <li key={index}>{conflict}</li>
@@ -394,7 +396,7 @@ export const PointMergeDialog: React.FC<PointMergeDialogProps> = ({
 
               {mergeCandidates.length === 0 ? (
                 <div className="no-candidates">
-                  <div className="no-candidates-icon">🔍</div>
+                  <div className="no-candidates-icon"><FontAwesomeIcon icon={faMagnifyingGlass} /></div>
                   <div className="no-candidates-text">No merge candidates found</div>
                   <div className="no-candidates-hint">
                     Try adjusting the distance threshold or confidence level
@@ -420,7 +422,7 @@ export const PointMergeDialog: React.FC<PointMergeDialogProps> = ({
                           <div className="candidate-info">
                             <div className="candidate-header">
                               <span className="candidate-names">
-                                {candidate.sourcePoint.name} → {candidate.targetPoint.name}
+                                {candidate.sourcePoint.name} <FontAwesomeIcon icon={faArrowRight} /> {candidate.targetPoint.name}
                               </span>
                               <div className="candidate-metrics">
                                 <span className="confidence-badge" style={{

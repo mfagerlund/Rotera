@@ -131,12 +131,12 @@ class TestCamera:
             t=[1.0, 2.0, 3.0],
         )
 
-        K = camera.get_intrinsics()
-        R = camera.get_rotation()
+        k = camera.get_intrinsics()
+        r = camera.get_rotation()
         t = camera.get_translation()
 
-        np.testing.assert_array_equal(K, np.array([500.0, 500.0, 320.0, 240.0]))
-        np.testing.assert_array_equal(R, np.array([0.1, 0.2, 0.3]))
+        np.testing.assert_array_equal(k, np.array([500.0, 500.0, 320.0, 240.0]))
+        np.testing.assert_array_equal(r, np.array([0.1, 0.2, 0.3]))
         np.testing.assert_array_equal(t, np.array([1.0, 2.0, 3.0]))
 
     def test_camera_set_parameters(self):
@@ -149,12 +149,12 @@ class TestCamera:
             t=[0.0, 0.0, 0.0],
         )
 
-        new_K = np.array([600.0, 600.0, 320.0, 240.0, 0.05])
-        new_R = np.array([0.1, 0.2, 0.3])
+        new_k = np.array([600.0, 600.0, 320.0, 240.0, 0.05])
+        new_r = np.array([0.1, 0.2, 0.3])
         new_t = np.array([1.0, 2.0, 3.0])
 
-        camera.set_intrinsics(new_K)
-        camera.set_rotation(new_R)
+        camera.set_intrinsics(new_k)
+        camera.set_rotation(new_r)
         camera.set_translation(new_t)
 
         assert camera.K == [600.0, 600.0, 320.0, 240.0, 0.05]

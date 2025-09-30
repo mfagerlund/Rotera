@@ -1,6 +1,8 @@
 // Batch operations panel for bulk actions on points and constraints
 
 import React, { useState, useCallback, useMemo } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faDraftingCompass, faFolderOpen, faGear, faLocationDot, faPencil, faTag, faTrash } from '@fortawesome/free-solid-svg-icons'
 import { Project, WorldPoint, Constraint } from '../types/project'
 
 export type BatchOperation =
@@ -40,7 +42,7 @@ const BATCH_OPERATIONS: BatchOperationConfig[] = [
   {
     operation: 'delete_points',
     label: 'Delete Points',
-    icon: '🗑️',
+    icon: '<FontAwesomeIcon icon={faTrash} />',
     description: 'Delete selected world points and their image points',
     requiresParameter: false,
     category: 'points'
@@ -64,7 +66,7 @@ const BATCH_OPERATIONS: BatchOperationConfig[] = [
   {
     operation: 'set_group',
     label: 'Set Group',
-    icon: '📁',
+    icon: '<FontAwesomeIcon icon={faFolderOpen} />',
     description: 'Assign selected points to a group',
     requiresParameter: true,
     parameterType: 'group',
@@ -73,7 +75,7 @@ const BATCH_OPERATIONS: BatchOperationConfig[] = [
   {
     operation: 'clear_group',
     label: 'Clear Group',
-    icon: '📂',
+    icon: '<FontAwesomeIcon icon={faFolderOpen} />',
     description: 'Remove group assignment from selected points',
     requiresParameter: false,
     category: 'points'
@@ -90,7 +92,7 @@ const BATCH_OPERATIONS: BatchOperationConfig[] = [
   {
     operation: 'add_tags',
     label: 'Add Tags',
-    icon: '🏷️',
+    icon: '<FontAwesomeIcon icon={faTag} />',
     description: 'Add tags to selected points',
     requiresParameter: true,
     parameterType: 'tags',
@@ -99,7 +101,7 @@ const BATCH_OPERATIONS: BatchOperationConfig[] = [
   {
     operation: 'remove_tags',
     label: 'Remove Tags',
-    icon: '🏷️',
+    icon: '<FontAwesomeIcon icon={faTag} />',
     description: 'Remove tags from selected points',
     requiresParameter: true,
     parameterType: 'tags',
@@ -108,7 +110,7 @@ const BATCH_OPERATIONS: BatchOperationConfig[] = [
   {
     operation: 'bulk_rename',
     label: 'Bulk Rename',
-    icon: '📝',
+    icon: '<FontAwesomeIcon icon={faPencil} />',
     description: 'Rename selected points with a pattern',
     requiresParameter: true,
     parameterType: 'text',
@@ -119,7 +121,7 @@ const BATCH_OPERATIONS: BatchOperationConfig[] = [
   {
     operation: 'delete_constraints',
     label: 'Delete Constraints',
-    icon: '🗑️',
+    icon: '<FontAwesomeIcon icon={faTrash} />',
     description: 'Delete selected constraints',
     requiresParameter: false,
     category: 'constraints'
@@ -129,7 +131,7 @@ const BATCH_OPERATIONS: BatchOperationConfig[] = [
   {
     operation: 'triangulate_points',
     label: 'Triangulate Points',
-    icon: '📐',
+    icon: '<FontAwesomeIcon icon={faDraftingCompass} />',
     description: 'Compute 3D coordinates for selected points from image observations',
     requiresParameter: false,
     category: 'advanced'
@@ -410,7 +412,7 @@ export const BatchOperationsPanel: React.FC<BatchOperationsPanelProps> = ({
           onClick={() => setActiveCategory('points')}
           disabled={selectedPointIds.length === 0}
         >
-          📍 Points
+          <FontAwesomeIcon icon={faLocationDot} /> Points
         </button>
         <button
           className={`category-tab ${activeCategory === 'constraints' ? 'active' : ''}`}
@@ -457,7 +459,7 @@ export const BatchOperationsPanel: React.FC<BatchOperationsPanelProps> = ({
 
         {availableOperations.length === 0 && (
           <div className="no-operations">
-            <div className="no-operations-icon">⚙️</div>
+            <div className="no-operations-icon"><FontAwesomeIcon icon={faGear} /></div>
             <div className="no-operations-text">
               {activeCategory === 'points' && 'Select points to see available operations'}
               {activeCategory === 'constraints' && 'Select constraints to see available operations'}

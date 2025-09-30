@@ -6,9 +6,8 @@ import type { LineId, PointId } from '../../types/ids'
 export type LineDirection =
   | 'free'           // No directional constraint
   | 'horizontal'     // Constrained to horizontal (XY plane, Z=0 direction)
-  | 'vertical'       // Constrained to vertical (Z-axis direction)
+  | 'vertical'       // Constrained to vertical (Z-axis direction, same as Y-axis)
   | 'x-aligned'      // Constrained to X-axis direction
-  | 'y-aligned'      // Constrained to Y-axis direction
   | 'z-aligned'      // Constrained to Z-axis direction
 
 // Line constraint settings

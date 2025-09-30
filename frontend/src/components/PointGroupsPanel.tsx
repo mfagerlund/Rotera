@@ -1,6 +1,8 @@
 // Point groups/layers management panel
 
 import React, { useState, useCallback, useMemo } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faEye, faEyeSlash, faFolderOpen, faLocationDot, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons'
 import { Project, WorldPoint } from '../types/project'
 
 export interface PointGroup {
@@ -166,7 +168,7 @@ export const PointGroupsPanel: React.FC<PointGroupsPanelProps> = ({
             onClick={() => setShowCreateForm(!showCreateForm)}
             title="Create new group"
           >
-            {showCreateForm ? '✕' : '➕'}
+            {showCreateForm ? '✕' : '<FontAwesomeIcon icon={faPlus} />'}
           </button>
         </div>
       </div>
@@ -309,7 +311,7 @@ export const PointGroupsPanel: React.FC<PointGroupsPanelProps> = ({
         >
           <div className="group-header">
             <div className="group-info">
-              <div className="group-color ungrouped-color">📍</div>
+              <div className="group-color ungrouped-color"><FontAwesomeIcon icon={faLocationDot} /></div>
               <div className="group-details">
                 <div className="group-name">Ungrouped</div>
                 <div className="group-meta">{ungroupedPoints.length} points</div>
@@ -373,7 +375,7 @@ export const PointGroupsPanel: React.FC<PointGroupsPanelProps> = ({
                   }}
                   title={group.visible ? 'Hide group' : 'Show group'}
                 >
-                  {group.visible ? '👁️' : '🙈'}
+                  {group.visible ? '<FontAwesomeIcon icon={faEye} />' : '<FontAwesomeIcon icon={faEyeSlash} />'}
                 </button>
                 <button
                   className={`control-btn lock-btn ${group.locked ? 'locked' : 'unlocked'}`}
@@ -403,7 +405,7 @@ export const PointGroupsPanel: React.FC<PointGroupsPanelProps> = ({
                   }}
                   title="Delete group"
                 >
-                  🗑️
+                  <FontAwesomeIcon icon={faTrash} />
                 </button>
               </div>
             </div>
@@ -412,7 +414,7 @@ export const PointGroupsPanel: React.FC<PointGroupsPanelProps> = ({
 
         {groups.length === 0 && (
           <div className="no-groups">
-            <div className="no-groups-icon">📁</div>
+            <div className="no-groups-icon"><FontAwesomeIcon icon={faFolderOpen} /></div>
             <div className="no-groups-text">No groups created</div>
             <div className="no-groups-hint">
               Create groups to organize your points

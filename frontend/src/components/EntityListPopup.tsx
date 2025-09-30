@@ -1,6 +1,8 @@
 // Reusable Entity List Popup Component
 
 import React, { useState } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faEye, faEyeSlash, faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
 import FloatingWindow from './FloatingWindow'
 import ContextMenu, { ContextMenuItem } from './ContextMenu'
 
@@ -83,7 +85,7 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
       items.push({
         id: 'edit',
         label: 'Edit',
-        icon: '✏️',
+        icon: 'faPencil',
         onClick: () => onEdit(entity.id)
       })
     }
@@ -92,7 +94,7 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
       items.push({
         id: 'toggle-visibility',
         label: entity.isVisible ? 'Hide' : 'Show',
-        icon: entity.isVisible ? '🙈' : '👁️',
+        icon: entity.isVisible ? 'faEyeSlash' : 'faEye',
         onClick: () => onToggleVisibility(entity.id)
       })
     }
@@ -110,7 +112,7 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
       items.push({
         id: 'delete',
         label: 'Delete',
-        icon: '🗑️',
+        icon: 'faTrash',
         onClick: () => handleDelete(entity.id, entity.name)
       })
     }
@@ -161,17 +163,31 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
                   </div>
 
                   <div className="entity-actions">
-                    {/* Quick visibility toggle - keep this as it's frequently used */}
-                    {onToggleVisibility && (
+                    {/* Edit button */}
+                    {onEdit && (
                       <button
-                        className={`btn-toggle-visibility ${entity.isVisible ? 'visible' : 'hidden'}`}
+                        className="btn-edit"
                         onClick={(e) => {
                           e.stopPropagation()
-                          onToggleVisibility(entity.id)
+                          onEdit(entity.id)
                         }}
-                        title={entity.isVisible ? 'Hide' : 'Show'}
+                        title="Edit"
                       >
-                        {entity.isVisible ? '👁️' : '🙈'}
+                        
+                      </button>
+                    )}
+
+                    {/* Delete button */}
+                    {onDelete && (
+                      <button
+                        className="btn-delete"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDelete(entity.id, entity.name)
+                        }}
+                        title="Delete"
+                      >
+                        
                       </button>
                     )}
 

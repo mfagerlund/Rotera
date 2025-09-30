@@ -29,7 +29,7 @@ export const ConstraintToolbar: React.FC<ConstraintToolbarProps> = ({
       <div className="toolbar-section">
         <span className="toolbar-label">Constraints:</span>
         <div className="constraint-buttons">
-          {availableConstraints.length > 0 ? (
+          {availableConstraints.length > 0 && (
             availableConstraints.map(constraint => (
               <ConstraintButton
                 key={constraint.type}
@@ -40,10 +40,6 @@ export const ConstraintToolbar: React.FC<ConstraintToolbarProps> = ({
                 onClick={() => handleConstraintClick(constraint.type, constraint.enabled)}
               />
             ))
-          ) : (
-            <span className="no-constraints-message">
-              Select points or lines to see available constraints
-            </span>
           )}
         </div>
       </div>

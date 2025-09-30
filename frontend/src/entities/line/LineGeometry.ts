@@ -5,12 +5,15 @@ import type { WorldPoint } from '../world-point'
 export class LineGeometry {
   // Calculate line length
   static calculateLength(pointA: WorldPoint, pointB: WorldPoint): number | null {
-    if (!pointA.xyz || !pointB.xyz) {
+    const aCoords = pointA.getDefinedCoordinates()
+    const bCoords = pointB.getDefinedCoordinates()
+
+    if (!aCoords || !bCoords) {
       return null
     }
 
-    const [x1, y1, z1] = pointA.xyz
-    const [x2, y2, z2] = pointB.xyz
+    const [x1, y1, z1] = aCoords
+    const [x2, y2, z2] = bCoords
 
     return Math.sqrt(
       Math.pow(x2 - x1, 2) +
@@ -21,12 +24,15 @@ export class LineGeometry {
 
   // Get line direction vector (normalized)
   static getDirection(pointA: WorldPoint, pointB: WorldPoint): [number, number, number] | null {
-    if (!pointA.xyz || !pointB.xyz) {
+    const aCoords = pointA.getDefinedCoordinates()
+    const bCoords = pointB.getDefinedCoordinates()
+
+    if (!aCoords || !bCoords) {
       return null
     }
 
-    const [x1, y1, z1] = pointA.xyz
-    const [x2, y2, z2] = pointB.xyz
+    const [x1, y1, z1] = aCoords
+    const [x2, y2, z2] = bCoords
 
     // Calculate direction vector
     const dx = x2 - x1
@@ -42,12 +48,15 @@ export class LineGeometry {
 
   // Get the midpoint of the line
   static getMidpoint(pointA: WorldPoint, pointB: WorldPoint): [number, number, number] | null {
-    if (!pointA.xyz || !pointB.xyz) {
+    const aCoords = pointA.getDefinedCoordinates()
+    const bCoords = pointB.getDefinedCoordinates()
+
+    if (!aCoords || !bCoords) {
       return null
     }
 
-    const [x1, y1, z1] = pointA.xyz
-    const [x2, y2, z2] = pointB.xyz
+    const [x1, y1, z1] = aCoords
+    const [x2, y2, z2] = bCoords
 
     return [
       (x1 + x2) / 2,
@@ -63,13 +72,16 @@ export class LineGeometry {
     testPoint: [number, number, number],
     tolerance: number = 1e-6
   ): boolean {
-    if (!pointA.xyz || !pointB.xyz) {
+    const aCoords = pointA.getDefinedCoordinates()
+    const bCoords = pointB.getDefinedCoordinates()
+
+    if (!aCoords || !bCoords) {
       return false
     }
 
     const [x, y, z] = testPoint
-    const [x1, y1, z1] = pointA.xyz
-    const [x2, y2, z2] = pointB.xyz
+    const [x1, y1, z1] = aCoords
+    const [x2, y2, z2] = bCoords
 
     // Calculate cross product to check if point is collinear
     const crossProduct = [
@@ -93,13 +105,16 @@ export class LineGeometry {
     pointB: WorldPoint,
     testPoint: [number, number, number]
   ): number | null {
-    if (!pointA.xyz || !pointB.xyz) {
+    const aCoords = pointA.getDefinedCoordinates()
+    const bCoords = pointB.getDefinedCoordinates()
+
+    if (!aCoords || !bCoords) {
       return null
     }
 
     const [px, py, pz] = testPoint
-    const [x1, y1, z1] = pointA.xyz
-    const [x2, y2, z2] = pointB.xyz
+    const [x1, y1, z1] = aCoords
+    const [x2, y2, z2] = bCoords
 
     // Vector from point A to point B
     const lineVector = [x2 - x1, y2 - y1, z2 - z1]

@@ -44,15 +44,15 @@ export class WorldPointValidator {
       if (!Array.isArray(dto.xyz) || dto.xyz.length !== 3) {
         errors.push(ValidationHelpers.createError(
           'INVALID_COORDINATES',
-          'xyz must be an array of 3 numbers',
+          'xyz must be an array of 3 values',
           dto.id,
           'point',
           'xyz'
         ))
-      } else if (!dto.xyz.every(coord => typeof coord === 'number' && !isNaN(coord))) {
+      } else if (!dto.xyz.every(coord => coord === null || (typeof coord === 'number' && !isNaN(coord)))) {
         errors.push(ValidationHelpers.createError(
           'INVALID_COORDINATES',
-          'xyz coordinates must be valid numbers',
+          'xyz coordinates must be null or valid numbers',
           dto.id,
           'point',
           'xyz'
@@ -72,7 +72,7 @@ export class WorldPointValidator {
   static validateWorldPoint(
     id: string,
     name: string,
-    xyz: [number, number, number] | undefined,
+    xyz: [number | null, number | null, number | null] | undefined,
     color: string
   ): ValidationResult {
     const errors: ValidationError[] = []
@@ -95,15 +95,15 @@ export class WorldPointValidator {
       if (!Array.isArray(xyz) || xyz.length !== 3) {
         errors.push(ValidationHelpers.createError(
           'INVALID_COORDINATES',
-          'xyz must be an array of 3 numbers',
+          'xyz must be an array of 3 values',
           id,
           'point',
           'xyz'
         ))
-      } else if (!xyz.every(coord => typeof coord === 'number' && !isNaN(coord))) {
+      } else if (!xyz.every(coord => coord === null || (typeof coord === 'number' && !isNaN(coord)))) {
         errors.push(ValidationHelpers.createError(
           'INVALID_COORDINATES',
-          'xyz coordinates must be valid numbers',
+          'xyz coordinates must be null or valid numbers',
           id,
           'point',
           'xyz'

@@ -15,7 +15,7 @@ export class WorldPoint implements ISelectable, IValidatable, IWorldPoint {
   private constructor(
     private _id: PointId,
     private _name: string,
-    private _xyz: [number, number, number] | undefined,
+    private _xyz: [number | null, number | null, number | null] | undefined,
     private _color: string,
     private _isVisible: boolean,
     private _isOrigin: boolean,
@@ -54,7 +54,7 @@ export class WorldPoint implements ISelectable, IValidatable, IWorldPoint {
     id: PointId,
     name: string,
     options: {
-      xyz?: [number, number, number]
+      xyz?: [number | null, number | null, number | null]
       color?: string
       isVisible?: boolean
       isOrigin?: boolean
@@ -156,11 +156,11 @@ export class WorldPoint implements ISelectable, IValidatable, IWorldPoint {
     this.updateTimestamp()
   }
 
-  get xyz(): [number, number, number] | undefined {
+  get xyz(): [number | null, number | null, number | null] | undefined {
     return this._xyz ? [...this._xyz] : undefined
   }
 
-  set xyz(value: [number, number, number] | undefined) {
+  set xyz(value: [number | null, number | null, number | null] | undefined) {
     this._xyz = value ? [...value] : undefined
     this.updateTimestamp()
   }
@@ -250,32 +250,53 @@ export class WorldPoint implements ISelectable, IValidatable, IWorldPoint {
 
   // Geometric methods (delegated to WorldPointGeometry)
   hasCoordinates(): boolean {
-    return this._xyz !== undefined
+    return this._xyz !== undefined &&
+           this._xyz[0] !== null &&
+           this._xyz[1] !== null &&
+           this._xyz[2] !== null
+  }
+
+  // Get fully-defined coordinates (all non-null), or undefined
+  getDefinedCoordinates(): [number, number, number] | undefined {
+    if (!this.hasCoordinates()) {
+      return undefined
+    }
+    return this._xyz as [number, number, number]
   }
 
   distanceTo(other: WorldPoint): number | null {
-    if (!this.hasCoordinates() || !other.hasCoordinates()) {
+    const thisXyz = this.getDefinedCoordinates()
+    const otherXyz = other.getDefinedCoordinates()
+    if (!thisXyz || !otherXyz) {
       return null
     }
-    return WorldPointGeometry.distanceBetween(this._xyz!, other.xyz!)
+    return WorldPointGeometry.distanceBetween(thisXyz, otherXyz)
   }
 
   getCentroidWithConnected(): [number, number, number] | null {
-    if (!this.hasCoordinates()) {
+    const thisXyz = this.getDefinedCoordinates()
+    if (!thisXyz) {
       return null
     }
 
-    const connectedPoints = this.connectedPoints.filter(p => p.hasCoordinates())
-    const allPoints = [this._xyz!, ...connectedPoints.map(p => p.xyz!)]
+    const connectedPoints = this.connectedPoints
+      .map(p => p.getDefinedCoordinates())
+      .filter((xyz): xyz is [number, number, number] => xyz !== undefined)
+
+    const allPoints = [thisXyz, ...connectedPoints]
 
     return WorldPointGeometry.calculateCentroid(allPoints)
   }
 
   isColinearWith(pointA: WorldPoint, pointB: WorldPoint, tolerance: number = 1e-6): boolean {
-    if (!this.hasCoordinates() || !pointA.hasCoordinates() || !pointB.hasCoordinates()) {
+    const thisXyz = this.getDefinedCoordinates()
+    const aXyz = pointA.getDefinedCoordinates()
+    const bXyz = pointB.getDefinedCoordinates()
+
+    if (!thisXyz || !aXyz || !bXyz) {
       return false
     }
-    return WorldPointGeometry.areCollinear(this._xyz!, pointA.xyz!, pointB.xyz!, tolerance)
+    return WorldPointGeometry.areCollinear(thisXyz, aXyz, bXyz, tolerance)
   }
 
   // Connection analysis (delegated to RelationshipManager)
@@ -324,7 +345,7 @@ export class WorldPoint implements ISelectable, IValidatable, IWorldPoint {
   }
 
   applyOptimizationResult(result: { xyz: [number, number, number], residual?: number }): void {
-    this._xyz = [...result.xyz]
+    this._xyz = [...result.xyz] as [number | null, number | null, number | null]
     this.updateTimestamp()
   }
 

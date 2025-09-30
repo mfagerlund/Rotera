@@ -1,6 +1,8 @@
 // Constraints Management Popup
 
 import React from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faBullseye, faDraftingCompass, faWrench } from '@fortawesome/free-solid-svg-icons'
 import EntityListPopup, { EntityListItem } from './EntityListPopup'
 import { Constraint } from '../types/project'
 
@@ -39,11 +41,11 @@ export const ConstraintsPopup: React.FC<ConstraintsPopupProps> = ({
   const getConstraintEntities = (constraint: Constraint): string[] => {
     const entities: string[] = []
 
-    if (constraint.entities.points) {
+    if (constraint.entities?.points) {
       entities.push(...constraint.entities.points.map(pointId => getPointName(pointId)))
     }
 
-    if (constraint.entities.lines) {
+    if (constraint.entities?.lines) {
       entities.push(...constraint.entities.lines.map(lineId => getLineName(lineId)))
     }
 
@@ -167,7 +169,7 @@ export const ConstraintsPopup: React.FC<ConstraintsPopupProps> = ({
               }}
               title={constraint.isDriving ? 'Switch to construction' : 'Switch to driving'}
             >
-              {constraint.isDriving ? '🔧' : '📐'}
+              {constraint.isDriving ? '<FontAwesomeIcon icon={faWrench} />' : '<FontAwesomeIcon icon={faDraftingCompass} />'}
             </button>
             <button
               className="btn-focus"
@@ -178,7 +180,7 @@ export const ConstraintsPopup: React.FC<ConstraintsPopupProps> = ({
               }}
               title="Focus on constraint entities"
             >
-              🎯
+              <FontAwesomeIcon icon={faBullseye} />
             </button>
           </>
         )

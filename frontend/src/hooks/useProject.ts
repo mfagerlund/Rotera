@@ -102,26 +102,37 @@ export const useProject = () => {
       if (!worldPoint) return prev
 
       // Check if this world point already has a point in this image
-      const existingImagePoint = worldPoint.imagePoints.find(ip => ip.imageId === imageId)
-      if (existingImagePoint) {
-        // Update existing image point
-        existingImagePoint.u = u
-        existingImagePoint.v = v
+      const existingImagePointIndex = worldPoint.imagePoints.findIndex(ip => ip.imageId === imageId)
+
+      let updatedImagePoints: typeof worldPoint.imagePoints
+      if (existingImagePointIndex !== -1) {
+        // Update existing image point - create new array with updated object
+        updatedImagePoints = worldPoint.imagePoints.map((ip, idx) =>
+          idx === existingImagePointIndex
+            ? { ...ip, u, v }
+            : ip
+        )
       } else {
-        // Add new image point
-        worldPoint.imagePoints.push({
-          imageId,
-          u,
-          v,
-          wpId: worldPointId
-        })
+        // Add new image point - create new array with new object
+        updatedImagePoints = [
+          ...worldPoint.imagePoints,
+          {
+            imageId,
+            u,
+            v,
+            wpId: worldPointId
+          }
+        ]
       }
 
       return {
         ...prev,
         worldPoints: {
           ...prev.worldPoints,
-          [worldPointId]: { ...worldPoint }
+          [worldPointId]: {
+            ...worldPoint,
+            imagePoints: updatedImagePoints
+          }
         }
       }
     })

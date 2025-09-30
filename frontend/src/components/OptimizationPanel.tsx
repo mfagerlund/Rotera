@@ -1,6 +1,8 @@
 // Optimization control panel component
 
 import React, { useState, useCallback } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faBullseye, faGear, faStop } from '@fortawesome/free-solid-svg-icons'
 import { Project, WorldPoint, Constraint } from '../types/project'
 import { OptimizationService, OptimizationProgress, defaultOptimizationSettings, validateOptimizationRequest } from '../services/optimization'
 import { errorToMessage } from '../types/utils'
@@ -191,13 +193,13 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
               onClick={handleOptimize}
               disabled={!canOptimize()}
             >
-              🎯 Optimize
+              <FontAwesomeIcon icon={faBullseye} /> Optimize
             </button>
             <button
               className="btn-settings"
               onClick={() => setShowAdvanced(!showAdvanced)}
             >
-              ⚙️ Settings
+              <FontAwesomeIcon icon={faGear} /> Settings
             </button>
           </>
         ) : (
@@ -205,7 +207,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
             className="btn-stop"
             onClick={handleStop}
           >
-            ⏹️ Stop
+            <FontAwesomeIcon icon={faStop} /> Stop
           </button>
         )}
       </div>

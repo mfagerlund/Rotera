@@ -1,6 +1,8 @@
 // Enhanced constraint timeline with visual language integration
 
 import React from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faEye, faGear, faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
 import { EnhancedConstraint } from '../types/geometry'
 import { VisualLanguageManager } from '../utils/visualLanguage'
 import { useEnhancedProject } from '../hooks/useEnhancedProject'
@@ -54,7 +56,7 @@ export const ConstraintTimeline: React.FC<ConstraintTimelineProps> = ({
           <span className="constraint-count">0</span>
         </div>
         <div className="timeline-empty">
-          <div className="empty-icon">⚙️</div>
+          <div className="empty-icon"><FontAwesomeIcon icon={faGear} /></div>
           <div className="empty-text">No constraints yet</div>
           <div className="empty-hint">
             Select entities and use the constraint toolbar to create relationships
@@ -124,7 +126,7 @@ export const ConstraintTimeline: React.FC<ConstraintTimelineProps> = ({
             }}
             title={constraint.enabled ? 'Disable constraint' : 'Enable constraint'}
           >
-            {constraint.enabled ? '👁️' : '👁️‍🗨️'}
+            {constraint.enabled ? '<FontAwesomeIcon icon={faEye} />' : '<FontAwesomeIcon icon={faEye} />‍🗨️'}
           </button>
 
           <button
@@ -135,7 +137,7 @@ export const ConstraintTimeline: React.FC<ConstraintTimelineProps> = ({
             }}
             title="Edit constraint"
           >
-            ✏️
+            <FontAwesomeIcon icon={faPencil} />
           </button>
 
           <button
@@ -146,7 +148,7 @@ export const ConstraintTimeline: React.FC<ConstraintTimelineProps> = ({
             }}
             title="Delete constraint"
           >
-            🗑️
+            <FontAwesomeIcon icon={faTrash} />
           </button>
         </div>
       </div>
@@ -223,10 +225,10 @@ function getConstraintDescription(constraint: EnhancedConstraint, visualManager:
     .join(', ')
 
   const entityCounts = [
-    constraint.entities.points.length > 0 ? `${constraint.entities.points.length} points` : '',
-    constraint.entities.lines.length > 0 ? `${constraint.entities.lines.length} lines` : '',
-    constraint.entities.planes.length > 0 ? `${constraint.entities.planes.length} planes` : '',
-    constraint.entities.circles.length > 0 ? `${constraint.entities.circles.length} circles` : ''
+    (constraint.entities?.points || []).length > 0 ? `${(constraint.entities?.points || []).length} points` : '',
+    (constraint.entities?.lines || []).length > 0 ? `${(constraint.entities?.lines || []).length} lines` : '',
+    (constraint.entities?.planes || []).length > 0 ? `${(constraint.entities?.planes || []).length} planes` : '',
+    (constraint.entities?.circles || []).length > 0 ? `${(constraint.entities?.circles || []).length} circles` : ''
   ].filter(Boolean).join(', ')
 
   const parts = [entityCounts, paramValues].filter(Boolean)

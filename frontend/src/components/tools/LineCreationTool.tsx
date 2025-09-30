@@ -1,6 +1,8 @@
 // Line Creation Tool with slot-based selection
 
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faArrowRight, faBullseye, faMagnifyingGlass, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
 
 const PRESET_COLORS = [
   { value: '#0696d7', name: 'Blue' },
@@ -30,6 +32,7 @@ interface LineCreationToolProps {
   } | null) => void
   isActive: boolean
   showHeader?: boolean // Whether to show the internal header (false when wrapped in FloatingWindow)
+  showActionButtons?: boolean // Whether to show internal action buttons (false when using FloatingWindow's buttons)
   // Edit mode props
   editMode?: boolean
   existingLine?: any // Line being edited
@@ -58,6 +61,7 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
   onConstructionPreviewChange,
   isActive,
   showHeader = true,
+  showActionButtons = true,
   editMode = false,
   existingLine,
   existingConstraints = [],
@@ -81,11 +85,16 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
   // Track which slot is currently active for highlighting
   const [activeSlot, setActiveSlot] = useState<1 | 2 | null>(null)
 
+  // Track previous isActive state to detect when tool becomes active
+  // Initialize to false so first activation is detected
+  const prevIsActiveRef = useRef(false)
+
+  console.log('[LineCreationTool] Component rendered. isActive:', isActive, 'editMode:', editMode)
+
   // Pre-populate form when in edit mode
+  // IMPORTANT: Only run this on initial mount in edit mode to prevent reverting changes
   useEffect(() => {
     if (editMode && existingLine) {
-      console.log('🔍 Loading existing line for edit:', existingLine)
-
       setPointSlot1(existingLine.pointA || '')
       setPointSlot2(existingLine.pointB || '')
       setLineName(existingLine.name || '')
@@ -95,7 +104,8 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
 
       // Load constraint settings from line properties
       if (existingLine.constraints) {
-        setDirection(existingLine.constraints.direction || 'free')
+        const loadedDirection = existingLine.constraints.direction || 'free'
+        setDirection(loadedDirection)
 
         if (existingLine.constraints.targetLength !== undefined) {
           setLengthValue(existingLine.constraints.targetLength.toString())
@@ -104,12 +114,10 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
         }
       } else {
         // Fallback to legacy behavior - load from separate constraints
-        console.log('🔍 Fallback: Loading from existing constraints:', existingConstraints)
         const directionConstraint = existingConstraints.find(c => c.type === 'line_axis_aligned')
 
         if (directionConstraint) {
           const constraintDirection = directionConstraint.parameters?.direction
-          console.log('🎯 Found direction constraint:', constraintDirection)
 
           if (constraintDirection === 'vertical') {
             setDirection('vertical')
@@ -124,18 +132,46 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
 
         setLengthValue('')
       }
-
-      console.log('🎯 Loaded constraints - direction:', direction, 'length:', lengthValue)
     }
-  }, [editMode, existingLine, existingConstraints])
+  }, [editMode]) // Only depend on editMode to run once when entering edit mode
 
   // Pre-populate slots from selection when tool opens
+  // Reset slots when tool closes, pre-populate when it opens
   useEffect(() => {
-    if (isActive && selectedPoints.length > 0) {
-      setPointSlot1(selectedPoints[0] || '')
-      setPointSlot2(selectedPoints[1] || '')
+    const wasActive = prevIsActiveRef.current
+    const isNowActive = isActive
+
+    console.log('[LineCreationTool] Pre-populate effect running:', {
+      wasActive,
+      isNowActive,
+      selectedPointsLength: selectedPoints.length,
+      selectedPointsArray: selectedPoints,
+      editMode,
+      currentSlot1: pointSlot1,
+      currentSlot2: pointSlot2
+    })
+
+    // Tool just became active (opened)
+    if (!wasActive && isNowActive && !editMode) {
+      if (selectedPoints.length > 0) {
+        console.log('[LineCreationTool] ✓ Pre-populating slots:', selectedPoints)
+        setPointSlot1(selectedPoints[0] || '')
+        setPointSlot2(selectedPoints[1] || '')
+      } else {
+        console.log('[LineCreationTool] ✗ Not pre-populating - no points selected')
+      }
     }
-  }, [isActive, selectedPoints])
+
+    // Tool just became inactive (closed) - reset slots and ref
+    if (wasActive && !isNowActive) {
+      console.log('[LineCreationTool] Clearing slots on deactivation')
+      setPointSlot1('')
+      setPointSlot2('')
+    }
+
+    // Always update ref to track current state
+    prevIsActiveRef.current = isActive
+  }, [isActive, selectedPoints, editMode, pointSlot1, pointSlot2])
 
   // Handle point clicks to fill slots while tool is active
   useEffect(() => {
@@ -179,6 +215,18 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isActive, onCancel])
+
+  // Listen for external save trigger (from FloatingWindow OK button)
+  useEffect(() => {
+    if (!isActive) return
+
+    const handleExternalSave = () => {
+      handleCreateLine()
+    }
+
+    window.addEventListener('lineToolSave', handleExternalSave)
+    return () => window.removeEventListener('lineToolSave', handleExternalSave)
+  }, [isActive, pointSlot1, pointSlot2, lineName, lineColor, isVisible, isConstruction, direction, lengthValue, editMode, existingLine, onUpdateLine, onCreateLine, onCancel, existingLines])
 
   // Update construction preview when slots change
   useEffect(() => {
@@ -276,11 +324,8 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
     } else {
       // Creation mode
       if (!canCreateLine) {
-        console.log('LineCreationTool: Cannot create line - invalid state')
         return
       }
-
-      console.log('LineCreationTool: Creating line between points:', pointSlot1, 'and', pointSlot2)
 
       // Build constraint settings
       const lineConstraintSettings: LineConstraintSettings = {
@@ -301,9 +346,7 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
         constraints: lineConstraintSettings
       }
 
-      console.log('LineCreationTool: Calling onCreateLine with constraints:', constraints)
       onCreateLine([pointSlot1, pointSlot2], constraints)
-      console.log('LineCreationTool: onCreateLine called, closing tool')
       onCancel() // Close the tool after creation
     }
   }
@@ -463,20 +506,56 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
         <div style={{marginTop: '8px'}}>
           <h5 style={{margin: '0 0 6px 0', fontSize: '12px', fontWeight: 'bold'}}>Constraints</h5>
 
-          <div style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px'}}>
-            <label style={{minWidth: '50px', fontSize: '12px'}}>Direction</label>
-            <select
-              value={direction}
-              onChange={(e) => setDirection(e.target.value as LineDirection)}
-              style={{flex: 1, fontSize: '12px', padding: '2px'}}
-            >
-              <option value="free">Free</option>
-              <option value="horizontal">↔ Horizontal</option>
-              <option value="vertical">↕ Vertical</option>
-              <option value="x-aligned">→ X-aligned</option>
-              <option value="y-aligned">↑ Y-aligned</option>
-              <option value="z-aligned">⬆ Z-aligned</option>
-            </select>
+          <div style={{marginBottom: '8px'}}>
+            <label style={{fontSize: '12px', fontWeight: '500', display: 'block', marginBottom: '4px'}}>Direction</label>
+            <div style={{display: 'flex', gap: '4px', flexWrap: 'wrap'}}>
+              {[
+                { value: 'free', label: 'Free', setsValue: 'free', tooltip: undefined },
+                { value: 'horizontal', label: '↔ Horiz', setsValue: 'horizontal', tooltip: undefined },
+                { value: 'vertical', label: '↕ Vert', setsValue: 'vertical', tooltip: undefined },
+                { value: 'x-aligned', label: 'X', setsValue: 'x-aligned', tooltip: undefined },
+                { value: 'y-aligned', label: 'Y', setsValue: 'vertical', tooltip: 'Same as Vert' },
+                { value: 'z-aligned', label: 'Z', setsValue: 'z-aligned', tooltip: undefined }
+              ].map(option => {
+                const isGrayed = option.value === 'y-aligned'
+                const isActive = direction === option.setsValue
+
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setDirection(option.setsValue as LineDirection)}
+                    title={option.tooltip}
+                    style={{
+                      flex: '1 1 auto',
+                      minWidth: '50px',
+                      padding: '4px 8px',
+                      fontSize: '11px',
+                      border: `1px solid ${isActive ? 'var(--accent, #0696d7)' : 'var(--border, #555)'}`,
+                      background: isGrayed ? 'var(--bg-disabled, #1a1a1a)' : isActive ? 'var(--accent, #0696d7)' : 'var(--bg-input, #2a2a2a)',
+                      color: isGrayed ? 'var(--text-disabled, #666)' : isActive ? '#fff' : 'var(--text, #fff)',
+                      borderRadius: '3px',
+                      cursor: 'pointer',
+                      fontWeight: isActive ? '600' : '400',
+                      transition: 'all 0.15s ease',
+                      opacity: isGrayed ? 0.6 : 1
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isActive) {
+                        e.currentTarget.style.borderColor = 'var(--accent, #0696d7)'
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive) {
+                        e.currentTarget.style.borderColor = 'var(--border, #555)'
+                      }
+                    }}
+                  >
+                    {option.label}
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
           <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
@@ -517,7 +596,7 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
             fontSize: '12px',
             color: '#856404'
           }}>
-            ⚠️ Line "{lineCheck.lineName}" already exists between these points
+            <FontAwesomeIcon icon={faTriangleExclamation} /> Line "{lineCheck.lineName}" already exists between these points
           </div>
         )}
 
@@ -545,22 +624,24 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
         )}
 
         {/* Action Buttons */}
-        <div style={{display: 'flex', gap: '8px', marginTop: '8px'}}>
-          <button
-            onClick={onCancel}
-            style={{flex: 1, padding: '4px 8px', fontSize: '12px'}}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleCreateLine}
-            disabled={!editMode && !canCreateLine}
-            style={{flex: 1, padding: '4px 8px', fontSize: '12px'}}
-            title={!editMode && !canCreateLine && lineCheck.exists ? `Line already exists: ${lineCheck.lineName}` : ''}
-          >
-            {editMode ? 'Update' : 'Create'}
-          </button>
-        </div>
+        {showActionButtons && (
+          <div style={{display: 'flex', gap: '8px', marginTop: '8px'}}>
+            <button
+              onClick={onCancel}
+              style={{flex: 1, padding: '4px 8px', fontSize: '12px'}}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleCreateLine}
+              disabled={!editMode && !canCreateLine}
+              style={{flex: 1, padding: '4px 8px', fontSize: '12px'}}
+              title={!editMode && !canCreateLine && lineCheck.exists ? `Line already exists: ${lineCheck.lineName}` : ''}
+            >
+              {editMode ? 'Update' : 'Create'}
+            </button>
+          </div>
+        )}
       </div>
 
     </>

@@ -1,6 +1,8 @@
 // Symmetry constraints panel for mirror and rotational symmetries
 
 import React, { useState, useCallback, useMemo } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faArrowsLeftRight, faPencil, faRotate, faTrash, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
 import { Project, WorldPoint, Constraint } from '../types/project'
 
 export type SymmetryType = 'mirror' | 'rotational' | 'translational'
@@ -386,7 +388,7 @@ export const SymmetryConstraintsPanel: React.FC<SymmetryConstraintsPanelProps> =
               onClick={() => startSymmetryCreation('rotational')}
               disabled={availablePoints.length < 3}
             >
-              <div className="symmetry-icon">🔄</div>
+              <div className="symmetry-icon"><FontAwesomeIcon icon={faRotate} /></div>
               <div className="symmetry-info">
                 <div className="symmetry-name">Rotational Symmetry</div>
                 <div className="symmetry-description">Rotate points around a center</div>
@@ -398,7 +400,7 @@ export const SymmetryConstraintsPanel: React.FC<SymmetryConstraintsPanelProps> =
               onClick={() => startSymmetryCreation('translational')}
               disabled={availablePoints.length < 4}
             >
-              <div className="symmetry-icon">↔️</div>
+              <div className="symmetry-icon"><FontAwesomeIcon icon={faArrowsLeftRight} /></div>
               <div className="symmetry-info">
                 <div className="symmetry-name">Translational Symmetry</div>
                 <div className="symmetry-description">Translate points by a vector</div>
@@ -408,7 +410,7 @@ export const SymmetryConstraintsPanel: React.FC<SymmetryConstraintsPanelProps> =
 
           {availablePoints.length < 3 && (
             <div className="requirement-notice">
-              <div className="notice-icon">⚠️</div>
+              <div className="notice-icon"><FontAwesomeIcon icon={faTriangleExclamation} /></div>
               <div className="notice-text">
                 At least 3 points with 3D coordinates are required for symmetry constraints
               </div>
@@ -523,12 +525,16 @@ export const SymmetryConstraintsPanel: React.FC<SymmetryConstraintsPanelProps> =
           <h4>Existing Symmetries</h4>
           <div className="symmetries-list">
             {symmetryConstraints.map(constraint => (
-              <div key={constraint.id} className="symmetry-item">
+              <div
+                key={constraint.id}
+                className="symmetry-item"
+                onClick={() => onSymmetryUpdate(constraint.id, {})}
+              >
                 <div className="symmetry-header">
                   <div className="symmetry-type-icon">
                     {constraint.symmetryType === 'mirror' && '🪞'}
-                    {constraint.symmetryType === 'rotational' && '🔄'}
-                    {constraint.symmetryType === 'translational' && '↔️'}
+                    {constraint.symmetryType === 'rotational' && <FontAwesomeIcon icon={faRotate} />}
+                    {constraint.symmetryType === 'translational' && <FontAwesomeIcon icon={faArrowsLeftRight} />}
                   </div>
                   <div className="symmetry-details">
                     <div className="symmetry-title">
@@ -538,13 +544,28 @@ export const SymmetryConstraintsPanel: React.FC<SymmetryConstraintsPanelProps> =
                       {constraint.symmetricPairs.length} pair{constraint.symmetricPairs.length !== 1 ? 's' : ''}
                     </div>
                   </div>
-                  <button
-                    className="delete-symmetry-btn"
-                    onClick={() => onSymmetryDelete(constraint.id)}
-                    title="Delete symmetry constraint"
-                  >
-                    🗑️
-                  </button>
+                  <div className="symmetry-actions">
+                    <button
+                      className="btn-edit"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onSymmetryUpdate(constraint.id, {})
+                      }}
+                      title="Edit symmetry constraint"
+                    >
+                      
+                    </button>
+                    <button
+                      className="btn-delete"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onSymmetryDelete(constraint.id)
+                      }}
+                      title="Delete symmetry constraint"
+                    >
+                      <FontAwesomeIcon icon={faTrash} />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

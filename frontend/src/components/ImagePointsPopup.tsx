@@ -1,6 +1,8 @@
 // Image Points Management Popup
 
 import React from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faBullseye, faXmark } from '@fortawesome/free-solid-svg-icons'
 import EntityListPopup, { EntityListItem } from './EntityListPopup'
 import { ImagePoint, WorldPoint, ProjectImage } from '../types/project'
 
@@ -89,7 +91,7 @@ export const ImagePointsPopup: React.FC<ImagePointsPopupProps> = ({
           <div className="image-point-details">
             {image && (
               <div className="image-info">
-                Image: {image.width}×{image.height}px
+                Image: {image.width}<FontAwesomeIcon icon={faXmark} />{image.height}px
               </div>
             )}
             {imagePoint && (
@@ -110,7 +112,7 @@ export const ImagePointsPopup: React.FC<ImagePointsPopupProps> = ({
           }}
           title="Focus in image viewer"
         >
-          🎯
+          <FontAwesomeIcon icon={faBullseye} />
         </button>
       )}
     />

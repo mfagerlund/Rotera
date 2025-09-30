@@ -1,6 +1,9 @@
 // Visual constraint glyph overlay component - shows constraint icons near points
 
 import React, { useMemo } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faArrowsLeftRight, faGear } from '@fortawesome/free-solid-svg-icons'
+import { faCircle } from '@fortawesome/free-regular-svg-icons'
 import { Constraint, WorldPoint, ProjectImage } from '../types/project'
 import { getConstraintPointIds } from '../types/utils'
 
@@ -145,12 +148,12 @@ function getConstraintIcon(type: string): string {
     parallel: '∥',
     collinear: '─',
     rectangle: '▭',
-    circle: '○',
+    circle: '<FontAwesomeIcon icon={faCircle} />',
     fixed: '📌',
-    horizontal: '⟷',
+    horizontal: '<FontAwesomeIcon icon={faArrowsLeftRight} />',
     vertical: '↕'
   }
-  return icons[type] || '⚙'
+  return icons[type] || '<FontAwesomeIcon icon={faGear} />'
 }
 
 function getConstraintTooltip(constraint: Constraint): string {

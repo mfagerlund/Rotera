@@ -1,6 +1,8 @@
 // Ground plane definition panel for establishing coordinate system
 
 import React, { useState, useCallback, useMemo } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faPencil, faPlus, faTrash, faTriangleExclamation, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { Project, WorldPoint } from '../types/project'
 
 export interface GroundPlaneDefinition {
@@ -297,13 +299,12 @@ export const GroundPlanePanel: React.FC<GroundPlanePanelProps> = ({
             className="btn-define-plane"
             onClick={startDefinition}
             disabled={availablePoints.length < 3}
-          >
-            ➕ Define Ground Plane
+          ><FontAwesomeIcon icon={faPlus} /> Define Ground Plane
           </button>
 
           {availablePoints.length < 3 && (
             <div className="requirement-notice">
-              <div className="notice-icon">⚠️</div>
+              <div className="notice-icon"><FontAwesomeIcon icon={faTriangleExclamation} /></div>
               <div className="notice-text">
                 At least 3 points with 3D coordinates are required to define a ground plane
               </div>
@@ -447,6 +448,7 @@ export const GroundPlanePanel: React.FC<GroundPlanePanelProps> = ({
                 <div
                   key={plane.id}
                   className={`plane-item ${isActive ? 'active' : ''}`}
+                  onClick={() => onGroundPlaneSelect(isActive ? null : plane.id)}
                 >
                   <div className="plane-header">
                     <div className="plane-info">
@@ -458,18 +460,24 @@ export const GroundPlanePanel: React.FC<GroundPlanePanelProps> = ({
                     </div>
                     <div className="plane-actions">
                       <button
-                        className={`activate-btn ${isActive ? 'active' : ''}`}
-                        onClick={() => onGroundPlaneSelect(isActive ? null : plane.id)}
-                        title={isActive ? 'Deactivate plane' : 'Activate plane'}
+                        className="btn-edit"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onGroundPlaneUpdate(plane.id, {})
+                        }}
+                        title="Edit ground plane"
                       >
-                        {isActive ? '✓' : '○'}
+                        
                       </button>
                       <button
-                        className="delete-plane-btn"
-                        onClick={() => onGroundPlaneDelete(plane.id)}
+                        className="btn-delete"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onGroundPlaneDelete(plane.id)
+                        }}
                         title="Delete ground plane"
                       >
-                        🗑️
+                        
                       </button>
                     </div>
                   </div>

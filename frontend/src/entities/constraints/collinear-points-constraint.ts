@@ -96,17 +96,19 @@ export class CollinearPointsConstraint extends Constraint {
 
   evaluate(): ConstraintEvaluation {
     const points = this.points
-    if (points.length >= 3 && points.every(p => p.hasCoordinates())) {
+    const coordsList = points.map(p => p.getDefinedCoordinates()).filter((c): c is [number, number, number] => c !== undefined)
+
+    if (coordsList.length >= 3 && coordsList.length === points.length) {
       // Check collinearity using cross product method
       // For three points to be collinear, the cross product of vectors should be zero
-      const p1 = points[0].xyz!
-      const p2 = points[1].xyz!
+      const p1 = coordsList[0]
+      const p2 = coordsList[1]
 
       let maxDeviation = 0
 
       // Check each additional point against the line defined by the first two points
-      for (let i = 2; i < points.length; i++) {
-        const p3 = points[i].xyz!
+      for (let i = 2; i < coordsList.length; i++) {
+        const p3 = coordsList[i]
 
         // Create vectors
         const v1 = [p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]]

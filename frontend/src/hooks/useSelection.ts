@@ -39,8 +39,8 @@ export const useSelection = () => {
     setSelection(prev => {
       const newSelection = new EntitySelectionImpl()
 
-      if (ctrlKey) {
-        // Add/remove from selection (multi-select)
+      if (ctrlKey || shiftKey) {
+        // Add/remove from selection (multi-select) - both Ctrl and Shift toggle
         if (prev.has(entity)) {
           // Remove the entity
           for (const item of prev.items) {
@@ -51,13 +51,6 @@ export const useSelection = () => {
         } else {
           // Add the entity
           newSelection.addMultiple([...Array.from(prev.items), entity])
-        }
-      } else if (shiftKey && prev.count > 0) {
-        // Range selection - for now just add the entity
-        if (!prev.has(entity)) {
-          newSelection.addMultiple([...Array.from(prev.items), entity])
-        } else {
-          newSelection.addMultiple(Array.from(prev.items))
         }
       } else {
         // Single selection - replace current selection

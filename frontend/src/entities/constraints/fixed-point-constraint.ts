@@ -101,8 +101,8 @@ export class FixedPointConstraint extends Constraint {
 
   evaluate(): ConstraintEvaluation {
     const points = this.points
-    if (points.length >= 1 && points[0].hasCoordinates()) {
-      const currentPos = points[0].xyz!
+    const currentPos = points.length >= 1 ? points[0].getDefinedCoordinates() : undefined
+    if (currentPos) {
       const targetPos = this.data.parameters.targetXyz
 
       // Calculate distance from current position to target position

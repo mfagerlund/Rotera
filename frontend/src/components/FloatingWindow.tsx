@@ -55,6 +55,7 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
   const [isDragging, setIsDragging] = useState(false)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [zIndex, setZIndex] = useState(globalZIndex)
+  const [isPositioned, setIsPositioned] = useState(false)
   const windowId = useRef(`window-${Date.now()}-${Math.random()}`)
 
   // Load saved position from localStorage
@@ -201,6 +202,7 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
       }
 
       setPosition(centeredPosition)
+      setIsPositioned(true)
     } else if (isOpen && storageKey) {
       // Use saved position or center if no saved position
       const savedPosition = localStorage.getItem(`floating-window-${storageKey}`)
@@ -215,8 +217,16 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
         }
         setPosition(centeredPosition)
       }
+      setIsPositioned(true)
     }
   }, [isOpen, width, height, storageKey])
+
+  // Reset positioning flag when window closes
+  useEffect(() => {
+    if (!isOpen) {
+      setIsPositioned(false)
+    }
+  }, [isOpen])
 
   if (!isOpen) return null
 
@@ -239,7 +249,9 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        pointerEvents: 'auto'
+        pointerEvents: 'auto',
+        opacity: isPositioned ? 1 : 0,
+        transition: 'opacity 0.15s ease-out'
       }}
       onClick={bringToFront}
     >

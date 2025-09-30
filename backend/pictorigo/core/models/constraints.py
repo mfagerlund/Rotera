@@ -262,7 +262,7 @@ def create_constraint_from_type(constraint_type: str, **kwargs: Any) -> Constrai
     if constraint_type not in CONSTRAINT_CLASSES:
         raise ValueError(f"Unknown constraint type: {constraint_type}")
 
-    constraint_class = CONSTRAINT_CLASSES[constraint_type]
+    constraint_class: type[Constraint] = CONSTRAINT_CLASSES[constraint_type]
     constraint = constraint_class(**kwargs)
 
     # Run constraint-specific validation
@@ -356,7 +356,7 @@ def convert_backend_constraint_to_frontend(
     backend_constraint: Constraint,
 ) -> dict[str, Any]:
     """Convert backend constraint to frontend format."""
-    base_data = {
+    base_data: dict[str, Any] = {
         "id": backend_constraint.id,
         "type": backend_constraint.constraint_type(),
         "isEnabled": backend_constraint.enabled,

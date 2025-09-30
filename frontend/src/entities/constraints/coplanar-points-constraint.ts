@@ -96,11 +96,13 @@ export class CoplanarPointsConstraint extends Constraint {
 
   evaluate(): ConstraintEvaluation {
     const points = this.points
-    if (points.length >= 4 && points.every(p => p.hasCoordinates())) {
+    const coordsList = points.map(p => p.getDefinedCoordinates()).filter((c): c is [number, number, number] => c !== undefined)
+
+    if (coordsList.length >= 4 && coordsList.length === points.length) {
       // Use first three points to define the plane
-      const p1 = points[0].xyz!
-      const p2 = points[1].xyz!
-      const p3 = points[2].xyz!
+      const p1 = coordsList[0]
+      const p2 = coordsList[1]
+      const p3 = coordsList[2]
 
       // Create vectors from p1 to p2 and p1 to p3
       const v1 = [p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]]
@@ -129,8 +131,8 @@ export class CoplanarPointsConstraint extends Constraint {
       let maxDeviation = 0
 
       // Check distance of each remaining point from the plane
-      for (let i = 3; i < points.length; i++) {
-        const pi = points[i].xyz!
+      for (let i = 3; i < coordsList.length; i++) {
+        const pi = coordsList[i]
 
         // Vector from p1 to pi
         const v = [pi[0] - p1[0], pi[1] - p1[1], pi[2] - p1[2]]

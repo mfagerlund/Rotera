@@ -1,6 +1,8 @@
 // Creation Tools Manager - Handles all geometry creation tools
 
 import React, { useState, useCallback } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faLocationDot, faRuler, faSquare } from '@fortawesome/free-solid-svg-icons'
 import LineCreationTool from './LineCreationTool'
 import FloatingWindow from '../FloatingWindow'
 import { LineConstraintSettings } from '../../entities/line'
@@ -35,6 +37,11 @@ interface CreationToolsManagerProps {
     showToCursor?: boolean
   } | null) => void
   currentImageId?: string
+  editingLineId?: string | null
+  onUpdateLine?: (updatedLine: any) => void
+  onDeleteLine?: (lineId: string) => void
+  onClearEditingLine?: () => void
+  projectConstraints?: Record<string, any>
 }
 
 export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
@@ -50,7 +57,12 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
   onCreatePlane,
   onCreateCircle,
   onConstructionPreviewChange,
-  currentImageId
+  currentImageId,
+  editingLineId = null,
+  onUpdateLine,
+  onDeleteLine,
+  onClearEditingLine,
+  projectConstraints = {}
 }) => {
   const [toolMessage, setToolMessage] = useState<string>('')
 
@@ -59,16 +71,27 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
       // Deactivate if same tool clicked
       onToolChange('select')
       setToolMessage('')
+      if (tool === 'line' && onClearEditingLine) {
+        onClearEditingLine()
+      }
     } else {
+      // Activating a new tool - clear editing state for line tool
+      if (tool === 'line' && onClearEditingLine) {
+        onClearEditingLine()
+      }
       onToolChange(tool)
       setToolMessage('')
     }
-  }, [activeTool, onToolChange])
+  }, [activeTool, onToolChange, onClearEditingLine])
 
   const handleToolCancel = useCallback(() => {
     onToolChange('select')
     setToolMessage('')
-  }, [onToolChange])
+    // Clear construction preview when canceling
+    if (onConstructionPreviewChange) {
+      onConstructionPreviewChange(null)
+    }
+  }, [onToolChange, onConstructionPreviewChange])
 
   const handleToolStateChange = useCallback((isActive: boolean, message?: string) => {
     if (message) {
@@ -127,7 +150,7 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
           onClick={() => handleToolActivation('point')}
           title="Create point in image view"
         >
-          <span className="tool-icon">📍</span>
+          <span className="tool-icon"><FontAwesomeIcon icon={faLocationDot} /></span>
           <span className="tool-label">Point</span>
           <span className="tool-shortcut">W</span>
         </button>
@@ -138,7 +161,7 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
           disabled={!canCreateLine()}
           title={getLineButtonTooltip()}
         >
-          <span className="tool-icon">📏</span>
+          <span className="tool-icon"><FontAwesomeIcon icon={faRuler} /></span>
           <span className="tool-label">Line</span>
           <span className="tool-shortcut">L</span>
         </button>
@@ -149,7 +172,7 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
           disabled={!canCreatePlane()}
           title={getPlaneButtonTooltip()}
         >
-          <span className="tool-icon">🟨</span>
+          <span className="tool-icon"><FontAwesomeIcon icon={faSquare} /></span>
           <span className="tool-label">Plane</span>
           <span className="tool-shortcut">P</span>
         </button>
@@ -238,17 +261,25 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
         </div>
       </div>
 
-      {/* Floating Line Creation Tool */}
+      {/* Floating Line Tool - handles both creation and editing */}
       <FloatingWindow
-        title="Create Line"
+        title={editingLineId && existingLines[editingLineId] ? `Edit Line: ${existingLines[editingLineId].name}` : "Create Line"}
         isOpen={activeTool === 'line'}
         onClose={handleToolCancel}
-        width={300}
-        storageKey="line-creation-tool"
-        showOkCancel={false}
+        width={400}
+        minHeight={500}
+        storageKey="line-tool"
+        showOkCancel={true}
+        onOk={() => {
+          // Trigger save via custom event
+          window.dispatchEvent(new CustomEvent('lineToolSave'))
+        }}
+        onCancel={handleToolCancel}
+        okText={editingLineId ? "Save" : "Create"}
+        cancelText="Cancel"
       >
         <LineCreationTool
-          selectedPoints={selectedPoints}
+          selectedPoints={editingLineId ? [] : selectedPoints}
           worldPointNames={worldPointNames}
           existingLines={existingLines}
           onCreateLine={onCreateLine}
@@ -256,6 +287,23 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
           onConstructionPreviewChange={onConstructionPreviewChange}
           isActive={activeTool === 'line'}
           showHeader={false}
+          showActionButtons={false}
+          editMode={!!editingLineId}
+          existingLine={editingLineId ? existingLines[editingLineId] : undefined}
+          existingConstraints={
+            editingLineId && projectConstraints
+              ? Object.values(projectConstraints).filter(c => {
+                  const line = existingLines[editingLineId]
+                  if (!line) return false
+                  const constraintLineIds = c.entities?.lines || []
+                  const constraintPointIds = c.entities?.points || []
+                  return constraintLineIds.includes(editingLineId) ||
+                         (constraintPointIds.includes(line.pointA) && constraintPointIds.includes(line.pointB))
+                })
+              : []
+          }
+          onUpdateLine={onUpdateLine}
+          onDeleteLine={onDeleteLine}
         />
       </FloatingWindow>
     </div>

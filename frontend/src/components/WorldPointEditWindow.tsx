@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
 import FloatingWindow from './FloatingWindow'
 import { WorldPoint } from '../types/project'
 
@@ -119,60 +121,72 @@ export const WorldPointEditWindow: React.FC<WorldPointEditWindowProps> = ({
 
         {/* World Coordinates */}
         <div className="edit-section">
-          <h4>World Coordinates</h4>
+          <h4>Position (Known World Coordinates)</h4>
 
           <div className="form-row">
-            <label>X</label>
-            <input
-              type="number"
-              step="0.0001"
-              value={editedPoint.xyz?.[0] || 0}
-              onChange={(e) => {
-                const newValue = parseFloat(e.target.value) || 0
-                setEditedPoint(prev => ({
-                  ...prev,
-                  xyz: [newValue, prev.xyz?.[1] || 0, prev.xyz?.[2] || 0]
-                }))
-                setHasChanges(true)
-              }}
-              className="form-input"
-            />
+            <label>X, Y, Z</label>
+            <div style={{ display: 'flex', gap: '4px', flex: 1, minWidth: 0 }}>
+              <input
+                type="number"
+                step="0.0001"
+                value={editedPoint.xyz?.[0] ?? ''}
+                onChange={(e) => {
+                  const newValue = e.target.value === '' ? undefined : parseFloat(e.target.value)
+                  setEditedPoint(prev => ({
+                    ...prev,
+                    xyz: newValue !== undefined || prev.xyz?.[1] !== undefined || prev.xyz?.[2] !== undefined
+                      ? [newValue, prev.xyz?.[1], prev.xyz?.[2]] as [number | undefined, number | undefined, number | undefined] as any
+                      : undefined
+                  }))
+                  setHasChanges(true)
+                }}
+                className="form-input"
+                placeholder="X"
+                title="X coordinate (leave empty if unknown)"
+                style={{ flex: 1, minWidth: 0, width: 0 }}
+              />
+              <input
+                type="number"
+                step="0.0001"
+                value={editedPoint.xyz?.[1] ?? ''}
+                onChange={(e) => {
+                  const newValue = e.target.value === '' ? undefined : parseFloat(e.target.value)
+                  setEditedPoint(prev => ({
+                    ...prev,
+                    xyz: prev.xyz?.[0] !== undefined || newValue !== undefined || prev.xyz?.[2] !== undefined
+                      ? [prev.xyz?.[0], newValue, prev.xyz?.[2]] as [number | undefined, number | undefined, number | undefined] as any
+                      : undefined
+                  }))
+                  setHasChanges(true)
+                }}
+                className="form-input"
+                placeholder="Y"
+                title="Y coordinate (leave empty if unknown)"
+                style={{ flex: 1, minWidth: 0, width: 0 }}
+              />
+              <input
+                type="number"
+                step="0.0001"
+                value={editedPoint.xyz?.[2] ?? ''}
+                onChange={(e) => {
+                  const newValue = e.target.value === '' ? undefined : parseFloat(e.target.value)
+                  setEditedPoint(prev => ({
+                    ...prev,
+                    xyz: prev.xyz?.[0] !== undefined || prev.xyz?.[1] !== undefined || newValue !== undefined
+                      ? [prev.xyz?.[0], prev.xyz?.[1], newValue] as [number | undefined, number | undefined, number | undefined] as any
+                      : undefined
+                  }))
+                  setHasChanges(true)
+                }}
+                className="form-input"
+                placeholder="Z"
+                title="Z coordinate (leave empty if unknown)"
+                style={{ flex: 1, minWidth: 0, width: 0 }}
+              />
+            </div>
           </div>
-
-          <div className="form-row">
-            <label>Y</label>
-            <input
-              type="number"
-              step="0.0001"
-              value={editedPoint.xyz?.[1] || 0}
-              onChange={(e) => {
-                const newValue = parseFloat(e.target.value) || 0
-                setEditedPoint(prev => ({
-                  ...prev,
-                  xyz: [prev.xyz?.[0] || 0, newValue, prev.xyz?.[2] || 0]
-                }))
-                setHasChanges(true)
-              }}
-              className="form-input"
-            />
-          </div>
-
-          <div className="form-row">
-            <label>Z</label>
-            <input
-              type="number"
-              step="0.0001"
-              value={editedPoint.xyz?.[2] || 0}
-              onChange={(e) => {
-                const newValue = parseFloat(e.target.value) || 0
-                setEditedPoint(prev => ({
-                  ...prev,
-                  xyz: [prev.xyz?.[0] || 0, prev.xyz?.[1] || 0, newValue]
-                }))
-                setHasChanges(true)
-              }}
-              className="form-input"
-            />
+          <div className="form-hint" style={{ fontSize: '0.85em', color: '#888', marginTop: '4px' }}>
+            Set known coordinates to use as constraints. Leave empty if unknown.
           </div>
         </div>
 
@@ -184,7 +198,35 @@ export const WorldPointEditWindow: React.FC<WorldPointEditWindowProps> = ({
               {editedPoint.imagePoints.map((imagePoint, index) => (
                 <div key={index} className="image-point-item">
                   <div className="image-point-header">
-                    <strong>Image {imagePoint.imageId}</strong>
+                    <div className="image-point-info">
+                      <strong>Image {imagePoint.imageId}</strong>
+                    </div>
+                    <div className="image-point-actions">
+                      <button
+                        className="btn-edit"
+                        onClick={() => {
+                          // Navigate to image viewer with this point selected
+                          console.log('Edit image point:', imagePoint)
+                        }}
+                        title="Edit image point"
+                      >
+                        <FontAwesomeIcon icon={faPencil} />
+                      </button>
+                      <button
+                        className="btn-delete"
+                        onClick={() => {
+                          const newImagePoints = editedPoint.imagePoints!.filter((_, i) => i !== index)
+                          setEditedPoint(prev => ({
+                            ...prev,
+                            imagePoints: newImagePoints
+                          }))
+                          setHasChanges(true)
+                        }}
+                        title="Delete image point"
+                      >
+                        <FontAwesomeIcon icon={faTrash} />
+                      </button>
+                    </div>
                   </div>
                   <div className="image-point-coords">
                     <span>u: {formatCoordinate(imagePoint.u)}</span>

@@ -424,10 +424,10 @@ export const useEnhancedConstraints = (
   // Get constraints affecting a specific entity
   const getConstraintsForEntity = useCallback((entityId: string): EnhancedConstraint[] => {
     return constraints.filter(constraint =>
-      constraint.entities.points.includes(entityId) ||
-      constraint.entities.lines.includes(entityId) ||
-      constraint.entities.planes.includes(entityId) ||
-      constraint.entities.circles.includes(entityId)
+      constraint.entities?.points?.includes(entityId) ||
+      constraint.entities?.lines?.includes(entityId) ||
+      constraint.entities?.planes?.includes(entityId) ||
+      constraint.entities?.circles?.includes(entityId)
     )
   }, [constraints])
 
@@ -453,13 +453,13 @@ export const useEnhancedConstraints = (
       const errors: string[] = []
 
       // Check entity references exist
-      for (const pointId of constraint.entities.points) {
+      for (const pointId of constraint.entities?.points || []) {
         if (!entityManager.operations.read(pointId)) {
           errors.push(`Point ${pointId} not found`)
         }
       }
 
-      for (const lineId of constraint.entities.lines) {
+      for (const lineId of constraint.entities?.lines || []) {
         if (!entityManager.operations.read(lineId)) {
           errors.push(`Line ${lineId} not found`)
         }

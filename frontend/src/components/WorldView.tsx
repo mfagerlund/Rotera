@@ -1,5 +1,7 @@
 // 3D World View for geometric primitives and constraints
 import React, { useRef, useEffect, useCallback, useState } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faArrowRight } from '@fortawesome/free-solid-svg-icons'
 import { WorldPoint, Line, Plane, Project, ConstraintStatus } from '../types/project'
 
 interface WorldViewProps {
@@ -109,7 +111,7 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
       const projected = project3DTo2D(point.xyz)
       const isSelected = selectedPoints.includes(pointId)
       const isHovered = hoverState.hoveredPointId === pointId
-      const radius = isSelected ? 8 : (isHovered ? 7 : 6)
+      const radius = isSelected ? 6 : (isHovered ? 5 : 4)
 
       // Point circle
       ctx.beginPath()
@@ -189,9 +191,8 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
         switch (line.constraints.direction) {
           case 'horizontal': directionGlyph = '↔'; break
           case 'vertical': directionGlyph = '↕'; break
-          case 'x-aligned': directionGlyph = '→'; break
-          case 'y-aligned': directionGlyph = '↑'; break
-          case 'z-aligned': directionGlyph = '⬆'; break
+          case 'x-aligned': directionGlyph = 'X'; break
+          case 'z-aligned': directionGlyph = 'Z'; break
           case 'free': directionGlyph = '↔'; break
         }
       }

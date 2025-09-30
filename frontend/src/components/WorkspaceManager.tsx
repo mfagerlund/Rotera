@@ -1,6 +1,9 @@
 // Enhanced workspace management with better separation and state management
 
 import React, { useState, useCallback, useEffect } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCamera, faCheck, faCircleXmark } from '@fortawesome/free-solid-svg-icons'
+import { faCircle } from '@fortawesome/free-regular-svg-icons'
 import { WorkspaceState } from '../types/enhanced-project'
 
 interface WorkspaceManagerProps {
@@ -41,7 +44,7 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
     {
       id: 'image' as const,
       name: 'Image View',
-      icon: '📷',
+      icon: <FontAwesomeIcon icon={faCamera} />,
       description: 'Work with images and 2D measurements',
       hasContent: imageHasContent,
       shortcut: '1'
@@ -103,7 +106,7 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
             <span className="workspace-icon">{config.icon}</span>
             <span className="workspace-name">{config.name}</span>
             {!config.hasContent && (
-              <span className="workspace-indicator empty">○</span>
+              <span className="workspace-indicator empty"><FontAwesomeIcon icon={faCircle} /></span>
             )}
             {config.hasContent && currentWorkspace === config.id && (
               <span className="workspace-indicator active">●</span>
@@ -156,7 +159,7 @@ export const WorkspaceStatus: React.FC<WorkspaceStatusProps> = ({
       <div className="workspace-status-section">
         <span className="status-label">Workspace:</span>
         <span className="status-value workspace-name">
-          {workspace === 'image' ? '📷 Image View' :
+          {workspace === 'image' ? <><FontAwesomeIcon icon={faCamera} /> Image View</> :
            workspace === 'world' ? '🌐 World View' :
            '⚌ Split View'}
         </span>
@@ -182,9 +185,9 @@ export const WorkspaceStatus: React.FC<WorkspaceStatusProps> = ({
             {worldInfo.totalPoints} points, {worldInfo.totalConstraints} constraints
           </span>
           <span className="status-indicator optimization">
-            {worldInfo.optimizationStatus === 'converged' ? '✓' :
-             worldInfo.optimizationStatus === 'failed' ? '✗' :
-             worldInfo.optimizationStatus === 'running' ? '⟳' : '○'}
+            {worldInfo.optimizationStatus === 'converged' ? '<FontAwesomeIcon icon={faCheck} />' :
+             worldInfo.optimizationStatus === 'failed' ? '<FontAwesomeIcon icon={faCircleXmark} />' :
+             worldInfo.optimizationStatus === 'running' ? '⟳' : '<FontAwesomeIcon icon={faCircle} />'}
           </span>
         </div>
       )}

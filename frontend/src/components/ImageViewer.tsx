@@ -1,7 +1,22 @@
 // Canvas-based image viewer with point interaction
 
-import React, { useRef, useEffect, useState, useCallback, useImperativeHandle, forwardRef } from 'react'
-import { ProjectImage, WorldPoint } from '../types/project'
+import React, { useRef, useEffect, useState, useCallback, useImperativeHandle, forwardRef, useMemo } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faLocationDot } from '@fortawesome/free-solid-svg-icons'
+import { useImageViewerRenderer } from './image-viewer/useImageViewerRenderer'
+import {
+  CanvasOffset,
+  CanvasPoint,
+  CanvasToImage,
+  ImageCoords,
+  ImageToCanvas,
+  ImageViewerPropsBase,
+  ImageViewerRenderState,
+  PanVelocity
+} from './image-viewer/types'
+
+const PRECISION_DRAG_RATIO = 0.12
+const SHIFT_TAP_THRESHOLD_MS = 250
 
 export interface ImageViewerRef {
   zoomFit: () => void
@@ -11,45 +26,15 @@ export interface ImageViewerRef {
   getMousePosition: () => { u: number; v: number } | null
 }
 
-interface LineData {
-  id: string
-  name: string
-  pointA: string
-  pointB: string
-  length?: number
-  color: string
-  isVisible: boolean
-  isConstruction: boolean
-  createdAt: string
-  updatedAt?: string
-  constraints?: {
-    direction: 'free' | 'horizontal' | 'vertical' | 'x-aligned' | 'y-aligned' | 'z-aligned'
-    targetLength?: number
-    tolerance?: number
-  }
-}
-
-interface ImageViewerProps {
-  image: ProjectImage
-  worldPoints: Record<string, WorldPoint>
-  lines?: Record<string, LineData>
-  selectedPoints: string[]
-  selectedLines?: string[]
-  hoveredConstraintId: string | null
-  hoveredWorldPointId?: string | null
-  placementMode?: { active: boolean; worldPointId: string | null }
-  activeConstraintType?: string | null
-  constructionPreview?: {
-    type: 'line'
-    pointA?: string
-    pointB?: string
-    showToCursor?: boolean
-  } | null
+interface ImageViewerProps extends ImageViewerPropsBase {
   onPointClick: (pointId: string, ctrlKey: boolean, shiftKey: boolean) => void
   onLineClick?: (lineId: string, ctrlKey: boolean, shiftKey: boolean) => void
   onCreatePoint?: (u: number, v: number) => void
   onMovePoint?: (worldPointId: string, u: number, v: number) => void
   onPointHover?: (pointId: string | null) => void
+  onPointRightClick?: (pointId: string) => void
+  onLineRightClick?: (lineId: string) => void
+  onEmptySpaceClick?: (shiftKey: boolean) => void
   onZoomFit?: () => void
   onZoomSelection?: () => void
   onScaleChange?: (scale: number) => void
@@ -62,8 +47,9 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
   selectedPoints,
   selectedLines = [],
   hoveredConstraintId,
-  hoveredWorldPointId,
+  hoveredWorldPointId = null,
   placementMode = { active: false, worldPointId: null },
+  isPointCreationActive = false,
   activeConstraintType = null,
   constructionPreview = null,
   onPointClick,
@@ -71,6 +57,9 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
   onCreatePoint,
   onMovePoint,
   onPointHover,
+  onPointRightClick,
+  onLineRightClick,
+  onEmptySpaceClick,
   onZoomFit,
   onZoomSelection,
   onScaleChange
@@ -79,22 +68,31 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
   const containerRef = useRef<HTMLDivElement>(null)
   const imageRef = useRef<HTMLImageElement>(new Image())
 
-  const [scale, setScale] = useState(1)
-  const [offset, setOffset] = useState({ x: 0, y: 0 })
+  const [scale, setScale] = useState<number>(1)
+  const [offset, setOffset] = useState<CanvasOffset>({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
-  const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 })
-  const [currentMousePos, setCurrentMousePos] = useState<{ x: number; y: number } | null>(null)
+  const [lastMousePos, setLastMousePos] = useState<CanvasPoint>({ x: 0, y: 0 })
+  const [currentMousePos, setCurrentMousePos] = useState<CanvasPoint | null>(null)
   const [imageLoaded, setImageLoaded] = useState(false)
 
   // Drag state for world points
   const [isDraggingPoint, setIsDraggingPoint] = useState(false)
   const [draggedPointId, setDraggedPointId] = useState<string | null>(null)
-  const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 })
+  const [dragStartPos, setDragStartPos] = useState<CanvasPoint>({ x: 0, y: 0 })
   const [hoveredPointId, setHoveredPointId] = useState<string | null>(null)
   const [hoveredLineId, setHoveredLineId] = useState<string | null>(null)
-  const [panVelocity, setPanVelocity] = useState({ x: 0, y: 0 })
+  const [panVelocity, setPanVelocity] = useState<PanVelocity>({ x: 0, y: 0 })
   const [lastPanTime, setLastPanTime] = useState(0)
   const [isAltKeyPressed, setIsAltKeyPressed] = useState(false)
+  const [isDragOverTarget, setIsDragOverTarget] = useState(false)
+  const dragStartImageCoordsRef = useRef<ImageCoords | null>(null)
+  const draggedPointImageCoordsRef = useRef<ImageCoords | null>(null)
+  const precisionPointerRef = useRef<ImageCoords | null>(null)
+  const precisionCanvasPosRef = useRef<CanvasPoint | null>(null)
+  const shiftPressStartTimeRef = useRef<number | null>(null)
+  const [isPrecisionDrag, setIsPrecisionDrag] = useState(false)
+  const [isPrecisionToggleActive, setIsPrecisionToggleActive] = useState(false)
+  const [isDragDropActive, setIsDragDropActive] = useState(false)
 
   // Load image
   useEffect(() => {
@@ -276,412 +274,88 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     return () => resizeObserver.disconnect()
   }, [])
 
-  // Render canvas with animation frame
-  useEffect(() => {
-    const canvas = canvasRef.current
-    const ctx = canvas?.getContext('2d')
-    const img = imageRef.current
-
-    if (!canvas || !ctx || !img || !imageLoaded) return
-
-    let animationId: number
-
-    const render = () => {
-      // Clear canvas using canvas dimensions
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-
-      // Draw image
-      ctx.drawImage(
-        img,
-        offset.x,
-        offset.y,
-        img.width * scale,
-        img.height * scale
-      )
-
-      // Draw world points
-      renderWorldPoints(ctx)
-
-      // Draw lines
-      renderLines(ctx)
-
-      // Draw construction preview
-      renderConstructionPreview(ctx)
-
-      // Draw selection overlays with animation
-      renderSelectionOverlay(ctx)
-
-      // Draw pan feedback
-      renderPanFeedback(ctx)
-
-      animationId = requestAnimationFrame(render)
-    }
-
-    render()
-
-    return () => {
-      if (animationId) {
-        cancelAnimationFrame(animationId)
-      }
-    }
-  }, [imageLoaded, scale, offset, worldPoints, lines, selectedPoints, selectedLines, hoveredConstraintId, hoveredWorldPointId, placementMode, isDraggingPoint, draggedPointId, hoveredPointId, hoveredLineId, isDragging, panVelocity, isAltKeyPressed, constructionPreview, currentMousePos])
-
-  const renderWorldPoints = (ctx: CanvasRenderingContext2D) => {
-    Object.values(worldPoints).forEach(wp => {
-      const imagePoint = wp.imagePoints.find(ip => ip.imageId === image.id)
-      if (!imagePoint || !wp.isVisible) return
-
-      const x = imagePoint.u * scale + offset.x
-      const y = imagePoint.v * scale + offset.y
-
-      // Check point states
-      const isSelected = selectedPoints.includes(wp.id)
-      const isBeingDragged = isDraggingPoint && draggedPointId === wp.id
-      const isHovered = hoveredPointId === wp.id
-      const isGloballyHovered = hoveredWorldPointId === wp.id
-
-      // Note: Removed green circle world point selection - only blue constraint selection is used
-
-      // Draw drag feedback for point being dragged
-      if (isBeingDragged) {
-        ctx.strokeStyle = 'rgba(255, 140, 0, 0.8)'
-        ctx.lineWidth = 2
-        ctx.setLineDash([4, 4])
-        ctx.beginPath()
-        ctx.arc(x, y, 18, 0, 2 * Math.PI)
-        ctx.stroke()
-        ctx.setLineDash([])
-      }
-
-      // Draw hover feedback for draggable points
-      if (isHovered && onMovePoint && !isBeingDragged) {
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)'
-        ctx.lineWidth = 2
-        ctx.beginPath()
-        ctx.arc(x, y, 10, 0, 2 * Math.PI)
-        ctx.stroke()
-      }
-
-      // Draw global hover feedback (from other components)
-      if (isGloballyHovered && !isSelected && !isBeingDragged) {
-        ctx.strokeStyle = 'rgba(255, 193, 7, 0.8)' // Amber color for global hover
-        ctx.lineWidth = 3
-        ctx.setLineDash([2, 2])
-        ctx.beginPath()
-        ctx.arc(x, y, 12, 0, 2 * Math.PI)
-        ctx.stroke()
-        ctx.setLineDash([])
-      }
-
-      // Draw point
-      ctx.fillStyle = wp.color || '#ff6b6b'
-      ctx.strokeStyle = isSelected ? '#ffffff' : '#000000'
-      ctx.lineWidth = isSelected ? 3 : 1
-
-      ctx.beginPath()
-      ctx.arc(x, y, 6, 0, 2 * Math.PI)
-      ctx.fill()
-      ctx.stroke()
-
-      // Draw point name
-      ctx.fillStyle = '#000000'
-      ctx.font = '12px Arial'
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'bottom'
-      ctx.fillText(wp.name, x, y - 10)
-
-      // Draw white outline for text readability
-      ctx.strokeStyle = '#ffffff'
-      ctx.lineWidth = 3
-      ctx.strokeText(wp.name, x, y - 10)
-      ctx.fillText(wp.name, x, y - 10)
-    })
-  }
-
-  const renderSelectionOverlay = (ctx: CanvasRenderingContext2D) => {
-    selectedPoints.forEach((pointId, index) => {
-      const wp = worldPoints[pointId]
-      const imagePoint = wp?.imagePoints.find(ip => ip.imageId === image.id)
-
-      if (!imagePoint) return
-
-      const x = imagePoint.u * scale + offset.x
-      const y = imagePoint.v * scale + offset.y
-
-      // Draw selection ring with animation
-      const time = Date.now() * 0.003
-      const pulseRadius = 12 + Math.sin(time) * 2
-
-      ctx.strokeStyle = '#0696d7'
-      ctx.lineWidth = 2
-      ctx.beginPath()
-      ctx.arc(x, y, pulseRadius, 0, 2 * Math.PI)
-      ctx.stroke()
-
-      // Draw secondary ring for multi-selection
-      if (selectedPoints.length > 1) {
-        ctx.strokeStyle = 'rgba(6, 150, 215, 0.3)'
-        ctx.lineWidth = 1
-        ctx.beginPath()
-        ctx.arc(x, y, pulseRadius + 5, 0, 2 * Math.PI)
-        ctx.stroke()
-      }
-
-      // Draw selection number badge
-      ctx.fillStyle = '#0696d7'
-      ctx.strokeStyle = '#ffffff'
-      ctx.lineWidth = 2
-      ctx.font = 'bold 10px Arial'
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'middle'
-
-      const numberX = x + 15
-      const numberY = y - 15
-
-      ctx.beginPath()
-      ctx.arc(numberX, numberY, 8, 0, 2 * Math.PI)
-      ctx.fill()
-      ctx.stroke()
-
-      ctx.fillStyle = '#ffffff'
-      ctx.fillText((index + 1).toString(), numberX, numberY)
-    })
-
-  }
-
-  const renderPanFeedback = (ctx: CanvasRenderingContext2D) => {
-    if (!isDragging || (Math.abs(panVelocity.x) < 0.1 && Math.abs(panVelocity.y) < 0.1)) return
-
-    const canvas = canvasRef.current
-    if (!canvas) return
-
-    // Draw pan direction indicator in corner using canvas dimensions
-    const indicatorSize = 80
-    const margin = 20
-    const centerX = canvas.width - margin - indicatorSize / 2
-    const centerY = margin + indicatorSize / 2
-
-    // Draw background circle
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'
-    ctx.beginPath()
-    ctx.arc(centerX, centerY, indicatorSize / 2, 0, 2 * Math.PI)
-    ctx.fill()
-
-    // Draw border
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'
-    ctx.lineWidth = 2
-    ctx.stroke()
-
-    // Draw velocity arrow
-    const maxVelocity = 20
-    const normalizedVx = Math.max(-1, Math.min(1, panVelocity.x / maxVelocity))
-    const normalizedVy = Math.max(-1, Math.min(1, panVelocity.y / maxVelocity))
-
-    const arrowLength = Math.sqrt(normalizedVx * normalizedVx + normalizedVy * normalizedVy) * (indicatorSize / 3)
-    const arrowEndX = centerX + normalizedVx * arrowLength
-    const arrowEndY = centerY + normalizedVy * arrowLength
-
-    if (arrowLength > 5) {
-      // Draw arrow line
-      ctx.strokeStyle = 'rgba(6, 150, 215, 0.8)'
-      ctx.lineWidth = 3
-      ctx.beginPath()
-      ctx.moveTo(centerX, centerY)
-      ctx.lineTo(arrowEndX, arrowEndY)
-      ctx.stroke()
-
-      // Draw arrow head
-      const headSize = 8
-      const angle = Math.atan2(normalizedVy, normalizedVx)
-
-      ctx.fillStyle = 'rgba(6, 150, 215, 0.8)'
-      ctx.beginPath()
-      ctx.moveTo(arrowEndX, arrowEndY)
-      ctx.lineTo(
-        arrowEndX - headSize * Math.cos(angle - Math.PI / 6),
-        arrowEndY - headSize * Math.sin(angle - Math.PI / 6)
-      )
-      ctx.lineTo(
-        arrowEndX - headSize * Math.cos(angle + Math.PI / 6),
-        arrowEndY - headSize * Math.sin(angle + Math.PI / 6)
-      )
-      ctx.closePath()
-      ctx.fill()
-    }
-
-    // Draw center dot
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'
-    ctx.beginPath()
-    ctx.arc(centerX, centerY, 3, 0, 2 * Math.PI)
-    ctx.fill()
-  }
-
-  // Render completed lines on the image
-  const renderLines = (ctx: CanvasRenderingContext2D) => {
-    Object.entries(lines).forEach(([lineId, line]) => {
-      if (!line.isVisible) return
-
-      const pointA = worldPoints[line.pointA]
-      const pointB = worldPoints[line.pointB]
-
-      if (!pointA || !pointB) return
-
-      // Check if both points have image points in this image
-      const ipA = pointA.imagePoints.find(ip => ip.imageId === image.id)
-      const ipB = pointB.imagePoints.find(ip => ip.imageId === image.id)
-
-      if (!ipA || !ipB) return
-
-      // Convert to canvas coordinates
-      const x1 = ipA.u * scale + offset.x
-      const y1 = ipA.v * scale + offset.y
-      const x2 = ipB.u * scale + offset.x
-      const y2 = ipB.v * scale + offset.y
-
-      // Check line states
-      const isSelected = selectedLines.includes(lineId)
-      const isHovered = hoveredLineId === lineId
-
-      // Draw line with hover/selection feedback
-      let strokeColor = line.isConstruction ? 'rgba(0, 150, 255, 0.6)' : line.color
-      let lineWidth = line.isConstruction ? 1 : 2
-
-      if (isSelected) {
-        strokeColor = '#FFC107' // Yellow for selection
-        lineWidth = 3
-      } else if (isHovered) {
-        strokeColor = '#42A5F5' // Light blue for hover
-        lineWidth = 3
-      }
-
-      ctx.strokeStyle = strokeColor
-      ctx.lineWidth = lineWidth
-
-      if (line.isConstruction) {
-        ctx.setLineDash([3, 3])
-      }
-
-      ctx.beginPath()
-      ctx.moveTo(x1, y1)
-      ctx.lineTo(x2, y2)
-      ctx.stroke()
-
-      if (line.isConstruction) {
-        ctx.setLineDash([])
-      }
-
-      // Always show line name and distance (if set)
-      const midX = (x1 + x2) / 2
-      const midY = (y1 + y2) / 2
-
-      // Show glyph with direction constraint if available
-      let directionGlyph = '↔' // Default glyph
-      if (line.constraints) {
-        switch (line.constraints.direction) {
-          case 'horizontal': directionGlyph = '↔'; break
-          case 'vertical': directionGlyph = '↕'; break
-          case 'x-aligned': directionGlyph = '→'; break
-          case 'y-aligned': directionGlyph = '↑'; break
-          case 'z-aligned': directionGlyph = '⬆'; break
-          case 'free': directionGlyph = '↔'; break
-        }
-      }
-
-      const displayText = line.constraints?.targetLength
-        ? `${line.name} ${directionGlyph} ${line.constraints.targetLength.toFixed(1)}m`
-        : `${line.name} ${directionGlyph}`
-
-      // Draw outlined text
-      ctx.font = '12px Arial'
-      ctx.textAlign = 'center'
-
-      // Draw text outline (stroke)
-      ctx.strokeStyle = 'white'
-      ctx.lineWidth = 3
-      ctx.strokeText(displayText, midX, midY - 2)
-
-      // Draw text fill
-      ctx.fillStyle = '#000'
-      ctx.fillText(displayText, midX, midY - 2)
-    })
-  }
-
-  // Render construction preview for line tool
-  const renderConstructionPreview = (ctx: CanvasRenderingContext2D) => {
-    if (!constructionPreview || constructionPreview.type !== 'line') return
-    if (!currentMousePos) return
-
-    const { pointA, pointB, showToCursor } = constructionPreview
-
-    // Case 1: One point defined, show line to cursor
-    if (pointA && !pointB && showToCursor) {
-      const wpA = worldPoints[pointA]
-      if (!wpA) return
-
-      const ipA = wpA.imagePoints.find(ip => ip.imageId === image.id)
-      if (!ipA) return
-
-      const x1 = ipA.u * scale + offset.x
-      const y1 = ipA.v * scale + offset.y
-      const x2 = currentMousePos.x
-      const y2 = currentMousePos.y
-
-      // Draw preview line
-      ctx.strokeStyle = 'rgba(255, 140, 0, 0.8)'
-      ctx.lineWidth = 2
-      ctx.setLineDash([4, 4])
-
-      ctx.beginPath()
-      ctx.moveTo(x1, y1)
-      ctx.lineTo(x2, y2)
-      ctx.stroke()
-      ctx.setLineDash([])
-    }
-
-    // Case 2: Two points defined, show completed line preview
-    if (pointA && pointB) {
-      const wpA = worldPoints[pointA]
-      const wpB = worldPoints[pointB]
-      if (!wpA || !wpB) return
-
-      const ipA = wpA.imagePoints.find(ip => ip.imageId === image.id)
-      const ipB = wpB.imagePoints.find(ip => ip.imageId === image.id)
-      if (!ipA || !ipB) return
-
-      const x1 = ipA.u * scale + offset.x
-      const y1 = ipA.v * scale + offset.y
-      const x2 = ipB.u * scale + offset.x
-      const y2 = ipB.v * scale + offset.y
-
-      // Draw preview line (brighter than final line)
-      ctx.strokeStyle = 'rgba(255, 140, 0, 0.9)'
-      ctx.lineWidth = 3
-
-      ctx.beginPath()
-      ctx.moveTo(x1, y1)
-      ctx.lineTo(x2, y2)
-      ctx.stroke()
-    }
-  }
-
-  // Convert canvas coordinates to image coordinates
-  const canvasToImageCoords = (canvasX: number, canvasY: number) => {
+  const canvasToImageCoords = useCallback<CanvasToImage>((canvasX: number, canvasY: number) => {
     const img = imageRef.current
     if (!img) return null
 
     const imageX = (canvasX - offset.x) / scale
     const imageY = (canvasY - offset.y) / scale
 
-    // Check if coordinates are within image bounds
     if (imageX < 0 || imageX > img.width || imageY < 0 || imageY > img.height) {
       return null
     }
 
     return { u: imageX, v: imageY }
-  }
+  }, [offset.x, offset.y, scale])
+
+  const imageToCanvasCoords = useCallback<ImageToCanvas>((u: number, v: number) => ({
+    x: u * scale + offset.x,
+    y: v * scale + offset.y
+  }), [offset.x, offset.y, scale])
+
+  const placementModeActive = placementMode?.active ?? false
+  const creationContextActive = placementModeActive || isPointCreationActive
+  const isPlacementInteractionActive = isDraggingPoint || isDragDropActive || creationContextActive
+
+  const renderState = useMemo<ImageViewerRenderState>(() => ({
+    imageId: image.id,
+    worldPoints,
+    lines,
+    scale,
+    offset,
+    selectedPoints,
+    selectedLines,
+    hoveredConstraintId,
+    hoveredWorldPointId: hoveredWorldPointId ?? null,
+    hoveredPointId,
+    hoveredLineId,
+    isDraggingPoint,
+    draggedPointId,
+    isDragging,
+    panVelocity,
+    constructionPreview,
+    currentMousePos,
+    isPrecisionDrag,
+    isDragDropActive,
+    isPlacementModeActive: placementModeActive,
+    isPointCreationActive
+  }), [
+    constructionPreview,
+    currentMousePos,
+    draggedPointId,
+    hoveredConstraintId,
+    hoveredLineId,
+    hoveredPointId,
+    hoveredWorldPointId,
+    image.id,
+    isDragDropActive,
+    isDragging,
+    isDraggingPoint,
+    isPrecisionDrag,
+    placementModeActive,
+    isPointCreationActive,
+    lines,
+    offset,
+    panVelocity,
+    scale,
+    selectedLines,
+    selectedPoints,
+    worldPoints
+  ])
+
+  useImageViewerRenderer({
+    canvasRef,
+    imageRef,
+    imageLoaded,
+    renderState,
+    canvasToImageCoords,
+    imageToCanvasCoords,
+    precisionCanvasPosRef,
+    onMovePoint
+  })
 
   // Find nearby point
-  const findNearbyPoint = (canvasX: number, canvasY: number, threshold: number = 15) => {
+  const findNearbyPoint = useCallback((canvasX: number, canvasY: number, threshold: number = 15) => {
     return Object.values(worldPoints).find(wp => {
       const imagePoint = wp.imagePoints.find(ip => ip.imageId === image.id)
       if (!imagePoint) return false
@@ -695,10 +369,10 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
 
       return distance <= threshold
     })
-  }
+  }, [image.id, offset.x, offset.y, scale, worldPoints])
 
   // Find nearby line
-  const findNearbyLine = (canvasX: number, canvasY: number, threshold: number = 5) => {
+  const findNearbyLine = useCallback((canvasX: number, canvasY: number, threshold: number = 10) => {
     for (const [lineId, line] of Object.entries(lines)) {
       if (!line.isVisible) continue
 
@@ -706,18 +380,15 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
       const pointB = worldPoints[line.pointB]
       if (!pointA || !pointB) continue
 
-      // Check if both points have image points in this image
       const ipA = pointA.imagePoints.find(ip => ip.imageId === image.id)
       const ipB = pointB.imagePoints.find(ip => ip.imageId === image.id)
       if (!ipA || !ipB) continue
 
-      // Convert to canvas coordinates
       const x1 = ipA.u * scale + offset.x
       const y1 = ipA.v * scale + offset.y
       const x2 = ipB.u * scale + offset.x
       const y2 = ipB.v * scale + offset.y
 
-      // Calculate distance from point to line segment
       const A = canvasX - x1
       const B = canvasY - y1
       const C = x2 - x1
@@ -727,15 +398,12 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
       const lenSq = C * C + D * D
 
       if (lenSq === 0) {
-        // Line is a point
         const distance = Math.sqrt(A * A + B * B)
         if (distance <= threshold) return lineId
         continue
       }
 
       let param = dot / lenSq
-
-      // All lines are segments, clamp parameter to [0, 1]
       param = Math.max(0, Math.min(1, param))
 
       const closestX = x1 + param * C
@@ -748,12 +416,17 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
       if (distance <= threshold) return lineId
     }
     return null
-  }
+  }, [image.id, lines, offset.x, offset.y, scale, worldPoints])
 
+  // Handle mouse events
   // Handle mouse events
   const handleMouseDown = (event: React.MouseEvent) => {
     const canvas = canvasRef.current
     if (!canvas) return
+
+    precisionPointerRef.current = null
+    precisionCanvasPosRef.current = null
+    setIsPrecisionToggleActive(false)
 
     const rect = canvas.getBoundingClientRect()
     const x = event.clientX - rect.left
@@ -777,23 +450,50 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
         }
       } else {
         // Normal mode - check for nearby entities first
+        setIsPrecisionDrag(false)
         const nearbyPoint = findNearbyPoint(x, y)
         const nearbyLine = findNearbyLine(x, y)
 
         if (nearbyPoint) {
           // Points have priority over lines
+          const draggedImagePoint = nearbyPoint.imagePoints.find(ip => ip.imageId === image.id)
+          if (draggedImagePoint) {
+            dragStartImageCoordsRef.current = { u: draggedImagePoint.u, v: draggedImagePoint.v }
+            draggedPointImageCoordsRef.current = { u: draggedImagePoint.u, v: draggedImagePoint.v }
+          } else {
+            dragStartImageCoordsRef.current = null
+            draggedPointImageCoordsRef.current = null
+          }
+          precisionPointerRef.current = null
+          setIsPrecisionDrag(false)
+          setIsPrecisionToggleActive(false)
           setDragStartPos({ x, y })
           setDraggedPointId(nearbyPoint.id)
           // Don't start dragging immediately - wait for mouse movement
           onPointClick(nearbyPoint.id, event.ctrlKey, event.shiftKey)
         } else if (nearbyLine && onLineClick) {
           // Handle line click
+          dragStartImageCoordsRef.current = null
+          draggedPointImageCoordsRef.current = null
+          precisionPointerRef.current = null
           onLineClick(nearbyLine, event.ctrlKey, event.shiftKey)
-        } else if (onCreatePoint) {
-          // Click on empty space - create new point
-          const imageCoords = canvasToImageCoords(x, y)
-          if (imageCoords) {
-            onCreatePoint(imageCoords.u, imageCoords.v)
+        } else {
+          // Click on empty space
+          dragStartImageCoordsRef.current = null
+          draggedPointImageCoordsRef.current = null
+          precisionPointerRef.current = null
+
+          // Clear selection if not holding shift
+          if (onEmptySpaceClick) {
+            onEmptySpaceClick(event.shiftKey)
+          }
+
+          // Create point if tool is active
+          if (onCreatePoint) {
+            const imageCoords = canvasToImageCoords(x, y)
+            if (imageCoords) {
+              onCreatePoint(imageCoords.u, imageCoords.v)
+            }
           }
         }
       }
@@ -812,6 +512,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     setCurrentMousePos({ x, y })
 
     if (isDragging) {
+      setIsPrecisionDrag(false)
       // Handle viewport panning
       const deltaX = x - lastMousePos.x
       const deltaY = y - lastMousePos.y
@@ -848,10 +549,60 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
         // Handle point dragging - update point position in real-time
         const imageCoords = canvasToImageCoords(x, y)
         if (imageCoords) {
-          onMovePoint(draggedPointId, imageCoords.u, imageCoords.v)
+          const precisionActive = event.shiftKey || isPrecisionToggleActive
+
+          if (precisionActive) {
+            setIsPrecisionDrag(true)
+            const previousPointer = precisionPointerRef.current || imageCoords
+            const deltaU = imageCoords.u - previousPointer.u
+            const deltaV = imageCoords.v - previousPointer.v
+            precisionPointerRef.current = imageCoords
+
+            const baseCoords = draggedPointImageCoordsRef.current || dragStartImageCoordsRef.current || imageCoords
+            const targetCoords = {
+              u: baseCoords.u + deltaU * PRECISION_DRAG_RATIO,
+              v: baseCoords.v + deltaV * PRECISION_DRAG_RATIO
+            }
+
+            onMovePoint(draggedPointId, targetCoords.u, targetCoords.v)
+            draggedPointImageCoordsRef.current = targetCoords
+            precisionCanvasPosRef.current = imageToCanvasCoords(targetCoords.u, targetCoords.v)
+          } else {
+            if (precisionPointerRef.current) {
+              precisionPointerRef.current = null
+            }
+            if (precisionCanvasPosRef.current) {
+              precisionCanvasPosRef.current = null
+            }
+            if (isPrecisionDrag) {
+              setIsPrecisionDrag(false)
+            }
+            onMovePoint(draggedPointId, imageCoords.u, imageCoords.v)
+            draggedPointImageCoordsRef.current = imageCoords
+          }
+        } else {
+          if (precisionPointerRef.current) {
+            precisionPointerRef.current = null
+          }
+          if (precisionCanvasPosRef.current) {
+            precisionCanvasPosRef.current = null
+          }
+          setIsPrecisionDrag(false)
         }
+      } else {
+        if (precisionPointerRef.current) {
+          precisionPointerRef.current = null
+        }
+        if (precisionCanvasPosRef.current) {
+          precisionCanvasPosRef.current = null
+        }
+        setIsPrecisionDrag(false)
       }
     } else {
+      if (precisionCanvasPosRef.current) {
+        precisionCanvasPosRef.current = null
+      }
+      setIsPrecisionDrag(false)
       // Check for nearby entities to show hover cursor
       const nearbyPoint = findNearbyPoint(x, y)
       const nearbyLine = findNearbyLine(x, y)
@@ -875,7 +626,13 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     if (isDraggingPoint) {
       setIsDraggingPoint(false)
     }
+    setIsPrecisionDrag(false)
+    setIsPrecisionToggleActive(false)
     setDraggedPointId(null)
+    dragStartImageCoordsRef.current = null
+    draggedPointImageCoordsRef.current = null
+    precisionPointerRef.current = null
+    precisionCanvasPosRef.current = null
   }
 
   const handleMouseLeave = () => {
@@ -893,8 +650,79 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     if (isDraggingPoint) {
       setIsDraggingPoint(false)
     }
+    setIsPrecisionDrag(false)
+    setIsPrecisionToggleActive(false)
     setDraggedPointId(null)
+    dragStartImageCoordsRef.current = null
+    draggedPointImageCoordsRef.current = null
+    precisionPointerRef.current = null
+    precisionCanvasPosRef.current = null
   }
+
+  const handleContextMenu = (event: React.MouseEvent) => {
+    console.log('=== ImageViewer: handleContextMenu triggered ===')
+    console.log('Event button:', event.button, 'Event type:', event.type)
+    console.log('onPointRightClick defined:', !!onPointRightClick)
+    console.log('onLineClick defined:', !!onLineClick)
+
+    event.preventDefault()
+    event.stopPropagation()
+
+    const canvas = canvasRef.current
+    if (!canvas) {
+      console.log('No canvas ref')
+      return
+    }
+
+    const rect = canvas.getBoundingClientRect()
+    const x = event.clientX - rect.left
+    const y = event.clientY - rect.top
+    console.log('Click position:', x, y)
+
+    // Find nearby entities (points have priority over lines)
+    const nearbyPoint = findNearbyPoint(x, y)
+    const nearbyLine = findNearbyLine(x, y)
+    console.log('Nearby point:', nearbyPoint?.id, 'Nearby line:', nearbyLine)
+
+    if (nearbyPoint && onPointRightClick) {
+      console.log('✓ Calling onPointRightClick for point:', nearbyPoint.id, nearbyPoint.name)
+      onPointRightClick(nearbyPoint.id)
+    } else if (nearbyLine && onLineRightClick) {
+      console.log('✓ Calling onLineRightClick for line:', nearbyLine)
+      onLineRightClick(nearbyLine)
+    } else {
+      console.log('× No nearby entity found (empty space)')
+    }
+  }
+
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      if (event.target instanceof HTMLElement && event.target !== document.body) return
+      if (!draggedPointId && !isDraggingPoint) return
+
+      if (draggedPointId && dragStartImageCoordsRef.current && onMovePoint) {
+        const origin = dragStartImageCoordsRef.current
+        onMovePoint(draggedPointId, origin.u, origin.v)
+      }
+
+      setIsDragging(false)
+      setIsDraggingPoint(false)
+      setIsPrecisionDrag(false)
+      setIsPrecisionToggleActive(false)
+      setDraggedPointId(null)
+      dragStartImageCoordsRef.current = null
+      draggedPointImageCoordsRef.current = null
+      precisionPointerRef.current = null
+      precisionCanvasPosRef.current = null
+      setCurrentMousePos(null)
+      setPanVelocity({ x: 0, y: 0 })
+      event.preventDefault()
+    }
+
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [draggedPointId, isDraggingPoint, onMovePoint])
 
   const handleWheel = (event: React.WheelEvent) => {
     event.preventDefault()
@@ -974,16 +802,56 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
       }
     }
 
+    const handleShiftKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Shift' && !event.repeat) {
+        shiftPressStartTimeRef.current = Date.now()
+      }
+    }
+
+    const handleShiftKeyUp = (event: KeyboardEvent) => {
+      if (event.key !== 'Shift') {
+        return
+      }
+
+      const pressStarted = shiftPressStartTimeRef.current
+      shiftPressStartTimeRef.current = null
+
+      if (!pressStarted) {
+        return
+      }
+
+      const pressDuration = Date.now() - pressStarted
+      const hasActivePlacement = Boolean(draggedPointId || isPlacementInteractionActive)
+
+      if (pressDuration <= SHIFT_TAP_THRESHOLD_MS && hasActivePlacement) {
+        setIsPrecisionToggleActive(prev => {
+          const next = !prev
+          if (!next) {
+            setIsPrecisionDrag(false)
+            precisionPointerRef.current = null
+            precisionCanvasPosRef.current = null
+          } else if (isPlacementInteractionActive) {
+            setIsPrecisionDrag(true)
+          }
+          return next
+        })
+      }
+    }
+
     window.addEventListener('keydown', handleKeyDown)
     window.addEventListener('keydown', handleAltKeyDown)
     window.addEventListener('keyup', handleAltKeyUp)
+    window.addEventListener('keydown', handleShiftKeyDown)
+    window.addEventListener('keyup', handleShiftKeyUp)
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('keydown', handleAltKeyDown)
       window.removeEventListener('keyup', handleAltKeyUp)
+      window.removeEventListener('keydown', handleShiftKeyDown)
+      window.removeEventListener('keyup', handleShiftKeyUp)
     }
-  }, [scale, fitImageToCanvas])
+  }, [scale, fitImageToCanvas, draggedPointId, isPlacementInteractionActive])
 
   // NO ZOOM HANDLING - REMOVED COMPLETELY
 
@@ -999,6 +867,69 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
+        onContextMenu={handleContextMenu}
+        onDragOver={(e) => {
+          e.preventDefault()
+          e.dataTransfer.dropEffect = 'copy'
+          setIsDragOverTarget(true)
+          setIsDragDropActive(true)
+          setIsPrecisionDrag(false)
+          setIsPrecisionToggleActive(false)
+          precisionPointerRef.current = null
+          precisionCanvasPosRef.current = null
+
+          // Update mouse position for loupe
+          const rect = canvasRef.current?.getBoundingClientRect()
+          if (rect) {
+            setCurrentMousePos({
+              x: e.clientX - rect.left,
+              y: e.clientY - rect.top
+            })
+          }
+        }}
+        onDragLeave={(e) => {
+          e.preventDefault()
+          setIsDragOverTarget(false)
+          setIsDragDropActive(false)
+          setCurrentMousePos(null)
+          setIsPrecisionDrag(false)
+          setIsPrecisionToggleActive(false)
+          precisionPointerRef.current = null
+          precisionCanvasPosRef.current = null
+        }}
+        onDrop={(e) => {
+          e.preventDefault()
+          setIsDragOverTarget(false)
+          setIsDragDropActive(false)
+          setCurrentMousePos(null)
+          setIsPrecisionDrag(false)
+          setIsPrecisionToggleActive(false)
+          precisionPointerRef.current = null
+          precisionCanvasPosRef.current = null
+          try {
+            const data = JSON.parse(e.dataTransfer.getData('application/json'))
+            if (data.type === 'world-point') {
+              const rect = canvasRef.current?.getBoundingClientRect()
+              if (rect) {
+                const x = e.clientX - rect.left
+                const y = e.clientY - rect.top
+                const imageCoords = canvasToImageCoords(x, y)
+                if (imageCoords) {
+                  if (data.action === 'place' && onCreatePoint) {
+                    // For new world points, just place them
+                    onCreatePoint(imageCoords.u, imageCoords.v)
+                  } else if (data.action === 'move' && onMovePoint) {
+                    // For existing world points, move their image point
+                    onMovePoint(data.worldPointId, imageCoords.u, imageCoords.v)
+                  }
+                }
+              }
+            }
+          } catch (error) {
+            console.warn('Failed to parse drop data:', error)
+          }
+        }}
+        data-drop-target={isDragOverTarget}
         style={{
           cursor: isDragging ? 'grabbing' :
                   isDraggingPoint ? 'move' :
@@ -1025,7 +956,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
       {placementMode.active && placementMode.worldPointId && (
         <div className="placement-mode-overlay">
           <div className="placement-instructions">
-            <div className="placement-icon">📍</div>
+            <div className="placement-icon"><FontAwesomeIcon icon={faLocationDot} /></div>
             <div className="placement-text">
               <strong>Placing: {worldPoints[placementMode.worldPointId]?.name}</strong>
               <div className="placement-hint">Click anywhere on the image to place this world point</div>

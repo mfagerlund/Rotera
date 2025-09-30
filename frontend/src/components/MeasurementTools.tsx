@@ -1,6 +1,8 @@
 // Measurement tools for distance, angle, and area calculations
 
 import React, { useState, useCallback, useMemo } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faDraftingCompass, faEye, faRuler, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
 import { WorldPoint, ProjectImage, Constraint } from '../types/project'
 
 export type MeasurementType = 'points_distance' | 'points_equal_distance' | 'area' | 'perimeter'
@@ -286,7 +288,7 @@ export const MeasurementTools: React.FC<MeasurementToolsProps> = ({
             onClick={() => setShowMeasurements(!showMeasurements)}
             title={showMeasurements ? 'Hide measurements' : 'Show measurements'}
           >
-            {showMeasurements ? '👁️' : '👁️‍🗨️'}
+            {showMeasurements ? '<FontAwesomeIcon icon={faEye} />' : '<FontAwesomeIcon icon={faEye} />‍🗨️'}
           </button>
         </div>
       </div>
@@ -297,14 +299,14 @@ export const MeasurementTools: React.FC<MeasurementToolsProps> = ({
           onClick={() => onToolChange(activeTool === 'points_distance' ? null : 'points_distance')}
           disabled={availablePoints.length < 2}
         >
-          📏 Distance
+          <FontAwesomeIcon icon={faRuler} /> Distance
         </button>
         <button
           className={`tool-btn ${activeTool === 'points_equal_distance' ? 'active' : ''}`}
           onClick={() => onToolChange(activeTool === 'points_equal_distance' ? null : 'points_equal_distance')}
           disabled={availablePoints.length < 3}
         >
-          📐 Angle
+          <FontAwesomeIcon icon={faDraftingCompass} /> Angle
         </button>
         <button
           className={`tool-btn ${activeTool === 'area' ? 'active' : ''}`}
@@ -368,7 +370,7 @@ export const MeasurementTools: React.FC<MeasurementToolsProps> = ({
 
           {measurements.length === 0 ? (
             <div className="no-measurements">
-              <div className="no-measurements-icon">📏</div>
+              <div className="no-measurements-icon"><FontAwesomeIcon icon={faRuler} /></div>
               <div className="no-measurements-text">No measurements yet</div>
               <div className="no-measurements-hint">
                 Select a tool above to start measuring
@@ -380,8 +382,8 @@ export const MeasurementTools: React.FC<MeasurementToolsProps> = ({
                 <div key={measurement.id} className="measurement-item">
                   <div className="measurement-main">
                     <div className="measurement-icon">
-                      {measurement.type === 'points_distance' && '📏'}
-                      {measurement.type === 'points_equal_distance' && '📐'}
+                      {measurement.type === 'points_distance' && '<FontAwesomeIcon icon={faRuler} />'}
+                      {measurement.type === 'points_equal_distance' && '<FontAwesomeIcon icon={faDraftingCompass} />'}
                       {measurement.type === 'area' && '🔳'}
                       {measurement.type === 'perimeter' && '⭕'}
                     </div>
@@ -416,7 +418,7 @@ export const MeasurementTools: React.FC<MeasurementToolsProps> = ({
 
       {availablePoints.length < 2 && (
         <div className="measurement-requirements">
-          <div className="requirement-icon">⚠️</div>
+          <div className="requirement-icon"><FontAwesomeIcon icon={faTriangleExclamation} /></div>
           <div className="requirement-text">
             At least 2 points with 3D coordinates are required for measurements
           </div>

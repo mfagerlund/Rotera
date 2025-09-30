@@ -391,10 +391,10 @@ export const useEntityManager = (
 
   const getConstraintsForEntity = useCallback((id: string): EnhancedConstraint[] => {
     return constraints.filter(constraint => {
-      return constraint.entities.points.includes(id) ||
-             constraint.entities.lines.includes(id) ||
-             constraint.entities.planes.includes(id) ||
-             constraint.entities.circles.includes(id)
+      return constraint.entities?.points?.includes(id) ||
+             constraint.entities?.lines?.includes(id) ||
+             constraint.entities?.planes?.includes(id) ||
+             constraint.entities?.circles?.includes(id)
     })
   }, [constraints])
 

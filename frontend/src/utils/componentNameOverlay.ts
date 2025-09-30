@@ -162,7 +162,7 @@ function refreshOverlay() {
       continue
     }
 
-    const label = createLabelElement(componentName, rect)
+    const label = createLabelElement(componentName, rect, element, ownerFiber)
     if (!label) {
       continue
     }
@@ -174,7 +174,7 @@ function refreshOverlay() {
   }
 }
 
-function createLabelElement(componentName: string, targetRect: DOMRect): HTMLDivElement | null {
+function createLabelElement(componentName: string, targetRect: DOMRect, element: HTMLElement, fiber: FiberNode): HTMLDivElement | null {
   if (typeof document === 'undefined') {
     return null
   }
@@ -182,11 +182,27 @@ function createLabelElement(componentName: string, targetRect: DOMRect): HTMLDiv
   const label = document.createElement('div')
   label.className = 'component-overlay-label'
   label.dataset.componentName = componentName
-  label.textContent = `[${componentName}]`
-  label.title = 'Click to copy component name'
+  label.title = 'Click to copy name'
   label.style.top = '0px'
   label.style.left = '0px'
   label.style.visibility = 'hidden'
+  label.style.display = 'flex'
+  label.style.alignItems = 'center'
+  label.style.gap = '6px'
+
+  const nameSpan = document.createElement('span')
+  nameSpan.textContent = componentName
+  nameSpan.style.flex = '1'
+  label.appendChild(nameSpan)
+
+  const infoIcon = document.createElement('span')
+  infoIcon.textContent = 'ⓘ'
+  infoIcon.className = 'component-info-icon'
+  infoIcon.title = 'Click for full info'
+  infoIcon.style.opacity = '0.7'
+  infoIcon.style.cursor = 'pointer'
+  infoIcon.style.fontSize = '12px'
+  label.appendChild(infoIcon)
 
   if (targetRect.width < 64 || targetRect.height < 32) {
     label.classList.add('is-small')
@@ -195,35 +211,38 @@ function createLabelElement(componentName: string, targetRect: DOMRect): HTMLDiv
   label.tabIndex = 0
   label.setAttribute('role', 'button')
 
-  label.addEventListener('click', event => {
+  // Default click: copy name only
+  nameSpan.addEventListener('click', event => {
     event.preventDefault()
     event.stopPropagation()
-    void copyLabelText(label)
+    void copyComponentName(label, componentName)
+  })
+
+  // Info icon click: copy full info
+  infoIcon.addEventListener('click', event => {
+    event.preventDefault()
+    event.stopPropagation()
+    void copyComponentInfo(label, element, fiber)
   })
 
   label.addEventListener('keydown', event => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault()
       event.stopPropagation()
-      void copyLabelText(label)
+      void copyComponentName(label, componentName)
     }
   })
 
   return label
 }
 
-async function copyLabelText(label: HTMLDivElement) {
-  const text = label.dataset.componentName ? `[${label.dataset.componentName}]` : label.textContent || ''
-  if (!text) {
-    return
-  }
-
+async function copyComponentName(label: HTMLDivElement, componentName: string) {
   try {
     if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text)
+      await navigator.clipboard.writeText(componentName)
     } else {
       const textarea = document.createElement('textarea')
-      textarea.value = text
+      textarea.value = componentName
       textarea.style.position = 'fixed'
       textarea.style.opacity = '0'
       textarea.style.pointerEvents = 'none'
@@ -238,7 +257,88 @@ async function copyLabelText(label: HTMLDivElement) {
       label.classList.remove('copied')
     }, COPY_FEEDBACK_DURATION)
   } catch (error) {
-    console.warn('Failed to copy component label', error)
+    console.warn('Failed to copy component name', error)
+  }
+}
+
+function buildComponentPath(fiber: FiberNode | null): string[] {
+  const path: string[] = []
+  let current: FiberNode | null = fiber
+
+  while (current) {
+    const name = getFiberDisplayName(current)
+    if (name) {
+      path.unshift(name)
+    }
+    current = current.return ?? null
+  }
+
+  return path
+}
+
+function buildDOMPath(element: HTMLElement): string {
+  const parts: string[] = []
+  let current: HTMLElement | null = element
+
+  while (current && current !== document.body) {
+    let selector = current.tagName.toLowerCase()
+
+    if (current.id) {
+      selector += `#${current.id}`
+    } else if (current.className && typeof current.className === 'string') {
+      const classes = current.className.trim().split(/\s+/).slice(0, 3)
+      if (classes.length > 0 && classes[0]) {
+        selector += '.' + classes.join('.')
+      }
+    }
+
+    parts.unshift(selector)
+    current = current.parentElement
+  }
+
+  return parts.join(' > ')
+}
+
+async function copyComponentInfo(label: HTMLDivElement, element: HTMLElement, fiber: FiberNode) {
+  const componentName = label.dataset.componentName || label.textContent || ''
+  if (!componentName) {
+    return
+  }
+
+  const componentPath = buildComponentPath(fiber)
+  const domPath = buildDOMPath(element)
+
+  const info = [
+    `Component: ${componentName}`,
+    ``,
+    `Component Path:`,
+    componentPath.join(' > '),
+    ``,
+    `DOM Path:`,
+    domPath
+  ].join('\n')
+
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(info)
+    } else {
+      const textarea = document.createElement('textarea')
+      textarea.value = info
+      textarea.style.position = 'fixed'
+      textarea.style.opacity = '0'
+      textarea.style.pointerEvents = 'none'
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textarea)
+    }
+
+    label.classList.add('copied')
+    setTimeout(() => {
+      label.classList.remove('copied')
+    }, COPY_FEEDBACK_DURATION)
+  } catch (error) {
+    console.warn('Failed to copy component info', error)
   }
 }
 
@@ -253,9 +353,23 @@ function positionLabel(label: HTMLDivElement, targetRect: DOMRect, placedLabels:
   const preferredTopAbove = targetRect.top - height - LABEL_MARGIN
   const preferredTopBelow = targetRect.bottom + LABEL_MARGIN
 
-  let top = preferredTopAbove
-  if (top < VIEWPORT_PADDING) {
+  // Determine if label can fit above
+  const canFitAbove = preferredTopAbove >= VIEWPORT_PADDING
+  const canFitBelow = preferredTopBelow + height <= viewportHeight - VIEWPORT_PADDING
+
+  let top: number
+  if (!canFitAbove && canFitBelow) {
+    // Can't fit above, must go below
     top = preferredTopBelow
+  } else if (canFitAbove && !canFitBelow) {
+    // Can't fit below, must go above
+    top = preferredTopAbove
+  } else if (canFitAbove && canFitBelow) {
+    // Can fit both places, prefer above unless element is at very top
+    top = targetRect.top < 100 ? preferredTopBelow : preferredTopAbove
+  } else {
+    // Can't fit either place comfortably, show inside element bounds at top
+    top = targetRect.top + LABEL_MARGIN
   }
 
   top = clamp(top, VIEWPORT_PADDING, viewportHeight - VIEWPORT_PADDING - height)

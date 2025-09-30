@@ -1,6 +1,8 @@
 // Validation panel for constraint checking and system analysis
 
 import React, { useState, useCallback, useMemo } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faBullseye, faCheck, faPencil, faRotate, faRuler, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
 import { Project, WorldPoint, Constraint } from '../types/project'
 import { ConstraintValidator, ValidationResult, ValidationError, ValidationWarning, ValidationSuggestion } from '../services/validation'
 import { errorToMessage } from '../types/utils'
@@ -122,16 +124,16 @@ export const ValidationPanel: React.FC<ValidationPanelProps> = ({
         case 'critical': return '🔴'
         case 'high': return '🟠'
         case 'medium': return '🟡'
-        default: return '⚠️'
+        default: return '<FontAwesomeIcon icon={faTriangleExclamation} />'
       }
     } else if (item.type === 'warning') {
-      return '⚠️'
+      return '<FontAwesomeIcon icon={faTriangleExclamation} />'
     } else {
       const suggestion = item as ValidationSuggestion
       switch (suggestion.category) {
         case 'performance': return '⚡'
-        case 'accuracy': return '🎯'
-        case 'completeness': return '📝'
+        case 'accuracy': return '<FontAwesomeIcon icon={faBullseye} />'
+        case 'completeness': return '<FontAwesomeIcon icon={faPencil} />'
         default: return '💡'
       }
     }
@@ -164,7 +166,7 @@ export const ValidationPanel: React.FC<ValidationPanelProps> = ({
             onClick={runValidation}
             disabled={isValidating || (project.constraints?.length || 0) === 0}
           >
-            {isValidating ? '🔄' : '✓'} Validate
+            {isValidating ? '<FontAwesomeIcon icon={faRotate} />' : '<FontAwesomeIcon icon={faCheck} />'} Validate
           </button>
         </div>
       </div>
@@ -233,7 +235,7 @@ export const ValidationPanel: React.FC<ValidationPanelProps> = ({
               )}
               {summary.warnings > 0 && (
                 <div className="stat-item warning">
-                  <span>⚠️ Warnings:</span>
+                  <span><FontAwesomeIcon icon={faTriangleExclamation} /> Warnings:</span>
                   <span>{summary.warnings}</span>
                 </div>
               )}
@@ -250,7 +252,7 @@ export const ValidationPanel: React.FC<ValidationPanelProps> = ({
 
       {isValidating && (
         <div className="validation-progress">
-          <div className="progress-spinner">🔄</div>
+          <div className="progress-spinner"><FontAwesomeIcon icon={faRotate} /></div>
           <span>Validating constraints...</span>
         </div>
       )}
@@ -353,7 +355,7 @@ export const ValidationPanel: React.FC<ValidationPanelProps> = ({
 
       {!validationResult && !isValidating && (project.constraints?.length || 0) === 0 && (
         <div className="no-constraints">
-          <div className="no-constraints-icon">📏</div>
+          <div className="no-constraints-icon"><FontAwesomeIcon icon={faRuler} /></div>
           <div className="no-constraints-text">No constraints to validate</div>
           <div className="no-constraints-description">
             Add constraints to enable validation

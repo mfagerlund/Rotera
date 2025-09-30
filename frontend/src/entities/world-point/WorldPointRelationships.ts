@@ -5,7 +5,8 @@ export interface IWorldPoint {
   getId(): string
   getName(): string
   hasCoordinates(): boolean
-  xyz?: [number, number, number]
+  getDefinedCoordinates(): [number, number, number] | undefined
+  xyz?: [number | null, number | null, number | null]
 }
 
 export interface ILine {

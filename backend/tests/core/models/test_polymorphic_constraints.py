@@ -108,7 +108,7 @@ class TestParallelLinesConstraintRoundTrip:
     """Test DTO conversion for ParallelLinesConstraint."""
 
     def test_parallel_lines_constraint_dto_round_trip(self):
-        """Test frontend -> backend -> frontend conversion for ParallelLinesConstraint."""
+        """Test frontend -> backend -> frontend for ParallelLinesConstraint."""
         frontend_data = {
             "id": "parallel_test",
             "type": "parallel_lines",

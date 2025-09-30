@@ -1260,12 +1260,15 @@ body {
 
 .image-nav-item {
   display: flex;
+  flex-direction: column;
+  position: relative;
   border-radius: var(--border-radius);
-  overflow: visible; /* Changed to visible to allow select button to extend outside */
+  overflow: visible;
   border: 2px solid transparent;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background: var(--bg-secondary);
-  margin-top: 8px; /* Space from header for first item */
+  margin-top: 8px;
+  padding-left: 0;
 }
 
 .image-nav-item:first-child {
@@ -1306,14 +1309,51 @@ body {
   transform: translateY(-2px);
 }
 
+.image-name-overlay {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  padding: 2px 8px;
+  max-width: 90%;
+}
+
+.image-name-overlay .image-name {
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  cursor: text;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow:
+    -1px -1px 2px rgba(0, 0, 0, 0.9),
+    1px -1px 2px rgba(0, 0, 0, 0.9),
+    -1px 1px 2px rgba(0, 0, 0, 0.9),
+    1px 1px 2px rgba(0, 0, 0, 0.9),
+    0 0 8px rgba(0, 0, 0, 0.8),
+    0 0 4px rgba(0, 0, 0, 1);
+}
+
+.image-name-overlay .image-name-input {
+  background: white;
+  color: black;
+  border: 1px solid var(--accent-blue);
+  padding: 2px 6px;
+  border-radius: 2px;
+  font-size: 12px;
+  text-align: center;
+  min-width: 100px;
+}
+
 .image-thumbnail {
-  width: auto;
+  width: 100%;
   height: 100px;
-  min-width: 75px;
-  max-width: 150px;
   position: relative;
   cursor: pointer;
-  overflow: hidden; /* Keep overflow hidden on thumbnail for clean image borders */
+  overflow: visible;
   flex-shrink: 0;
   background: var(--bg-tertiary);
   border-radius: 4px;
@@ -1328,6 +1368,101 @@ body {
   object-fit: contain;
   background: var(--bg-secondary);
   border-radius: 4px;
+  overflow: hidden;
+}
+
+.thumbnail-resize-handle {
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: linear-gradient(to bottom, transparent, rgba(6, 150, 215, 0.3));
+  cursor: ns-resize;
+  z-index: 100;
+  pointer-events: all;
+  transition: background 0.2s ease;
+}
+
+.thumbnail-resize-handle:hover {
+  background: linear-gradient(to bottom, transparent, rgba(6, 150, 215, 0.6));
+}
+
+.image-info-right {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.85);
+  padding: 8px;
+  border-radius: 4px;
+  backdrop-filter: blur(4px);
+  max-width: 60px;
+  opacity: 1;
+  transition: all 0.2s ease;
+  pointer-events: all;
+}
+
+.image-info-right.collapsed {
+  max-width: 32px;
+  padding: 4px;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.btn-collapse-panel,
+.btn-expand-panel {
+  width: 28px;
+  height: 28px;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 4px;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-collapse-panel:hover,
+.btn-expand-panel:hover {
+  background: var(--accent-blue);
+}
+
+.image-info-right .image-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 10px;
+  color: white;
+}
+
+.image-info-right .stat-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.image-info-right .stat-icon {
+  font-size: 8px;
+}
+
+.image-info-right .image-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.image-info-right .btn-image-action {
+  width: 28px;
+  height: 28px;
+  padding: 4px;
+  font-size: 12px;
 }
 
 .constraint-mode-overlay {
@@ -4711,51 +4846,44 @@ body {
   cursor: grabbing;
 }
 
-/* Redesigned drag handle area */
-.image-drag-area {
-  position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  width: 20px;
-  background: linear-gradient(to right,
-    rgba(255, 255, 255, 0.05),
-    rgba(255, 255, 255, 0.02),
-    transparent);
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
+/* Redesigned drag handle area - now in right panel */
+.image-info-right .image-drag-area {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
   cursor: grab;
-  z-index: 5;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.3s ease;
 }
 
-.image-drag-area:hover {
-  background: linear-gradient(to right, var(--accent-blue), rgba(6, 150, 215, 0.1));
-  width: 24px;
+.image-info-right .image-drag-area:hover {
+  background: var(--accent-blue);
 }
 
-.image-drag-area:active {
+.image-info-right .image-drag-area:active {
   cursor: grabbing;
-  background: linear-gradient(to right, var(--accent-orange), rgba(255, 140, 0, 0.1));
+  background: var(--accent-orange);
 }
 
-.drag-handle {
-  width: 12px;
-  height: 32px;
+.image-info-right .drag-handle {
+  width: 16px;
+  height: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0.6;
+  opacity: 0.8;
   transition: all 0.3s ease;
 }
 
-.image-drag-area:hover .drag-handle {
+.image-info-right .image-drag-area:hover .drag-handle {
   opacity: 1;
 }
 
-.drag-dots {
+.image-info-right .drag-dots {
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr 1fr;
@@ -4785,14 +4913,13 @@ body {
   }
 }
 
-.image-drag-area:hover .drag-dots span {
+.image-info-right .image-drag-area:hover .drag-dots span {
   background: white;
   box-shadow: 0 0 4px rgba(255, 255, 255, 0.5);
 }
 
-.image-nav-item.dragging .image-drag-area {
-  background: linear-gradient(to right, var(--accent-orange), rgba(255, 140, 0, 0.2));
-  width: 28px;
+.image-nav-item.dragging .image-info-right .image-drag-area {
+  background: var(--accent-orange);
 }
 
 .image-nav-item.dragging .drag-dots span {
@@ -4800,14 +4927,6 @@ body {
   box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
   transform: scale(1.2);
 }
-
-/* Ensure image content has left margin for drag area */
-.image-nav-item {
-  position: relative;
-  padding-left: 20px;
-}
-
-/* Removed hover padding change to prevent slide animation that interferes with WP clicks */
 
 /* Image select button - simpler approach, just position inside with padding */
 .image-select-button {
@@ -4849,6 +4968,30 @@ body {
   background: var(--accent-blue);
   transform: scale(1.15);
   box-shadow: 0 0 0 2px rgba(6, 150, 215, 0.5), 0 2px 8px rgba(6, 150, 215, 0.5);
+}
+
+/* Drag and Drop Styles */
+.world-point-item[draggable="true"] {
+  cursor: grab;
+}
+
+.world-point-item[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.world-point-item.dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+  transition: all 0.2s ease;
+}
+
+.image-viewer canvas {
+  transition: background-color 0.2s ease;
+}
+
+.image-viewer canvas[data-drop-target="true"] {
+  background-color: rgba(6, 150, 215, 0.1);
+  box-shadow: inset 0 0 0 2px rgba(6, 150, 215, 0.3);
 }
 
 

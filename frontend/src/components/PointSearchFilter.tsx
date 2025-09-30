@@ -1,6 +1,8 @@
 // Search and filter component for world points
 
 import React, { useState, useMemo } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
 import { WorldPoint, Constraint } from '../types/project'
 import { getConstraintPointIds } from '../types/utils'
 
@@ -142,7 +144,7 @@ export const PointSearchFilter: React.FC<PointSearchFilterProps> = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-          <div className="search-icon">🔍</div>
+          <div className="search-icon"><FontAwesomeIcon icon={faMagnifyingGlass} /></div>
         </div>
         <div className="search-stats">
           {filteredPoints.length} of {Object.keys(worldPoints).length} points
@@ -283,7 +285,7 @@ export const PointSearchFilter: React.FC<PointSearchFilterProps> = ({
 
       {filteredPoints.length === 0 && (
         <div className="no-results">
-          <div className="no-results-icon">🔍</div>
+          <div className="no-results-icon"><FontAwesomeIcon icon={faMagnifyingGlass} /></div>
           <div className="no-results-text">
             {searchQuery || activeFilterCount > 0
               ? 'No points match your search or filters'

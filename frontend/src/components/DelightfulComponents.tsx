@@ -1,6 +1,8 @@
 // Delightful UI components for enhanced user experience
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faBullseye, faCheck, faDraftingCompass, faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
 
 // Achievement Toast Component
 interface AchievementToastProps {
@@ -94,9 +96,9 @@ export const DelightfulLoading: React.FC<DelightfulLoadingProps> = ({
   message = "Setting up your photogrammetry workspace...",
   tips = [
     "💡 Pro tip: Use well-lit photos for better accuracy",
-    "📐 Include calibration objects for scale reference",
-    "🎯 Overlap your photos by at least 60%",
-    "🔍 Capture details from multiple angles"
+    "<FontAwesomeIcon icon={faDraftingCompass} /> Include calibration objects for scale reference",
+    "<FontAwesomeIcon icon={faBullseye} /> Overlap your photos by at least 60%",
+    "<FontAwesomeIcon icon={faMagnifyingGlass} /> Capture details from multiple angles"
   ],
   showTips = true
 }) => {
@@ -238,7 +240,7 @@ interface FloatingActionButtonProps {
 export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   icon,
   onClick,
-  successIcon = '✓',
+  successIcon = '<FontAwesomeIcon icon={faCheck} />',
   tooltip
 }) => {
   const [showSuccess, setShowSuccess] = useState(false)

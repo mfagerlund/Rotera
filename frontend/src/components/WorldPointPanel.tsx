@@ -1,6 +1,9 @@
 // Enhanced World Point Panel with delightful micro-interactions
 
 import React, { useState, useEffect } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faArrowsLeftRight, faBullseye, faCamera, faDraftingCompass, faGear, faLocationDot, faPencil, faRocket, faTrash, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
+import { faCircle } from '@fortawesome/free-regular-svg-icons'
 import { WorldPoint, Constraint } from '../types/project'
 import { getConstraintPointIds } from '../types/utils'
 import {
@@ -78,21 +81,21 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
         // Celebrate milestones
         if (currentCount === 1) {
           triggerAchievement(
-            "First Point Created! 🎯",
+            "First Point Created! ",
             "Great start! Add more points to build your model.",
-            "🎯"
+            ""
           )
         } else if (currentCount === 10) {
           triggerProgress(
-            "10 Points Milestone! 🚀",
+            "10 Points Milestone! ",
             "You're building a solid foundation for your model.",
-            "🚀"
+            ""
           )
         } else if (currentCount % 25 === 0) {
           triggerProgress(
-            `${currentCount} Points! 🎉`,
+            `${currentCount} Points!`,
             "Your photogrammetry model is taking shape beautifully!",
-            "🎉"
+            ""
           )
         }
       })
@@ -140,9 +143,9 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
       // Celebrate meaningful renames
       if (editingName.trim().length > 5) {
         triggerAchievement(
-          "Descriptive Naming! 📝",
+          "Descriptive Naming! ",
           "Good organization helps with complex projects.",
-          "📝"
+          ""
         )
       }
     }
@@ -178,7 +181,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
       items.push({
         id: 'edit-properties',
         label: 'Edit Properties',
-        icon: '⚙️',
+        icon: 'faGear',
         onClick: () => onEditWorldPoint(worldPoint.id)
       })
     }
@@ -190,7 +193,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
       items.push({
         id: 'place',
         label: 'Place on Image',
-        icon: '📍',
+        icon: 'faLocationDot',
         onClick: () => onStartPlacement(worldPoint.id)
       })
     }
@@ -209,7 +212,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
     items.push({
       id: 'delete',
       label: 'Delete',
-      icon: '🗑️',
+      icon: 'faTrash',
       onClick: () => {
         if (confirm(`Delete world point "${worldPoint.name}"?\n\nThis will also delete any constraints that reference this point.`)) {
           onDeleteWorldPoint(worldPoint.id)
@@ -274,7 +277,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
       {placementMode.active && (
         <div className="placement-mode-header constraint-step">
           <div className="placement-info">
-            <span className="placement-icon">🎯</span>
+            <span className="placement-icon"><FontAwesomeIcon icon={faBullseye} /></span>
             <span>Click on image to place "{worldPoints[placementMode.worldPointId!]?.name}"</span>
           </div>
           <DelightfulTooltip content="Press Escape to cancel">
@@ -299,7 +302,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
       {/* Enhanced missing points notice */}
       {missingWPs.length > 0 && !placementMode.active && (
         <div className="missing-points-notice help-hint">
-          <span className="notice-icon">⚠️</span>
+          <span className="notice-icon"><FontAwesomeIcon icon={faTriangleExclamation} /></span>
           <span>{missingWPs.length} point{missingWPs.length !== 1 ? 's' : ''} not in this image</span>
           {latestMissingWP && (
             <DelightfulTooltip content={`Place ${latestMissingWP.name} in this image`}>
@@ -359,13 +362,13 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
           })
         ) : (
           <div className="world-point-empty">
-            <div className="empty-icon">🎯</div>
+            <div className="empty-icon"><FontAwesomeIcon icon={faBullseye} /></div>
             <div className="empty-text">No world points yet</div>
             <div className="empty-hint">Click on images to create world points and start building your 3D model</div>
             <div className="empty-tips">
-              <div>💡 Pro tip: Create points on distinct features</div>
-              <div>📐 Points help align multiple images</div>
-              <div>🎯 More points = better accuracy</div>
+              <div><span>💡</span> Pro tip: Create points on distinct features</div>
+              <div><FontAwesomeIcon icon={faDraftingCompass} /> Points help align multiple images</div>
+              <div><FontAwesomeIcon icon={faBullseye} /> More points = better accuracy</div>
             </div>
           </div>
         )}
@@ -457,6 +460,23 @@ const EnhancedWorldPointItem: React.FC<EnhancedWorldPointItemProps> = ({
     <OptimisticFeedback trigger={wasJustPlaced}>
       <div
         className={itemClasses}
+        draggable={true}
+        onDragStart={(e) => {
+          // Set drag data
+          e.dataTransfer.setData('application/json', JSON.stringify({
+            type: 'world-point',
+            worldPointId: worldPoint.id,
+            action: worldPoint.imagePoints.length > 0 ? 'move' : 'place'
+          }))
+          e.dataTransfer.effectAllowed = 'copy'
+
+          // Visual feedback
+          e.currentTarget.style.opacity = '0.5'
+        }}
+        onDragEnd={(e) => {
+          // Reset visual feedback
+          e.currentTarget.style.opacity = '1'
+        }}
         onClick={(e) => {
           if (e.shiftKey) e.preventDefault()
           onSelect(e.ctrlKey || e.metaKey, e.shiftKey)
@@ -485,28 +505,28 @@ const EnhancedWorldPointItem: React.FC<EnhancedWorldPointItemProps> = ({
 
             <div className="wp-info">
               <span className="image-count" title={`Visible in ${worldPoint.imagePoints.length} image${worldPoint.imagePoints.length !== 1 ? 's' : ''}`}>
-                <span className="count-icon">📷</span>
+                <span className="count-icon"><FontAwesomeIcon icon={faCamera} /></span>
                 <span>{worldPoint.imagePoints.length}</span>
               </span>
 
               {involvedConstraints.length > 0 && (
                 <span className="constraint-count" title={constraintsText}>
-                  <span className="count-icon">⚙</span>
+                  <span className="count-icon"><FontAwesomeIcon icon={faGear} /></span>
                   <span>{involvedConstraints.length}</span>
                 </span>
               )}
 
               {hasBrokenConstraints && (
-                <span className="broken-indicator" title="Some constraints are broken - check connections">⚠️</span>
+                <span className="broken-indicator" title="Some constraints are broken - check connections"><FontAwesomeIcon icon={faTriangleExclamation} /></span>
               )}
 
               {isInPlacementMode && (
-                <span className="placement-indicator" title="Click on image to place this point">🎯</span>
+                <span className="placement-indicator" title="Click on image to place this point"><FontAwesomeIcon icon={faBullseye} /></span>
               )}
             </div>
           </div>
 
-          <div className={`wp-item-actions ${showActions ? 'visible' : ''}`}>
+          <div className="wp-item-actions visible">
             {!isEditing && !placementModeActive && (
               <>
                 {/* Quick placement button for missing points */}
@@ -517,19 +537,19 @@ const EnhancedWorldPointItem: React.FC<EnhancedWorldPointItemProps> = ({
                       className="btn-place"
                       variant="tool"
                     >
-                      📍
+                      <FontAwesomeIcon icon={faLocationDot} />
                     </RippleButton>
                   </div>
                 )}
 
-                {/* Edit button - opens properties window */}
+                {/* Edit button - always visible, opens properties window */}
                 <div onClick={(e) => e.stopPropagation()} title="Edit world point properties">
                   <RippleButton
                     onClick={() => onEdit()}
                     className="btn-edit"
                     variant="tool"
                   >
-                    ⚙️
+                    <FontAwesomeIcon icon={faGear} />
                   </RippleButton>
                 </div>
 
@@ -541,13 +561,10 @@ const EnhancedWorldPointItem: React.FC<EnhancedWorldPointItemProps> = ({
                       className="btn-constraints"
                       variant="tool"
                     >
-                      ⟷
+                      <FontAwesomeIcon icon={faArrowsLeftRight} />
                     </RippleButton>
                   </div>
                 )}
-
-                {/* Context menu hint */}
-                <div className="context-menu-hint" title="Right-click for more options">⋯</div>
               </>
             )}
           </div>
@@ -607,12 +624,12 @@ function getConstraintIcon(type: string): string {
     parallel: '∥',
     collinear: '─',
     rectangle: '▭',
-    circle: '○',
+    circle: '<FontAwesomeIcon icon={faCircle} />',
     fixed: '📌',
-    horizontal: '⟷',
+    horizontal: '<FontAwesomeIcon icon={faArrowsLeftRight} />',
     vertical: '↕'
   }
-  return icons[type] || '⚙'
+  return icons[type] || '<FontAwesomeIcon icon={faGear} />'
 }
 
 export default WorldPointPanel

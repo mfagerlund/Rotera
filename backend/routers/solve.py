@@ -96,7 +96,7 @@ async def solve_project(project_id: str, request: SolveRequest) -> SolveResult:
         return result
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Solve failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Solve failed: {str(e)}") from e
 
 
 @router.get("/{project_id}/diagnostics")
@@ -133,9 +133,11 @@ async def solve_incremental(project_id: str, request: SolveRequest) -> dict[str,
 
     # Add artificial delay for testing cancellation
     if request.test_mode:
-        print(
-            f"Test mode (incremental): Adding {request.test_delay_seconds} second delay..."
+        delay_msg = (
+            f"Test mode (incremental): Adding {request.test_delay_seconds} "
+            f"second delay..."
         )
+        print(delay_msg)
         await asyncio.sleep(request.test_delay_seconds)
         print("Test delay complete, starting incremental reconstruction...")
 
@@ -157,7 +159,7 @@ async def solve_incremental(project_id: str, request: SolveRequest) -> dict[str,
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Incremental solve failed: {str(e)}"
-        )
+        ) from e
 
 
 @router.get("/{project_id}/optimization-summary")
@@ -177,7 +179,7 @@ async def get_optimization_summary(project_id: str) -> dict[str, Any]:
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Failed to build optimization summary: {str(e)}"
-        )
+        ) from e
 
 
 @router.post("/{project_id}/robust-loss")
@@ -211,4 +213,4 @@ async def set_robust_loss(
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Failed to set robust loss: {str(e)}"
-        )
+        ) from e

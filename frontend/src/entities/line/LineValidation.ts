@@ -203,7 +203,7 @@ export class LineValidator {
         'constraints.direction'
       ))
     } else {
-      const validDirections: LineDirection[] = ['free', 'horizontal', 'vertical', 'x-aligned', 'y-aligned', 'z-aligned']
+      const validDirections: LineDirection[] = ['free', 'horizontal', 'vertical', 'x-aligned', 'z-aligned']
       if (!validDirections.includes(constraints.direction)) {
         errors.push(ValidationHelpers.createError(
           'INVALID_DIRECTION',
