@@ -214,7 +214,7 @@ export const LoopTraceTool: React.FC<LoopTraceToolProps> = ({
 
         {/* Orientation Controls - Compact */}
         <div className="tool-section compact">
-          <label className="tool-label-inline">Dir:</label>
+          <label className="tool-label-inline">Direction</label>
           <div className="orientation-buttons compact">
             <button
               className={`orientation-btn ${orientation === 'free' ? 'active' : ''}`}
@@ -228,14 +228,14 @@ export const LoopTraceTool: React.FC<LoopTraceToolProps> = ({
               onClick={() => handleOrientationChange('horizontal')}
               title="Horizontal"
             >
-              H
+              ↔ Horiz
             </button>
             <button
               className={`orientation-btn ${orientation === 'vertical' ? 'active' : ''}`}
               onClick={() => handleOrientationChange('vertical')}
               title="Vertical"
             >
-              V
+              ↕ Vert
             </button>
             <button
               className={`orientation-btn ${orientation === 'x-aligned' ? 'active' : ''}`}
