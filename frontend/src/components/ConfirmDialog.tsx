@@ -32,29 +32,39 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   }, [])
 
   useEffect(() => {
-    if (dialogRef.current && targetElement) {
-      const rect = targetElement.getBoundingClientRect()
+    if (dialogRef.current) {
       const dialogRect = dialogRef.current.getBoundingClientRect()
       const viewportWidth = window.innerWidth
       const viewportHeight = window.innerHeight
 
-      let x = rect.left + rect.width / 2 - dialogRect.width / 2
-      let y = rect.bottom + 8
+      if (targetElement) {
+        const rect = targetElement.getBoundingClientRect()
 
-      if (x + dialogRect.width > viewportWidth - 20) {
-        x = viewportWidth - dialogRect.width - 20
+        let x = rect.left + rect.width / 2 - dialogRect.width / 2
+        let y = rect.bottom + 8
+
+        if (x + dialogRect.width > viewportWidth - 20) {
+          x = viewportWidth - dialogRect.width - 20
+        }
+
+        if (x < 20) {
+          x = 20
+        }
+
+        if (y + dialogRect.height > viewportHeight - 20) {
+          y = rect.top - dialogRect.height - 8
+        }
+
+        dialogRef.current.style.left = `${x}px`
+        dialogRef.current.style.top = `${y}px`
+      } else {
+        // Center the dialog when no target element is provided
+        const x = viewportWidth / 2 - dialogRect.width / 2
+        const y = viewportHeight / 2 - dialogRect.height / 2
+
+        dialogRef.current.style.left = `${x}px`
+        dialogRef.current.style.top = `${y}px`
       }
-
-      if (x < 20) {
-        x = 20
-      }
-
-      if (y + dialogRect.height > viewportHeight - 20) {
-        y = rect.top - dialogRect.height - 8
-      }
-
-      dialogRef.current.style.left = `${x}px`
-      dialogRef.current.style.top = `${y}px`
     }
   }, [targetElement, isVisible])
 
@@ -170,6 +180,7 @@ export const useConfirm = () => {
   }
 
   const dialog = dialogProps ? <ConfirmDialog {...dialogProps} /> : null
+  const isOpen = dialogProps !== null
 
-  return { confirm, dialog }
+  return { confirm, dialog, isOpen }
 }

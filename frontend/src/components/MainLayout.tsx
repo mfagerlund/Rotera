@@ -58,7 +58,7 @@ export const MainLayout: React.FC = () => {
   // Enhanced project system (future)
 
   // Confirm dialog
-  const { confirm, dialog } = useConfirm()
+  const { confirm, dialog, isOpen: isConfirmDialogOpen } = useConfirm()
 
   // Tool state management
   const [activeTool, setActiveTool] = useState<ActiveTool>('select')
@@ -521,13 +521,54 @@ export const MainLayout: React.FC = () => {
 
   // Keyboard shortcuts for tools and escape handling
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
+    const handleKeyDown = async (event: KeyboardEvent) => {
+      // Don't handle keyboard shortcuts if confirm dialog is open
+      if (isConfirmDialogOpen) {
+        return
+      }
+
       // Escape key handling
       if (event.key === 'Escape') {
         if (placementMode.active) {
           cancelPlacementMode()
         } else if (activeTool !== 'select') {
           setActiveTool('select')
+        }
+        return
+      }
+
+      // Delete key handling
+      if (event.key === 'Delete' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        const selectedPoints = selectedPointEntities.map(p => p.getId())
+        const selectedLines = selectedLineEntities.map(l => l.getId())
+        const selectedPlanes = selectedPlaneEntities.map(p => p.getId())
+        const selectedConstraints = getSelectedByType<any>('constraint').map(c => c.getId())
+
+        const totalSelected = selectedPoints.length + selectedLines.length + selectedPlanes.length + selectedConstraints.length
+
+        if (totalSelected === 0) return
+
+        // Build message
+        const parts: string[] = []
+        if (selectedPoints.length > 0) parts.push(`${selectedPoints.length} point${selectedPoints.length > 1 ? 's' : ''}`)
+        if (selectedLines.length > 0) parts.push(`${selectedLines.length} line${selectedLines.length > 1 ? 's' : ''}`)
+        if (selectedPlanes.length > 0) parts.push(`${selectedPlanes.length} plane${selectedPlanes.length > 1 ? 's' : ''}`)
+        if (selectedConstraints.length > 0) parts.push(`${selectedConstraints.length} constraint${selectedConstraints.length > 1 ? 's' : ''}`)
+
+        const message = `Delete ${parts.join(', ')}?`
+
+        if (await confirm(message, { variant: 'danger', confirmLabel: 'Delete', cancelLabel: 'Cancel' })) {
+          // Delete all selected entities
+          selectedConstraints.forEach(id => deleteConstraint(id))
+          selectedLines.forEach(id => deleteLine(id))
+          selectedPlanes.forEach(id => {
+            // TODO: Implement deletePlane when available
+            console.warn('Plane deletion not yet implemented')
+          })
+          selectedPoints.forEach(id => deleteWorldPoint(id))
+
+          // Clear selection
+          clearSelection()
         }
         return
       }
@@ -559,7 +600,7 @@ export const MainLayout: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [placementMode.active, activeTool, selectedPointEntities.map(p => p.getId()).length])
+  }, [placementMode.active, activeTool, selectedPointEntities, selectedLineEntities, selectedPlaneEntities, getSelectedByType, confirm, deleteConstraint, deleteLine, deleteWorldPoint, clearSelection, isConfirmDialogOpen])
 
   // Content for different workspaces
   const renderImageWorkspace = useCallback(() => (
@@ -852,6 +893,7 @@ export const MainLayout: React.FC = () => {
                     // Silently fail
                   }
                 }}
+                onCreateConstraint={addConstraint}
                 onCreatePlane={(definition) => {
                   // TODO: Implement plane creation
                 }}
@@ -1132,6 +1174,7 @@ export const MainLayout: React.FC = () => {
         }}
       />
     )}
+    {dialog}
   </>
   )
 }

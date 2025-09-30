@@ -30,6 +30,7 @@ interface CreationToolsManagerProps {
   existingLines: Record<string, any> // Existing lines for duplicate checking
   onCreatePoint: (imageId: string, u: number, v: number) => void
   onCreateLine: (pointIds: [string, string], constraints?: LineConstraints) => void
+  onCreateConstraint?: (constraint: any) => void
   onCreatePlane: (definition: any) => void
   onCreateCircle: (definition: any) => void
   onConstructionPreviewChange?: (preview: ConstructionPreview | null) => void
@@ -52,6 +53,7 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
   existingLines,
   onCreatePoint,
   onCreateLine,
+  onCreateConstraint,
   onCreatePlane,
   onCreateCircle,
   onConstructionPreviewChange,
@@ -340,6 +342,7 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
           worldPointNames={worldPointNames}
           existingLines={existingLines}
           onCreateLine={onCreateLine}
+          onCreateConstraint={onCreateConstraint}
           onCancel={handleToolCancel}
           onConstructionPreviewChange={onConstructionPreviewChange}
           onClearSelection={onClearSelection}

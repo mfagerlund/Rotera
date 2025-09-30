@@ -23,6 +23,7 @@ interface LoopTraceToolProps {
   worldPointNames: Record<string, string>
   existingLines: Record<string, any>
   onCreateLine: (pointIds: [string, string], constraints?: LineConstraints) => void
+  onCreateConstraint?: (constraint: any) => void
   onCancel: () => void
   onConstructionPreviewChange?: (preview: ConstructionPreview | null) => void
   onClearSelection?: () => void
@@ -36,6 +37,7 @@ export const LoopTraceTool: React.FC<LoopTraceToolProps> = ({
   worldPointNames,
   existingLines,
   onCreateLine,
+  onCreateConstraint,
   onCancel,
   onConstructionPreviewChange,
   onClearSelection,
@@ -44,7 +46,7 @@ export const LoopTraceTool: React.FC<LoopTraceToolProps> = ({
   showActionButtons = true
 }) => {
   const [orientation, setOrientation] = useState<LineDirection>('free')
-  const [coplanarEnabled, setCoplanarEnabled] = useState(false)
+  const [coplanarEnabled, setCoplanarEnabled] = useState(true)
   const [namePrefix, setNamePrefix] = useState('')
   const [closedLoop, setClosedLoop] = useState(false)
   const prevSegmentsRef = useRef<any[]>([])
@@ -58,6 +60,7 @@ export const LoopTraceTool: React.FC<LoopTraceToolProps> = ({
     selectedPoints,
     existingLines,
     onCreateLine,
+    onCreateConstraint,
     orientation,
     setOrientation,
     coplanarEnabled,
@@ -263,6 +266,18 @@ export const LoopTraceTool: React.FC<LoopTraceToolProps> = ({
               onChange={(e) => setClosedLoop(e.target.checked)}
             />
             <span>Closed</span>
+          </label>
+        </div>
+
+        {/* Coplanar Toggle */}
+        <div className="tool-section compact">
+          <label className="tool-checkbox-inline">
+            <input
+              type="checkbox"
+              checked={coplanarEnabled}
+              onChange={(e) => setCoplanarEnabled(e.target.checked)}
+            />
+            <span>Coplanar</span>
           </label>
         </div>
 

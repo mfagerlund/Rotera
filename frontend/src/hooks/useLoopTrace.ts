@@ -15,6 +15,7 @@ interface UseLoopTraceProps {
   selectedPoints: string[]
   existingLines: Record<string, any>
   onCreateLine: (pointIds: [string, string], constraints?: LineConstraints) => void
+  onCreateConstraint?: (constraint: any) => void
   orientation: LineDirection
   setOrientation: (orientation: LineDirection) => void
   coplanarEnabled: boolean
@@ -34,6 +35,7 @@ export function useLoopTrace({
   selectedPoints,
   existingLines,
   onCreateLine,
+  onCreateConstraint,
   orientation,
   setOrientation,
   coplanarEnabled,
@@ -138,8 +140,34 @@ export function useLoopTrace({
       created.push(`${pointA}-${pointB}`)
     }
 
+    // Create coplanar constraint if enabled and we have at least 4 points
+    if (coplanarEnabled && selectedPoints.length >= 4 && onCreateConstraint) {
+      const constraintName = namePrefix
+        ? `${namePrefix}_coplanar`
+        : 'Loop_coplanar'
+
+      const coplanarConstraint = {
+        id: `constraint_${Date.now()}`,
+        type: 'points_coplanar',
+        enabled: true,
+        isDriving: true,
+        weight: 1.0,
+        status: 'satisfied',
+        entities: {
+          points: [...selectedPoints]
+        },
+        parameters: {
+          tolerance: 0.001,
+          name: constraintName
+        },
+        createdAt: new Date().toISOString()
+      }
+
+      onCreateConstraint(coplanarConstraint)
+    }
+
     return { created, skipped }
-  }, [selectedPoints, orientation, lineExists, onCreateLine, namePrefix, closedLoop])
+  }, [selectedPoints, orientation, lineExists, onCreateLine, namePrefix, closedLoop, coplanarEnabled, onCreateConstraint])
 
   return {
     segments,
