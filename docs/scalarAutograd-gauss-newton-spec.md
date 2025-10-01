@@ -55,7 +55,6 @@ const result = V.gaussNewton(params, residualFunction, {
   maxIterations: 100,
   costTolerance: 1e-6,
   paramTolerance: 1e-6,
-  skipSmallResiduals: 1e-9, // Skip residuals with |r| < epsilon
   verbose: true
 });
 
@@ -74,39 +73,11 @@ const result = V.gaussNewton(params, residualFunction, {
 5. Repeat until converged
 ```
 
-### Key Optimization: Early Termination
-```typescript
-function computeResidualsAndJacobian(params: Value[]): {residuals, J, cost} {
-  const residuals: number[] = [];
-  const J: number[][] = [];
-  let totalCost = 0;
-
-  const candidateResiduals = residualFunction(params);
-
-  for (const r of candidateResiduals) {
-    // Short-circuit: skip tiny residuals
-    if (Math.abs(r.data) < skipThreshold) {
-      continue;
-    }
-
-    totalCost += r.data * r.data;
-
-    // Only compute Jacobian row for significant residuals
-    params.forEach(p => p.grad = 0);
-    r.backward();
-
-    residuals.push(r.data);
-    J.push(params.map(p => p.grad));
-  }
-
-  return { residuals, J, totalCost };
-}
-```
-
-**Why this is fast:**
-- Satisfied constraints (r ≈ 0) don't trigger backward pass
-- Sparse Jacobian automatically discovered (most gradients = 0)
-- Can exit early if totalCost < threshold during construction
+### Key Optimization: Automatic Sparsity Discovery
+The Jacobian is computed efficiently via automatic differentiation:
+- Each `r.backward()` only computes derivatives for parameters that actually affect `r`
+- Sparse Jacobian automatically discovered (most gradients = 0 for problems with local connectivity)
+- No need to manually specify sparsity patterns
 
 ## Implementation Plan
 
@@ -118,7 +89,6 @@ export interface GaussNewtonOptions {
   maxIterations?: number;
   costTolerance?: number;
   paramTolerance?: number;
-  skipSmallResiduals?: number;
   lineSearchSteps?: number;
   verbose?: boolean;
 }
@@ -144,8 +114,7 @@ export function gaussNewton(
 ```typescript
 function computeResidualsAndJacobian(
   params: Value[],
-  residualFn: (params: Value[]) => Value[],
-  skipThreshold: number
+  residualFn: (params: Value[]) => Value[]
 ): { residuals: number[], J: number[][], cost: number } {
 
   const residualValues = residualFn(params);
@@ -154,11 +123,6 @@ function computeResidualsAndJacobian(
   let cost = 0;
 
   for (const r of residualValues) {
-    // Early termination: skip satisfied constraints
-    if (Math.abs(r.data) < skipThreshold) {
-      continue;
-    }
-
     cost += r.data * r.data;
 
     // Zero all gradients before backward pass
@@ -281,7 +245,6 @@ export function gaussNewton(
     maxIterations = 100,
     costTolerance = 1e-6,
     paramTolerance = 1e-6,
-    skipSmallResiduals = 1e-9,
     lineSearchSteps = 10,
     verbose = false
   } = options;
@@ -293,8 +256,7 @@ export function gaussNewton(
     // Compute residuals and Jacobian
     const { residuals, J, cost } = computeResidualsAndJacobian(
       params,
-      residualFn,
-      skipSmallResiduals
+      residualFn
     );
 
     if (verbose) {
@@ -371,7 +333,7 @@ export function gaussNewton(
   }
 
   // Max iterations reached
-  const { cost } = computeResidualsAndJacobian(params, residualFn, skipSmallResiduals);
+  const { cost } = computeResidualsAndJacobian(params, residualFn);
   return {
     success: false,
     iterations: maxIterations,
@@ -464,15 +426,9 @@ function residuals(p: Value[]) {
 // Has difficult valley, good test for robustness
 ```
 
-**Test 4: Early termination**
-```typescript
-// Residuals with mix of satisfied and unsatisfied constraints
-// Verify that satisfied constraints are skipped
-```
-
 ### Integration Test: Bundle Adjustment
 
-**Test 5: Photogrammetry fixture**
+**Test 4: Photogrammetry fixture**
 Use the existing `tests/fixtures/project1.json`:
 - Multiple world points with locked/free axes
 - Image point reprojection residuals
@@ -493,10 +449,6 @@ For typical photogrammetry problem:
 **Autodiff with sparsity:**
 - O(M) = 500 backward passes per iteration
 - **60x fewer computations!**
-
-**With early termination:**
-- Skip ~50% of residuals once nearly converged
-- **Additional 2x speedup in final iterations**
 
 ### Benchmarks to measure
 
