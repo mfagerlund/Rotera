@@ -6,7 +6,7 @@ Constraint-driven sparse Structure-from-Motion (SfM) with CAD-like geometric pri
 __version__ = "0.1.0"
 
 # Core models
-from .core.models.entities import Camera, CameraLockFlags, Image, WorldPoint
+from .core.models.entities import Camera, CameraLockFlags, Image, Line, WorldPoint
 from .core.models.project import Project, SolveResult
 from .core.models.constraints import (
     ImagePointConstraint,
@@ -29,6 +29,7 @@ __all__ = [
     "Camera",
     "CameraLockFlags",
     "Image",
+    "Line",
     "Project",
     "SolveResult",
     # Constraints

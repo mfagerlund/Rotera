@@ -147,18 +147,24 @@ def test_optimization_converges(project_from_export):
 
         for wp_id in uninitialized:
             wp = project.world_points[wp_id]
-            # Place at random position in a 10x10x10 meter cube
-            wp.xyz = [
-                float(np.random.uniform(-5, 5)),
-                float(np.random.uniform(-5, 5)),
-                float(np.random.uniform(5, 15))  # In front of camera
-            ]
+            # Initialize with default position (all axes free - no locked array)
+            wp.xyz = [0.0, 0.0, 0.0]
 
-        print(f"  Initialized {len(uninitialized)} world points with random positions")
+        print(f"  Initialized {len(uninitialized)} world points with free axes")
 
     # Build optimization problem
     problem = OptimizationProblem(project)
     factor_graph = problem.build_factor_graph()
+
+    # Set initial random positions in factor graph for uninitialized points
+    if len(uninitialized) > 0:
+        for wp_id in uninitialized:
+            if wp_id in factor_graph.variables:
+                factor_graph.variables[wp_id].value = np.array([
+                    np.random.uniform(-5, 5),
+                    np.random.uniform(-5, 5),
+                    np.random.uniform(5, 15)  # In front of camera
+                ])
 
     # Configure solver
     solver_options = SolverOptions(
@@ -212,15 +218,22 @@ def test_optimization_with_robust_loss(project_from_export):
         np.random.seed(42)
         for wp_id in uninitialized:
             wp = project.world_points[wp_id]
-            wp.xyz = [
-                float(np.random.uniform(-5, 5)),
-                float(np.random.uniform(-5, 5)),
-                float(np.random.uniform(5, 15))
-            ]
+            # Initialize with default position (all axes free - no locked array)
+            wp.xyz = [0.0, 0.0, 0.0]
 
     # Build optimization problem
     problem = OptimizationProblem(project)
     factor_graph = problem.build_factor_graph()
+
+    # Set initial random positions in factor graph
+    if len(uninitialized) > 0:
+        for wp_id in uninitialized:
+            if wp_id in factor_graph.variables:
+                factor_graph.variables[wp_id].value = np.array([
+                    np.random.uniform(-5, 5),
+                    np.random.uniform(-5, 5),
+                    np.random.uniform(5, 15)
+                ])
 
     # Configure solver with robust loss
     solver_options = SolverOptions(

@@ -14,6 +14,9 @@ export default {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
     '\\.(gif|ttf|eot|svg|png|jpg|jpeg)$': '<rootDir>/src/tests/__mocks__/fileMock.js'
   },
+  transformIgnorePatterns: [
+    'node_modules/(?!(ml-levenberg-marquardt|ml-array)/)'
+  ],
   collectCoverageFrom: [
     'src/components/**/*.{ts,tsx}',
     'src/services/**/*.{ts,tsx}',

@@ -1,19 +1,36 @@
-"""Core entities: WorldPoint, Image, Camera."""
+"""Core entities: WorldPoint, Image, Camera, Line."""
 
-from typing import Optional, List
+from typing import Optional, List, Dict, Any, Literal
 import numpy as np
 from pydantic import BaseModel, Field, field_validator
 
 
 class WorldPoint(BaseModel):
-    """3D point in world coordinates."""
+    """3D point in world coordinates.
+
+    Separates position (xyz) from constraints (locked).
+    - xyz: Current 3D position [x, y, z]
+    - locked: Boolean mask [lock_x, lock_y, lock_z] indicating which axes are constrained
+    - tolerance: Constraint tolerance for locked axes (smaller = tighter constraint)
+    """
 
     id: str = Field(description="Unique identifier for the world point")
     xyz: Optional[List[float]] = Field(
         default=None,
-        description="3D coordinates in meters [x, y, z]",
+        description="3D coordinates [x, y, z]",
         min_length=3,
         max_length=3
+    )
+    locked: Optional[List[bool]] = Field(
+        default=None,
+        description="Per-axis lock flags [lock_x, lock_y, lock_z]",
+        min_length=3,
+        max_length=3
+    )
+    tolerance: float = Field(
+        default=0.001,
+        gt=0,
+        description="Constraint tolerance for locked axes"
     )
 
     @field_validator('xyz')
@@ -23,19 +40,65 @@ class WorldPoint(BaseModel):
             raise ValueError("xyz must be exactly 3 elements")
         return v
 
+    @field_validator('locked')
+    @classmethod
+    def validate_locked(cls, v):
+        if v is not None and len(v) != 3:
+            raise ValueError("locked must be exactly 3 elements")
+        return v
+
     def to_numpy(self) -> Optional[np.ndarray]:
         """Convert coordinates to numpy array."""
-        return np.array(self.xyz) if self.xyz is not None else None
+        if self.xyz is None:
+            return None
+        return np.array(self.xyz)
 
     def set_from_numpy(self, xyz: np.ndarray) -> None:
-        """Set coordinates from numpy array."""
+        """Set coordinates from numpy array.
+
+        Only updates free axes - locked axes remain unchanged.
+        """
         if xyz.shape != (3,):
             raise ValueError("xyz must be 3-element array")
-        self.xyz = xyz.tolist()
+
+        if self.xyz is None:
+            # Initialize all axes
+            self.xyz = xyz.tolist()
+        else:
+            # Preserve locked axes, update free axes
+            lock_mask = self.get_lock_mask()
+            self.xyz = [
+                self.xyz[i] if lock_mask[i] else xyz[i]
+                for i in range(3)
+            ]
 
     def is_initialized(self) -> bool:
-        """Check if point has coordinates."""
+        """Check if point has coordinate data."""
         return self.xyz is not None
+
+    def has_locked_axes(self) -> bool:
+        """Check if any axes are locked."""
+        if self.locked is None:
+            return False
+        return any(self.locked)
+
+    def get_lock_mask(self) -> List[bool]:
+        """Get boolean mask indicating which axes are locked."""
+        if self.locked is None:
+            return [False, False, False]
+        return self.locked
+
+    def get_locked_values(self) -> List[Optional[float]]:
+        """Get the coordinate values for locked axes.
+
+        Returns None for unlocked axes, the coordinate value for locked axes.
+        """
+        if self.xyz is None or self.locked is None:
+            return [None, None, None]
+        return [
+            self.xyz[i] if self.locked[i] else None
+            for i in range(3)
+        ]
 
 
 class Image(BaseModel):
@@ -154,3 +217,58 @@ class Camera(BaseModel):
     def get_distortion(self) -> List[float]:
         """Get distortion parameters [k1, k2?]."""
         return self.K[4:] if self.has_distortion() else []
+
+
+class LineConstraints(BaseModel):
+    """Embedded constraints for a line entity."""
+
+    direction: Literal['free', 'horizontal', 'vertical', 'x-aligned', 'z-aligned'] = Field(
+        default='free',
+        description="Direction constraint for the line"
+    )
+    targetLength: Optional[float] = Field(
+        default=None,
+        ge=0,
+        description="Target length in meters (optional)"
+    )
+    tolerance: float = Field(
+        default=0.001,
+        gt=0,
+        description="Constraint tolerance"
+    )
+
+
+class Line(BaseModel):
+    """Line entity connecting two world points with optional constraints."""
+
+    id: str = Field(description="Unique identifier for the line")
+    name: str = Field(description="Display name (e.g., 'L1', 'Loop_1')")
+    pointA: str = Field(description="First world point ID")
+    pointB: str = Field(description="Second world point ID")
+    constraints: Optional[LineConstraints] = Field(
+        default=None,
+        description="Embedded geometric constraints"
+    )
+
+    def has_constraints(self) -> bool:
+        """Check if line has any active constraints."""
+        if self.constraints is None:
+            return False
+        return (
+            self.constraints.direction != 'free' or
+            self.constraints.targetLength is not None
+        )
+
+    def get_constraint_dict(self) -> Dict[str, Any]:
+        """Get constraints as dictionary for residual creation."""
+        if self.constraints is None:
+            return {
+                'direction': 'free',
+                'targetLength': None,
+                'tolerance': 0.001
+            }
+        return {
+            'direction': self.constraints.direction,
+            'targetLength': self.constraints.targetLength,
+            'tolerance': self.constraints.tolerance
+        }

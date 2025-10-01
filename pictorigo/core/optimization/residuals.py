@@ -1,7 +1,7 @@
 """Residual functors for different constraint types."""
 
 import numpy as np
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Optional
 from abc import ABC, abstractmethod
 
 from .factor_graph import Factor
@@ -952,6 +952,270 @@ class DistanceRatioResidual(ResidualFunctor):
         return 1
 
 
+class LineResidual(ResidualFunctor):
+    """Composite residual for line entity with embedded constraints.
+
+    Supports:
+    - Direction constraints (horizontal, vertical, x-aligned, z-aligned)
+    - Target length constraints
+
+    This residual preserves traceability from UI line entities to optimization.
+    """
+
+    def __init__(
+        self,
+        factor_id: str,
+        line_id: str,
+        line_name: str,
+        wp_i_id: str,
+        wp_j_id: str,
+        direction: str = 'free',
+        target_length: float = None,
+        tolerance: float = 0.001
+    ):
+        """Initialize line residual.
+
+        Args:
+            factor_id: Unique factor identifier
+            line_id: UI entity ID for traceability
+            line_name: Human-readable name (e.g., "L1", "Loop_1")
+            wp_i_id: First world point variable ID
+            wp_j_id: Second world point variable ID
+            direction: Direction constraint ('free', 'horizontal', 'vertical', 'x-aligned', 'z-aligned')
+            target_length: Target length in meters (optional)
+            tolerance: Constraint tolerance
+        """
+        variable_ids = [wp_i_id, wp_j_id]
+        super().__init__(factor_id, variable_ids)
+
+        self.line_id = line_id
+        self.line_name = line_name
+        self.wp_i_id = wp_i_id
+        self.wp_j_id = wp_j_id
+        self.direction = direction
+        self.target_length = target_length
+        self.tolerance = tolerance
+
+    def compute_residual(self, variables: Dict[str, np.ndarray]) -> np.ndarray:
+        """Compute composite residual vector.
+
+        Returns variable-length array depending on active constraints:
+        - If target_length set: includes distance residual
+        - If direction != 'free': includes direction residual(s)
+
+        Args:
+            variables: Dictionary mapping variable IDs to their values
+
+        Returns:
+            Residual vector (length 0-2 depending on constraints)
+        """
+        Xi = variables[self.wp_i_id]  # Point A position [x, y, z]
+        Xj = variables[self.wp_j_id]  # Point B position [x, y, z]
+
+        residuals = []
+
+        # 1. Distance constraint (if specified)
+        if self.target_length is not None:
+            line_vec = Xj - Xi
+            actual_length = np.linalg.norm(line_vec)
+            length_error = (actual_length - self.target_length) / self.tolerance
+            residuals.append(length_error)
+
+        # 2. Direction constraint (if specified)
+        if self.direction != 'free':
+            line_vec = Xj - Xi
+            line_length = np.linalg.norm(line_vec)
+
+            # Avoid division by zero
+            if line_length < 1e-10:
+                # If points coincide, any direction constraint is maximally violated
+                residuals.append(1.0 / self.tolerance)
+            else:
+                line_dir = line_vec / line_length
+
+                if self.direction == 'horizontal':
+                    # Line should be parallel to XY plane (z component = 0)
+                    z_error = abs(line_dir[2]) / self.tolerance
+                    residuals.append(z_error)
+
+                elif self.direction == 'vertical':
+                    # Line should be parallel to Z axis (x,y components = 0)
+                    xy_error = np.linalg.norm(line_dir[:2]) / self.tolerance
+                    residuals.append(xy_error)
+
+                elif self.direction == 'x-aligned':
+                    # Line should be parallel to X axis (y,z components = 0)
+                    yz_error = np.linalg.norm(line_dir[1:]) / self.tolerance
+                    residuals.append(yz_error)
+
+                elif self.direction == 'z-aligned':
+                    # Same as vertical
+                    xy_error = np.linalg.norm(line_dir[:2]) / self.tolerance
+                    residuals.append(xy_error)
+
+        return np.array(residuals) if residuals else np.array([])
+
+    def compute_jacobian(self, variables: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+        """Compute Jacobian using finite differences."""
+        from ..math.jacobians import finite_difference_jacobian
+
+        def residual_func(params):
+            # Unpack parameters
+            Xi = params[:3]
+            Xj = params[3:6]
+
+            var_dict = {
+                self.wp_i_id: Xi,
+                self.wp_j_id: Xj
+            }
+            return self.compute_residual(var_dict)
+
+        # Pack variables
+        Xi = variables[self.wp_i_id]
+        Xj = variables[self.wp_j_id]
+        params = np.concatenate([Xi, Xj])
+
+        # Compute Jacobian
+        residual = self.compute_residual(variables)
+        if len(residual) == 0:
+            # No constraints active, return empty jacobians
+            return {
+                self.wp_i_id: np.zeros((0, 3)),
+                self.wp_j_id: np.zeros((0, 3))
+            }
+
+        J_full = finite_difference_jacobian(residual_func, params)
+
+        # Split Jacobian by variables
+        jacobians = {
+            self.wp_i_id: J_full[:, :3],
+            self.wp_j_id: J_full[:, 3:]
+        }
+
+        return jacobians
+
+    def residual_dimension(self) -> int:
+        """Get residual dimension (variable based on constraints)."""
+        count = 0
+        if self.target_length is not None:
+            count += 1
+        if self.direction != 'free':
+            count += 1
+        return count
+
+    def get_metadata(self) -> Dict[str, any]:
+        """Return traceability metadata for diagnostics."""
+        return {
+            'entity_type': 'line',
+            'entity_id': self.line_id,
+            'entity_name': self.line_name,
+            'components': [
+                {
+                    'type': 'distance',
+                    'enabled': self.target_length is not None,
+                    'target': self.target_length
+                },
+                {
+                    'type': 'direction',
+                    'enabled': self.direction != 'free',
+                    'target': self.direction
+                }
+            ]
+        }
+
+
+class WorldPointResidual(ResidualFunctor):
+    """Residual for world point with per-axis locking constraints.
+
+    Each locked axis (non-None coordinate) creates a residual that pulls
+    that axis toward the locked value.
+    """
+
+    def __init__(
+        self,
+        factor_id: str,
+        wp_id: str,
+        wp_name: str,
+        locked_values: List[Optional[float]],
+        tolerance: float = 0.001
+    ):
+        """Initialize world point residual.
+
+        Args:
+            factor_id: Unique identifier for this factor
+            wp_id: World point ID
+            wp_name: World point name (for traceability)
+            locked_values: [x, y, z] where None = free, float = locked
+            tolerance: Constraint tolerance
+        """
+        self.wp_id = wp_id
+        self.wp_name = wp_name
+        self.locked_values = locked_values
+        self.tolerance = tolerance
+
+        # Determine which axes are locked
+        self.locked_axes = [i for i, val in enumerate(locked_values) if val is not None]
+
+        if not self.locked_axes:
+            raise ValueError("WorldPointResidual requires at least one locked axis")
+
+        # Variable references (world points are stored with their ID directly)
+        variable_ids = [wp_id]
+
+        # Initialize parent
+        super().__init__(factor_id, variable_ids)
+
+    def compute_residual(self, variables: Dict[str, np.ndarray]) -> np.ndarray:
+        """Compute residual for locked axes."""
+        X = variables[self.wp_id]
+
+        residuals = []
+        for axis_idx in self.locked_axes:
+            locked_val = self.locked_values[axis_idx]
+            error = (X[axis_idx] - locked_val) / self.tolerance
+            residuals.append(error)
+
+        return np.array(residuals)
+
+    def compute_jacobian(self, variables: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+        """Compute Jacobian for locked axes.
+
+        Each locked axis has a simple derivative: d/dx_i (x_i - locked_val) = 1
+        """
+        n_residuals = len(self.locked_axes)
+
+        # Jacobian is n_residuals x 3 (one row per locked axis, one column per coordinate)
+        J = np.zeros((n_residuals, 3))
+
+        for i, axis_idx in enumerate(self.locked_axes):
+            J[i, axis_idx] = 1.0 / self.tolerance
+
+        return {self.wp_id: J}
+
+    def residual_dimension(self) -> int:
+        """Return number of locked axes."""
+        return len(self.locked_axes)
+
+    def get_metadata(self) -> dict:
+        """Return metadata for traceability."""
+        axis_names = ['x', 'y', 'z']
+        components = []
+
+        for axis_idx in self.locked_axes:
+            components.append({
+                'type': f'lock_{axis_names[axis_idx]}',
+                'enabled': True,
+                'target': self.locked_values[axis_idx]
+            })
+
+        return {
+            'entity_type': 'world_point',
+            'entity_id': self.wp_id,
+            'entity_name': self.wp_name,
+            'components': components
+        }
+
+
 class ResidualRegistry:
     """Registry for residual functor types."""
 
@@ -967,6 +1231,8 @@ class ResidualRegistry:
         "parallel": ParallelResidual,
         "angle": AngleResidual,
         "distance_ratio": DistanceRatioResidual,
+        "line": LineResidual,
+        "world_point": WorldPointResidual,
     }
 
     @classmethod

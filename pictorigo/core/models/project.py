@@ -4,7 +4,7 @@ import math
 from typing import Dict, List, Optional, Literal
 from pydantic import BaseModel, Field, field_validator
 
-from .entities import WorldPoint, Image, Camera
+from .entities import WorldPoint, Image, Camera, Line
 from .constraints import Constraint
 
 
@@ -112,6 +112,10 @@ class Project(BaseModel):
         default_factory=dict,
         description="World points by ID"
     )
+    lines: Dict[str, Line] = Field(
+        default_factory=dict,
+        description="Lines by ID"
+    )
     images: Dict[str, Image] = Field(
         default_factory=dict,
         description="Images by ID"
@@ -138,6 +142,16 @@ class Project(BaseModel):
         if wp.id in self.world_points:
             raise ValueError(f"World point {wp.id} already exists")
         self.world_points[wp.id] = wp
+
+    def add_line(self, line: Line) -> None:
+        """Add a line to the project."""
+        if line.id in self.lines:
+            raise ValueError(f"Line {line.id} already exists")
+        if line.pointA not in self.world_points:
+            raise ValueError(f"Line references non-existent point {line.pointA}")
+        if line.pointB not in self.world_points:
+            raise ValueError(f"Line references non-existent point {line.pointB}")
+        self.lines[line.id] = line
 
     def add_image(self, image: Image) -> None:
         """Add an image to the project."""

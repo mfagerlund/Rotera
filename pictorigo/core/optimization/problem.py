@@ -16,6 +16,7 @@ from .residuals import (
     ParallelResidual,
     AngleResidual,
     DistanceRatioResidual,
+    LineResidual,
 )
 from ..models.project import Project
 from ..models.constraints import (
@@ -65,17 +66,22 @@ class OptimizationProblem:
         # Add factors for constraints
         self._add_constraint_factors()
 
+        # Add factors for entity-driven constraints
+        self._add_world_point_factors()
+        self._add_line_factors()
+
         return self.factor_graph
 
     def _add_world_point_variables(self) -> None:
         """Add world point variables to factor graph."""
         for wp_id, world_point in self.project.world_points.items():
             # Create variable
+            # Use to_numpy() which converts None to 0.0 for free axes
             variable = Variable(
                 id=wp_id,
                 type=VariableType.WORLD_POINT,
                 size=3,
-                value=np.array(world_point.xyz) if world_point.xyz is not None else None
+                value=world_point.to_numpy()
             )
 
             self.factor_graph.add_variable(variable)
@@ -387,6 +393,57 @@ class OptimizationProblem:
             line2_wp_a_id=constraint.line2_wp_a,
             line2_wp_b_id=constraint.line2_wp_b,
             target_ratio=constraint.ratio
+        )
+
+        self.factor_graph.add_factor(factor)
+
+    def _add_world_point_factors(self) -> None:
+        """Add factors for world points with locked axes (entity-driven optimization)."""
+        for wp_id, wp in self.project.world_points.items():
+            # Only add factor if world point has locked axes
+            if wp.has_locked_axes():
+                self._add_world_point_factor(wp)
+
+    def _add_world_point_factor(self, wp) -> None:
+        """Add factor for a single world point with locked axes."""
+        factor_id = f"wp_lock_{wp.id}"
+
+        # Create WorldPointResidual
+        from .residuals import WorldPointResidual
+        factor = WorldPointResidual(
+            factor_id=factor_id,
+            wp_id=wp.id,
+            wp_name=wp.id,  # WorldPoint doesn't have a name field, use id
+            locked_values=wp.get_locked_values(),
+            tolerance=wp.tolerance
+        )
+
+        self.factor_graph.add_factor(factor)
+
+    def _add_line_factors(self) -> None:
+        """Add factors for line entities with embedded constraints (entity-driven optimization)."""
+        for line_id, line in self.project.lines.items():
+            # Only add factor if line has active constraints
+            if line.has_constraints():
+                self._add_line_factor(line)
+
+    def _add_line_factor(self, line) -> None:
+        """Add factor for a single line entity."""
+        factor_id = f"line_{line.id}"
+
+        # Get constraint parameters
+        constraints = line.get_constraint_dict()
+
+        # Create LineResidual
+        factor = LineResidual(
+            factor_id=factor_id,
+            line_id=line.id,
+            line_name=line.name,
+            wp_i_id=line.pointA,
+            wp_j_id=line.pointB,
+            direction=constraints['direction'],
+            target_length=constraints['targetLength'],
+            tolerance=constraints['tolerance']
         )
 
         self.factor_graph.add_factor(factor)
