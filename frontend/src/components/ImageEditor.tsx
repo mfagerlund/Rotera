@@ -13,7 +13,6 @@ interface ImageEditorProps {
   onDeleteImage?: (imageId: string) => void
 }
 
-// RENAME_TO: ImageEditor
 export const ImageEditor: React.FC<ImageEditorProps> = ({
   isOpen,
   onClose,
