@@ -26,9 +26,9 @@
     "@fortawesome/free-solid-svg-icons": "^7.0.1",
     "@fortawesome/react-fontawesome": "^3.0.2",
     "bootstrap": "^5.3.0",
-    "ml-levenberg-marquardt": "^5.0.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "scalar-autograd": "file:../../ScalarAutograd"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.28.3",
