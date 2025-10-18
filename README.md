@@ -3,28 +3,21 @@ Poor Man's Photogrammetry
 
 ## 🚀 Current Status
 
-**WORKING IMPLEMENTATION** - Core system is complete and functional!
+**ACTIVE DEVELOPMENT** - Core frontend is functional, solver migration in progress.
 
-✅ **Backend**: Full REST API with project management, synthetic scene generation, and bundle adjustment solver
-✅ **Frontend**: React TypeScript interface with project management and solver controls
-✅ **Solver**: SciPy-based optimization with robust loss functions and convergence diagnostics
-✅ **Synthetic Scenes**: Generate test cases (box room, grid plane, two-view) for validation
-✅ **Testing**: Comprehensive test suite with high coverage across all modules
+✅ **Frontend**: React TypeScript interface with project management and visualization
+🚧 **Solver**: Migrating to TypeScript-based constraint solver using ScalarAutograd
+✅ **Testing**: Comprehensive frontend test suite
 
 **Quick Start:**
 ```bash
-# Backend (Python 3.11+)
-cd backend
-pip install -e ../pictorigo
-python main.py  # Server runs on http://127.0.0.1:8000
-
 # Frontend (Node.js 20+)
 cd frontend
 npm install
 npm run dev  # UI runs on http://localhost:3000
 ```
 
-**Try it:** Generate a synthetic scene → Solve → View results in real-time!
+**Note:** Constraint solving functionality is being migrated from Python to the ScalarAutograd library (C:\Dev\ScalarAutograd).
 
 ## Goal
 
@@ -91,10 +84,10 @@ Camera projections are solved from the full constraint graph. IPs cannot exist w
 
 ## Architecture
 
-* **Frontend:** React + Bootstrap. Fast image switching, point/constraint editing, residual/uncertainty indicators.
-* **Backend:** Python (scipy.optimize.least_squares) for numerics, constraint graph, and solver. FastAPI surfaces entities and solves incrementally.
+* **Frontend:** React + TypeScript. Fast image switching, point/constraint editing, residual/uncertainty indicators.
+* **Solver:** TypeScript-based constraint solver using ScalarAutograd for automatic differentiation and optimization.
 
-## Testing strategy (backend-first, TDD)
+## Testing strategy
 
 * No bitmaps required. Synthetic scenes:
 
@@ -107,5 +100,4 @@ Camera projections are solved from the full constraint graph. IPs cannot exist w
 ## Notes
 
 * All distances in meters.
-* System continuously reports what’s unconstrained, plus largest residuals by constraint and by WP.
-* The frontend is built after the backend achieves stable, tested solves.
+* System continuously reports what's unconstrained, plus largest residuals by constraint and by WP.

@@ -18,20 +18,6 @@ FRONTEND_TYPE_PID=$!
 
 cd ..
 
-# Run backend checks from backend directory
-cd backend
-python -m ruff check . > "$TEMP_DIR/backend_lint.log" 2>&1 &
-BACKEND_LINT_PID=$!
-python -m black --check . > "$TEMP_DIR/backend_format.log" 2>&1 &
-BACKEND_FORMAT_PID=$!
-
-# Run tests and type checks from root (where pictorigo package and tests live)
-cd ..
-python -m pytest tests/unit tests/api --tb=short -x --maxfail=5 > "$TEMP_DIR/backend_test.log" 2>&1 &
-BACKEND_TEST_PID=$!
-python -m mypy pictorigo/ > "$TEMP_DIR/backend_type.log" 2>&1 &
-BACKEND_TYPE_PID=$!
-
 # Wait for all processes and collect results
 failed_checks=()
 all_passed=true
@@ -51,26 +37,6 @@ if ! wait $FRONTEND_TYPE_PID; then
     all_passed=false
 fi
 
-if ! wait $BACKEND_TEST_PID; then
-    failed_checks+=("backend-tests")
-    all_passed=false
-fi
-
-if ! wait $BACKEND_LINT_PID; then
-    failed_checks+=("backend-lint")
-    all_passed=false
-fi
-
-if ! wait $BACKEND_TYPE_PID; then
-    failed_checks+=("backend-types")
-    all_passed=false
-fi
-
-if ! wait $BACKEND_FORMAT_PID; then
-    failed_checks+=("backend-format")
-    all_passed=false
-fi
-
 # Output results
 if $all_passed; then
     echo "✓ All checks passed"
@@ -83,10 +49,6 @@ else
             "frontend-tests") echo "  cd frontend && npm test -- --maxWorkers=1" ;;
             "frontend-lint") echo "  cd frontend && npm run lint" ;;
             "frontend-types") echo "  cd frontend && npm run type-check" ;;
-            "backend-tests") echo "  python -m pytest tests/unit tests/api --tb=short -x --maxfail=5" ;;
-            "backend-lint") echo "  cd backend && python -m ruff check ." ;;
-            "backend-types") echo "  python -m mypy pictorigo/" ;;
-            "backend-format") echo "  cd backend && python -m black --check ." ;;
         esac
     done
     exit 1
