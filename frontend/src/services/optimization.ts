@@ -445,10 +445,10 @@ export class OptimizationService {
 
 // Default optimization settings
 export const defaultOptimizationSettings = {
-  maxIterations: 100,
+  maxIterations: 200,  // Sufficient for bundle adjustment with good initialization
   tolerance: 1e-6,
   damping: 0.1,
-  verbose: false
+  verbose: true  // Enable verbose logging to see progress
 }
 
 // Validation function

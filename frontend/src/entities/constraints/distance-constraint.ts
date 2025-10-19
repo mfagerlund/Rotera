@@ -2,6 +2,8 @@
 
 import type { ConstraintId, PointId } from '../../types/ids'
 import type { ValidationResult } from '../../validation/validator'
+import type { ValueMap } from '../../optimization/IOptimizable'
+import { V, type Value } from 'scalar-autograd'
 import { ValidationHelpers } from '../../validation/validator'
 import {
   Constraint,
@@ -197,5 +199,35 @@ export class DistanceConstraint extends Constraint {
 
   protected getTargetValue(): number {
     return this.targetDistance
+  }
+
+  /**
+   * Compute residuals for distance constraint.
+   * Residual: (actual_distance - target_distance)
+   * Should be 0 when the distance between points equals the target.
+   */
+  computeResiduals(valueMap: ValueMap): Value[] {
+    // Find points in valueMap by ID
+    let pointA: ReturnType<typeof valueMap.points.get> | undefined
+    let pointB: ReturnType<typeof valueMap.points.get> | undefined
+
+    for (const [point, vec] of valueMap.points) {
+      if (point.getId() === this.pointAId) pointA = vec
+      if (point.getId() === this.pointBId) pointB = vec
+    }
+
+    if (!pointA || !pointB) {
+      console.warn(`Distance constraint ${this.data.id}: points not found in valueMap`)
+      return []
+    }
+
+    // Calculate actual distance using Vec3 API
+    const diff = pointB.sub(pointA)
+    const dist = diff.magnitude
+
+    // Residual = actual - target
+    const residual = V.sub(dist, V.C(this.targetDistance))
+
+    return [residual]
   }
 }

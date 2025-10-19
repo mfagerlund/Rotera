@@ -1,0 +1,737 @@
+{
+  "version": "1.0.0",
+  "exportedAt": "2025-10-18T14:31:20.261Z",
+  "worldPoints": {
+    "8450fa8b-dcd6-441b-bc37-91da05068203": {
+      "id": "8450fa8b-dcd6-441b-bc37-91da05068203",
+      "name": "WP1",
+      "color": "#ff6b6b",
+      "isVisible": true,
+      "isOrigin": false,
+      "isLocked": false,
+      "createdAt": "2025-10-18T14:31:20.259Z",
+      "updatedAt": "2025-10-18T14:31:20.260Z"
+    },
+    "984a965a-adb5-4a27-aa92-b16fcf6f3d8b": {
+      "id": "984a965a-adb5-4a27-aa92-b16fcf6f3d8b",
+      "name": "WP2",
+      "color": "#4ecdc4",
+      "isVisible": true,
+      "isOrigin": false,
+      "isLocked": false,
+      "createdAt": "2025-10-18T14:31:20.260Z",
+      "updatedAt": "2025-10-18T14:31:20.260Z"
+    },
+    "a19c1c98-7141-42af-852b-85d545a5cb35": {
+      "id": "a19c1c98-7141-42af-852b-85d545a5cb35",
+      "name": "WP3",
+      "color": "#45b7d1",
+      "isVisible": true,
+      "isOrigin": false,
+      "isLocked": false,
+      "createdAt": "2025-10-18T14:31:20.260Z",
+      "updatedAt": "2025-10-18T14:31:20.260Z"
+    },
+    "c7dcd4b3-5403-4ed0-9d8d-df633300f1f0": {
+      "id": "c7dcd4b3-5403-4ed0-9d8d-df633300f1f0",
+      "name": "WP4",
+      "color": "#96ceb4",
+      "isVisible": true,
+      "isOrigin": false,
+      "isLocked": false,
+      "createdAt": "2025-10-18T14:31:20.260Z",
+      "updatedAt": "2025-10-18T14:31:20.260Z"
+    },
+    "c2e0cac1-915f-46a7-805a-af101d406d4b": {
+      "id": "c2e0cac1-915f-46a7-805a-af101d406d4b",
+      "name": "WP5",
+      "color": "#ffeaa7",
+      "isVisible": true,
+      "isOrigin": false,
+      "isLocked": false,
+      "createdAt": "2025-10-18T14:31:20.260Z",
+      "updatedAt": "2025-10-18T14:31:20.260Z"
+    },
+    "71dda9dc-6463-4bc9-b631-0a36e5583ea1": {
+      "id": "71dda9dc-6463-4bc9-b631-0a36e5583ea1",
+      "name": "WP6",
+      "color": "#dda0dd",
+      "isVisible": true,
+      "isOrigin": false,
+      "isLocked": false,
+      "createdAt": "2025-10-18T14:31:20.260Z",
+      "updatedAt": "2025-10-18T14:31:20.260Z"
+    },
+    "b97c28c0-3180-4ba3-9f11-126dc6c7dd28": {
+      "id": "b97c28c0-3180-4ba3-9f11-126dc6c7dd28",
+      "name": "WP7",
+      "color": "#ff9f43",
+      "isVisible": true,
+      "isOrigin": false,
+      "isLocked": false,
+      "createdAt": "2025-10-18T14:31:20.260Z",
+      "updatedAt": "2025-10-18T14:31:20.260Z"
+    },
+    "ecddd062-6a29-409d-9827-58302ec0508b": {
+      "id": "ecddd062-6a29-409d-9827-58302ec0508b",
+      "name": "WP8",
+      "color": "#6c5ce7",
+      "isVisible": true,
+      "isOrigin": false,
+      "isLocked": false,
+      "createdAt": "2025-10-18T14:31:20.260Z",
+      "updatedAt": "2025-10-18T14:31:20.260Z"
+    },
+    "4a7e5ee8-8270-442b-9b5f-f93cf2962b5d": {
+      "id": "4a7e5ee8-8270-442b-9b5f-f93cf2962b5d",
+      "name": "WP9",
+      "color": "#ff6b6b",
+      "isVisible": true,
+      "isOrigin": false,
+      "isLocked": false,
+      "createdAt": "2025-10-18T14:31:20.260Z",
+      "updatedAt": "2025-10-18T14:31:20.260Z"
+    }
+  },
+  "lines": {
+    "221a8b81-d045-44a5-b053-ded98f13ffb1": {
+      "id": "221a8b81-d045-44a5-b053-ded98f13ffb1",
+      "name": "Loop_1",
+      "pointA": "8450fa8b-dcd6-441b-bc37-91da05068203",
+      "pointB": "984a965a-adb5-4a27-aa92-b16fcf6f3d8b",
+      "color": "#0696d7",
+      "isVisible": true,
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "constraints": {
+        "direction": "z-aligned",
+        "targetLength": 10,
+        "tolerance": 0.001
+      },
+      "createdAt": "2025-10-18T13:44:15.482Z",
+      "updatedAt": "2025-10-18T14:31:20.260Z"
+    },
+    "193f189f-8189-4ec3-90ba-6b901d9e90d2": {
+      "id": "193f189f-8189-4ec3-90ba-6b901d9e90d2",
+      "name": "Loop_2",
+      "pointA": "984a965a-adb5-4a27-aa92-b16fcf6f3d8b",
+      "pointB": "a19c1c98-7141-42af-852b-85d545a5cb35",
+      "color": "#0696d7",
+      "isVisible": true,
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "constraints": {
+        "direction": "horizontal",
+        "tolerance": 0.001
+      },
+      "createdAt": "2025-10-18T13:44:15.490Z",
+      "updatedAt": "2025-10-18T14:31:20.260Z"
+    },
+    "8a395164-c327-4de9-bdc0-e9d3a8b357c9": {
+      "id": "8a395164-c327-4de9-bdc0-e9d3a8b357c9",
+      "name": "Loop_3",
+      "pointA": "a19c1c98-7141-42af-852b-85d545a5cb35",
+      "pointB": "c7dcd4b3-5403-4ed0-9d8d-df633300f1f0",
+      "color": "#0696d7",
+      "isVisible": true,
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "constraints": {
+        "direction": "horizontal",
+        "tolerance": 0.001
+      },
+      "createdAt": "2025-10-18T13:44:15.492Z",
+      "updatedAt": "2025-10-18T14:31:20.260Z"
+    },
+    "883c3200-03df-4830-ac92-85bd67608d91": {
+      "id": "883c3200-03df-4830-ac92-85bd67608d91",
+      "name": "Loop_4",
+      "pointA": "c7dcd4b3-5403-4ed0-9d8d-df633300f1f0",
+      "pointB": "8450fa8b-dcd6-441b-bc37-91da05068203",
+      "color": "#0696d7",
+      "isVisible": true,
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "constraints": {
+        "direction": "x-aligned",
+        "targetLength": 10,
+        "tolerance": 0.001
+      },
+      "createdAt": "2025-10-18T13:44:15.495Z",
+      "updatedAt": "2025-10-18T14:31:20.260Z"
+    },
+    "2f4994be-4877-4876-8eef-0a730b8fd07d": {
+      "id": "2f4994be-4877-4876-8eef-0a730b8fd07d",
+      "name": "Loop_1",
+      "pointA": "71dda9dc-6463-4bc9-b631-0a36e5583ea1",
+      "pointB": "b97c28c0-3180-4ba3-9f11-126dc6c7dd28",
+      "color": "#0696d7",
+      "isVisible": true,
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "constraints": {
+        "direction": "horizontal",
+        "targetLength": 10,
+        "tolerance": 0.001
+      },
+      "createdAt": "2025-10-18T13:47:15.273Z",
+      "updatedAt": "2025-10-18T14:31:20.260Z"
+    },
+    "6d9b4d86-42b1-4b5a-a214-55991c160a5a": {
+      "id": "6d9b4d86-42b1-4b5a-a214-55991c160a5a",
+      "name": "Loop_2",
+      "pointA": "b97c28c0-3180-4ba3-9f11-126dc6c7dd28",
+      "pointB": "ecddd062-6a29-409d-9827-58302ec0508b",
+      "color": "#0696d7",
+      "isVisible": true,
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "constraints": {
+        "direction": "horizontal",
+        "tolerance": 0.001
+      },
+      "createdAt": "2025-10-18T13:47:15.276Z",
+      "updatedAt": "2025-10-18T14:31:20.260Z"
+    },
+    "c6d3b423-2ee6-4772-bca6-a8a50fb06345": {
+      "id": "c6d3b423-2ee6-4772-bca6-a8a50fb06345",
+      "name": "Loop_3",
+      "pointA": "ecddd062-6a29-409d-9827-58302ec0508b",
+      "pointB": "4a7e5ee8-8270-442b-9b5f-f93cf2962b5d",
+      "color": "#0696d7",
+      "isVisible": true,
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "constraints": {
+        "direction": "horizontal",
+        "tolerance": 0.001
+      },
+      "createdAt": "2025-10-18T13:47:15.279Z",
+      "updatedAt": "2025-10-18T14:31:20.260Z"
+    },
+    "6b490113-5477-46a1-89c2-8679a471b273": {
+      "id": "6b490113-5477-46a1-89c2-8679a471b273",
+      "name": "Loop_4",
+      "pointA": "4a7e5ee8-8270-442b-9b5f-f93cf2962b5d",
+      "pointB": "71dda9dc-6463-4bc9-b631-0a36e5583ea1",
+      "color": "#0696d7",
+      "isVisible": true,
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "constraints": {
+        "direction": "horizontal",
+        "targetLength": 10,
+        "tolerance": 0.001
+      },
+      "createdAt": "2025-10-18T13:47:15.282Z",
+      "updatedAt": "2025-10-18T14:31:20.260Z"
+    },
+    "1c07f1d7-9b17-41a1-aaf7-dc7291bf0b16": {
+      "id": "1c07f1d7-9b17-41a1-aaf7-dc7291bf0b16",
+      "name": "L9",
+      "pointA": "71dda9dc-6463-4bc9-b631-0a36e5583ea1",
+      "pointB": "8450fa8b-dcd6-441b-bc37-91da05068203",
+      "color": "#0696d7",
+      "isVisible": true,
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "constraints": {
+        "direction": "vertical",
+        "targetLength": 10,
+        "tolerance": 0.001
+      },
+      "createdAt": "2025-10-18T13:47:56.032Z",
+      "updatedAt": "2025-10-18T14:31:20.260Z"
+    }
+  },
+  "cameras": [
+    {
+      "id": "f1243035-50cb-4f4a-b101-c6531f9bd593",
+      "name": "Camera_1",
+      "focalLength": 1000,
+      "principalPointX": 0,
+      "principalPointY": 0,
+      "skewCoefficient": 0,
+      "aspectRatio": 1,
+      "radialDistortion": [
+        0,
+        0,
+        0
+      ],
+      "tangentialDistortion": [
+        0,
+        0
+      ],
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "imageWidth": 1920,
+      "imageHeight": 1080,
+      "calibrationAccuracy": 0,
+      "isVisible": true,
+      "color": "#ffff00",
+      "createdAt": "2025-10-18T14:31:20.260Z",
+      "updatedAt": "2025-10-18T14:31:20.260Z"
+    },
+    {
+      "id": "a1a425f5-712d-4421-b90a-dfb4623e2bd7",
+      "name": "Camera_2",
+      "focalLength": 1000,
+      "principalPointX": 0,
+      "principalPointY": 0,
+      "skewCoefficient": 0,
+      "aspectRatio": 1,
+      "radialDistortion": [
+        0,
+        0,
+        0
+      ],
+      "tangentialDistortion": [
+        0,
+        0
+      ],
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "imageWidth": 1920,
+      "imageHeight": 1080,
+      "calibrationAccuracy": 0,
+      "isVisible": true,
+      "color": "#ffff00",
+      "createdAt": "2025-10-18T14:31:20.260Z",
+      "updatedAt": "2025-10-18T14:31:20.260Z"
+    },
+    {
+      "id": "677cf239-3126-4b0f-b207-4f2ab9c2fbf9",
+      "name": "Camera_3",
+      "focalLength": 1000,
+      "principalPointX": 0,
+      "principalPointY": 0,
+      "skewCoefficient": 0,
+      "aspectRatio": 1,
+      "radialDistortion": [
+        0,
+        0,
+        0
+      ],
+      "tangentialDistortion": [
+        0,
+        0
+      ],
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "imageWidth": 1920,
+      "imageHeight": 1080,
+      "calibrationAccuracy": 0,
+      "isVisible": true,
+      "color": "#ffff00",
+      "createdAt": "2025-10-18T14:31:20.260Z",
+      "updatedAt": "2025-10-18T14:31:20.260Z"
+    }
+  ],
+  "images": {
+    "e4dc41a9-ef4f-40be-b6cf-3f981c933919": {
+      "id": "e4dc41a9-ef4f-40be-b6cf-3f981c933919",
+      "name": "1",
+      "filename": "1",
+      "url": "",
+      "width": 720,
+      "height": 720,
+      "cameraId": "f1243035-50cb-4f4a-b101-c6531f9bd593",
+      "imagePoints": {
+        "ip0": {
+          "id": "ip0",
+          "worldPointId": "8450fa8b-dcd6-441b-bc37-91da05068203",
+          "u": 627.9999542236328,
+          "v": 615.3333320617676,
+          "isVisible": true,
+          "isManuallyPlaced": true,
+          "confidence": 1,
+          "createdAt": "2025-10-18T14:31:20.260Z",
+          "updatedAt": "2025-10-18T14:31:20.260Z"
+        },
+        "ip1": {
+          "id": "ip1",
+          "worldPointId": "984a965a-adb5-4a27-aa92-b16fcf6f3d8b",
+          "u": 53.83995422363284,
+          "v": 614.293332061768,
+          "isVisible": true,
+          "isManuallyPlaced": true,
+          "confidence": 1,
+          "createdAt": "2025-10-18T14:31:20.260Z",
+          "updatedAt": "2025-10-18T14:31:20.260Z"
+        },
+        "ip2": {
+          "id": "ip2",
+          "worldPointId": "a19c1c98-7141-42af-852b-85d545a5cb35",
+          "u": 54.5999542236328,
+          "v": 42.413332061767605,
+          "isVisible": true,
+          "isManuallyPlaced": true,
+          "confidence": 1,
+          "createdAt": "2025-10-18T14:31:20.260Z",
+          "updatedAt": "2025-10-18T14:31:20.260Z"
+        },
+        "ip3": {
+          "id": "ip3",
+          "worldPointId": "c7dcd4b3-5403-4ed0-9d8d-df633300f1f0",
+          "u": 628.0399542236325,
+          "v": 41.933332061767565,
+          "isVisible": true,
+          "isManuallyPlaced": true,
+          "confidence": 1,
+          "createdAt": "2025-10-18T14:31:20.260Z",
+          "updatedAt": "2025-10-18T14:31:20.260Z"
+        },
+        "ip4": {
+          "id": "ip4",
+          "worldPointId": "c2e0cac1-915f-46a7-805a-af101d406d4b",
+          "u": 352.9999542236328,
+          "v": 441.3333320617676,
+          "isVisible": true,
+          "isManuallyPlaced": true,
+          "confidence": 1,
+          "createdAt": "2025-10-18T14:31:20.260Z",
+          "updatedAt": "2025-10-18T14:31:20.260Z"
+        }
+      },
+      "isProcessed": false,
+      "isVisible": true,
+      "opacity": 1,
+      "createdAt": "2025-10-18T14:31:20.260Z",
+      "updatedAt": "2025-10-18T14:31:20.260Z"
+    },
+    "c03060b6-ba75-4aa1-a5b5-4c05eec1702c": {
+      "id": "c03060b6-ba75-4aa1-a5b5-4c05eec1702c",
+      "name": "2",
+      "filename": "2",
+      "url": "",
+      "width": 1085,
+      "height": 776,
+      "cameraId": "a1a425f5-712d-4421-b90a-dfb4623e2bd7",
+      "imagePoints": {
+        "ip0": {
+          "id": "ip0",
+          "worldPointId": "8450fa8b-dcd6-441b-bc37-91da05068203",
+          "u": 449.61534543264344,
+          "v": 757.8557399392811,
+          "isVisible": true,
+          "isManuallyPlaced": true,
+          "confidence": 1,
+          "createdAt": "2025-10-18T14:31:20.260Z",
+          "updatedAt": "2025-10-18T14:31:20.260Z"
+        },
+        "ip1": {
+          "id": "ip1",
+          "worldPointId": "984a965a-adb5-4a27-aa92-b16fcf6f3d8b",
+          "u": 103.23652550867997,
+          "v": 621.0326733772682,
+          "isVisible": true,
+          "isManuallyPlaced": true,
+          "confidence": 1,
+          "createdAt": "2025-10-18T14:31:20.260Z",
+          "updatedAt": "2025-10-18T14:31:20.260Z"
+        },
+        "ip2": {
+          "id": "ip2",
+          "worldPointId": "a19c1c98-7141-42af-852b-85d545a5cb35",
+          "u": 359.2749676583746,
+          "v": 433.0826876099682,
+          "isVisible": true,
+          "isManuallyPlaced": true,
+          "confidence": 1,
+          "createdAt": "2025-10-18T14:31:20.260Z",
+          "updatedAt": "2025-10-18T14:31:20.260Z"
+        },
+        "ip3": {
+          "id": "ip3",
+          "worldPointId": "c7dcd4b3-5403-4ed0-9d8d-df633300f1f0",
+          "u": 687.3191735861292,
+          "v": 543.0903715872199,
+          "isVisible": true,
+          "isManuallyPlaced": true,
+          "confidence": 1,
+          "createdAt": "2025-10-18T14:31:20.260Z",
+          "updatedAt": "2025-10-18T14:31:20.260Z"
+        },
+        "ip4": {
+          "id": "ip4",
+          "worldPointId": "c2e0cac1-915f-46a7-805a-af101d406d4b",
+          "u": 350.9961221314516,
+          "v": 622.8903655442849,
+          "isVisible": true,
+          "isManuallyPlaced": true,
+          "confidence": 1,
+          "createdAt": "2025-10-18T14:31:20.260Z",
+          "updatedAt": "2025-10-18T14:31:20.260Z"
+        },
+        "ip5": {
+          "id": "ip5",
+          "worldPointId": "71dda9dc-6463-4bc9-b631-0a36e5583ea1",
+          "u": 428.4134239612571,
+          "v": 364.1057697563914,
+          "isVisible": true,
+          "isManuallyPlaced": true,
+          "confidence": 1,
+          "createdAt": "2025-10-18T14:31:20.260Z",
+          "updatedAt": "2025-10-18T14:31:20.260Z"
+        },
+        "ip6": {
+          "id": "ip6",
+          "worldPointId": "b97c28c0-3180-4ba3-9f11-126dc6c7dd28",
+          "u": 55.8653752497538,
+          "v": 244.97116339336324,
+          "isVisible": true,
+          "isManuallyPlaced": true,
+          "confidence": 1,
+          "createdAt": "2025-10-18T14:31:20.260Z",
+          "updatedAt": "2025-10-18T14:31:20.260Z"
+        },
+        "ip7": {
+          "id": "ip7",
+          "worldPointId": "ecddd062-6a29-409d-9827-58302ec0508b",
+          "u": 334.5192003022603,
+          "v": 80.4038681630786,
+          "isVisible": true,
+          "isManuallyPlaced": true,
+          "confidence": 1,
+          "createdAt": "2025-10-18T14:31:20.260Z",
+          "updatedAt": "2025-10-18T14:31:20.260Z"
+        },
+        "ip8": {
+          "id": "ip8",
+          "worldPointId": "4a7e5ee8-8270-442b-9b5f-f93cf2962b5d",
+          "u": 685.8653275423773,
+          "v": 177.32693774655914,
+          "isVisible": true,
+          "isManuallyPlaced": true,
+          "confidence": 1,
+          "createdAt": "2025-10-18T14:31:20.260Z",
+          "updatedAt": "2025-10-18T14:31:20.260Z"
+        }
+      },
+      "isProcessed": false,
+      "isVisible": true,
+      "opacity": 1,
+      "createdAt": "2025-10-18T14:31:20.260Z",
+      "updatedAt": "2025-10-18T14:31:20.260Z"
+    },
+    "eb1ab86e-d6e1-4700-977c-e9c35a3f602d": {
+      "id": "eb1ab86e-d6e1-4700-977c-e9c35a3f602d",
+      "name": "3",
+      "filename": "3",
+      "url": "",
+      "width": 831,
+      "height": 863,
+      "cameraId": "677cf239-3126-4b0f-b207-4f2ab9c2fbf9",
+      "imagePoints": {
+        "ip0": {
+          "id": "ip0",
+          "worldPointId": "8450fa8b-dcd6-441b-bc37-91da05068203",
+          "u": 407.89995422363296,
+          "v": 819.1133320617676,
+          "isVisible": true,
+          "isManuallyPlaced": true,
+          "confidence": 1,
+          "createdAt": "2025-10-18T14:31:20.260Z",
+          "updatedAt": "2025-10-18T14:31:20.260Z"
+        },
+        "ip1": {
+          "id": "ip1",
+          "worldPointId": "984a965a-adb5-4a27-aa92-b16fcf6f3d8b",
+          "u": 148.97995422363292,
+          "v": 609.4733320617676,
+          "isVisible": true,
+          "isManuallyPlaced": true,
+          "confidence": 1,
+          "createdAt": "2025-10-18T14:31:20.260Z",
+          "updatedAt": "2025-10-18T14:31:20.260Z"
+        },
+        "ip2": {
+          "id": "ip2",
+          "worldPointId": "a19c1c98-7141-42af-852b-85d545a5cb35",
+          "u": 485.2199542236326,
+          "v": 445.1933320617677,
+          "isVisible": true,
+          "isManuallyPlaced": true,
+          "confidence": 1,
+          "createdAt": "2025-10-18T14:31:20.260Z",
+          "updatedAt": "2025-10-18T14:31:20.260Z"
+        },
+        "ip3": {
+          "id": "ip3",
+          "worldPointId": "c7dcd4b3-5403-4ed0-9d8d-df633300f1f0",
+          "u": 753.739954223633,
+          "v": 622.1133320617677,
+          "isVisible": true,
+          "isManuallyPlaced": true,
+          "confidence": 1,
+          "createdAt": "2025-10-18T14:31:20.260Z",
+          "updatedAt": "2025-10-18T14:31:20.260Z"
+        },
+        "ip4": {
+          "id": "ip4",
+          "worldPointId": "c2e0cac1-915f-46a7-805a-af101d406d4b",
+          "u": 504.13995422363325,
+          "v": 654.7933320617673,
+          "isVisible": true,
+          "isManuallyPlaced": true,
+          "confidence": 1,
+          "createdAt": "2025-10-18T14:31:20.260Z",
+          "updatedAt": "2025-10-18T14:31:20.260Z"
+        },
+        "ip5": {
+          "id": "ip5",
+          "worldPointId": "71dda9dc-6463-4bc9-b631-0a36e5583ea1",
+          "u": 371.49995422363304,
+          "v": 428.55333206176726,
+          "isVisible": true,
+          "isManuallyPlaced": true,
+          "confidence": 1,
+          "createdAt": "2025-10-18T14:31:20.260Z",
+          "updatedAt": "2025-10-18T14:31:20.260Z"
+        },
+        "ip6": {
+          "id": "ip6",
+          "worldPointId": "b97c28c0-3180-4ba3-9f11-126dc6c7dd28",
+          "u": 92.0999542236328,
+          "v": 238.23333206176767,
+          "isVisible": true,
+          "isManuallyPlaced": true,
+          "confidence": 1,
+          "createdAt": "2025-10-18T14:31:20.260Z",
+          "updatedAt": "2025-10-18T14:31:20.260Z"
+        },
+        "ip7": {
+          "id": "ip7",
+          "worldPointId": "ecddd062-6a29-409d-9827-58302ec0508b",
+          "u": 462.7799542236328,
+          "v": 91.15333206176753,
+          "isVisible": true,
+          "isManuallyPlaced": true,
+          "confidence": 1,
+          "createdAt": "2025-10-18T14:31:20.260Z",
+          "updatedAt": "2025-10-18T14:31:20.260Z"
+        },
+        "ip8": {
+          "id": "ip8",
+          "worldPointId": "4a7e5ee8-8270-442b-9b5f-f93cf2962b5d",
+          "u": 751.8999542236327,
+          "v": 250.0333320617675,
+          "isVisible": true,
+          "isManuallyPlaced": true,
+          "confidence": 1,
+          "createdAt": "2025-10-18T14:31:20.260Z",
+          "updatedAt": "2025-10-18T14:31:20.260Z"
+        }
+      },
+      "isProcessed": false,
+      "isVisible": true,
+      "opacity": 1,
+      "createdAt": "2025-10-18T14:31:20.260Z",
+      "updatedAt": "2025-10-18T14:31:20.260Z"
+    }
+  },
+  "constraints": [
+    {
+      "id": "constraint_1760795055497",
+      "name": "points_coplanar constraint",
+      "type": "points_coplanar",
+      "status": "satisfied",
+      "entities": {
+        "points": [
+          "8450fa8b-dcd6-441b-bc37-91da05068203",
+          "984a965a-adb5-4a27-aa92-b16fcf6f3d8b",
+          "a19c1c98-7141-42af-852b-85d545a5cb35",
+          "c7dcd4b3-5403-4ed0-9d8d-df633300f1f0"
+        ]
+      },
+      "parameters": {
+        "tolerance": 0.001,
+        "priority": 5,
+        "name": "Loop_coplanar"
+      },
+      "isEnabled": true,
+      "isDriving": true,
+      "createdAt": "2025-10-18T13:44:15.497Z",
+      "updatedAt": "2025-10-18T14:31:20.261Z"
+    },
+    {
+      "id": "constraint_1760795235284",
+      "name": "points_coplanar constraint",
+      "type": "points_coplanar",
+      "status": "satisfied",
+      "entities": {
+        "points": [
+          "71dda9dc-6463-4bc9-b631-0a36e5583ea1",
+          "b97c28c0-3180-4ba3-9f11-126dc6c7dd28",
+          "ecddd062-6a29-409d-9827-58302ec0508b",
+          "4a7e5ee8-8270-442b-9b5f-f93cf2962b5d"
+        ]
+      },
+      "parameters": {
+        "tolerance": 0.001,
+        "priority": 5,
+        "name": "Loop_coplanar"
+      },
+      "isEnabled": true,
+      "isDriving": true,
+      "createdAt": "2025-10-18T13:47:15.284Z",
+      "updatedAt": "2025-10-18T14:31:20.261Z"
+    }
+  ],
+  "metadata": {
+    "projectName": "New Project",
+    "projectId": "1e073995-3794-4886-9ce9-ea5a1f4d8e0d",
+    "totalWorldPoints": 9,
+    "totalLines": 9,
+    "totalCameras": 3,
+    "totalImages": 3,
+    "totalConstraints": 2,
+    "totalImagePoints": 23
+  },
+  "statistics": {
+    "worldPointsWithCoordinates": 0,
+    "worldPointsWithoutCoordinates": 9,
+    "averageImagePointsPerWorldPoint": 2.5555555555555554,
+    "constraintsByType": {
+      "points_coplanar": 2
+    },
+    "imagePointsPerImage": {
+      "e4dc41a9-ef4f-40be-b6cf-3f981c933919": 5,
+      "c03060b6-ba75-4aa1-a5b5-4c05eec1702c": 9,
+      "eb1ab86e-d6e1-4700-977c-e9c35a3f602d": 9
+    }
+  }
+}

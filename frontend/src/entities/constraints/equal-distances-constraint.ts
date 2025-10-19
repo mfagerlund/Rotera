@@ -2,6 +2,8 @@
 
 import type { ConstraintId, PointId } from '../../types/ids'
 import type { ValidationResult } from '../../validation/validator'
+import type { ValueMap } from '../../optimization/IOptimizable'
+import { V, Vec3, type Value } from 'scalar-autograd'
 import { ValidationHelpers } from '../../validation/validator'
 import {
   Constraint,
@@ -274,5 +276,63 @@ export class EqualDistancesConstraint extends Constraint {
 
   protected getTargetValue(): number {
     return 0 // Equal distances should have 0 standard deviation
+  }
+
+  /**
+   * Compute residuals for equal distances constraint.
+   * Residual: All pairwise distances should be equal.
+   * Returns (n-1) residuals where n is the number of point pairs,
+   * each residual = distance_i - distance_0.
+   */
+  computeResiduals(valueMap: ValueMap): Value[] {
+    const distancePairs = this.distancePairs
+
+    if (distancePairs.length < 2) {
+      console.warn('Equal distances constraint requires at least 2 pairs')
+      return []
+    }
+
+    // Helper to find point in valueMap
+    const findPoint = (pointId: PointId): Vec3 | undefined => {
+      for (const [point, vec] of valueMap.points) {
+        if (point.getId() === pointId) return vec
+      }
+      return undefined
+    }
+
+    // Calculate distance for a pair using Vec3 API
+    const calculateDistance = (pair: [PointId, PointId]): Value | undefined => {
+      const p1 = findPoint(pair[0])
+      const p2 = findPoint(pair[1])
+
+      if (!p1 || !p2) return undefined
+
+      const diff = p2.sub(p1)
+      return diff.magnitude
+    }
+
+    // Calculate all distances
+    const distances: Value[] = []
+    for (const pair of distancePairs) {
+      const dist = calculateDistance(pair)
+      if (dist) {
+        distances.push(dist)
+      }
+    }
+
+    if (distances.length < 2) {
+      console.warn(`Equal distances constraint ${this.data.id}: not enough valid pairs found`)
+      return []
+    }
+
+    // Create residuals: distance_i - distance_0 should all be 0
+    const residuals: Value[] = []
+    const referenceDist = distances[0]
+
+    for (let i = 1; i < distances.length; i++) {
+      residuals.push(V.sub(distances[i], referenceDist))
+    }
+
+    return residuals
   }
 }

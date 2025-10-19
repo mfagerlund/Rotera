@@ -3,6 +3,8 @@
 import type { ConstraintId, PointId, LineId, PlaneId, EntityId } from '../../types/ids'
 import type { ISelectable, SelectableType } from '../../types/selectable'
 import type { IValidatable, ValidationContext, ValidationResult, ValidationError } from '../../validation/validator'
+import type { ValueMap, IResidualProvider } from '../../optimization/IOptimizable'
+import type { Value } from 'scalar-autograd'
 import { ValidationHelpers } from '../../validation/validator'
 import type { WorldPoint } from '../world-point'
 import type { Line } from '../line'
@@ -81,6 +83,7 @@ export interface ConstraintDto extends BaseConstraintDto {
   coplanarPointsConstraint?: CoplanarPointsConstraintDto
   equalDistancesConstraint?: EqualDistancesConstraintDto
   equalAnglesConstraint?: EqualAnglesConstraintDto
+  projectionConstraint?: ProjectionConstraintDto
 }
 
 // Individual constraint DTOs
@@ -120,8 +123,14 @@ export interface EqualAnglesConstraintDto {
   angleTriplets: [PointId, PointId, PointId][]
 }
 
+export interface ProjectionConstraintDto {
+  cameraId: string // CameraId
+  observedU: number
+  observedV: number
+}
+
 // Abstract base constraint class
-export abstract class Constraint implements ISelectable, IValidatable {
+export abstract class Constraint implements ISelectable, IValidatable, IResidualProvider {
   private selected = false
 
   // Direct object references for performance
@@ -142,6 +151,15 @@ export abstract class Constraint implements ISelectable, IValidatable {
   abstract getRequiredEntityCounts(): { points?: number; lines?: number; planes?: number }
   abstract toConstraintDto(): ConstraintDto
   abstract clone(newId: ConstraintId, newName?: string): Constraint
+
+  /**
+   * Compute residuals for this constraint.
+   * Must be implemented by each constraint type to define its residual function.
+   *
+   * @param valueMap - The ValueMap containing all entity values
+   * @returns Array of Value objects (residuals that should be zero)
+   */
+  abstract computeResiduals(valueMap: ValueMap): Value[]
 
   // ISelectable implementation
   getId(): ConstraintId {

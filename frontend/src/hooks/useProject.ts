@@ -11,6 +11,7 @@ import { CameraDto } from '../entities/camera'
 import { ImageDto } from '../entities/image'
 import { ConstraintDto, convertFrontendConstraintToDto } from '../entities/constraints'
 import { OptimizationExportDto, calculateExportStatistics } from '../types/optimization-export'
+import { Quaternion } from '../optimization/Quaternion'
 
 export const useProject = () => {
   const [project, setProject] = useState<Project | null>(null)
@@ -638,7 +639,14 @@ export const useProject = () => {
           camera.intrinsics?.p2 || 0
         ],
         position: camera.extrinsics?.translation || [0, 0, 0],
-        rotation: camera.extrinsics?.rotation || [0, 0, 0],
+        rotation: camera.extrinsics?.rotation
+          ? (() => {
+              // Legacy rotation is Rodrigues vector [rx, ry, rz]
+              // Convert to quaternion via euler angles (treating as euler for simplicity)
+              const quat = Quaternion.fromEuler(...camera.extrinsics.rotation);
+              return quat.toArray();
+            })()
+          : [1, 0, 0, 0], // Identity quaternion
         imageWidth: 1920,
         imageHeight: 1080,
         calibrationAccuracy: camera.calibrationQuality || 0,

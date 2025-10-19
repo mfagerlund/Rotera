@@ -1,5 +1,6 @@
 - Before we're done with a task, run `bash check.sh`
 - This project should currently have NO backward compability and NO legacy code. Keep it CLEAN.
+- NEVER create multiple objects, classes, interfaces, or types that serve the same or similar purposes. Each concept gets ONE representation.
 - Don't run the dev server. I run the dev server.
 - gogo means "Start executing and don't stop until finished. Beep when done."
 - Always beep when a task is done. Beep: powershell -c "[System.Media.SystemSounds]::Beep.Play()"

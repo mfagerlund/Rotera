@@ -1,0 +1,479 @@
+{
+  "version": "1.0.0",
+  "exportedAt": "2025-10-18T13:51:18.181Z",
+  "worldPoints": {
+    "8450fa8b-dcd6-441b-bc37-91da05068203": {
+      "id": "8450fa8b-dcd6-441b-bc37-91da05068203",
+      "name": "WP1",
+      "color": "#ff6b6b",
+      "isVisible": true,
+      "isOrigin": false,
+      "isLocked": false,
+      "createdAt": "2025-10-18T13:51:18.179Z",
+      "updatedAt": "2025-10-18T13:51:18.179Z",
+      "xyz": [
+        3.333040969995329,
+        -9.539994612677042,
+        -3.8368442499689426
+      ]
+    },
+    "984a965a-adb5-4a27-aa92-b16fcf6f3d8b": {
+      "id": "984a965a-adb5-4a27-aa92-b16fcf6f3d8b",
+      "name": "WP2",
+      "color": "#4ecdc4",
+      "isVisible": true,
+      "isOrigin": false,
+      "isLocked": false,
+      "createdAt": "2025-10-18T13:51:18.179Z",
+      "updatedAt": "2025-10-18T13:51:18.179Z",
+      "xyz": [
+        -2.0392151279534065,
+        -3.014446623388256,
+        -5.25012731305297
+      ]
+    },
+    "a19c1c98-7141-42af-852b-85d545a5cb35": {
+      "id": "a19c1c98-7141-42af-852b-85d545a5cb35",
+      "name": "WP3",
+      "color": "#45b7d1",
+      "isVisible": true,
+      "isOrigin": false,
+      "isLocked": false,
+      "createdAt": "2025-10-18T13:51:18.179Z",
+      "updatedAt": "2025-10-18T13:51:18.179Z",
+      "xyz": [
+        -3.657507407150673,
+        4.861030167517009,
+        5.619407081769654
+      ]
+    },
+    "c7dcd4b3-5403-4ed0-9d8d-df633300f1f0": {
+      "id": "c7dcd4b3-5403-4ed0-9d8d-df633300f1f0",
+      "name": "WP4",
+      "color": "#96ceb4",
+      "isVisible": true,
+      "isOrigin": false,
+      "isLocked": false,
+      "createdAt": "2025-10-18T13:51:18.179Z",
+      "updatedAt": "2025-10-18T13:51:18.179Z",
+      "xyz": [
+        -9.541703499537304,
+        -8.159931099581556,
+        0.15948668452059334
+      ]
+    },
+    "c2e0cac1-915f-46a7-805a-af101d406d4b": {
+      "id": "c2e0cac1-915f-46a7-805a-af101d406d4b",
+      "name": "WP5",
+      "color": "#ffeaa7",
+      "isVisible": true,
+      "isOrigin": false,
+      "isLocked": false,
+      "createdAt": "2025-10-18T13:51:18.179Z",
+      "updatedAt": "2025-10-18T13:51:18.179Z",
+      "xyz": [
+        3.515642215764685,
+        7.769412514473597,
+        -0.7246798947846012
+      ]
+    },
+    "71dda9dc-6463-4bc9-b631-0a36e5583ea1": {
+      "id": "71dda9dc-6463-4bc9-b631-0a36e5583ea1",
+      "name": "WP6",
+      "color": "#dda0dd",
+      "isVisible": true,
+      "isOrigin": false,
+      "isLocked": false,
+      "createdAt": "2025-10-18T13:51:18.179Z",
+      "updatedAt": "2025-10-18T13:51:18.179Z",
+      "xyz": [
+        -7.382734526923618,
+        5.641476205084031,
+        -4.0041979677784045
+      ]
+    },
+    "b97c28c0-3180-4ba3-9f11-126dc6c7dd28": {
+      "id": "b97c28c0-3180-4ba3-9f11-126dc6c7dd28",
+      "name": "WP7",
+      "color": "#ff9f43",
+      "isVisible": true,
+      "isOrigin": false,
+      "isLocked": false,
+      "createdAt": "2025-10-18T13:51:18.179Z",
+      "updatedAt": "2025-10-18T13:51:18.179Z",
+      "xyz": [
+        -3.9138512925405156,
+        2.414406833690257,
+        -7.668624382075313
+      ]
+    },
+    "ecddd062-6a29-409d-9827-58302ec0508b": {
+      "id": "ecddd062-6a29-409d-9827-58302ec0508b",
+      "name": "WP8",
+      "color": "#6c5ce7",
+      "isVisible": true,
+      "isOrigin": false,
+      "isLocked": false,
+      "createdAt": "2025-10-18T13:51:18.179Z",
+      "updatedAt": "2025-10-18T13:51:18.179Z",
+      "xyz": [
+        -0.2741169994463988,
+        -1.4379333313751363,
+        2.804180849393334
+      ]
+    },
+    "4a7e5ee8-8270-442b-9b5f-f93cf2962b5d": {
+      "id": "4a7e5ee8-8270-442b-9b5f-f93cf2962b5d",
+      "name": "WP9",
+      "color": "#ff6b6b",
+      "isVisible": true,
+      "isOrigin": false,
+      "isLocked": false,
+      "createdAt": "2025-10-18T13:51:18.179Z",
+      "updatedAt": "2025-10-18T13:51:18.179Z",
+      "xyz": [
+        -7.743130152821922,
+        1.2165646309536449,
+        -7.014072637202959
+      ]
+    }
+  },
+  "lines": {
+    "221a8b81-d045-44a5-b053-ded98f13ffb1": {
+      "id": "221a8b81-d045-44a5-b053-ded98f13ffb1",
+      "name": "Loop_1",
+      "pointA": "8450fa8b-dcd6-441b-bc37-91da05068203",
+      "pointB": "984a965a-adb5-4a27-aa92-b16fcf6f3d8b",
+      "color": "#0696d7",
+      "isVisible": true,
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "constraints": {
+        "direction": "z-aligned",
+        "targetLength": 10,
+        "tolerance": 0.001
+      },
+      "createdAt": "2025-10-18T13:44:15.482Z",
+      "updatedAt": "2025-10-18T13:51:18.179Z"
+    },
+    "193f189f-8189-4ec3-90ba-6b901d9e90d2": {
+      "id": "193f189f-8189-4ec3-90ba-6b901d9e90d2",
+      "name": "Loop_2",
+      "pointA": "984a965a-adb5-4a27-aa92-b16fcf6f3d8b",
+      "pointB": "a19c1c98-7141-42af-852b-85d545a5cb35",
+      "color": "#0696d7",
+      "isVisible": true,
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "constraints": {
+        "direction": "horizontal",
+        "tolerance": 0.001
+      },
+      "createdAt": "2025-10-18T13:44:15.490Z",
+      "updatedAt": "2025-10-18T13:51:18.179Z"
+    },
+    "8a395164-c327-4de9-bdc0-e9d3a8b357c9": {
+      "id": "8a395164-c327-4de9-bdc0-e9d3a8b357c9",
+      "name": "Loop_3",
+      "pointA": "a19c1c98-7141-42af-852b-85d545a5cb35",
+      "pointB": "c7dcd4b3-5403-4ed0-9d8d-df633300f1f0",
+      "color": "#0696d7",
+      "isVisible": true,
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "constraints": {
+        "direction": "horizontal",
+        "tolerance": 0.001
+      },
+      "createdAt": "2025-10-18T13:44:15.492Z",
+      "updatedAt": "2025-10-18T13:51:18.179Z"
+    },
+    "883c3200-03df-4830-ac92-85bd67608d91": {
+      "id": "883c3200-03df-4830-ac92-85bd67608d91",
+      "name": "Loop_4",
+      "pointA": "c7dcd4b3-5403-4ed0-9d8d-df633300f1f0",
+      "pointB": "8450fa8b-dcd6-441b-bc37-91da05068203",
+      "color": "#0696d7",
+      "isVisible": true,
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "constraints": {
+        "direction": "x-aligned",
+        "targetLength": 10,
+        "tolerance": 0.001
+      },
+      "createdAt": "2025-10-18T13:44:15.495Z",
+      "updatedAt": "2025-10-18T13:51:18.179Z"
+    },
+    "2f4994be-4877-4876-8eef-0a730b8fd07d": {
+      "id": "2f4994be-4877-4876-8eef-0a730b8fd07d",
+      "name": "Loop_1",
+      "pointA": "71dda9dc-6463-4bc9-b631-0a36e5583ea1",
+      "pointB": "b97c28c0-3180-4ba3-9f11-126dc6c7dd28",
+      "color": "#0696d7",
+      "isVisible": true,
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "constraints": {
+        "direction": "horizontal",
+        "targetLength": 10,
+        "tolerance": 0.001
+      },
+      "createdAt": "2025-10-18T13:47:15.273Z",
+      "updatedAt": "2025-10-18T13:51:18.179Z"
+    },
+    "6d9b4d86-42b1-4b5a-a214-55991c160a5a": {
+      "id": "6d9b4d86-42b1-4b5a-a214-55991c160a5a",
+      "name": "Loop_2",
+      "pointA": "b97c28c0-3180-4ba3-9f11-126dc6c7dd28",
+      "pointB": "ecddd062-6a29-409d-9827-58302ec0508b",
+      "color": "#0696d7",
+      "isVisible": true,
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "constraints": {
+        "direction": "horizontal",
+        "tolerance": 0.001
+      },
+      "createdAt": "2025-10-18T13:47:15.276Z",
+      "updatedAt": "2025-10-18T13:51:18.179Z"
+    },
+    "c6d3b423-2ee6-4772-bca6-a8a50fb06345": {
+      "id": "c6d3b423-2ee6-4772-bca6-a8a50fb06345",
+      "name": "Loop_3",
+      "pointA": "ecddd062-6a29-409d-9827-58302ec0508b",
+      "pointB": "4a7e5ee8-8270-442b-9b5f-f93cf2962b5d",
+      "color": "#0696d7",
+      "isVisible": true,
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "constraints": {
+        "direction": "horizontal",
+        "tolerance": 0.001
+      },
+      "createdAt": "2025-10-18T13:47:15.279Z",
+      "updatedAt": "2025-10-18T13:51:18.179Z"
+    },
+    "6b490113-5477-46a1-89c2-8679a471b273": {
+      "id": "6b490113-5477-46a1-89c2-8679a471b273",
+      "name": "Loop_4",
+      "pointA": "4a7e5ee8-8270-442b-9b5f-f93cf2962b5d",
+      "pointB": "71dda9dc-6463-4bc9-b631-0a36e5583ea1",
+      "color": "#0696d7",
+      "isVisible": true,
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "constraints": {
+        "direction": "horizontal",
+        "targetLength": 10,
+        "tolerance": 0.001
+      },
+      "createdAt": "2025-10-18T13:47:15.282Z",
+      "updatedAt": "2025-10-18T13:51:18.179Z"
+    },
+    "1c07f1d7-9b17-41a1-aaf7-dc7291bf0b16": {
+      "id": "1c07f1d7-9b17-41a1-aaf7-dc7291bf0b16",
+      "name": "L9",
+      "pointA": "71dda9dc-6463-4bc9-b631-0a36e5583ea1",
+      "pointB": "8450fa8b-dcd6-441b-bc37-91da05068203",
+      "color": "#0696d7",
+      "isVisible": true,
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "constraints": {
+        "direction": "vertical",
+        "targetLength": 10,
+        "tolerance": 0.001
+      },
+      "createdAt": "2025-10-18T13:47:56.032Z",
+      "updatedAt": "2025-10-18T13:51:18.179Z"
+    }
+  },
+  "cameras": [
+    {
+      "id": "f1243035-50cb-4f4a-b101-c6531f9bd593",
+      "name": "Camera_1",
+      "focalLength": 1000,
+      "principalPointX": 0,
+      "principalPointY": 0,
+      "skewCoefficient": 0,
+      "aspectRatio": 1,
+      "radialDistortion": [
+        0,
+        0,
+        0
+      ],
+      "tangentialDistortion": [
+        0,
+        0
+      ],
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "imageWidth": 1920,
+      "imageHeight": 1080,
+      "calibrationAccuracy": 0,
+      "isVisible": true,
+      "color": "#ffff00",
+      "createdAt": "2025-10-18T13:51:18.179Z",
+      "updatedAt": "2025-10-18T13:51:18.179Z"
+    },
+    {
+      "id": "a1a425f5-712d-4421-b90a-dfb4623e2bd7",
+      "name": "Camera_2",
+      "focalLength": 1000,
+      "principalPointX": 0,
+      "principalPointY": 0,
+      "skewCoefficient": 0,
+      "aspectRatio": 1,
+      "radialDistortion": [
+        0,
+        0,
+        0
+      ],
+      "tangentialDistortion": [
+        0,
+        0
+      ],
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "imageWidth": 1920,
+      "imageHeight": 1080,
+      "calibrationAccuracy": 0,
+      "isVisible": true,
+      "color": "#ffff00",
+      "createdAt": "2025-10-18T13:51:18.179Z",
+      "updatedAt": "2025-10-18T13:51:18.179Z"
+    },
+    {
+      "id": "677cf239-3126-4b0f-b207-4f2ab9c2fbf9",
+      "name": "Camera_3",
+      "focalLength": 1000,
+      "principalPointX": 0,
+      "principalPointY": 0,
+      "skewCoefficient": 0,
+      "aspectRatio": 1,
+      "radialDistortion": [
+        0,
+        0,
+        0
+      ],
+      "tangentialDistortion": [
+        0,
+        0
+      ],
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "imageWidth": 1920,
+      "imageHeight": 1080,
+      "calibrationAccuracy": 0,
+      "isVisible": true,
+      "color": "#ffff00",
+      "createdAt": "2025-10-18T13:51:18.179Z",
+      "updatedAt": "2025-10-18T13:51:18.179Z"
+    }
+  ],
+  "constraints": [
+    {
+      "id": "constraint_1760795055497",
+      "name": "points_coplanar constraint",
+      "type": "points_coplanar",
+      "status": "satisfied",
+      "entities": {
+        "points": [
+          "8450fa8b-dcd6-441b-bc37-91da05068203",
+          "984a965a-adb5-4a27-aa92-b16fcf6f3d8b",
+          "a19c1c98-7141-42af-852b-85d545a5cb35",
+          "c7dcd4b3-5403-4ed0-9d8d-df633300f1f0"
+        ]
+      },
+      "parameters": {
+        "tolerance": 0.001,
+        "priority": 5,
+        "name": "Loop_coplanar"
+      },
+      "isEnabled": true,
+      "isDriving": true,
+      "createdAt": "2025-10-18T13:44:15.497Z",
+      "updatedAt": "2025-10-18T13:51:18.181Z"
+    },
+    {
+      "id": "constraint_1760795235284",
+      "name": "points_coplanar constraint",
+      "type": "points_coplanar",
+      "status": "satisfied",
+      "entities": {
+        "points": [
+          "71dda9dc-6463-4bc9-b631-0a36e5583ea1",
+          "b97c28c0-3180-4ba3-9f11-126dc6c7dd28",
+          "ecddd062-6a29-409d-9827-58302ec0508b",
+          "4a7e5ee8-8270-442b-9b5f-f93cf2962b5d"
+        ]
+      },
+      "parameters": {
+        "tolerance": 0.001,
+        "priority": 5,
+        "name": "Loop_coplanar"
+      },
+      "isEnabled": true,
+      "isDriving": true,
+      "createdAt": "2025-10-18T13:47:15.284Z",
+      "updatedAt": "2025-10-18T13:51:18.181Z"
+    }
+  ],
+  "metadata": {
+    "projectName": "New Project",
+    "projectId": "1e073995-3794-4886-9ce9-ea5a1f4d8e0d",
+    "totalWorldPoints": 9,
+    "totalLines": 9,
+    "totalCameras": 3,
+    "totalImages": 3,
+    "totalConstraints": 2,
+    "totalImagePoints": 14
+  },
+  "statistics": {
+    "worldPointsWithCoordinates": 0,
+    "worldPointsWithoutCoordinates": 9,
+    "averageImagePointsPerWorldPoint": 1.5555555555555556,
+    "constraintsByType": {
+      "points_coplanar": 2
+    },
+    "imagePointsPerImage": {
+      "e4dc41a9-ef4f-40be-b6cf-3f981c933919": 5,
+      "c03060b6-ba75-4aa1-a5b5-4c05eec1702c": 9,
+      "eb1ab86e-d6e1-4700-977c-e9c35a3f602d": 0
+    }
+  }
+}

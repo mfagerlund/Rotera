@@ -2,6 +2,8 @@
 
 import type { ConstraintId, PointId } from '../../types/ids'
 import type { ValidationResult } from '../../validation/validator'
+import type { ValueMap } from '../../optimization/IOptimizable'
+import { Vec3, type Value } from 'scalar-autograd'
 import { ValidationHelpers } from '../../validation/validator'
 import {
   Constraint,
@@ -246,5 +248,57 @@ export class CoplanarPointsConstraint extends Constraint {
 
   protected getTargetValue(): number {
     return 0 // Coplanar points should have 0 deviation from the plane
+  }
+
+  /**
+   * Compute residuals for coplanar points constraint.
+   * Residual: For 4+ points to be coplanar, the scalar triple product
+   * (v1 · (v2 × v3)) should be zero.
+   * Returns 1 residual (the scalar triple product).
+   */
+  computeResiduals(valueMap: ValueMap): Value[] {
+    const pointIds = this.pointIds
+
+    if (pointIds.length < 4) {
+      console.warn('Coplanar constraint requires at least 4 points')
+      return []
+    }
+
+    // Find first 4 points in valueMap
+    const points: Vec3[] = []
+    for (const [point, vec] of valueMap.points) {
+      if (pointIds.includes(point.getId())) {
+        points.push(vec)
+        if (points.length === 4) break
+      }
+    }
+
+    if (points.length < 4) {
+      console.warn(`Coplanar constraint ${this.data.id}: not enough points found in valueMap`)
+      return []
+    }
+
+    const p0 = points[0]
+    const p1 = points[1]
+    const p2 = points[2]
+    const p3 = points[3]
+
+    // Calculate vectors from p0 using Vec3 API
+    const v1 = p1.sub(p0)
+    const v2 = p2.sub(p0)
+    const v3 = p3.sub(p0)
+
+    // Calculate cross product v2 × v3
+    const cross = Vec3.cross(v2, v3)
+
+    // Calculate scalar triple product: v1 · (v2 × v3)
+    const scalarTripleProduct = Vec3.dot(v1, cross)
+
+    // Should be 0 for coplanar points
+    return [scalarTripleProduct]
+  }
+
+  getPointIds(): PointId[] {
+    return this.pointIds
   }
 }

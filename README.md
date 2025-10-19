@@ -3,10 +3,10 @@ Poor Man's Photogrammetry
 
 ## 🚀 Current Status
 
-**ACTIVE DEVELOPMENT** - Core frontend is functional, solver migration in progress.
+**ACTIVE DEVELOPMENT** - Core frontend is functional, solver uses ScalarAutograd.
 
 ✅ **Frontend**: React TypeScript interface with project management and visualization
-🚧 **Solver**: Migrating to TypeScript-based constraint solver using ScalarAutograd
+✅ **Solver**: ScalarAutograd (TypeScript) for automatic differentiation and optimization
 ✅ **Testing**: Comprehensive frontend test suite
 
 **Quick Start:**
@@ -17,7 +17,7 @@ npm install
 npm run dev  # UI runs on http://localhost:3000
 ```
 
-**Note:** Constraint solving functionality is being migrated from Python to the ScalarAutograd library (C:\Dev\ScalarAutograd).
+**Solver:** Uses ScalarAutograd (TypeScript-based) for automatic differentiation and optimization (C:\Dev\ScalarAutograd).
 
 ## Goal
 
@@ -85,7 +85,7 @@ Camera projections are solved from the full constraint graph. IPs cannot exist w
 ## Architecture
 
 * **Frontend:** React + TypeScript. Fast image switching, point/constraint editing, residual/uncertainty indicators.
-* **Solver:** TypeScript-based constraint solver using ScalarAutograd for automatic differentiation and optimization.
+* **Solver:** ScalarAutograd (TypeScript) for automatic differentiation and constraint optimization. Supports intrinsic constraints (embedded in geometric entities like lines) and extrinsic constraints (relationships between entities).
 
 ## Testing strategy
 

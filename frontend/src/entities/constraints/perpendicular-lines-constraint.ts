@@ -2,6 +2,8 @@
 
 import type { ConstraintId, LineId } from '../../types/ids'
 import type { ValidationResult } from '../../validation/validator'
+import type { ValueMap } from '../../optimization/IOptimizable'
+import type { Value } from 'scalar-autograd'
 import {
   Constraint,
   type ConstraintRepository,
@@ -168,5 +170,15 @@ export class PerpendicularLinesConstraint extends Constraint {
 
   protected getTargetValue(): number {
     return 0 // Perpendicular lines should have 0 dot product
+  }
+
+  /**
+   * Compute residuals for perpendicular lines constraint.
+   * TODO: Requires line support in valueMap.
+   * For now, returns empty array as lines are not yet supported in optimization.
+   */
+  computeResiduals(valueMap: ValueMap): Value[] {
+    console.warn(`Perpendicular lines constraint ${this.data.id}: not yet implemented - requires line support in valueMap`)
+    return []
   }
 }

@@ -3,6 +3,8 @@
 import type { LineId, EntityId } from '../../types/ids'
 import type { ISelectable, SelectableType } from '../../types/selectable'
 import type { IValidatable, ValidationContext, ValidationResult } from '../../validation/validator'
+import type { IResidualProvider, ValueMap } from '../../optimization/IOptimizable'
+import { V, Value } from 'scalar-autograd'
 import type { WorldPoint, IConstraint } from '../world-point'
 import type { ILine } from '../world-point/WorldPointRelationships'
 import { LineDto, LineDirection, LineConstraintSettings } from './LineDto'
@@ -11,7 +13,9 @@ import { LineGeometry } from './LineGeometry'
 import { LineRelationshipManager } from './LineRelationships'
 
 // Line implements ILine interface for WorldPoint compatibility
-export class Line implements ISelectable, IValidatable, ILine {
+export class Line implements ISelectable, IValidatable, ILine, IResidualProvider {
+  // Store residuals from last optimization
+  private _lastResiduals: number[] = []
   private _selected = false
   private _relationshipManager: LineRelationshipManager
 
@@ -27,7 +31,7 @@ export class Line implements ISelectable, IValidatable, ILine {
     private _thickness: number,
     private _constraints: LineConstraintSettings,
     private _group: string | undefined,
-    private _tags: string[], // TODO: Remove completely
+    private _tags: string[], // Tags for batch operations and filtering
     private _createdAt: string,
     private _updatedAt: string
   ) {
@@ -467,5 +471,115 @@ export class Line implements ISelectable, IValidatable, ILine {
 
   private updateTimestamp(): void {
     this._updatedAt = new Date().toISOString()
+  }
+
+  // IResidualProvider implementation
+  /**
+   * Compute residuals for this line's intrinsic constraints (direction and length).
+   *
+   * @param valueMap - The ValueMap containing all entity values
+   * @returns Array of Value objects (residuals that should be zero)
+   */
+  computeResiduals(valueMap: ValueMap): Value[] {
+    const residuals: Value[] = []
+
+    const vecA = valueMap.points.get(this._pointA)
+    const vecB = valueMap.points.get(this._pointB)
+
+    if (!vecA || !vecB) {
+      console.warn(`Line ${this._id}: endpoints not found in valueMap`)
+      return residuals
+    }
+
+    // Direction vector using Vec3 API
+    const direction = vecB.sub(vecA)
+
+    // 1. DIRECTION CONSTRAINTS
+    switch (this._constraints.direction) {
+      case 'horizontal':
+        // Horizontal: dy = 0, dz = 0
+        residuals.push(direction.y, direction.z)
+        break
+
+      case 'vertical':
+        // Vertical (Y-axis): dx = 0, dz = 0
+        residuals.push(direction.x, direction.z)
+        break
+
+      case 'x-aligned':
+        // X-axis aligned: dy = 0, dz = 0
+        residuals.push(direction.y, direction.z)
+        break
+
+      case 'z-aligned':
+        // Z-axis aligned: dx = 0, dy = 0
+        residuals.push(direction.x, direction.y)
+        break
+
+      case 'free':
+        // No direction constraint
+        break
+    }
+
+    // 2. LENGTH CONSTRAINT
+    if (this.hasFixedLength() && this._constraints.targetLength !== undefined) {
+      const dist = direction.magnitude
+      const targetLength = this._constraints.targetLength
+      const lengthResidual = V.sub(dist, V.C(targetLength))
+      residuals.push(lengthResidual)
+    }
+
+    return residuals
+  }
+
+  /**
+   * Evaluate and store residuals from intrinsic constraints
+   * Called after optimization to cache numerical residual values
+   */
+  evaluateAndStoreResiduals(valueMap: ValueMap): void {
+    const residualValues = this.computeResiduals(valueMap)
+    this._lastResiduals = residualValues.map(r => r.data)
+  }
+
+  /**
+   * Get the last computed residuals from intrinsic constraints
+   *
+   * @returns Array of residual values (should be near zero if well-optimized)
+   */
+  getLastResiduals(): number[] {
+    return [...this._lastResiduals]
+  }
+
+  /**
+   * Get optimization information for this line
+   *
+   * @returns Object with optimized values and residuals
+   */
+  getOptimizationInfo() {
+    const residuals = this.getLastResiduals()
+    const totalResidual = residuals.length > 0
+      ? Math.sqrt(residuals.reduce((sum, r) => sum + r * r, 0))
+      : 0
+
+    const currentLength = this.length()
+
+    return {
+      // Optimized values
+      length: currentLength,
+      targetLength: this._constraints.targetLength,
+      direction: this._constraints.direction,
+
+      // Residuals
+      residuals: residuals,
+      totalResidual: totalResidual,
+      rmsResidual: residuals.length > 0 ? totalResidual / Math.sqrt(residuals.length) : 0,
+
+      // Constraint satisfaction
+      hasLengthConstraint: this.hasFixedLength(),
+      hasDirectionConstraint: this._constraints.direction !== undefined,
+      lengthError: currentLength !== null && this._constraints.targetLength !== undefined
+        ? Math.abs(currentLength - this._constraints.targetLength)
+        : null,
+    }
   }
 }

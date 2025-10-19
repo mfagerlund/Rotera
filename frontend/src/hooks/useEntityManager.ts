@@ -543,10 +543,7 @@ export const useEntityManager = (
     getDependencies,
     getConstraintsForEntity,
     validate,
-    validateAll,
-    getEntitiesInRegion: () => [], // TODO: Implement spatial queries
-    findNearestEntity: () => null, // TODO: Implement spatial queries
-    getIntersections: () => []     // TODO: Implement geometric intersections
+    validateAll
   }), [
     create, read, update, deleteEntity, createBatch, deleteBatch, updateBatch,
     getByType, getByIds, getVisible, getConstruction, getByTag,
@@ -578,7 +575,9 @@ export const useEntityManager = (
   }, [entities, read])
 
   const importEntities = useCallback((data: any): string[] => {
-    // TODO: Implement proper import with validation
+    // Future: Import entities with validation and conflict resolution
+    // For now, use batch create operations in calling code
+    console.warn('importEntities not yet implemented - use operations.createBatch')
     return []
   }, [])
 

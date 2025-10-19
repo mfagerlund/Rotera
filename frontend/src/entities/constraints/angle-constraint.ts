@@ -2,6 +2,8 @@
 
 import type { ConstraintId, PointId } from '../../types/ids'
 import type { ValidationResult, ValidationError } from '../../validation/validator'
+import type { ValueMap } from '../../optimization/IOptimizable'
+import { V, Vec3, type Value } from 'scalar-autograd'
 import { ValidationHelpers } from '../../validation/validator'
 import {
   Constraint,
@@ -200,5 +202,42 @@ export class AngleConstraint extends Constraint {
 
   protected getTargetValue(): number {
     return this.targetAngle
+  }
+
+  /**
+   * Compute residuals for angle constraint.
+   * Residual: (actual_angle - target_angle) in radians
+   * Should be 0 when the angle at the vertex equals the target.
+   */
+  computeResiduals(valueMap: ValueMap): Value[] {
+    // Find points in valueMap
+    let pointA: ReturnType<typeof valueMap.points.get> | undefined
+    let vertex: ReturnType<typeof valueMap.points.get> | undefined
+    let pointC: ReturnType<typeof valueMap.points.get> | undefined
+
+    for (const [point, vec] of valueMap.points) {
+      if (point.getId() === this.pointAId) pointA = vec
+      if (point.getId() === this.vertexId) vertex = vec
+      if (point.getId() === this.pointCId) pointC = vec
+    }
+
+    if (!pointA || !vertex || !pointC) {
+      console.warn(`Angle constraint ${this.data.id}: points not found in valueMap`)
+      return []
+    }
+
+    const targetAngleRadians = (this.targetAngle * Math.PI) / 180
+
+    // Calculate vectors from vertex using Vec3 API
+    const v1 = pointA.sub(vertex)
+    const v2 = pointC.sub(vertex)
+
+    // Calculate angle using Vec3.angleBetween
+    const actualAngle = Vec3.angleBetween(v1, v2)
+
+    // Residual = actual - target
+    const residual = V.sub(actualAngle, V.C(targetAngleRadians))
+
+    return [residual]
   }
 }

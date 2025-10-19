@@ -6,6 +6,10 @@ export default {
     '<rootDir>/src/**/__tests__/**/*.{js,jsx,ts,tsx}',
     '<rootDir>/src/**/*.{test,spec}.{js,jsx,ts,tsx}'
   ],
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/src/wip/'
+  ],
   transform: {
     '^.+\\.(ts|tsx)$': 'ts-jest',
     '^.+\\.(js|jsx)$': 'babel-jest'

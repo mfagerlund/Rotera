@@ -80,10 +80,6 @@ export interface EntityOperations {
   validate: (id: string) => EntityValidation
   validateAll: () => Record<string, EntityValidation>
 
-  // Spatial queries
-  getEntitiesInRegion: (bounds: BoundingBox) => GeometricEntity[]
-  findNearestEntity: (point: [number, number, number], type?: 'point' | 'line' | 'plane' | 'points_equal_distance') => GeometricEntity | null
-  getIntersections: (entityA: string, entityB: string) => [number, number, number][]
 }
 
 // Geometric utility types

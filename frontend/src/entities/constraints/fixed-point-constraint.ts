@@ -2,6 +2,8 @@
 
 import type { ConstraintId, PointId } from '../../types/ids'
 import type { ValidationResult } from '../../validation/validator'
+import type { ValueMap } from '../../optimization/IOptimizable'
+import { V, type Value } from 'scalar-autograd'
 import { ValidationHelpers } from '../../validation/validator'
 import {
   Constraint,
@@ -213,5 +215,37 @@ export class FixedPointConstraint extends Constraint {
 
   protected getTargetValue(): number {
     return 0 // Fixed point should have 0 distance from target
+  }
+
+  /**
+   * Compute residuals for fixed point constraint.
+   * Residual: Distance from point to target position should be zero.
+   * Returns [dx, dy, dz] where each component should be 0 when constraint is satisfied.
+   */
+  computeResiduals(valueMap: ValueMap): Value[] {
+    // Find the point in the valueMap by comparing IDs
+    let pointVec: ReturnType<typeof valueMap.points.get> | undefined
+
+    for (const [point, vec] of valueMap.points) {
+      if (point.getId() === this.pointId) {
+        pointVec = vec
+        break
+      }
+    }
+
+    if (!pointVec) {
+      console.warn(`Fixed point constraint ${this.data.id}: point not found in valueMap`)
+      return []
+    }
+
+    const targetXyz = this.targetXyz
+
+    // Residual = current position - target position
+    // Each component should be 0 when point is at target
+    const dx = V.sub(pointVec.x, V.C(targetXyz[0]))
+    const dy = V.sub(pointVec.y, V.C(targetXyz[1]))
+    const dz = V.sub(pointVec.z, V.C(targetXyz[2]))
+
+    return [dx, dy, dz]
   }
 }

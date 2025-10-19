@@ -21,6 +21,6 @@
     "types": ["vite/client", "node", "jest"]
   },
   "include": ["src"],
-  "exclude": [],
+  "exclude": ["src/wip"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

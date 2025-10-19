@@ -3,6 +3,13 @@
 import React from 'react'
 import { ConstraintStatus } from '../types/geometry'
 import { EnhancedProjectSettings } from '../types/enhanced-project'
+import {
+  ENTITY_COLORS as CONSTRAINT_STATUS_COLORS,
+  CONSTRAINT_GLYPHS as GLYPHS,
+  THEME_COLORS,
+  FEEDBACK_LEVELS,
+  ENTITY_STYLES
+} from '../constants/visualLanguage'
 
 // Entity type definitions
 export type EntityType = 'point' | 'line' | 'plane' | 'circle'
@@ -58,12 +65,12 @@ export const defaultColorScheme: ColorScheme = {
     }
   },
   constraints: {
-    satisfied: '#4CAF50',
-    warning: '#FF9800',
-    violated: '#F44336',
+    satisfied: CONSTRAINT_STATUS_COLORS.satisfied,
+    warning: CONSTRAINT_STATUS_COLORS.warning,
+    violated: CONSTRAINT_STATUS_COLORS.violated,
     conflicting: '#9C27B0',
-    redundant: '#9E9E9E',
-    undefined: '#2196F3'
+    redundant: CONSTRAINT_STATUS_COLORS.construction,
+    undefined: CONSTRAINT_STATUS_COLORS.worldGeometry
   },
   workspaces: {
     image: '#2196F3',

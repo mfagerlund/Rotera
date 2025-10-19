@@ -1,10 +1,27 @@
 # Entity-Driven Optimization Architecture
 
+**Solver:** ScalarAutograd (TypeScript-based automatic differentiation and optimization)
+
 ## Philosophy
 
 **Traditional Approach**: Convert high-level geometric entities (lines, planes) into atomic constraints (distance, angle, parallel) before optimization.
 
 **Entity-Driven Approach**: Optimize directly on semantic entities, preserving the UI→optimization→feedback loop with full traceability.
+
+## Constraint Types
+
+**Intrinsic Constraints:** Embedded within geometric entities themselves
+- Line direction (horizontal, vertical, axis-aligned)
+- Line target length
+- Fixed point coordinates
+- These are properties of the entity, not separate constraint objects
+
+**Extrinsic Constraints:** Relationships between separate entities
+- Distance between two points
+- Angle between lines
+- Parallel/perpendicular relationships
+- Coplanar/collinear relationships
+- These exist as separate constraint objects
 
 ## The Problem
 
@@ -441,9 +458,9 @@ def compute_residual(self, variables):
     return np.array([u_error, v_error])  # 2 elements!
 ```
 
-**Solver compatibility**: `scipy.optimize.least_squares` accepts residual vectors of any length. It just needs:
+**Solver compatibility**: ScalarAutograd optimization accepts residual vectors of any length. It just needs:
 - `fun(x) -> residuals` (✅ we have this)
-- `jac(x) -> jacobian` (✅ we compute this)
+- Automatic differentiation for jacobians (✅ ScalarAutograd provides this)
 
 ### Jacobian Computation
 

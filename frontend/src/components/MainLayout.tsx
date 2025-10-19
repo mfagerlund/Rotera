@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faFolderOpen, faFloppyDisk, faFileExport, faTrash, faRuler, faGear, faArrowRight, faCamera, faSquare } from '@fortawesome/free-solid-svg-icons'
+import { faFolderOpen, faFloppyDisk, faFileExport, faTrash, faRuler, faGear, faArrowRight, faCamera, faSquare, faBullseye } from '@fortawesome/free-solid-svg-icons'
 import { useProject } from '../hooks/useProject'
+import { useEntityProject } from '../hooks/useEntityProject'
 import { useSelection, useSelectionKeyboard } from '../hooks/useSelection'
 import { useConstraints } from '../hooks/useConstraints'
 import { Line, AvailableConstraint, WorldPoint as LegacyWorldPoint } from '../types/project'
@@ -33,6 +34,7 @@ import {
   WorkspaceSwitcher,
   WorkspaceStatus
 } from './WorkspaceManager'
+import { MainToolbar } from './main-layout/MainToolbar'
 
 import ImageWorkspace from './main-layout/ImageWorkspace'
 import WorldWorkspace from './main-layout/WorldWorkspace'
@@ -45,6 +47,7 @@ import PlanesManager from './PlanesManager'
 import ImagePointsManager from './ImagePointsManager'
 import ConstraintsManager from './ConstraintsManager'
 import WorldPointEditor from './WorldPointEditor'
+import OptimizationPanel from './OptimizationPanel'
 
 // Styles
 import '../styles/enhanced-workspace.css'
@@ -53,10 +56,12 @@ import '../styles/tools.css'
 type ActiveTool = 'select' | 'point' | 'line' | 'plane' | 'circle' | 'loop'
 
 export const MainLayout: React.FC = () => {
-  // Legacy project system (for now)
+  // Legacy project system (DTO-based, will be phased out)
   const legacyProject = useProject()
 
-  // Enhanced project system (future)
+  // Entity-based project system (RUNTIME DATA MODEL)
+  // DTOs are ONLY touched during load/save
+  const entityProject = useEntityProject()
 
   // Confirm dialog
   const { confirm, dialog, isOpen: isConfirmDialogOpen } = useConfirm()
@@ -238,6 +243,7 @@ export const MainLayout: React.FC = () => {
   const [showPlanesPopup, setShowPlanesPopup] = useState(false)
   const [showImagePointsPopup, setShowImagePointsPopup] = useState(false)
   const [showConstraintsPopup, setShowConstraintsPopup] = useState(false)
+  const [showOptimizationPanel, setShowOptimizationPanel] = useState(false)
 
   // World point edit window state
   const [worldPointEditWindow, setWorldPointEditWindow] = useState<{
@@ -324,10 +330,7 @@ export const MainLayout: React.FC = () => {
   }, [project?.lines])
 
 
-  // TODO: Remove this legacy function - use entity objects directly
-  // TODO: Update constraint system to use entity objects
-  // const allConstraints = getAllConstraints(selectedPointEntities.map(p => p.getId()), selectedLineEntities)
-  // const availableConstraints = getAvailableConstraints(selectedPointEntities.map(p => p.getId()), selectedLineEntities)
+  // Constraint system uses entity objects directly (intrinsic + extrinsic)
   const allConstraints: AvailableConstraint[] = []
   const availableConstraints: AvailableConstraint[] = []
 
@@ -723,89 +726,26 @@ export const MainLayout: React.FC = () => {
       {(currentWorkspace, workspaceActions) => (
         <div className="app-layout enhanced-layout">
           {/* Enhanced top toolbar */}
-          <div className="top-toolbar">
-            <WorkspaceSwitcher
-              currentWorkspace={currentWorkspace}
-              onWorkspaceChange={workspaceActions.setWorkspace}
-              imageHasContent={imageInfo.totalImages > 0}
-              worldHasContent={worldInfo.totalPoints > 0}
-            />
-
-            <div className="toolbar-section">
-              <button className="btn-tool"><FontAwesomeIcon icon={faFolderOpen} /> Open</button>
-              <button className="btn-tool"><FontAwesomeIcon icon={faFloppyDisk} /> Save</button>
-              <button
-                className="btn-tool"
-                onClick={() => {
-                  const exportData = exportOptimizationDto()
-                  if (!exportData) {
-                    alert('No project data to export')
-                    return
-                  }
-
-                  // Filter out image blobs for smaller file size
-                  const filteredData = filterImageBlobs(exportData)
-
-                  // Create JSON blob and download
-                  const json = JSON.stringify(filteredData, null, 2)
-                  const blob = new Blob([json], { type: 'application/json' })
-                  const url = URL.createObjectURL(blob)
-                  const link = document.createElement('a')
-                  link.href = url
-                  link.download = `${project?.name || 'project'}-optimization-${new Date().toISOString().split('T')[0]}.json`
-                  document.body.appendChild(link)
-                  link.click()
-                  document.body.removeChild(link)
-                  URL.revokeObjectURL(url)
-                }}
-                title="Export project data for optimization (without image blobs)"
-              >
-                <FontAwesomeIcon icon={faFileExport} /> Export
-              </button>
-              <button
-                className="btn-tool btn-clear-project"
-                onClick={async () => {
-                  if (await confirm('Are you sure you want to clear the entire project?\n\nThis will remove all world points, images, lines, planes, and constraints. This action cannot be undone.')) {
-                    clearProject()
-                  }
-                }}
-                title="Clear entire project"
-              >
-                <FontAwesomeIcon icon={faTrash} /> Clear
-              </button>
-            </div>
-
-            {/* Context-sensitive constraint toolbar */}
-            <ConstraintToolbar
-              selectedPoints={selectedPointEntities.map(p => p.getId())}
-              selectedLines={selectedLineEntities.map(l => ({
-                id: l.getId(),
-                name: l.name,
-                pointA: l.pointA.getId(),
-                pointB: l.pointB.getId(),
-                type: 'segment' as const,
-                isVisible: l.isVisible(),
-                color: l.color,
-                isConstruction: l.isConstruction
-              }))}
-              availableConstraints={allConstraints}
-              selectionSummary="" // Remove redundant selection display
-              onConstraintClick={startConstraintCreation}
-            />
-
-            <div className="toolbar-section">
-              <label className="toolbar-toggle">
-                <input
-                  type="checkbox"
-                  checked={project.settings.showPointNames}
-                  onChange={(e) => {
-                    // TODO: Update project settings
-                  }}
-                />
-                Show Point Names
-              </label>
-            </div>
-          </div>
+          <MainToolbar
+            currentWorkspace={currentWorkspace}
+            onWorkspaceChange={workspaceActions.setWorkspace}
+            imageHasContent={imageInfo.totalImages > 0}
+            worldHasContent={worldInfo.totalPoints > 0}
+            project={project}
+            onExportOptimization={exportOptimizationDto}
+            onClearProject={clearProject}
+            selectedPoints={selectedPointEntities}
+            selectedLines={selectedLineEntities}
+            allConstraints={allConstraints}
+            onConstraintClick={() => {/* TODO: Implement constraint creation */}}
+            showPointNames={project.settings.showPointNames}
+            onTogglePointNames={() => {/* TODO: Update project settings */}}
+            showComponentOverlay={showComponentNames}
+            onToggleComponentOverlay={handleComponentOverlayToggle}
+            visualFeedbackLevel={project.settings.visualFeedbackLevel || 'standard'}
+            onVisualFeedbackChange={() => {/* TODO: Update visual feedback */}}
+            confirm={confirm}
+          />
 
           {/* Main content area */}
           <div className="content-area">
@@ -1030,6 +970,16 @@ export const MainLayout: React.FC = () => {
                     <span className="button-icon" style={{ fontSize: '10px' }}><FontAwesomeIcon icon={faGear} /></span>
                     <span className="button-count">{constraints.length}</span>
                   </button>
+
+                  <button
+                    className="entity-button"
+                    onClick={() => setShowOptimizationPanel(true)}
+                    title="Bundle adjustment optimization"
+                    style={{ padding: '2px 6px', fontSize: '11px', minHeight: 'auto' }}
+                  >
+                    <span className="button-icon" style={{ fontSize: '10px' }}><FontAwesomeIcon icon={faBullseye} /></span>
+                    <span className="button-label">Optimize</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -1195,6 +1145,30 @@ export const MainLayout: React.FC = () => {
         // TODO: Implement constraint selection
       }}
     />
+
+    {/* Optimization Panel */}
+    {showOptimizationPanel && (
+      <FloatingWindow
+        title="Bundle Adjustment Optimization"
+        isOpen={showOptimizationPanel}
+        onClose={() => setShowOptimizationPanel(false)}
+        width={500}
+        height={600}
+      >
+        {entityProject.project && (
+          <OptimizationPanel
+            project={entityProject.project}
+            onOptimizationComplete={(success, message) => {
+              console.log(`Optimization ${success ? 'succeeded' : 'failed'}: ${message}`)
+              // Entities are modified in-place during optimization
+              // They are stored in state, so changes persist
+              // Trigger re-render to show updated values
+              entityProject.saveProject()
+            }}
+          />
+        )}
+      </FloatingWindow>
+    )}
 
     {/* World Point Edit Window */}
     {worldPointEditWindow.worldPointId && (

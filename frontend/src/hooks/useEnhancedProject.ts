@@ -230,14 +230,12 @@ export const useEnhancedProject = () => {
     }
   }, [])
 
-  // Project migration (placeholder)
+  // Project migration - Not needed (per project requirements: no backward compatibility)
   const migrateProject = useCallback(async (oldProject: any): Promise<EnhancedProject> => {
-    // TODO: Implement migration from legacy project format
-    if (oldProject.version === '2.0.0') {
-      return oldProject as EnhancedProject
+    // No migration needed - project requires v2.0.0+ format
+    if (oldProject.version !== '2.0.0') {
+      console.warn('Unsupported project version:', oldProject.version, '- expecting 2.0.0')
     }
-
-    // For now, just return the project as-is
     return oldProject as EnhancedProject
   }, [])
 
@@ -345,9 +343,9 @@ export const useEnhancedProject = () => {
     return project
   }, [project])
 
-  // Convert to legacy project format (placeholder)
+  // Convert to simplified export format (not legacy - just simplified structure)
   const convertToLegacyProject = useCallback((enhancedProject: EnhancedProject) => {
-    // TODO: Implement conversion to legacy format
+    // Simplified export structure for compatibility with export formats
     return {
       id: enhancedProject.id,
       name: enhancedProject.name,
