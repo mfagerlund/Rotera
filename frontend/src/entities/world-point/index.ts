@@ -1,8 +1,5 @@
 // Public exports for WorldPoint module
 
 export { WorldPoint } from './WorldPoint'
-export type { WorldPointDto } from './WorldPointDto'
-export { WorldPointValidator } from './WorldPointValidation'
-export { WorldPointGeometry } from './WorldPointGeometry'
-export { WorldPointRelationshipManager } from './WorldPointRelationships'
-export type { ILine, IConstraint } from './WorldPointRelationships'
+export type { WorldPointDto, AxisLock } from './WorldPointDto'
+export type { IWorldPoint, ILine, IConstraint } from './WorldPoint'
