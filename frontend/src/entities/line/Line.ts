@@ -1,22 +1,22 @@
-// Core Line domain class - refactored with composition
+// Consolidated Line domain class
 
 import type { LineId, EntityId } from '../../types/ids'
 import type { ISelectable, SelectableType } from '../../types/selectable'
-import type { IValidatable, ValidationContext, ValidationResult } from '../../validation/validator'
+import type { IValidatable, ValidationContext, ValidationResult, ValidationError } from '../../validation/validator'
 import type { IResidualProvider, ValueMap } from '../../optimization/IOptimizable'
+import { ValidationHelpers } from '../../validation/validator'
 import { V, Value } from 'scalar-autograd'
 import type { WorldPoint, IConstraint, ILine } from '../world-point'
-import { LineDto, LineDirection, LineConstraintSettings } from './LineDto'
-import { LineValidator } from './LineValidation'
-import { LineGeometry } from './LineGeometry'
-import { LineRelationshipManager } from './LineRelationships'
+import type { LineDto, LineDirection, LineConstraintSettings } from './LineDto'
 
 // Line implements ILine interface for WorldPoint compatibility
 export class Line implements ISelectable, IValidatable, ILine, IResidualProvider {
   // Store residuals from last optimization
   private _lastResiduals: number[] = []
   private _selected = false
-  private _relationshipManager: LineRelationshipManager
+
+  // Relationship tracking (inlined from LineRelationshipManager)
+  private _referencingConstraints: Set<IConstraint> = new Set()
 
   private constructor(
     private _id: LineId,
@@ -30,17 +30,21 @@ export class Line implements ISelectable, IValidatable, ILine, IResidualProvider
     private _thickness: number,
     private _constraints: LineConstraintSettings,
     private _group: string | undefined,
-    private _tags: string[], // Tags for batch operations and filtering
+    private _tags: string[],
     private _createdAt: string,
     private _updatedAt: string
   ) {
-    // Initialize relationship manager
-    this._relationshipManager = new LineRelationshipManager(this._pointA, this._pointB, this)
+    // Establish bidirectional relationships with points
+    this._pointA.addConnectedLine(this)
+    this._pointB.addConnectedLine(this)
   }
 
+  // ============================================================================
   // Factory methods
+  // ============================================================================
+
   static fromDTO(dto: LineDto, pointA: WorldPoint, pointB: WorldPoint): Line {
-    const validation = LineValidator.validateDto(dto)
+    const validation = Line.validateDto(dto)
     if (!validation.isValid) {
       throw new Error(`Invalid Line DTO: ${validation.errors.map(e => e.message).join(', ')}`)
     }
@@ -101,7 +105,10 @@ export class Line implements ISelectable, IValidatable, ILine, IResidualProvider
     )
   }
 
+  // ============================================================================
   // Serialization
+  // ============================================================================
+
   toDTO(): LineDto {
     return {
       id: this._id,
@@ -121,7 +128,10 @@ export class Line implements ISelectable, IValidatable, ILine, IResidualProvider
     }
   }
 
+  // ============================================================================
   // ISelectable implementation
+  // ============================================================================
+
   getId(): LineId {
     return this._id
   }
@@ -144,11 +154,14 @@ export class Line implements ISelectable, IValidatable, ILine, IResidualProvider
   }
 
   getDependencies(): EntityId[] {
-    return this._relationshipManager.getDependencies() as EntityId[]
+    // Lines depend on their two points
+    return [this._pointA.getId(), this._pointB.getId()] as EntityId[]
   }
 
   getDependents(): EntityId[] {
-    return this._relationshipManager.getDependents() as EntityId[]
+    const dependents: string[] = []
+    this._referencingConstraints.forEach(constraint => dependents.push(constraint.getId()))
+    return dependents as EntityId[]
   }
 
   isSelected(): boolean {
@@ -160,16 +173,22 @@ export class Line implements ISelectable, IValidatable, ILine, IResidualProvider
   }
 
   canDelete(): boolean {
-    return this._relationshipManager.canDelete()
+    return this._referencingConstraints.size === 0
   }
 
   getDeleteWarning(): string | null {
-    return this._relationshipManager.getDeleteWarning()
+    if (this._referencingConstraints.size === 0) {
+      return null
+    }
+    return `Deleting this line will also delete ${this._referencingConstraints.size} constraint${this._referencingConstraints.size === 1 ? '' : 's'}`
   }
 
+  // ============================================================================
   // IValidatable implementation
+  // ============================================================================
+
   validate(context: ValidationContext): ValidationResult {
-    return LineValidator.validateLine(
+    return Line.validateLine(
       this._id,
       this._name,
       this._pointA,
@@ -179,7 +198,228 @@ export class Line implements ISelectable, IValidatable, ILine, IResidualProvider
     )
   }
 
+  // ============================================================================
+  // Validation methods (inlined from LineValidator)
+  // ============================================================================
+
+  static validateDto(dto: LineDto): ValidationResult {
+    const errors: ValidationError[] = []
+
+    if (!dto.id) {
+      errors.push(ValidationHelpers.createError(
+        'MISSING_REQUIRED_FIELD',
+        'id is required',
+        dto.id,
+        'line',
+        'id'
+      ))
+    }
+
+    if (!dto.name) {
+      errors.push(ValidationHelpers.createError(
+        'MISSING_REQUIRED_FIELD',
+        'name is required',
+        dto.id,
+        'line',
+        'name'
+      ))
+    }
+
+    if (!dto.pointA) {
+      errors.push(ValidationHelpers.createError(
+        'MISSING_REQUIRED_FIELD',
+        'pointA is required',
+        dto.id,
+        'line',
+        'pointA'
+      ))
+    }
+
+    if (!dto.pointB) {
+      errors.push(ValidationHelpers.createError(
+        'MISSING_REQUIRED_FIELD',
+        'pointB is required',
+        dto.id,
+        'line',
+        'pointB'
+      ))
+    }
+
+    if (dto.pointA === dto.pointB) {
+      errors.push(ValidationHelpers.createError(
+        'SELF_REFERENCING_LINE',
+        'Line cannot reference the same point twice',
+        dto.id,
+        'line'
+      ))
+    }
+
+    if (dto.color && !/^#[0-9A-Fa-f]{6}$/.test(dto.color)) {
+      errors.push(ValidationHelpers.createError(
+        'INVALID_COLOR',
+        'color must be a valid hex color',
+        dto.id,
+        'line',
+        'color'
+      ))
+    }
+
+    if (dto.thickness <= 0) {
+      errors.push(ValidationHelpers.createError(
+        'INVALID_THICKNESS',
+        'thickness must be greater than 0',
+        dto.id,
+        'line',
+        'thickness'
+      ))
+    }
+
+    if (!dto.constraints) {
+      errors.push(ValidationHelpers.createError(
+        'MISSING_REQUIRED_FIELD',
+        'constraints is required',
+        dto.id,
+        'line',
+        'constraints'
+      ))
+    } else {
+      const constraintErrors = Line.validateConstraints(dto.constraints, dto.id)
+      errors.push(...constraintErrors)
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      warnings: [],
+      summary: errors.length === 0 ? 'DTO validation passed' : `DTO validation failed: ${errors.length} errors`
+    }
+  }
+
+  static validateLine(
+    id: string,
+    name: string,
+    pointA: WorldPoint,
+    pointB: WorldPoint,
+    color: string,
+    thickness: number
+  ): ValidationResult {
+    const errors: ValidationError[] = []
+    const warnings: ValidationError[] = []
+
+    const nameError = ValidationHelpers.validateRequiredField(name, 'name', id, 'line')
+    if (nameError) errors.push(nameError)
+
+    const idError = ValidationHelpers.validateIdFormat(id, 'line')
+    if (idError) errors.push(idError)
+
+    if (!pointA) {
+      errors.push(ValidationHelpers.createError(
+        'MISSING_POINT',
+        'pointA is required',
+        id,
+        'line',
+        'pointA'
+      ))
+    }
+
+    if (!pointB) {
+      errors.push(ValidationHelpers.createError(
+        'MISSING_POINT',
+        'pointB is required',
+        id,
+        'line',
+        'pointB'
+      ))
+    }
+
+    if (pointA === pointB) {
+      errors.push(ValidationHelpers.createError(
+        'SELF_REFERENCING_LINE',
+        'Line cannot reference the same point twice',
+        id,
+        'line'
+      ))
+    }
+
+    if (color && !/^#[0-9A-Fa-f]{6}$/.test(color)) {
+      errors.push(ValidationHelpers.createError(
+        'INVALID_COLOR',
+        'color must be a valid hex color',
+        id,
+        'line',
+        'color'
+      ))
+    }
+
+    if (thickness <= 0) {
+      errors.push(ValidationHelpers.createError(
+        'INVALID_THICKNESS',
+        'thickness must be greater than 0',
+        id,
+        'line',
+        'thickness'
+      ))
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      warnings,
+      summary: errors.length === 0 ? 'Line validation passed' : `Line validation failed: ${errors.length} errors`
+    }
+  }
+
+  private static validateConstraints(constraints: LineConstraintSettings, lineId: string): ValidationError[] {
+    const errors: ValidationError[] = []
+
+    if (!constraints.direction) {
+      errors.push(ValidationHelpers.createError(
+        'MISSING_REQUIRED_FIELD',
+        'constraints.direction is required',
+        lineId,
+        'line',
+        'constraints.direction'
+      ))
+    } else {
+      const validDirections: LineDirection[] = ['free', 'horizontal', 'vertical', 'x-aligned', 'z-aligned']
+      if (!validDirections.includes(constraints.direction)) {
+        errors.push(ValidationHelpers.createError(
+          'INVALID_DIRECTION',
+          `constraints.direction must be one of: ${validDirections.join(', ')}`,
+          lineId,
+          'line',
+          'constraints.direction'
+        ))
+      }
+    }
+
+    if (constraints.targetLength !== undefined && constraints.targetLength <= 0) {
+      errors.push(ValidationHelpers.createError(
+        'INVALID_TARGET_LENGTH',
+        'constraints.targetLength must be greater than 0',
+        lineId,
+        'line',
+        'constraints.targetLength'
+      ))
+    }
+
+    if (constraints.tolerance !== undefined && constraints.tolerance < 0) {
+      errors.push(ValidationHelpers.createError(
+        'INVALID_TOLERANCE',
+        'constraints.tolerance must be non-negative',
+        lineId,
+        'line',
+        'constraints.tolerance'
+      ))
+    }
+
+    return errors
+  }
+
+  // ============================================================================
   // Domain getters/setters
+  // ============================================================================
+
   get name(): string {
     return this._name
   }
@@ -198,11 +438,11 @@ export class Line implements ISelectable, IValidatable, ILine, IResidualProvider
   }
 
   get points(): [WorldPoint, WorldPoint] {
-    return this._relationshipManager.points
+    return [this._pointA, this._pointB]
   }
 
   get referencingConstraints(): IConstraint[] {
-    return this._relationshipManager.referencingConstraints
+    return Array.from(this._referencingConstraints)
   }
 
   get color(): string {
@@ -314,7 +554,10 @@ export class Line implements ISelectable, IValidatable, ILine, IResidualProvider
     this.updateTimestamp()
   }
 
+  // ============================================================================
   // Constraint evaluation methods
+  // ============================================================================
+
   isDirectionConstrained(): boolean {
     return this._constraints.direction !== 'free'
   }
@@ -347,12 +590,10 @@ export class Line implements ISelectable, IValidatable, ILine, IResidualProvider
     return this._constraints.targetLength !== undefined
   }
 
-  // Constraint satisfaction check
   satisfiesConstraints(tolerance?: number): { satisfied: boolean; violations: string[] } {
     const violations: string[] = []
     const tol = tolerance ?? this.constraintTolerance
 
-    // Check direction constraints
     if (this.isDirectionConstrained()) {
       const dir = this.getDirection()
       if (dir) {
@@ -383,7 +624,6 @@ export class Line implements ISelectable, IValidatable, ILine, IResidualProvider
       }
     }
 
-    // Check distance constraints
     if (this.hasFixedLength()) {
       const currentLength = this.length()
       if (currentLength !== null && this._constraints.targetLength !== undefined) {
@@ -400,45 +640,237 @@ export class Line implements ISelectable, IValidatable, ILine, IResidualProvider
     }
   }
 
-  // Geometric methods (delegated to LineGeometry)
+  // ============================================================================
+  // Geometric methods (inlined from LineGeometry)
+  // ============================================================================
+
   length(): number | null {
-    return LineGeometry.calculateLength(this._pointA, this._pointB)
+    return Line.calculateLength(this._pointA, this._pointB)
   }
 
   getDirection(): [number, number, number] | null {
-    return LineGeometry.getDirection(this._pointA, this._pointB)
+    return Line.getDirectionVector(this._pointA, this._pointB)
   }
 
   getMidpoint(): [number, number, number] | null {
-    return LineGeometry.getMidpoint(this._pointA, this._pointB)
+    return Line.getMidpoint(this._pointA, this._pointB)
   }
 
   containsPoint(point: [number, number, number], tolerance: number = 1e-6): boolean {
-    return LineGeometry.containsPoint(this._pointA, this._pointB, point, tolerance)
+    return Line.containsPoint(this._pointA, this._pointB, point, tolerance)
   }
 
   distanceToPoint(point: [number, number, number]): number | null {
-    return LineGeometry.distanceToPoint(this._pointA, this._pointB, point)
+    return Line.distanceToPoint(this._pointA, this._pointB, point)
   }
 
-  // Relationship methods (delegated to LineRelationshipManager)
+  // ============================================================================
+  // Static geometry utility methods
+  // ============================================================================
+
+  static calculateLength(pointA: WorldPoint, pointB: WorldPoint): number | null {
+    const aCoords = pointA.getDefinedCoordinates()
+    const bCoords = pointB.getDefinedCoordinates()
+
+    if (!aCoords || !bCoords) {
+      return null
+    }
+
+    const [x1, y1, z1] = aCoords
+    const [x2, y2, z2] = bCoords
+
+    return Math.sqrt(
+      Math.pow(x2 - x1, 2) +
+      Math.pow(y2 - y1, 2) +
+      Math.pow(z2 - z1, 2)
+    )
+  }
+
+  static getDirectionVector(pointA: WorldPoint, pointB: WorldPoint): [number, number, number] | null {
+    const aCoords = pointA.getDefinedCoordinates()
+    const bCoords = pointB.getDefinedCoordinates()
+
+    if (!aCoords || !bCoords) {
+      return null
+    }
+
+    const [x1, y1, z1] = aCoords
+    const [x2, y2, z2] = bCoords
+
+    const dx = x2 - x1
+    const dy = y2 - y1
+    const dz = z2 - z1
+
+    const length = Math.sqrt(dx * dx + dy * dy + dz * dz)
+    if (length === 0) return null
+
+    return [dx / length, dy / length, dz / length]
+  }
+
+  static getMidpoint(pointA: WorldPoint, pointB: WorldPoint): [number, number, number] | null {
+    const aCoords = pointA.getDefinedCoordinates()
+    const bCoords = pointB.getDefinedCoordinates()
+
+    if (!aCoords || !bCoords) {
+      return null
+    }
+
+    const [x1, y1, z1] = aCoords
+    const [x2, y2, z2] = bCoords
+
+    return [
+      (x1 + x2) / 2,
+      (y1 + y2) / 2,
+      (z1 + z2) / 2
+    ]
+  }
+
+  static containsPoint(
+    pointA: WorldPoint,
+    pointB: WorldPoint,
+    testPoint: [number, number, number],
+    tolerance: number = 1e-6
+  ): boolean {
+    const aCoords = pointA.getDefinedCoordinates()
+    const bCoords = pointB.getDefinedCoordinates()
+
+    if (!aCoords || !bCoords) {
+      return false
+    }
+
+    const [x, y, z] = testPoint
+    const [x1, y1, z1] = aCoords
+    const [x2, y2, z2] = bCoords
+
+    const crossProduct = [
+      (y - y1) * (z2 - z1) - (z - z1) * (y2 - y1),
+      (z - z1) * (x2 - x1) - (x - x1) * (z2 - z1),
+      (x - x1) * (y2 - y1) - (y - y1) * (x2 - x1)
+    ]
+
+    const crossMagnitude = Math.sqrt(
+      crossProduct[0] * crossProduct[0] +
+      crossProduct[1] * crossProduct[1] +
+      crossProduct[2] * crossProduct[2]
+    )
+
+    return crossMagnitude < tolerance
+  }
+
+  static distanceToPoint(
+    pointA: WorldPoint,
+    pointB: WorldPoint,
+    testPoint: [number, number, number]
+  ): number | null {
+    const aCoords = pointA.getDefinedCoordinates()
+    const bCoords = pointB.getDefinedCoordinates()
+
+    if (!aCoords || !bCoords) {
+      return null
+    }
+
+    const [px, py, pz] = testPoint
+    const [x1, y1, z1] = aCoords
+    const [x2, y2, z2] = bCoords
+
+    const lineVector = [x2 - x1, y2 - y1, z2 - z1]
+    const pointVector = [px - x1, py - y1, pz - z1]
+
+    const lineLengthSquared = lineVector[0] ** 2 + lineVector[1] ** 2 + lineVector[2] ** 2
+
+    if (lineLengthSquared === 0) {
+      return Math.sqrt((px - x1) ** 2 + (py - y1) ** 2 + (pz - z1) ** 2)
+    }
+
+    const projection = (
+      pointVector[0] * lineVector[0] +
+      pointVector[1] * lineVector[1] +
+      pointVector[2] * lineVector[2]
+    ) / lineLengthSquared
+
+    const closestPoint = [
+      x1 + projection * lineVector[0],
+      y1 + projection * lineVector[1],
+      z1 + projection * lineVector[2]
+    ]
+
+    return Math.sqrt(
+      (px - closestPoint[0]) ** 2 +
+      (py - closestPoint[1]) ** 2 +
+      (pz - closestPoint[2]) ** 2
+    )
+  }
+
+  static angleBetweenLines(
+    line1PointA: WorldPoint,
+    line1PointB: WorldPoint,
+    line2PointA: WorldPoint,
+    line2PointB: WorldPoint
+  ): number | null {
+    const dir1 = this.getDirectionVector(line1PointA, line1PointB)
+    const dir2 = this.getDirectionVector(line2PointA, line2PointB)
+
+    if (!dir1 || !dir2) {
+      return null
+    }
+
+    const dotProduct = dir1[0] * dir2[0] + dir1[1] * dir2[1] + dir1[2] * dir2[2]
+    const clampedDotProduct = Math.max(-1, Math.min(1, dotProduct))
+    const angleRad = Math.acos(Math.abs(clampedDotProduct))
+    return angleRad * (180 / Math.PI)
+  }
+
+  static areParallel(
+    line1PointA: WorldPoint,
+    line1PointB: WorldPoint,
+    line2PointA: WorldPoint,
+    line2PointB: WorldPoint,
+    tolerance: number = 1e-6
+  ): boolean {
+    const angle = this.angleBetweenLines(line1PointA, line1PointB, line2PointA, line2PointB)
+    return angle !== null && angle < tolerance
+  }
+
+  static arePerpendicular(
+    line1PointA: WorldPoint,
+    line1PointB: WorldPoint,
+    line2PointA: WorldPoint,
+    line2PointB: WorldPoint,
+    tolerance: number = 1e-6
+  ): boolean {
+    const angle = this.angleBetweenLines(line1PointA, line1PointB, line2PointA, line2PointB)
+    return angle !== null && Math.abs(angle - 90) < tolerance
+  }
+
+  // ============================================================================
+  // Relationship management (inlined from LineRelationshipManager)
+  // ============================================================================
+
   addReferencingConstraint(constraint: IConstraint): void {
-    this._relationshipManager.addReferencingConstraint(constraint)
+    this._referencingConstraints.add(constraint)
   }
 
   removeReferencingConstraint(constraint: IConstraint): void {
-    this._relationshipManager.removeReferencingConstraint(constraint)
+    this._referencingConstraints.delete(constraint)
   }
 
   connectsTo(point: WorldPoint): boolean {
-    return this._relationshipManager.connectsTo(point)
+    return this._pointA === point || this._pointB === point
   }
 
   getOtherPoint(point: WorldPoint): WorldPoint | null {
-    return this._relationshipManager.getOtherPoint(point)
+    if (this._pointA === point) {
+      return this._pointB
+    } else if (this._pointB === point) {
+      return this._pointA
+    }
+    return null
   }
 
+  // ============================================================================
   // Utility methods
+  // ============================================================================
+
   clone(newId: LineId, newName?: string): Line {
     const now = new Date().toISOString()
     return new Line(
@@ -465,19 +897,21 @@ export class Line implements ISelectable, IValidatable, ILine, IResidualProvider
   }
 
   cleanup(): void {
-    this._relationshipManager.cleanup()
+    // Remove self from points
+    this._pointA.removeConnectedLine(this)
+    this._pointB.removeConnectedLine(this)
   }
 
   private updateTimestamp(): void {
     this._updatedAt = new Date().toISOString()
   }
 
-  // IResidualProvider implementation
+  // ============================================================================
+  // IResidualProvider implementation (optimization system)
+  // ============================================================================
+
   /**
    * Compute residuals for this line's intrinsic constraints (direction and length).
-   *
-   * @param valueMap - The ValueMap containing all entity values
-   * @returns Array of Value objects (residuals that should be zero)
    */
   computeResiduals(valueMap: ValueMap): Value[] {
     const residuals: Value[] = []
@@ -532,8 +966,7 @@ export class Line implements ISelectable, IValidatable, ILine, IResidualProvider
   }
 
   /**
-   * Evaluate and store residuals from intrinsic constraints
-   * Called after optimization to cache numerical residual values
+   * Evaluate and store residuals from intrinsic constraints.
    */
   evaluateAndStoreResiduals(valueMap: ValueMap): void {
     const residualValues = this.computeResiduals(valueMap)
@@ -541,18 +974,14 @@ export class Line implements ISelectable, IValidatable, ILine, IResidualProvider
   }
 
   /**
-   * Get the last computed residuals from intrinsic constraints
-   *
-   * @returns Array of residual values (should be near zero if well-optimized)
+   * Get the last computed residuals from intrinsic constraints.
    */
   getLastResiduals(): number[] {
     return [...this._lastResiduals]
   }
 
   /**
-   * Get optimization information for this line
-   *
-   * @returns Object with optimized values and residuals
+   * Get optimization information for this line.
    */
   getOptimizationInfo() {
     const residuals = this.getLastResiduals()
