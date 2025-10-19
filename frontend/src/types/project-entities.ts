@@ -3,7 +3,7 @@
 
 import { WorldPoint } from '../entities/world-point/WorldPoint'
 import { Line } from '../entities/line/Line'
-import { Camera } from '../entities/camera'
+import { Viewpoint } from '../entities/viewpoint/Viewpoint'
 import { Constraint } from '../entities/constraints/base-constraint'
 
 export interface EntityProject {
@@ -13,7 +13,7 @@ export interface EntityProject {
   // Entity collections - fully typed, no IDs
   worldPoints: Map<string, WorldPoint>
   lines: Map<string, Line>
-  cameras: Map<string, Camera>
+  viewpoints: Map<string, Viewpoint>
 
   // Constraints hold references to entities
   constraints: Constraint[]

@@ -2,7 +2,7 @@
 
 import type { EntityId, PointId, LineId, PlaneId, CameraId, ImageId, ConstraintId } from './ids'
 
-export type SelectableType = 'point' | 'line' | 'plane' | 'camera' | 'image' | 'constraint'
+export type SelectableType = 'point' | 'line' | 'plane' | 'viewpoint' | 'camera' | 'image' | 'constraint'
 
 export interface ISelectable {
   // Core identification
@@ -251,6 +251,7 @@ export function getSelectionStats(selection: EntitySelection): Record<Selectable
     point: 0,
     line: 0,
     plane: 0,
+    viewpoint: 0,
     camera: 0,
     image: 0,
     constraint: 0
