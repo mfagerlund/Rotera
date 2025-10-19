@@ -44,7 +44,7 @@ interface ImageViewerProps extends ImageViewerPropsBase {
 export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
   image,
   worldPoints,
-  lines = {},
+  lines = new Map(),
   selectedPoints,
   selectedLines = [],
   hoveredConstraintId,
@@ -144,7 +144,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     let minV = Infinity, maxV = -Infinity
 
     selectedPoints.forEach(pointId => {
-      const wp = worldPoints[pointId]
+      const wp = worldPoints.get(pointId)
       const imagePoint = wp?.imagePoints.find(ip => ip.imageId === image.id)
       if (imagePoint) {
         minU = Math.min(minU, imagePoint.u)
@@ -186,9 +186,9 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
       zoomToSelection()
     } else {
       // If no selection, zoom to fit all points
-      const allPointIds = Object.keys(worldPoints).filter(id => {
-        const wp = worldPoints[id]
-        return wp.imagePoints.some(ip => ip.imageId === image.id)
+      const allPointIds = Array.from(worldPoints.keys()).filter(id => {
+        const wp = worldPoints.get(id)
+        return wp?.imagePoints.some(ip => ip.imageId === image.id)
       })
 
       if (allPointIds.length > 0) {
@@ -360,7 +360,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
 
   // Find nearby point
   const findNearbyPoint = useCallback((canvasX: number, canvasY: number, threshold: number = 15) => {
-    return Object.values(worldPoints).find(wp => {
+    return Array.from(worldPoints.values()).find(wp => {
       const imagePoint = wp.imagePoints.find(ip => ip.imageId === image.id)
       if (!imagePoint) return false
 
@@ -377,11 +377,11 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
 
   // Find nearby line
   const findNearbyLine = useCallback((canvasX: number, canvasY: number, threshold: number = 10) => {
-    for (const [lineId, line] of Object.entries(lines)) {
+    for (const [lineId, line] of Array.from(lines.entries())) {
       if (!line.isVisible) continue
 
-      const pointA = worldPoints[line.pointA]
-      const pointB = worldPoints[line.pointB]
+      const pointA = worldPoints.get(line.pointA)
+      const pointB = worldPoints.get(line.pointB)
       if (!pointA || !pointB) continue
 
       const ipA = pointA.imagePoints.find(ip => ip.imageId === image.id)
@@ -1012,7 +1012,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
           <div className="placement-instructions">
             <div className="placement-icon"><FontAwesomeIcon icon={faLocationDot} /></div>
             <div className="placement-text">
-              <strong>Placing: {worldPoints[placementMode.worldPointId]?.name}</strong>
+              <strong>Placing: {worldPoints.get(placementMode.worldPointId!)?.name}</strong>
               <div className="placement-hint">Click anywhere on the image to place this world point</div>
               <div className="placement-escape">Press Esc to cancel</div>
             </div>

@@ -67,7 +67,7 @@ export const useImageViewerRenderer = ({
     let animationId: number | undefined
 
     const renderWorldPoints = () => {
-      Object.values(worldPoints).forEach(wp => {
+      Array.from(worldPoints.values()).forEach(wp => {
         const imagePoint = wp.imagePoints.find(ip => ip.imageId === imageId)
         if (!imagePoint || !wp.isVisible) {
           return
@@ -133,7 +133,7 @@ export const useImageViewerRenderer = ({
 
     const renderSelectionOverlay = () => {
       selectedPoints.forEach((pointId, index) => {
-        const wp = worldPoints[pointId]
+        const wp = worldPoints.get(pointId)
         const imagePoint = wp?.imagePoints.find(ip => ip.imageId === imageId)
 
         if (!imagePoint) {
@@ -367,13 +367,13 @@ export const useImageViewerRenderer = ({
     }
 
     const renderLines = () => {
-      Object.entries(lines).forEach(([lineId, line]) => {
+      Array.from(lines.entries()).forEach(([lineId, line]) => {
         if (!line.isVisible) {
           return
         }
 
-        const pointA = worldPoints[line.pointA]
-        const pointB = worldPoints[line.pointB]
+        const pointA = worldPoints.get(line.pointA)
+        const pointB = worldPoints.get(line.pointB)
 
         if (!pointA || !pointB) {
           return
@@ -464,8 +464,8 @@ export const useImageViewerRenderer = ({
         const segments = constructionPreview.segments || []
 
         segments.forEach(segment => {
-          const wpA = worldPoints[segment.pointA]
-          const wpB = worldPoints[segment.pointB]
+          const wpA = worldPoints.get(segment.pointA)
+          const wpB = worldPoints.get(segment.pointB)
           if (!wpA || !wpB) return
 
           const ipA = wpA.imagePoints.find(ip => ip.imageId === imageId)
@@ -499,7 +499,7 @@ export const useImageViewerRenderer = ({
         // Show line to cursor from last point if there's a chain
         if (segments.length > 0 && currentMousePos) {
           const lastSegment = segments[segments.length - 1]
-          const lastPoint = worldPoints[lastSegment.pointB]
+          const lastPoint = worldPoints.get(lastSegment.pointB)
           if (lastPoint) {
             const ipLast = lastPoint.imagePoints.find(ip => ip.imageId === imageId)
             if (ipLast) {
@@ -535,7 +535,7 @@ export const useImageViewerRenderer = ({
       const { pointA, pointB, showToCursor } = constructionPreview
 
       if (pointA && !pointB && showToCursor) {
-        const wpA = worldPoints[pointA]
+        const wpA = worldPoints.get(pointA)
         if (!wpA) {
           return
         }
@@ -562,8 +562,8 @@ export const useImageViewerRenderer = ({
       }
 
       if (pointA && pointB) {
-        const wpA = worldPoints[pointA]
-        const wpB = worldPoints[pointB]
+        const wpA = worldPoints.get(pointA)
+        const wpB = worldPoints.get(pointB)
         if (!wpA || !wpB) {
           return
         }

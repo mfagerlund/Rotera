@@ -3,12 +3,11 @@
 
 import type { WorldPointDto } from '../entities/world-point/WorldPointDto'
 import type { LineDto } from '../entities/line/LineDto'
-import type { CameraDto } from '../entities/camera'
-import type { ImageDto, ImagePointDto } from '../entities/image'
+import type { ViewpointDto } from '../entities/viewpoint/ViewpointDto'
 import type { ConstraintDto } from '../entities/constraints/base-constraint'
 
-// Lightweight image DTO without base64 blob
-export interface ImageDtoLight extends Omit<ImageDto, 'url'> {
+// Lightweight viewpoint DTO without base64 image blob
+export interface ViewpointDtoLight extends Omit<ViewpointDto, 'url'> {
   url: string // Just filename or placeholder, not base64 data
 }
 
@@ -20,8 +19,7 @@ export interface OptimizationExportDto {
   // Core entities
   worldPoints: WorldPointDto[]
   lines: LineDto[]
-  cameras: CameraDto[]
-  images: ImageDto[]
+  viewpoints: ViewpointDto[]
   constraints: ConstraintDto[]
 
   // Project metadata
@@ -30,8 +28,7 @@ export interface OptimizationExportDto {
     projectId: string
     totalWorldPoints: number
     totalLines: number
-    totalCameras: number
-    totalImages: number
+    totalViewpoints: number
     totalConstraints: number
     totalImagePoints: number
   }
@@ -58,17 +55,17 @@ export interface OptimizationExportDto {
 }
 
 // Filtered export without image blobs (for server upload)
-export interface OptimizationExportDtoFiltered extends Omit<OptimizationExportDto, 'images'> {
-  images: ImageDtoLight[]
+export interface OptimizationExportDtoFiltered extends Omit<OptimizationExportDto, 'viewpoints'> {
+  viewpoints: ViewpointDtoLight[]
 }
 
 // Helper to filter out image blobs
 export function filterImageBlobs(exportDto: OptimizationExportDto): OptimizationExportDtoFiltered {
   return {
     ...exportDto,
-    images: exportDto.images.map(img => ({
-      ...img,
-      url: img.filename // Use filename instead of base64 blob
+    viewpoints: exportDto.viewpoints.map(vp => ({
+      ...vp,
+      url: vp.filename // Use filename instead of base64 blob
     }))
   }
 }
@@ -77,7 +74,7 @@ export function filterImageBlobs(exportDto: OptimizationExportDto): Optimization
 export function calculateExportStatistics(
   worldPoints: WorldPointDto[],
   lines: LineDto[],
-  images: (ImageDto | ImageDtoLight)[],
+  viewpoints: (ViewpointDto | ViewpointDtoLight)[],
   constraints: ConstraintDto[]
 ): OptimizationExportDto['statistics'] {
   const worldPointsWithCoordinates = worldPoints.filter(wp =>
@@ -86,8 +83,8 @@ export function calculateExportStatistics(
 
   const worldPointsWithoutCoordinates = worldPoints.length - worldPointsWithCoordinates
 
-  const totalImagePoints = images.reduce((sum, img) =>
-    sum + Object.keys(img.imagePoints).length, 0
+  const totalImagePoints = viewpoints.reduce((sum, vp) =>
+    sum + Object.keys(vp.imagePoints).length, 0
   )
 
   const averageImagePointsPerWorldPoint = worldPoints.length > 0
@@ -100,8 +97,8 @@ export function calculateExportStatistics(
   })
 
   const imagePointsPerImage: Record<string, number> = {}
-  images.forEach(img => {
-    imagePointsPerImage[img.id] = Object.keys(img.imagePoints).length
+  viewpoints.forEach(vp => {
+    imagePointsPerImage[vp.id] = Object.keys(vp.imagePoints).length
   })
 
   return {

@@ -80,9 +80,9 @@ export const MainToolbar: React.FC<MainToolbarProps> = ({
     const filterImageBlobs = (data: OptimizationExportDto): OptimizationExportDto => {
       return {
         ...data,
-        images: data.images.map(img => ({
-          ...img,
-          blob: undefined // Remove blob to reduce file size
+        viewpoints: data.viewpoints.map(vp => ({
+          ...vp,
+          // Viewpoints already handle blob filtering in their DTO
         }))
       }
     }

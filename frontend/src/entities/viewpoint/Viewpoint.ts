@@ -11,12 +11,6 @@ import { Quaternion } from '../../optimization/Quaternion'
 import { quaternionNormalizationResidual } from '../../optimization/residuals/quaternion-normalization-residual'
 import type { ViewpointDto, ImagePointDto } from './ViewpointDto'
 
-// Repository interface
-export interface ViewpointRepository {
-  getWorldPoint(pointId: string): EntityId | undefined
-  entityExists(id: EntityId): boolean
-}
-
 // Domain class
 export class Viewpoint implements ISelectable, IValidatable, IValueMapContributor {
   private _selected = false
@@ -24,7 +18,6 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
   private _lastResiduals: number[] = []
 
   private constructor(
-    private _repo: ViewpointRepository,
     private _data: ViewpointDto
   ) {}
 
@@ -32,12 +25,12 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
   // Factory methods
   // ============================================================================
 
-  static fromDTO(dto: ViewpointDto, repo: ViewpointRepository): Viewpoint {
+  static fromDTO(dto: ViewpointDto): Viewpoint {
     const validation = Viewpoint.validateDto(dto)
     if (!validation.isValid) {
       throw new Error(`Invalid Viewpoint DTO: ${validation.errors.map(e => e.message).join(', ')}`)
     }
-    return new Viewpoint(repo, { ...dto })
+    return new Viewpoint({ ...dto })
   }
 
   static create(
@@ -47,7 +40,6 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
     url: string,
     imageWidth: number,
     imageHeight: number,
-    repo: ViewpointRepository,
     options: {
       // Camera intrinsics
       focalLength?: number
@@ -128,7 +120,7 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
       updatedAt: now
     }
 
-    const viewpoint = new Viewpoint(repo, dto)
+    const viewpoint = new Viewpoint(dto)
     viewpoint._isPoseLocked = options.isPoseLocked ?? false
     return viewpoint
   }
@@ -426,7 +418,7 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
       createdAt: now,
       updatedAt: now
     }
-    return new Viewpoint(this._repo, clonedData)
+    return new Viewpoint(clonedData)
   }
 
   setVisible(visible: boolean): void {

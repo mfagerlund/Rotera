@@ -9,8 +9,8 @@ interface ImageWorkspaceProps {
   isLoopTraceActive: boolean
   image: ProjectImage | null
   imageViewerRef: React.RefObject<ImageViewerRef>
-  worldPoints: Record<string, WorldPoint>
-  lines: Record<string, LineData>
+  worldPoints: Map<string, WorldPoint>
+  lines: Map<string, LineData>
   selectedPointIds: string[]
   selectedLineIds: string[]
   hoveredConstraintId: string | null

@@ -27,7 +27,7 @@ interface CreationToolsManagerProps {
   activeTool: ToolType
   onToolChange: (tool: ToolType) => void
   worldPointNames: Record<string, string>
-  existingLines: Record<string, any> // Existing lines for duplicate checking
+  existingLines: Map<string, any> // Existing lines for duplicate checking
   onCreatePoint: (imageId: string, u: number, v: number) => void
   onCreateLine: (pointIds: [string, string], constraints?: LineConstraints) => void
   onCreateConstraint?: (constraint: any) => void
@@ -280,7 +280,7 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
 
       {/* Floating Line Tool - handles both creation and editing */}
       <FloatingWindow
-        title={editingLineId && existingLines[editingLineId] ? `Edit Line: ${existingLines[editingLineId].name}` : "Create Line"}
+        title={editingLineId && existingLines.get(editingLineId) ? `Edit Line: ${existingLines.get(editingLineId)!.name}` : "Create Line"}
         isOpen={activeTool === 'line'}
         onClose={handleToolCancel}
         storageKey="line-tool"
@@ -310,11 +310,11 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
           showHeader={false}
           showActionButtons={false}
           editMode={!!editingLineId}
-          existingLine={editingLineId ? existingLines[editingLineId] : undefined}
+          existingLine={editingLineId ? existingLines.get(editingLineId) : undefined}
           existingConstraints={
             editingLineId && projectConstraints
               ? Object.values(projectConstraints).filter(c => {
-                  const line = existingLines[editingLineId]
+                  const line = existingLines.get(editingLineId)
                   if (!line) return false
                   const constraintLineIds = c.entities?.lines || []
                   const constraintPointIds = c.entities?.points || []

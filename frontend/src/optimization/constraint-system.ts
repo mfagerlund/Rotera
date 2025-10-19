@@ -14,7 +14,7 @@ import { Value, nonlinearLeastSquares } from 'scalar-autograd';
 import type { ValueMap } from './IOptimizable';
 import type { WorldPoint } from '../entities/world-point/WorldPoint';
 import type { Line } from '../entities/line/Line';
-import type { Camera } from '../entities/camera';
+import type { Viewpoint } from '../entities/viewpoint/Viewpoint';
 import type { Constraint } from '../entities/constraints/base-constraint';
 
 export interface SolverResult {
@@ -40,7 +40,7 @@ export class ConstraintSystem {
   // Entities in the system
   private points: Set<WorldPoint> = new Set();
   private lines: Set<Line> = new Set();
-  private cameras: Set<Camera> = new Set();
+  private cameras: Set<Viewpoint> = new Set();
   private constraints: Set<Constraint> = new Set();
 
   constructor(options: SolverOptions = {}) {
@@ -66,11 +66,11 @@ export class ConstraintSystem {
   }
 
   /**
-   * Add a camera to the constraint system.
-   * Cameras add their pose (and optionally intrinsics) as optimizable parameters.
+   * Add a viewpoint (camera) to the constraint system.
+   * Viewpoints add their pose (and optionally intrinsics) as optimizable parameters.
    */
-  addCamera(camera: Camera): void {
-    this.cameras.add(camera);
+  addCamera(viewpoint: Viewpoint): void {
+    this.cameras.add(viewpoint);
   }
 
   /**

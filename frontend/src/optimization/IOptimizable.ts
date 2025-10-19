@@ -10,10 +10,10 @@
 import type { Value, Vec3 } from 'scalar-autograd';
 import type { Vec4 } from './Vec4';
 import type { WorldPoint } from '../entities/world-point/WorldPoint';
-import type { Camera } from '../entities/camera';
+import type { Viewpoint } from '../entities/viewpoint/Viewpoint';
 
 /**
- * Camera parameters in ValueMap.
+ * Viewpoint (camera) parameters in ValueMap.
  * Separated into position, rotation, and intrinsics for optimization.
  */
 export interface CameraValues {
@@ -34,11 +34,11 @@ export interface CameraValues {
 /**
  * Map from entities to their corresponding Value objects for optimization.
  * Points map to Vec3 (3D position vectors).
- * Cameras map to CameraValues (pose + intrinsics).
+ * Viewpoints (cameras) map to CameraValues (pose + intrinsics).
  */
 export interface ValueMap {
   points: Map<WorldPoint, Vec3>;
-  cameras: Map<Camera, CameraValues>;
+  cameras: Map<Viewpoint, CameraValues>;
 }
 
 /**

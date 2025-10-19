@@ -9,16 +9,11 @@
 
 import { describe, it, expect, beforeEach } from '@jest/globals';
 import { WorldPoint } from '../../entities/world-point/WorldPoint';
-import { Camera } from '../../entities/camera';
+import { Viewpoint } from '../../entities/viewpoint/Viewpoint';
 import { ProjectionConstraint } from '../../entities/constraints/projection-constraint';
 import { ConstraintSystem } from '../constraint-system';
 
 // Test repository implementations
-class TestCameraRepository {
-  getImagesByCamera() { return []; }
-  entityExists() { return true; }
-}
-
 class TestConstraintRepository {
   getPoint() { return undefined; }
   getLine() { return undefined; }
@@ -31,7 +26,6 @@ class TestConstraintRepository {
 
 describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
   let system: ConstraintSystem;
-  let cameraRepo: TestCameraRepository;
   let constraintRepo: TestConstraintRepository;
 
   beforeEach(() => {
@@ -40,7 +34,6 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
       maxIterations: 100,
       verbose: false,
     });
-    cameraRepo = new TestCameraRepository();
     constraintRepo = new TestConstraintRepository();
   });
 
@@ -60,15 +53,16 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
         isLocked: true,
       });
 
-      // Create a camera with wrong initial pose
-      const camera = Camera.create(
+      // Create a viewpoint with wrong initial pose
+      const camera = Viewpoint.create(
         'cam1',
         'TestCamera',
-        1000, // focal length = 1000 pixels
+        'test-camera.jpg',
+        '',
         1920,
         1080,
-        cameraRepo,
         {
+          focalLength: 1000,
           position: [0.5, 0.2, 0.1], // Wrong position (should be at origin)
           rotationEuler: [0.05, 0.03, 0.02], // Wrong rotation (should be zero)
           principalPointX: 960,
@@ -119,15 +113,16 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
     });
 
     it('should optimize point position to match observed pixel', () => {
-      // Create a camera at a known pose (LOCKED - we're optimizing the point)
-      const camera = Camera.create(
+      // Create a viewpoint at a known pose (LOCKED - we're optimizing the point)
+      const camera = Viewpoint.create(
         'cam1',
         'TestCamera',
-        1000,
+        'test-camera.jpg',
+        '',
         1920,
         1080,
-        cameraRepo,
         {
+          focalLength: 1000,
           position: [0, 0, 0], // Camera at origin
           rotation: [1, 0, 0, 0], // No rotation (identity quaternion)
           principalPointX: 960,
@@ -182,15 +177,17 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
 
   describe('Bundle Adjustment', () => {
     it('should jointly optimize camera pose and point positions', () => {
-      // Create two cameras with wrong poses
-      const cam1 = Camera.create('cam1', 'Camera1', 1000, 1920, 1080, cameraRepo, {
+      // Create two viewpoints with wrong poses
+      const cam1 = Viewpoint.create('cam1', 'Camera1', 'camera1.jpg', '', 1920, 1080, {
+        focalLength: 1000,
         position: [-1.5, 0.3, 0.2], // Wrong (should be at [-2, 0, 0])
         rotationEuler: [0, 0.1, 0],      // Wrong (should be [0, 0, 0])
         principalPointX: 960,
         principalPointY: 540,
       });
 
-      const cam2 = Camera.create('cam2', 'Camera2', 1000, 1920, 1080, cameraRepo, {
+      const cam2 = Viewpoint.create('cam2', 'Camera2', 'camera2.jpg', '', 1920, 1080, {
+        focalLength: 1000,
         position: [1.7, -0.2, 0.1], // Wrong (should be at [2, 0, 0])
         rotationEuler: [0, -0.1, 0],     // Wrong (should be [0, 0, 0])
         principalPointX: 960,
@@ -270,8 +267,9 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
         isLocked: true,
       });
 
-      // Create cameras with locked poses
-      const camera1 = Camera.create('cam1', 'Camera1', 1000, 1920, 1080, cameraRepo, {
+      // Create viewpoints with locked poses
+      const camera1 = Viewpoint.create('cam1', 'Camera1', 'camera1.jpg', '', 1920, 1080, {
+        focalLength: 1000,
         position: [-2, 0, 0],
         rotation: [1, 0, 0, 0], // Identity quaternion
         principalPointX: 960,
@@ -279,7 +277,8 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
         isPoseLocked: true, // Lock camera pose
       });
 
-      const camera2 = Camera.create('cam2', 'Camera2', 1000, 1920, 1080, cameraRepo, {
+      const camera2 = Viewpoint.create('cam2', 'Camera2', 'camera2.jpg', '', 1920, 1080, {
+        focalLength: 1000,
         position: [2, 0, 0],
         rotation: [1, 0, 0, 0], // Identity quaternion
         principalPointX: 960,

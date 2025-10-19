@@ -28,10 +28,10 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
   const stats = React.useMemo(() => {
     const pointArray = Array.from(project.worldPoints.values())
     const lineArray = Array.from(project.lines.values())
-    const cameraArray = Array.from(project.cameras.values())
+    const viewpointArray = Array.from(project.viewpoints.values())
 
     const unlockedPoints = pointArray.filter(p => !p.isLocked())
-    const totalDOF = (unlockedPoints.length * 3) + (cameraArray.length * 6)
+    const totalDOF = (unlockedPoints.length * 3) + (viewpointArray.length * 6)
     const constraintDOF = project.constraints.length
     const netDOF = Math.max(0, totalDOF - constraintDOF)
 
@@ -44,13 +44,13 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
       pointCount: pointArray.length,
       unlockedPointCount: unlockedPoints.length,
       lineCount: lineArray.length,
-      cameraCount: cameraArray.length,
+      viewpointCount: viewpointArray.length,
       constraintCount: project.constraints.length,
       projectionConstraintCount: projectionCount,
       totalDOF,
       constraintDOF,
       netDOF,
-      canOptimize: project.constraints.length > 0 && (unlockedPoints.length > 0 || cameraArray.length > 0)
+      canOptimize: project.constraints.length > 0 && (unlockedPoints.length > 0 || viewpointArray.length > 0)
     }
   }, [project])
 
@@ -71,13 +71,13 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
       // Extract entity arrays
       const pointEntities = Array.from(project.worldPoints.values())
       const lineEntities = Array.from(project.lines.values())
-      const cameraEntities = Array.from(project.cameras.values())
+      const viewpointEntities = Array.from(project.viewpoints.values())
 
       // Run optimization
       const solverResult = await clientSolver.optimize(
         pointEntities,
         lineEntities,
-        cameraEntities,
+        viewpointEntities,
         project.constraints,
         {
           maxIterations: settings.maxIterations,
@@ -138,10 +138,10 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
           <span className="stat-label">Points:</span>
           <span className="stat-value">{stats.pointCount} ({stats.unlockedPointCount} unlocked)</span>
         </div>
-        {stats.cameraCount > 0 && (
+        {stats.viewpointCount > 0 && (
           <div className="stat-item">
-            <span className="stat-label">Cameras:</span>
-            <span className="stat-value">{stats.cameraCount}</span>
+            <span className="stat-label">Viewpoints:</span>
+            <span className="stat-value">{stats.viewpointCount}</span>
           </div>
         )}
         <div className="stat-item">
@@ -161,8 +161,8 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
         <div className="optimization-requirements">
           <h4>Requirements:</h4>
           <ul>
-            {stats.unlockedPointCount === 0 && stats.cameraCount === 0 && (
-              <li className="requirement-missing">At least 1 unlocked point or camera</li>
+            {stats.unlockedPointCount === 0 && stats.viewpointCount === 0 && (
+              <li className="requirement-missing">At least 1 unlocked point or viewpoint</li>
             )}
             {stats.constraintCount === 0 && (
               <li className="requirement-missing">At least 1 constraint or image observation</li>

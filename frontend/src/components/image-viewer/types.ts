@@ -47,8 +47,8 @@ export interface LineData {
 
 export interface ImageViewerPropsBase {
   image: ProjectImage
-  worldPoints: Record<string, WorldPoint>
-  lines?: Record<string, LineData>
+  worldPoints: Map<string, WorldPoint>
+  lines?: Map<string, LineData>
   selectedPoints: string[]
   selectedLines?: string[]
   hoveredConstraintId: string | null
@@ -61,8 +61,8 @@ export interface ImageViewerPropsBase {
 
 export interface ImageViewerRenderState {
   imageId: string
-  worldPoints: Record<string, WorldPoint>
-  lines: Record<string, LineData>
+  worldPoints: Map<string, WorldPoint>
+  lines: Map<string, LineData>
   scale: number
   offset: CanvasOffset
   selectedPoints: string[]

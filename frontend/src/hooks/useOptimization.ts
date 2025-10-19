@@ -7,7 +7,7 @@ import { useState, useCallback } from 'react';
 import { ConstraintSystem, SolverResult } from '../optimization/constraint-system';
 import { WorldPoint } from '../entities/world-point/WorldPoint';
 import { Line } from '../entities/line/Line';
-import { Camera } from '../entities/camera';
+import { Viewpoint } from '../entities/viewpoint/Viewpoint';
 import { Constraint } from '../entities/constraints/base-constraint';
 import type { ConstraintId } from '../types/ids';
 
@@ -48,7 +48,7 @@ export const useOptimization = () => {
     (
       points: WorldPoint[],
       lines: Line[],
-      cameras: Camera[],
+      viewpoints: Viewpoint[],
       constraints: Constraint[]
     ): ConstraintResidual[] => {
       const system = new ConstraintSystem({
@@ -60,7 +60,7 @@ export const useOptimization = () => {
       // Add entities
       points.forEach((p) => system.addPoint(p));
       lines.forEach((l) => system.addLine(l));
-      cameras.forEach((c) => system.addCamera(c));
+      viewpoints.forEach((v) => system.addCamera(v));
       constraints.forEach((c) => system.addConstraint(c));
 
       // Build value map
@@ -70,9 +70,9 @@ export const useOptimization = () => {
       };
 
       points.forEach((p) => p.addToValueMap(valueMap));
-      cameras.forEach((c) => {
-        if ('addToValueMap' in c && typeof c.addToValueMap === 'function') {
-          (c as any).addToValueMap(valueMap);
+      viewpoints.forEach((v) => {
+        if ('addToValueMap' in v && typeof v.addToValueMap === 'function') {
+          (v as any).addToValueMap(valueMap);
         }
       });
 
@@ -106,7 +106,7 @@ export const useOptimization = () => {
     async (
       points: WorldPoint[],
       lines: Line[],
-      cameras: Camera[],
+      viewpoints: Viewpoint[],
       constraints: Constraint[],
       options: OptimizationOptions = {}
     ): Promise<SolverResult> => {
@@ -129,7 +129,7 @@ export const useOptimization = () => {
         // Add all entities
         points.forEach((p) => system.addPoint(p));
         lines.forEach((l) => system.addLine(l));
-        cameras.forEach((c) => system.addCamera(c));
+        viewpoints.forEach((v) => system.addCamera(v));
         constraints.forEach((c) => system.addConstraint(c));
 
         // Run optimization (this updates entity positions in-place)
@@ -142,7 +142,7 @@ export const useOptimization = () => {
         });
 
         // Compute final residuals per constraint
-        const constraintResiduals = computeResiduals(points, lines, cameras, constraints);
+        const constraintResiduals = computeResiduals(points, lines, viewpoints, constraints);
 
         setState({
           isRunning: false,

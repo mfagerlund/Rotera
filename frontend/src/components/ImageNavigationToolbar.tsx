@@ -4,15 +4,17 @@ import React, { useRef } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowsUpDown, faCheck, faPlus, faPencil, faTrash, faCopy } from '@fortawesome/free-solid-svg-icons'
 import { faCircle } from '@fortawesome/free-regular-svg-icons'
+// TODO: Remove legacy type imports - ProjectImage is part of Viewpoint (1:1 relationship)
+// Viewpoint = Camera + Image consolidated. ImagePoint is a collection within Viewpoint.
 import { ProjectImage, WorldPoint } from '../types/project'
 import { ImageUtils } from '../utils/imageUtils'
 import { useConfirm } from './ConfirmDialog'
 import ImageEditor from './ImageEditor'
 
 interface ImageNavigationToolbarProps {
-  images: Record<string, ProjectImage>
+  images: Map<string, ProjectImage>
   currentImageId: string | null
-  worldPoints: Record<string, WorldPoint>
+  worldPoints: Map<string, WorldPoint>
   selectedWorldPointIds: string[]
   hoveredWorldPointId?: string | null
   isCreatingConstraint: boolean
@@ -87,32 +89,21 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
   }
 
   // Sort images according to sort order, with new images at the end
-  const imageList = React.useMemo(() => {
-    const allImages = Object.values(images)
-    const sortedImages: ProjectImage[] = []
-
-    // Add images in order
-    imageSortOrder.forEach(imageId => {
-      const image = images[imageId]
-      if (image) {
-        sortedImages.push(image)
-      }
+  const imageList = React.useMemo(() =>
+    Array.from(images.values()).sort((a, b) => {
+      const indexA = imageSortOrder.indexOf(a.id)
+      const indexB = imageSortOrder.indexOf(b.id)
+      // Images in sort order come first (by their index), unsorted images go to end (Infinity)
+      const orderA = indexA >= 0 ? indexA : Infinity
+      const orderB = indexB >= 0 ? indexB : Infinity
+      return orderA - orderB
     })
-
-    // Add any new images not in the sort order
-    allImages.forEach(image => {
-      if (!imageSortOrder.includes(image.id)) {
-        sortedImages.push(image)
-      }
-    })
-
-    return sortedImages
-  }, [images, imageSortOrder])
+  , [images, imageSortOrder])
 
   // Count selected world points in an image
   const getSelectedWorldPointsInImage = (imageId: string): number => {
     return selectedWorldPointIds.filter(wpId => {
-      const wp = worldPoints[wpId]
+      const wp = worldPoints.get(wpId)
       return wp?.imagePoints.some(ip => ip.imageId === imageId)
     }).length
   }
@@ -147,10 +138,10 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
   return (
     <>
       {dialog}
-      {editingImageId && images[editingImageId] && (
+      {editingImageId && images.get(editingImageId) && (
         <ImageEditor
           isOpen={true}
-          image={images[editingImageId]}
+          image={images.get(editingImageId)!}
           onClose={() => setEditingImageId(null)}
           onUpdateImage={(updatedImage) => {
             onImageRename(updatedImage.id, updatedImage.name)
@@ -238,7 +229,7 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
 
 interface ImageNavigationItemProps {
   image: ProjectImage
-  worldPoints: Record<string, WorldPoint>
+  worldPoints: Map<string, WorldPoint>
   selectedWorldPointIds: string[]
   hoveredWorldPointId?: string | null
   isActive: boolean
@@ -483,7 +474,7 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
 
         {/* World point locations overlay */}
         <div className="wp-locations-overlay">
-            {Object.values(worldPoints).map(wp => {
+            {Array.from(worldPoints.values()).map(wp => {
               const imagePoint = wp.imagePoints.find(ip => ip.imageId === image.id)
               if (!imagePoint) return null
 

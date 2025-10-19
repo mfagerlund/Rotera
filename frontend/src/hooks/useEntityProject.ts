@@ -1,10 +1,13 @@
-// Entity-based project hook - DTOs are ONLY touched during load/save
-// This is the PRIMARY hook for working with projects
+// Entity-based project hook - CLEAN, NO LEGACY
+// DTOs are ONLY touched during load/save
+// ALL runtime work uses entities
 
-import { useState, useEffect, useMemo } from 'react'
-import { useProject } from './useProject'
-import { deserializeProject, serializeProject } from '../utils/project-serialization'
+import { useState, useEffect } from 'react'
+import { loadFromLocalStorage, saveToLocalStorage, loadProjectFromJson } from '../store/project-serialization'
 import { EntityProject } from '../types/project-entities'
+import { newProject } from '../store/project-store'
+
+const STORAGE_KEY = 'pictorigo-project'
 
 /**
  * Hook that manages entity-based project
@@ -12,45 +15,56 @@ import { EntityProject } from '../types/project-entities'
  * ALL runtime work uses entities
  */
 export const useEntityProject = () => {
-  const legacyProject = useProject()
-
-  // Entity-based project - loaded ONCE from DTOs, used for EVERYTHING
   const [entityProject, setEntityProject] = useState<EntityProject | null>(null)
+  const [currentImageId, setCurrentImageId] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Deserialize DTO → Entities ONCE when DTO project changes
+  // Load from localStorage on mount
   useEffect(() => {
-    if (legacyProject.project) {
-      console.log('Loading entities from DTOs (ONCE)...')
-      const entities = deserializeProject(legacyProject.project)
-      setEntityProject(entities)
+    try {
+      const loaded = loadFromLocalStorage(STORAGE_KEY)
+      if (loaded) {
+        console.log('Loaded project from localStorage')
+        setEntityProject(loaded)
+        // Set current image to first viewpoint if available
+        const viewpointIds = Array.from(loaded.viewpoints.keys())
+        if (viewpointIds.length > 0) {
+          setCurrentImageId(viewpointIds[0])
+        }
+      } else {
+        console.log('Creating new empty project')
+        const newProj = newProject()
+        setEntityProject(newProj)
+        saveToLocalStorage(newProj, STORAGE_KEY)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load project')
+    } finally {
+      setIsLoading(false)
     }
-  }, [legacyProject.project])
+  }, [])
 
-  // Save entities back to DTOs when needed
-  const saveEntityProject = () => {
+  // Auto-save on project changes
+  useEffect(() => {
+    if (entityProject && !isLoading) {
+      saveToLocalStorage(entityProject, STORAGE_KEY)
+    }
+  }, [entityProject, isLoading])
+
+  const saveProject = () => {
     if (entityProject) {
-      console.log('Serializing entities back to DTOs for save...')
-      const dtoProject = serializeProject(entityProject)
-      // TODO: Need to update the DTO project in useProject
-      // For now, entities are modified in place
+      saveToLocalStorage(entityProject, STORAGE_KEY)
     }
   }
 
   return {
-    // Entity-based project (runtime data model)
     project: entityProject,
-
-    // Save function
-    saveProject: saveEntityProject,
-
-    // Pass through other legacy project functions
-    // These will be gradually migrated to work with entities
-    currentImageId: legacyProject.currentImageId,
-    setCurrentImageId: legacyProject.setCurrentImageId,
-    isLoading: legacyProject.isLoading,
-    error: legacyProject.error,
-
-    // Keep legacy project for gradual migration
-    legacyProject: legacyProject.project
+    setProject: setEntityProject,
+    saveProject,
+    currentImageId,
+    setCurrentImageId,
+    isLoading,
+    error
   }
 }

@@ -7,8 +7,8 @@ import { ImagePoint, WorldPoint, ProjectImage } from '../types/project'
 interface ImagePointsManagerProps {
   isOpen: boolean
   onClose: () => void
-  worldPoints: Record<string, WorldPoint>
-  images: Record<string, ProjectImage>
+  worldPoints: Map<string, WorldPoint>
+  images: Map<string, ProjectImage>
   selectedImagePoints?: string[]
   onEditImagePoint?: (imagePointId: string) => void
   onDeleteImagePoint?: (imagePointId: string) => void
@@ -28,7 +28,7 @@ export const ImagePointsManager: React.FC<ImagePointsManagerProps> = ({
   // Collect all image points from all world points
   const allImagePoints: Array<ImagePoint & { worldPointId: string, worldPointName: string }> = []
 
-  Object.entries(worldPoints).forEach(([wpId, worldPoint]) => {
+  Array.from(worldPoints.entries()).forEach(([wpId, worldPoint]) => {
     worldPoint.imagePoints.forEach(imagePoint => {
       allImagePoints.push({
         ...imagePoint,
@@ -38,7 +38,7 @@ export const ImagePointsManager: React.FC<ImagePointsManagerProps> = ({
     })
   })
 
-  const getImageName = (imageId: string) => images[imageId]?.name || imageId
+  const getImageName = (imageId: string) => images.get(imageId)?.name || imageId
 
   // Convert image points to EntityListItem format
   const imagePointEntities: EntityListItem[] = allImagePoints.map(imagePoint => {
@@ -79,9 +79,9 @@ export const ImagePointsManager: React.FC<ImagePointsManagerProps> = ({
       onSelect={onSelectImagePoint}
       renderEntityDetails={(entity) => {
         const [worldPointId, imageId] = entity.id.split('-')
-        const worldPoint = worldPoints[worldPointId]
+        const worldPoint = worldPoints.get(worldPointId)
         const imagePoint = worldPoint?.imagePoints.find(ip => ip.imageId === imageId)
-        const image = images[imageId]
+        const image = images.get(imageId)
 
         return (
           <div className="image-point-details">

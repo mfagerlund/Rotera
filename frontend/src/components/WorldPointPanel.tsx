@@ -16,7 +16,7 @@ import ContextMenu, { ContextMenuItem } from './ContextMenu'
 import { useConfirm } from './ConfirmDialog'
 
 interface WorldPointPanelProps {
-  worldPoints: Record<string, WorldPoint>
+  worldPoints: Map<string, WorldPoint>
   constraints: Constraint[]
   selectedWorldPointIds: string[]
   hoveredWorldPointId?: string | null
@@ -67,14 +67,14 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
   const { triggerAchievement, triggerProgress } = useCelebration()
 
   // Track newly created world points for celebration
-  const prevWorldPointCount = React.useRef(Object.keys(worldPoints).length)
+  const prevWorldPointCount = React.useRef(worldPoints.size)
 
   useEffect(() => {
-    const currentCount = Object.keys(worldPoints).length
+    const currentCount = worldPoints.size
     if (currentCount > prevWorldPointCount.current) {
       // New world point created!
-      const newPoints = Object.keys(worldPoints).filter(id =>
-        !Object.keys(worldPoints).slice(0, prevWorldPointCount.current).includes(id)
+      const newPoints = Array.from(worldPoints.keys()).filter(id =>
+        !Array.from(worldPoints.keys()).slice(0, prevWorldPointCount.current).includes(id)
       )
 
       newPoints.forEach(pointId => {
@@ -129,7 +129,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
     const wpConstraints = getConstraintsForWorldPoint(wpId)
     return wpConstraints.some(constraint => {
       const pointIds = getConstraintPointIds(constraint)
-      return pointIds.some(id => !worldPoints[id])
+      return pointIds.some(id => !worldPoints.get(id))
     })
   }
 
@@ -228,7 +228,8 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
   // Removed handleKeyPress - no longer needed for inline editing
 
   const handleDelete = async (wpId: string) => {
-    const wp = worldPoints[wpId]
+    const wp = worldPoints.get(wpId)
+    if (!wp) return
     const involvedConstraints = getConstraintsForWorldPoint(wpId)
 
     let message = `Delete world point "${wp.name}"?`
@@ -264,8 +265,8 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
   }
 
   // Group world points by presence in current image
-  const presentWPs = Object.values(worldPoints).filter(wp => !isWorldPointMissingFromImage(wp))
-  const missingWPs = Object.values(worldPoints).filter(wp => isWorldPointMissingFromImage(wp))
+  const presentWPs = Array.from(worldPoints.values()).filter(wp => !isWorldPointMissingFromImage(wp))
+  const missingWPs = Array.from(worldPoints.values()).filter(wp => isWorldPointMissingFromImage(wp))
 
   // Find the most recently created world point that's missing from current image
   const latestMissingWP = missingWPs.length > 0 ?
@@ -282,7 +283,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
         <div className="placement-mode-header constraint-step">
           <div className="placement-info">
             <span className="placement-icon"><FontAwesomeIcon icon={faBullseye} /></span>
-            <span>Click on image to place "{worldPoints[placementMode.worldPointId!]?.name}"</span>
+            <span>Click on image to place "{worldPoints.get(placementMode.worldPointId!)?.name}"</span>
           </div>
           <DelightfulTooltip content="Press Escape to cancel">
             <RippleButton
@@ -379,11 +380,11 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
       </div>
 
       {/* Context Menu */}
-      {contextMenu.worldPointId && (
+      {contextMenu.worldPointId && worldPoints.get(contextMenu.worldPointId) && (
         <ContextMenu
           isOpen={contextMenu.isOpen}
           position={contextMenu.position}
-          items={getContextMenuItems(worldPoints[contextMenu.worldPointId])}
+          items={getContextMenuItems(worldPoints.get(contextMenu.worldPointId)!)}
           onClose={closeContextMenu}
         />
       )}

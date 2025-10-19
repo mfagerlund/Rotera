@@ -40,4 +40,5 @@ export interface ProjectSettings {
   enableSmartSnapping: boolean
   constraintPreview: boolean
   visualFeedbackLevel: 'minimal' | 'standard' | 'detailed'
+  imageSortOrder?: 'name' | 'date' // Optional for legacy compatibility
 }

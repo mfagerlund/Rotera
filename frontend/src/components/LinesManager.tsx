@@ -9,7 +9,7 @@ import { Line } from '../types/project'
 interface LinesManagerProps {
   isOpen: boolean
   onClose: () => void
-  lines: Record<string, Line>
+  lines: Map<string, Line>
   worldPointNames: Record<string, string>
   selectedLines?: string[]
   onEditLine?: (lineId: string) => void
@@ -40,7 +40,7 @@ export const LinesManager: React.FC<LinesManagerProps> = ({
   const getPointName = (pointId: string) => worldPointNames[pointId] || pointId
 
   // Convert lines to EntityListItem format
-  const lineEntities: EntityListItem[] = Object.values(lines).map(line => ({
+  const lineEntities: EntityListItem[] = Array.from(lines.values()).map(line => ({
     id: line.id,
     name: line.name,
     displayInfo: `${getPointName(line.pointA)} ↔ ${getPointName(line.pointB)}`,
@@ -67,7 +67,7 @@ export const LinesManager: React.FC<LinesManagerProps> = ({
     setEditingLineId(null)
   }
 
-  const editingLine = editingLineId ? lines[editingLineId] : null
+  const editingLine = editingLineId ? lines.get(editingLineId) : null
 
   return (
     <>
@@ -84,7 +84,8 @@ export const LinesManager: React.FC<LinesManagerProps> = ({
         onToggleVisibility={onToggleLineVisibility}
         onSelect={onSelectLine}
         renderEntityDetails={(entity) => {
-          const line = lines[entity.id]
+          const line = lines.get(entity.id)
+          if (!line) return null
           return (
             <div className="line-details">
               {line.constraints?.targetLength && (

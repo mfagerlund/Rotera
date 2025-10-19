@@ -11,7 +11,7 @@ interface WorldPointEditorProps {
   worldPoint: WorldPoint
   onUpdateWorldPoint: (updatedPoint: WorldPoint) => void
   onDeleteWorldPoint?: (pointId: string) => void
-  images: Record<string, ProjectImage>
+  images: Map<string, ProjectImage>
 }
 
 export const WorldPointEditor: React.FC<WorldPointEditorProps> = ({
@@ -66,7 +66,7 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = ({
   }
 
   const summarizeImageObservation = (imagePoint: WorldPoint['imagePoints'][number]) => {
-    const image = images[imagePoint.imageId]
+    const image = images.get(imagePoint.imageId)
     const displayName = image?.name || imagePoint.imageId
 
     if (!image || !image.width || !image.height) {
