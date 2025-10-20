@@ -6,6 +6,7 @@ import FloatingWindow from './FloatingWindow'
 import LineCreationTool from './tools/LineCreationTool'
 import { Line } from '../entities/line'
 import { WorldPoint } from '../entities/world-point'
+import { getEntityKey } from '../utils/entityKeys'
 
 interface LinesManagerProps {
   isOpen: boolean
@@ -42,18 +43,19 @@ export const LinesManager: React.FC<LinesManagerProps> = ({
   const lineMap = new Map<string, Line>()
 
   const lineEntities: EntityListItem[] = linesList.map(line => {
-    lineMap.set(line.id, line)
+    const entityKey = getEntityKey(line)
+    lineMap.set(entityKey, line)
     const dirVector = line.getDirection()
     const dirLabel = dirVector ? 'constrained' : 'free'
 
     return {
-      id: line.id,
+      id: entityKey,
       name: line.getName(),
       displayInfo: `${line.pointA.getName()} ↔ ${line.pointB.getName()}`,
       additionalInfo: [
         line.isConstruction ? 'Construction line' : 'Driving line',
         ...(dirLabel !== 'free' ? [`Direction: ${dirLabel}`] : []),
-        ...(line.constraints.targetLength ? [`Length: ${line.constraints.targetLength}m`] : [])
+        ...(line.targetLength ? [`Length: ${line.targetLength}m`] : [])
       ],
       color: line.color,
       isVisible: line.isVisible,
@@ -112,9 +114,9 @@ export const LinesManager: React.FC<LinesManagerProps> = ({
           const dirVector = line.getDirection()
           return (
             <div className="line-details">
-              {line.constraints.targetLength && (
+              {line.targetLength && (
                 <div className="constraint-badge">
-                  Length: {line.constraints.targetLength}m
+                  Length: {line.targetLength}m
                 </div>
               )}
               {dirVector && (

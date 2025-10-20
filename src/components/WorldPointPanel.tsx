@@ -10,6 +10,7 @@ import type { Viewpoint } from '../entities/viewpoint'
 import type { Constraint } from '../entities/constraints/base-constraint'
 import ContextMenu, { ContextMenuItem } from './ContextMenu'
 import { useConfirm } from './ConfirmDialog'
+import { getEntityKey } from '../utils/entityKeys'
 
 interface WorldPointPanelProps {
   worldPoints: Map<string, WorldPoint>
@@ -59,7 +60,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
     worldPoint: WorldPoint | null
   }>({
     isOpen: false,
-    lockedXyz: { x: 0, y: 0 },
+    position: { x: 0, y: 0 },
     worldPoint: null
   })
   // Track newly created world points
@@ -69,7 +70,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
   const getImagePointCount = (worldPoint: WorldPoint): number => {
     let count = 0
     for (const viewpoint of viewpoints.values()) {
-      if (Object.values(viewpoint.imagePoints).some(ip => ip.worldPointId === worldPoint.id)) {
+      if (Array.from(viewpoint.imagePoints).some(ip => ip.worldPoint === worldPoint)) {
         count++
       }
     }
@@ -78,7 +79,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
 
   // Helper: Check if world point is in current image
   const isWorldPointInImage = (worldPoint: WorldPoint, viewpoint: Viewpoint): boolean => {
-    return Object.values(viewpoint.imagePoints).some(ip => ip.worldPointId === worldPoint.id)
+    return Array.from(viewpoint.imagePoints).some(ip => ip.worldPoint === worldPoint)
   }
 
   useEffect(() => {
@@ -118,7 +119,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
     const wpConstraints = getConstraintsForWorldPoint(wp)
     return wpConstraints.some(constraint => {
       const constraintPoints = constraint.points
-      return constraintPoints.some(p => !worldPoints.get(p.id))
+      return constraintPoints.some(p => !Array.from(worldPoints.values()).includes(p))
     })
   }
 
@@ -314,7 +315,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
 
             return (
               <EnhancedWorldPointItem
-                key={wp.id}
+                key={getEntityKey(wp)}
                 worldPoint={wp}
                 imagePointCount={getImagePointCount(wp)}
                 isSelected={isSelected}
@@ -449,7 +450,7 @@ const EnhancedWorldPointItem: React.FC<EnhancedWorldPointItemProps> = ({
           // Set drag data
           e.dataTransfer.setData('application/json', JSON.stringify({
             type: 'world-point',
-            worldPointId: worldPoint.id,
+            worldPointName: worldPoint.getName(),
             action: imagePointCount > 0 ? 'move' : 'place'
           }))
           e.dataTransfer.effectAllowed = 'copy'
@@ -483,7 +484,7 @@ const EnhancedWorldPointItem: React.FC<EnhancedWorldPointItemProps> = ({
       >
         <div className="wp-item-main">
           <div className="wp-item-content">
-            <div className="wp-color-dot world-point-hover" style={{ backgroundColor: worldPoint.color }} title={`Point ID: ${worldPoint.id}`} />
+            <div className="wp-color-dot world-point-hover" style={{ backgroundColor: worldPoint.color }} title={`Point: ${worldPoint.getName()}`} />
 
             <div className="wp-name" title={constraintsText}>{worldPoint.getName()}</div>
 
@@ -564,7 +565,7 @@ const EnhancedWorldPointItem: React.FC<EnhancedWorldPointItemProps> = ({
               const constraintType = constraint.getConstraintType()
               return (
                 <div
-                  key={constraint.id}
+                  key={getEntityKey(constraint)}
                   className={`wp-constraint-item ${!isEnabled ? 'disabled' : ''} ${isEnabled ? 'constraint-completion' : ''}`}
                 >
                   <span className="constraint-icon">{getConstraintIcon(constraintType)}</span>

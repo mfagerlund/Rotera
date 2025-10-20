@@ -135,8 +135,8 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
               </div>
 
               <div className="status-item">
-                <label>Viewpoint ID</label>
-                <span title={viewpoint.id}>{viewpoint.id}</span>
+                <label>Viewpoint Name</label>
+                <span title={viewpoint.getName()}>{viewpoint.getName()}</span>
               </div>
             </div>
           </div>

@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { Line } from '../entities/line/Line'
+import type { WorldPoint } from '../entities/world-point'
 
 // Legacy type until we migrate away from types/project
 interface AvailableConstraint {
@@ -12,11 +13,11 @@ interface AvailableConstraint {
 }
 
 interface ConstraintToolbarProps {
-  selectedPoints: string[]
+  selectedPoints: WorldPoint[]
   selectedLines: Line[]
   availableConstraints: AvailableConstraint[]
   selectionSummary: string
-  onConstraintClick: (type: string, selectedPoints: string[], selectedLines: Line[]) => void
+  onConstraintClick: (type: string, selectedPoints: WorldPoint[], selectedLines: Line[]) => void
 }
 
 export const ConstraintToolbar: React.FC<ConstraintToolbarProps> = ({

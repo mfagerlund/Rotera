@@ -107,9 +107,9 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
   // Render world points
   const renderWorldPoints = useCallback((ctx: CanvasRenderingContext2D) => {
     project.worldPoints.forEach((point) => {
-      if (!point.isVisible || !point.lockedXyz) return
+      if (!point.isVisible) return
 
-      const coords = point.getDefinedCoordinates()
+      const coords = point.optimizedXyz
       if (!coords) return
 
       const projected = project3DTo2D(coords)
@@ -151,8 +151,8 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
 
       const pointA = line.pointA
       const pointB = line.pointB
-      const coordsA = pointA.getDefinedCoordinates()
-      const coordsB = pointB.getDefinedCoordinates()
+      const coordsA = pointA.optimizedXyz
+      const coordsB = pointB.optimizedXyz
       if (!coordsA || !coordsB) return
 
       const projA = project3DTo2D(coordsA)
@@ -192,7 +192,7 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
 
       // Show glyph with direction constraint if available
       let directionGlyph = '↔' // Default glyph
-      const direction = line.constraints.direction
+      const direction = line.direction
       switch (direction) {
         case 'horizontal': directionGlyph = '↔'; break
         case 'vertical': directionGlyph = '↕'; break
@@ -203,7 +203,7 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
 
       // Show target length if set, otherwise show calculated length
       let displayText = `${line.name} ${directionGlyph}`
-      const targetLength = line.constraints.targetLength
+      const targetLength = line.targetLength
       if (targetLength !== undefined) {
         displayText = `${line.name} ${directionGlyph} ${targetLength.toFixed(1)}m`
       } else {
@@ -428,7 +428,7 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
     for (const point of project.worldPoints) {
       if (!point.isVisible) continue
 
-      const coords = point.getDefinedCoordinates()
+      const coords = point.optimizedXyz
       if (!coords) continue
 
       const projected = project3DTo2D(coords)
@@ -446,8 +446,8 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
     for (const line of project.lines) {
       if (!line.isVisible) continue
 
-      const coordsA = line.pointA.getDefinedCoordinates()
-      const coordsB = line.pointB.getDefinedCoordinates()
+      const coordsA = line.pointA.optimizedXyz
+      const coordsB = line.pointB.optimizedXyz
       if (!coordsA || !coordsB) continue
 
       const projA = project3DTo2D(coordsA)

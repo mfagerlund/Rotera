@@ -7,6 +7,7 @@ import EntityListPopup, { EntityListItem } from './EntityListPopup'
 import type { Constraint } from '../entities/constraints'
 import { WorldPoint } from '../entities/world-point'
 import { Line } from '../entities/line'
+import { getEntityKey } from '../utils/entityKeys'
 
 interface ConstraintsPopupProps {
   isOpen: boolean
@@ -33,12 +34,12 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
   onToggleConstraint,
   onSelectConstraint
 }) => {
-  const pointMap = new Map(allWorldPoints.map(p => [p.id, p]))
-  const lineMap = new Map(allLines.map(l => [l.id, l]))
-  const constraintMap = new Map(constraints.map(c => [c.id, c]))
+  // Use getEntityKey() for ALL entities - NO DTO IDs at runtime!
+  const constraintMap = new Map<string, Constraint>()
 
-  const getPointName = (pointId: string) => pointMap.get(pointId)?.getName() || pointId
-  const getLineName = (lineId: string) => lineMap.get(lineId)?.getName() || lineId
+  // Helper to get entity names for display
+  const getPointName = (point: WorldPoint) => point.getName()
+  const getLineName = (line: Line) => line.getName()
 
   const getConstraintDisplayName = (type: string) => {
     return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
@@ -46,14 +47,17 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
 
   const getConstraintEntities = (constraint: Constraint): string[] => {
     const entities: string[] = []
-    const dto = constraint.toConstraintDto()
 
-    if (dto.entities?.points) {
-      entities.push(...dto.entities.points.map((pointId: string) => getPointName(pointId)))
+    // Use object references, NOT IDs!
+    const points = constraint.points
+    const lines = constraint.lines
+
+    if (points.length > 0) {
+      entities.push(...points.map(p => getPointName(p)))
     }
 
-    if (dto.entities?.lines) {
-      entities.push(...dto.entities.lines.map((lineId: string) => getLineName(lineId)))
+    if (lines.length > 0) {
+      entities.push(...lines.map(l => getLineName(l)))
     }
 
     return entities
@@ -108,8 +112,10 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
   const constraintEntities: EntityListItem[] = constraints.map(constraint => {
     const entities = getConstraintEntities(constraint)
     const dto = constraint.toConstraintDto()
+    const entityKey = getEntityKey(constraint)
+    constraintMap.set(entityKey, constraint) // Map entityKey to constraint for lookups
     return {
-      id: dto.id,
+      id: entityKey, // Use getEntityKey(), NOT dto.id!
       name: getConstraintDisplayName(dto.type),
       displayInfo: entities.length > 0 ? entities.join(', ') : 'No entities',
       additionalInfo: getConstraintDetails(constraint),
@@ -179,7 +185,7 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
         )
       }}
       renderCustomActions={(entity) => {
-        const constraint = constraints.find(c => c.id === entity.id)
+        const constraint = constraintMap.get(entity.id)
         if (!constraint) return null
 
         const dto = constraint.toConstraintDto()

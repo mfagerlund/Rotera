@@ -59,7 +59,7 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
     entityId: string
   }>({
     isOpen: false,
-    lockedXyz: { x: 0, y: 0 },
+    position: { x: 0, y: 0 },
     entityId: ''
   })
 
@@ -79,7 +79,7 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
     e.preventDefault()
     setContextMenu({
       isOpen: true,
-      lockedXyz: { x: e.clientX, y: e.clientY },
+      position: { x: e.clientX, y: e.clientY },
       entityId
     })
   }

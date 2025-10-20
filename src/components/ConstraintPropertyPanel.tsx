@@ -27,8 +27,7 @@ export const ConstraintPropertyPanel: React.FC<ConstraintPropertyPanelProps> = (
   onApply,
   onCancel
 }) => {
-  const pointMap = new Map(allWorldPoints.map(p => [p.id, p]))
-  const getPointName = (pointId: string) => pointMap.get(pointId)?.getName() || pointId
+  const getPointName = (point: WorldPoint) => point.getName()
 
   // Handle ESC key to cancel constraint creation
   useEffect(() => {
@@ -85,10 +84,10 @@ export const ConstraintPropertyPanel: React.FC<ConstraintPropertyPanelProps> = (
 
 interface ConstraintParameterFormProps {
   type: string
-  selectedPoints: string[]
+  selectedPoints: WorldPoint[]
   selectedLines: Line[]
   parameters: Record<string, any>
-  getPointName: (pointId: string) => string
+  getPointName: (point: WorldPoint) => string
   onParameterChange: (key: string, value: any) => void
   onApply: () => void
   isComplete: boolean
@@ -104,7 +103,7 @@ const ConstraintParameterForm: React.FC<ConstraintParameterFormProps> = ({
   onApply,
   isComplete
 }) => {
-  const getPointNames = (pointIds: string[]) => pointIds.map(getPointName)
+  const getPointNames = (points: WorldPoint[]) => points.map(getPointName)
 
   switch (type) {
     case 'points_distance':
@@ -148,7 +147,7 @@ const ConstraintParameterForm: React.FC<ConstraintParameterFormProps> = ({
                 <span>Angle: {getPointNames(selectedPoints.slice(0, 3)).join(' - ')}</span>
               ) : (
                 <span>Lines: {selectedLines.map(line =>
-                  `${getPointName(line.pointA.id)}-${getPointName(line.pointB.id)}`
+                  `${getPointName(line.pointA)}-${getPointName(line.pointB)}`
                 ).join(' and ')}</span>
               )
             ) : (
@@ -194,7 +193,7 @@ const ConstraintParameterForm: React.FC<ConstraintParameterFormProps> = ({
           <div className="selected-lines-preview">
             <span>
               Lines: {selectedLines.map(line =>
-                `${getPointName(line.pointA.id)}-${getPointName(line.pointB.id)}`
+                `${getPointName(line.pointA)}-${getPointName(line.pointB)}`
               ).join(' and ')}
             </span>
           </div>

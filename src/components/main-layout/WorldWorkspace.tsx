@@ -4,6 +4,7 @@ import WorldView, { WorldViewRef } from '../WorldView'
 import { Project } from '../../entities/project'
 import { WorldPoint } from '../../entities/world-point'
 import { Line } from '../../entities/line'
+import type { Plane } from '../../entities/plane'
 import type { ISelectable } from '../../types/selectable'
 
 interface WorldWorkspaceProps {
@@ -13,7 +14,7 @@ interface WorldWorkspaceProps {
   hoveredConstraintId: string | null
   onPointClick: (worldPoint: WorldPoint, ctrlKey: boolean, shiftKey: boolean) => void
   onLineClick: (line: Line, ctrlKey: boolean, shiftKey: boolean) => void
-  onPlaneClick: (planeId: string, ctrlKey: boolean, shiftKey: boolean) => void
+  onPlaneClick: (plane: Plane, ctrlKey: boolean, shiftKey: boolean) => void
 }
 
 const WorldWorkspace: React.FC<WorldWorkspaceProps> = ({
