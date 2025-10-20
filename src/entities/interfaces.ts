@@ -1,8 +1,7 @@
 export interface IWorldPoint {
     getName(): string
     hasCoordinates(): boolean
-    getDefinedCoordinates(): [number, number, number] | undefined
-    xyz?: [number | null, number | null, number | null]
+    lockedXyz?: [number | null, number | null, number | null]
 }
 
 export interface ILine {

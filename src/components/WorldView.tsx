@@ -107,7 +107,7 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
   // Render world points
   const renderWorldPoints = useCallback((ctx: CanvasRenderingContext2D) => {
     project.worldPoints.forEach((point) => {
-      if (!point.isVisible || !point.xyz) return
+      if (!point.isVisible || !point.lockedXyz) return
 
       const coords = point.getDefinedCoordinates()
       if (!coords) return

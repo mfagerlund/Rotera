@@ -242,7 +242,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                             <div className="data-row">
                               <span className="data-label">Position:</span>
                               <span className="data-value">
-                                [{info.position?.map(v => v?.toFixed(3)).join(', ')}]
+                                [{info.lockedXyz?.map(v => v?.toFixed(3)).join(', ')}]
                               </span>
                             </div>
                             <div className="data-row">

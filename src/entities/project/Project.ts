@@ -1,33 +1,14 @@
-import type {WorldPoint} from '../world-point/WorldPoint'
-import type {Line} from '../line/Line'
-import type {Viewpoint} from '../viewpoint/Viewpoint'
+import type {WorldPoint} from '../world-point'
+import type {Line} from '../line'
+import type {Viewpoint} from '../viewpoint'
 import type {IImagePoint} from '../interfaces'
-import type {Constraint} from '../constraints/base-constraint'
+import type {Constraint} from '../constraints'
 
 export type MeasurementUnits = 'meters' | 'feet' | 'inches'
 export type Theme = 'dark' | 'light'
 export type WorkspaceType = 'image' | 'world'
 export type VisualFeedbackLevel = 'minimal' | 'standard' | 'detailed'
 export type ImageSortOrder = 'name' | 'date'
-
-// export interface ProjectSettings {
-//   showPointNames: boolean
-//   autoSave: boolean
-//   theme: Theme
-//   measurementUnits: MeasurementUnits
-//   precisionDigits: number
-//   showConstraintGlyphs: boolean
-//   showMeasurements: boolean
-//   autoOptimize: boolean
-//   gridVisible: boolean
-//   snapToGrid: boolean
-//   defaultWorkspace: WorkspaceType
-//   showConstructionGeometry: boolean
-//   enableSmartSnapping: boolean
-//   constraintPreview: boolean
-//   visualFeedbackLevel: VisualFeedbackLevel
-//   imageSortOrder?: ImageSortOrder
-// }
 
 export class Project {
     name: string

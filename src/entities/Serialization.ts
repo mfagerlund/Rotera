@@ -268,7 +268,7 @@ export class Serialization {
     return {
       id: point.id,
       name: point.name,
-      xyz: point.xyz,
+      xyz: point.lockedXyz,
       xyzProvenance: point.isOptimized ? {
         source: 'optimized',
         timestamp: point.optimizedAt || new Date(),
@@ -360,7 +360,7 @@ export class Serialization {
       aspectRatio: viewpoint.aspectRatio,
       radialDistortion: [...viewpoint.radialDistortion],
       tangentialDistortion: [...viewpoint.tangentialDistortion],
-      position: [...viewpoint.position],
+      lockedXyz: [...viewpoint.position],
       rotation: [...viewpoint.rotation],
       calibrationAccuracy: viewpoint.calibrationAccuracy,
       calibrationDate: viewpoint.calibrationDate,

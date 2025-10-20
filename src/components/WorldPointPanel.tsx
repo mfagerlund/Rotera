@@ -59,7 +59,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
     worldPoint: WorldPoint | null
   }>({
     isOpen: false,
-    position: { x: 0, y: 0 },
+    lockedXyz: { x: 0, y: 0 },
     worldPoint: null
   })
   // Track newly created world points
@@ -145,7 +145,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
     e.preventDefault()
     setContextMenu({
       isOpen: true,
-      position: { x: e.clientX, y: e.clientY },
+      lockedXyz: { x: e.clientX, y: e.clientY },
       worldPoint
     })
   }

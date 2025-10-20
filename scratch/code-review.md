@@ -459,14 +459,15 @@ setName(name: string): void {
 ```
 
 **Option 2: Use factory to create updated instances**
+
 ```typescript
 const renameWorldPoint = (worldPoint: WorldPoint, name: string) => {
-  const updated = WorldPoint.create(worldPoint.id, name, {
-    xyz: worldPoint.xyz,
-    color: worldPoint.color,
-    // ... copy all properties
-  })
-  project.replaceWorldPoint(worldPoint, updated)
+    const updated = WorldPoint.create(worldPoint.id, name, {
+        xyz: worldPoint.lockedXyz,
+        color: worldPoint.color,
+        // ... copy all properties
+    })
+    project.replaceWorldPoint(worldPoint, updated)
 }
 ```
 

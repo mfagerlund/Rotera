@@ -451,7 +451,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint 
         if (optimizeDistortion) variables.push(k1, k2, k3, p1, p2)
 
         const cameraValues: CameraValues = {
-            position,
+            lockedXyz: position,
             rotation,
             focalLength,
             aspectRatio,
