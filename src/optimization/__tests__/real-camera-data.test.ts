@@ -8,7 +8,7 @@ import * as path from 'path';
 
 describe('Real Camera Data Optimization', () => {
   it('should load and validate 3-camera test data', () => {
-    const testDataPath = path.join(__dirname, '../../../../test-data/test-project-3-cameras.json');
+    const testDataPath = path.join(__dirname, '../../../test-data/test-project-3-cameras.json');
     const project = JSON.parse(fs.readFileSync(testDataPath, 'utf-8'));
 
     console.log('\n=== Real Camera Test Data ===');
@@ -46,7 +46,7 @@ describe('Real Camera Data Optimization', () => {
 
   it.skip('should optimize camera poses using real 3-camera data', () => {
     // SKIPPED: Test fixture uses old Camera/Image format, needs migration to Viewpoint format
-    const testDataPath = path.join(__dirname, '../../../../test-data/test-project-3-cameras.json');
+    const testDataPath = path.join(__dirname, '../../../test-data/test-project-3-cameras.json');
     const fixtureData = JSON.parse(fs.readFileSync(testDataPath, 'utf-8'));
 
     console.log('\n=== Real 3-Camera Bundle Adjustment ===');

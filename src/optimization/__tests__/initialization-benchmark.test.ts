@@ -14,7 +14,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 // Load the test project (without xyz coordinates)
-const testDataPath = path.join(__dirname, '../../../../test-data/test-project.json');
+const testDataPath = path.join(__dirname, '../../../test-data/test-project.json');
 const baseProject = JSON.parse(fs.readFileSync(testDataPath, 'utf-8'));
 delete baseProject.images; // Remove images
 

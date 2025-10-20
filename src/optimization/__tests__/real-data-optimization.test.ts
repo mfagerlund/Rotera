@@ -15,7 +15,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 // Load the cleaned test project
-const testDataPath = path.join(__dirname, '../../../../test-data/test-project-clean.json');
+const testDataPath = path.join(__dirname, '../../../test-data/test-project-clean.json');
 const testProject = JSON.parse(fs.readFileSync(testDataPath, 'utf-8'));
 
 describe('Real Data Optimization', () => {
