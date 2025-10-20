@@ -8,10 +8,12 @@ export interface ISelectable {
   // Core identification
   getId(): EntityId
   getType(): SelectableType
-
-  // For display and interaction
   getName(): string
-  isVisible(): boolean
+
+  // Direct field access (not methods)
+  isVisible: boolean
+
+  // Methods
   isLocked(): boolean
 
   // Dependency tracking for referential integrity

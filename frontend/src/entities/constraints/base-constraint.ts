@@ -174,7 +174,7 @@ export abstract class Constraint implements ISelectable, IValidatable, IResidual
     return this.data.name
   }
 
-  isVisible(): boolean {
+  get isVisible(): boolean {
     return this.data.isEnabled
   }
 

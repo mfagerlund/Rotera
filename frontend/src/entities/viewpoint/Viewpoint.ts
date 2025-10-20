@@ -9,28 +9,186 @@ import { V, Value, Vec3 } from 'scalar-autograd'
 import { Vec4 } from '../../optimization/Vec4'
 import { Quaternion } from '../../optimization/Quaternion'
 import { quaternionNormalizationResidual } from '../../optimization/residuals/quaternion-normalization-residual'
-import type { ViewpointDto, ImagePointDto } from './ViewpointDto'
 
-// Domain class
+// ImagePoint DTO
+export interface ImagePointDto {
+  id: ImagePointId
+  worldPointId: string
+  u: number // pixel coordinate x
+  v: number // pixel coordinate y
+  isVisible: boolean
+  isManuallyPlaced: boolean
+  confidence: number // 0-1
+  createdAt: string
+  updatedAt: string
+}
+
 export class Viewpoint implements ISelectable, IValidatable, IValueMapContributor {
-  private _selected = false
-  private _isPoseLocked = false
-  private _lastResiduals: number[] = []
+  selected = false
+  isPoseLocked = false
+  lastResiduals: number[] = []
+
+  id: ViewpointId
+  name: string
+  filename: string
+  url: string
+  imageWidth: number
+  imageHeight: number
+  focalLength: number
+  principalPointX: number
+  principalPointY: number
+  skewCoefficient: number
+  aspectRatio: number
+  radialDistortion: [number, number, number]
+  tangentialDistortion: [number, number]
+  position: [number, number, number]
+  rotation: [number, number, number, number]
+  imagePoints: Record<ImagePointId, ImagePointDto>
+  calibrationAccuracy: number
+  calibrationDate?: string
+  calibrationNotes?: string
+  isProcessed: boolean
+  processingNotes?: string
+  metadata?: any
+  isVisible: boolean
+  opacity: number
+  color: string
+  group?: string
+  tags?: string[]
+  createdAt: string
+  updatedAt: string
 
   private constructor(
-    private _data: ViewpointDto
-  ) {}
+    id: ViewpointId,
+    name: string,
+    filename: string,
+    url: string,
+    imageWidth: number,
+    imageHeight: number,
+    focalLength: number,
+    principalPointX: number,
+    principalPointY: number,
+    skewCoefficient: number,
+    aspectRatio: number,
+    radialDistortion: [number, number, number],
+    tangentialDistortion: [number, number],
+    position: [number, number, number],
+    rotation: [number, number, number, number],
+    imagePoints: Record<ImagePointId, ImagePointDto>,
+    calibrationAccuracy: number,
+    calibrationDate: string | undefined,
+    calibrationNotes: string | undefined,
+    isProcessed: boolean,
+    processingNotes: string | undefined,
+    metadata: any | undefined,
+    isVisible: boolean,
+    opacity: number,
+    color: string,
+    group: string | undefined,
+    tags: string[] | undefined,
+    createdAt: string,
+    updatedAt: string
+  ) {
+    this.id = id
+    this.name = name
+    this.filename = filename
+    this.url = url
+    this.imageWidth = imageWidth
+    this.imageHeight = imageHeight
+    this.focalLength = focalLength
+    this.principalPointX = principalPointX
+    this.principalPointY = principalPointY
+    this.skewCoefficient = skewCoefficient
+    this.aspectRatio = aspectRatio
+    this.radialDistortion = radialDistortion
+    this.tangentialDistortion = tangentialDistortion
+    this.position = position
+    this.rotation = rotation
+    this.imagePoints = imagePoints
+    this.calibrationAccuracy = calibrationAccuracy
+    this.calibrationDate = calibrationDate
+    this.calibrationNotes = calibrationNotes
+    this.isProcessed = isProcessed
+    this.processingNotes = processingNotes
+    this.metadata = metadata
+    this.isVisible = isVisible
+    this.opacity = opacity
+    this.color = color
+    this.group = group
+    this.tags = tags
+    this.createdAt = createdAt
+    this.updatedAt = updatedAt
+  }
 
   // ============================================================================
   // Factory methods
   // ============================================================================
 
-  static fromDTO(dto: ViewpointDto): Viewpoint {
-    const validation = Viewpoint.validateDto(dto)
-    if (!validation.isValid) {
-      throw new Error(`Invalid Viewpoint DTO: ${validation.errors.map(e => e.message).join(', ')}`)
-    }
-    return new Viewpoint({ ...dto })
+  /**
+   * @internal Used only by Serialization class - do not use directly
+   */
+  static createFromSerialized(
+    id: ViewpointId,
+    name: string,
+    filename: string,
+    url: string,
+    imageWidth: number,
+    imageHeight: number,
+    focalLength: number,
+    principalPointX: number,
+    principalPointY: number,
+    skewCoefficient: number,
+    aspectRatio: number,
+    radialDistortion: [number, number, number],
+    tangentialDistortion: [number, number],
+    position: [number, number, number],
+    rotation: [number, number, number, number],
+    imagePoints: Record<ImagePointId, ImagePointDto>,
+    calibrationAccuracy: number,
+    calibrationDate: string | undefined,
+    calibrationNotes: string | undefined,
+    isProcessed: boolean,
+    processingNotes: string | undefined,
+    metadata: any,
+    isVisible: boolean,
+    opacity: number,
+    color: string,
+    group: string | undefined,
+    tags: string[] | undefined,
+    createdAt: string,
+    updatedAt: string
+  ): Viewpoint {
+    return new Viewpoint(
+      id,
+      name,
+      filename,
+      url,
+      imageWidth,
+      imageHeight,
+      focalLength,
+      principalPointX,
+      principalPointY,
+      skewCoefficient,
+      aspectRatio,
+      radialDistortion,
+      tangentialDistortion,
+      position,
+      rotation,
+      imagePoints,
+      calibrationAccuracy,
+      calibrationDate,
+      calibrationNotes,
+      isProcessed,
+      processingNotes,
+      metadata,
+      isVisible,
+      opacity,
+      color,
+      group,
+      tags,
+      createdAt,
+      updatedAt
+    )
   }
 
   static create(
@@ -62,7 +220,7 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
       calibrationNotes?: string
       isProcessed?: boolean
       processingNotes?: string
-      metadata?: ViewpointDto['metadata']
+      metadata?: any
 
       // Display
       isVisible?: boolean
@@ -88,7 +246,7 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
       rotation = [1, 0, 0, 0] // Identity quaternion
     }
 
-    const dto: ViewpointDto = {
+    const dto: any = {
       id,
       name,
       filename,
@@ -120,25 +278,39 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
       updatedAt: now
     }
 
-    const viewpoint = new Viewpoint(dto)
-    viewpoint._isPoseLocked = options.isPoseLocked ?? false
+    const viewpoint = new Viewpoint(
+      dto.id,
+      dto.name,
+      dto.filename,
+      dto.url,
+      dto.imageWidth,
+      dto.imageHeight,
+      dto.focalLength,
+      dto.principalPointX,
+      dto.principalPointY,
+      dto.skewCoefficient,
+      dto.aspectRatio,
+      dto.radialDistortion,
+      dto.tangentialDistortion,
+      dto.position,
+      dto.rotation,
+      dto.imagePoints,
+      dto.calibrationAccuracy,
+      dto.calibrationDate,
+      dto.calibrationNotes,
+      dto.isProcessed,
+      dto.processingNotes,
+      dto.metadata,
+      dto.isVisible,
+      dto.opacity,
+      dto.color,
+      dto.group,
+      dto.tags,
+      dto.createdAt,
+      dto.updatedAt
+    )
+    viewpoint.isPoseLocked = options.isPoseLocked ?? false
     return viewpoint
-  }
-
-  // ============================================================================
-  // Serialization
-  // ============================================================================
-
-  toDTO(): ViewpointDto {
-    return {
-      ...this._data,
-      radialDistortion: [...this._data.radialDistortion],
-      tangentialDistortion: [...this._data.tangentialDistortion],
-      position: [...this._data.position],
-      rotation: [...this._data.rotation],
-      imagePoints: { ...this._data.imagePoints },
-      metadata: this._data.metadata ? { ...this._data.metadata } : undefined
-    }
   }
 
   // ============================================================================
@@ -146,7 +318,7 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
   // ============================================================================
 
   getId(): ViewpointId {
-    return this._data.id
+    return this.id
   }
 
   getType(): SelectableType {
@@ -154,20 +326,15 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
   }
 
   getName(): string {
-    return this._data.name
-  }
-
-  isVisible(): boolean {
-    return this._data.isVisible
+    return this.name
   }
 
   isLocked(): boolean {
-    return this._isPoseLocked
+    return this.isPoseLocked
   }
 
   getDependencies(): EntityId[] {
-    // Depends on world points referenced by image points
-    return Object.values(this._data.imagePoints).map(ip => ip.worldPointId as EntityId)
+    return Object.values(this.imagePoints).map(ip => ip.worldPointId as EntityId)
   }
 
   getDependents(): EntityId[] {
@@ -175,11 +342,11 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
   }
 
   isSelected(): boolean {
-    return this._selected
+    return this.selected
   }
 
   setSelected(selected: boolean): void {
-    this._selected = selected
+    this.selected = selected
   }
 
   canDelete(): boolean {
@@ -187,9 +354,9 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
   }
 
   getDeleteWarning(): string | null {
-    const count = Object.keys(this._data.imagePoints).length
+    const count = Object.keys(this.imagePoints).length
     if (count > 0) {
-      return `Deleting viewpoint "${this._data.name}" will remove ${count} image point${count === 1 ? '' : 's'}`
+      return `Deleting viewpoint "${this.name}" will remove ${count} image point${count === 1 ? '' : 's'}`
     }
     return null
   }
@@ -202,48 +369,43 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
     const errors: ValidationError[] = []
     const warnings: ValidationError[] = []
 
-    // Basic validation
-    const nameError = ValidationHelpers.validateRequiredField(this._data.name, 'name', this._data.id, 'viewpoint')
+    const nameError = ValidationHelpers.validateRequiredField(this.name, 'name', this.id, 'viewpoint')
     if (nameError) errors.push(nameError)
 
-    const idError = ValidationHelpers.validateIdFormat(this._data.id, 'viewpoint')
+    const idError = ValidationHelpers.validateIdFormat(this.id, 'viewpoint')
     if (idError) errors.push(idError)
 
-    // Image validation
-    if (this._data.imageWidth <= 0) {
-      errors.push(ValidationHelpers.createError('INVALID_WIDTH', 'imageWidth must be > 0', this._data.id, 'viewpoint', 'imageWidth'))
+    if (this.imageWidth <= 0) {
+      errors.push(ValidationHelpers.createError('INVALID_WIDTH', 'imageWidth must be > 0', this.id, 'viewpoint', 'imageWidth'))
     }
-    if (this._data.imageHeight <= 0) {
-      errors.push(ValidationHelpers.createError('INVALID_HEIGHT', 'imageHeight must be > 0', this._data.id, 'viewpoint', 'imageHeight'))
-    }
-
-    // Camera intrinsics validation
-    if (this._data.focalLength <= 0) {
-      errors.push(ValidationHelpers.createError('INVALID_FOCAL_LENGTH', 'focalLength must be > 0', this._data.id, 'viewpoint', 'focalLength'))
-    }
-    if (this._data.aspectRatio <= 0) {
-      errors.push(ValidationHelpers.createError('INVALID_ASPECT_RATIO', 'aspectRatio must be > 0', this._data.id, 'viewpoint', 'aspectRatio'))
+    if (this.imageHeight <= 0) {
+      errors.push(ValidationHelpers.createError('INVALID_HEIGHT', 'imageHeight must be > 0', this.id, 'viewpoint', 'imageHeight'))
     }
 
-    // Quaternion validation
-    if (this._data.rotation.length === 4) {
-      const [w, x, y, z] = this._data.rotation
+    if (this.focalLength <= 0) {
+      errors.push(ValidationHelpers.createError('INVALID_FOCAL_LENGTH', 'focalLength must be > 0', this.id, 'viewpoint', 'focalLength'))
+    }
+    if (this.aspectRatio <= 0) {
+      errors.push(ValidationHelpers.createError('INVALID_ASPECT_RATIO', 'aspectRatio must be > 0', this.id, 'viewpoint', 'aspectRatio'))
+    }
+
+    if (this.rotation.length === 4) {
+      const [w, x, y, z] = this.rotation
       const magSq = w * w + x * x + y * y + z * z
       if (Math.abs(magSq - 1.0) > 0.01) {
-        warnings.push(ValidationHelpers.createWarning('NON_UNIT_QUATERNION', `rotation quaternion not unit length (|q|² = ${magSq.toFixed(4)})`, this._data.id, 'viewpoint', 'rotation'))
+        warnings.push(ValidationHelpers.createWarning('NON_UNIT_QUATERNION', `rotation quaternion not unit length (|q|² = ${magSq.toFixed(4)})`, this.id, 'viewpoint', 'rotation'))
       }
     }
 
-    // Image points validation
-    Object.entries(this._data.imagePoints).forEach(([imagePointId, imagePoint]) => {
-      if (imagePoint.u < 0 || imagePoint.u > this._data.imageWidth) {
-        warnings.push(ValidationHelpers.createWarning('IMAGE_POINT_OUT_OF_BOUNDS', `Image point ${imagePointId} u-coordinate outside bounds`, this._data.id, 'viewpoint', 'imagePoints'))
+    Object.entries(this.imagePoints).forEach(([imagePointId, imagePoint]) => {
+      if (imagePoint.u < 0 || imagePoint.u > this.imageWidth) {
+        warnings.push(ValidationHelpers.createWarning('IMAGE_POINT_OUT_OF_BOUNDS', `Image point ${imagePointId} u-coordinate outside bounds`, this.id, 'viewpoint', 'imagePoints'))
       }
-      if (imagePoint.v < 0 || imagePoint.v > this._data.imageHeight) {
-        warnings.push(ValidationHelpers.createWarning('IMAGE_POINT_OUT_OF_BOUNDS', `Image point ${imagePointId} v-coordinate outside bounds`, this._data.id, 'viewpoint', 'imagePoints'))
+      if (imagePoint.v < 0 || imagePoint.v > this.imageHeight) {
+        warnings.push(ValidationHelpers.createWarning('IMAGE_POINT_OUT_OF_BOUNDS', `Image point ${imagePointId} v-coordinate outside bounds`, this.id, 'viewpoint', 'imagePoints'))
       }
       if (imagePoint.confidence < 0 || imagePoint.confidence > 1) {
-        errors.push(ValidationHelpers.createError('INVALID_CONFIDENCE', `Image point ${imagePointId} confidence must be 0-1`, this._data.id, 'viewpoint', 'imagePoints'))
+        errors.push(ValidationHelpers.createError('INVALID_CONFIDENCE', `Image point ${imagePointId} confidence must be 0-1`, this.id, 'viewpoint', 'imagePoints'))
       }
     })
 
@@ -255,7 +417,7 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
     }
   }
 
-  private static validateDto(dto: ViewpointDto): ValidationResult {
+  private static validateDto(dto: any): ValidationResult {
     const errors: ValidationError[] = []
 
     if (!dto.id) errors.push(ValidationHelpers.createError('MISSING_REQUIRED_FIELD', 'id required', dto.id, 'viewpoint', 'id'))
@@ -272,101 +434,66 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
   }
 
   // ============================================================================
-  // Domain getters/setters
+  // Computed properties
   // ============================================================================
 
-  get name(): string { return this._data.name }
-  set name(v: string) { this._data.name = v; this.updateTimestamp() }
-
-  get filename(): string { return this._data.filename }
-  get url(): string { return this._data.url }
-  set url(v: string) { this._data.url = v; this.updateTimestamp() }
-
-  get imageDimensions(): [number, number] { return [this._data.imageWidth, this._data.imageHeight] }
-
-  get focalLength(): number { return this._data.focalLength }
-  set focalLength(v: number) { this._data.focalLength = v; this.updateTimestamp() }
-
-  get position(): [number, number, number] { return [...this._data.position] }
-  set position(v: [number, number, number]) { this._data.position = [...v]; this.updateTimestamp() }
-
-  get rotation(): [number, number, number, number] { return [...this._data.rotation] }
-  set rotation(v: [number, number, number, number]) { this._data.rotation = [...v]; this.updateTimestamp() }
+  // Removed getter - access fields directly: use [viewpoint.imageWidth, viewpoint.imageHeight]
 
   getRotationEuler(): [number, number, number] {
-    const quat = Vec4.fromData(...this._data.rotation)
+    const quat = Vec4.fromData(...this.rotation)
     return Quaternion.toEuler(quat)
   }
 
   setRotationEuler(roll: number, pitch: number, yaw: number): void {
     const quat = Quaternion.fromEuler(roll, pitch, yaw)
-    this._data.rotation = quat.toArray()
-    this.updateTimestamp()
+    this.rotation = quat.toArray()
+    this.updatedAt = new Date().toISOString()
   }
-
-  get opacity(): number { return this._data.opacity }
-  set opacity(v: number) {
-    if (v < 0 || v > 1) throw new Error('Opacity must be 0-1')
-    this._data.opacity = v
-    this.updateTimestamp()
-  }
-
-  get color(): string { return this._data.color }
-  set color(v: string) { this._data.color = v; this.updateTimestamp() }
-
-  get group(): string | undefined { return this._data.group }
-  set group(v: string | undefined) { this._data.group = v; this.updateTimestamp() }
-
-  get tags(): string[] { return this._data.tags ? [...this._data.tags] : [] }
-  set tags(v: string[]) { this._data.tags = [...v]; this.updateTimestamp() }
-
-  get createdAt(): string { return this._data.createdAt }
-  get updatedAt(): string { return this._data.updatedAt }
 
   // ============================================================================
   // Image point management
   // ============================================================================
 
   getImagePoints(): ImagePointDto[] {
-    return Object.values(this._data.imagePoints)
+    return Object.values(this.imagePoints)
   }
 
   getImagePoint(id: ImagePointId): ImagePointDto | undefined {
-    return this._data.imagePoints[id]
+    return this.imagePoints[id]
   }
 
   addImagePoint(imagePoint: ImagePointDto): void {
-    this._data.imagePoints[imagePoint.id] = { ...imagePoint }
-    this.updateTimestamp()
+    this.imagePoints[imagePoint.id] = { ...imagePoint }
+    this.updatedAt = new Date().toISOString()
   }
 
   removeImagePoint(id: ImagePointId): void {
-    delete this._data.imagePoints[id]
-    this.updateTimestamp()
+    delete this.imagePoints[id]
+    this.updatedAt = new Date().toISOString()
   }
 
   updateImagePoint(id: ImagePointId, updates: Partial<ImagePointDto>): void {
-    const existing = this._data.imagePoints[id]
+    const existing = this.imagePoints[id]
     if (existing) {
-      this._data.imagePoints[id] = {
+      this.imagePoints[id] = {
         ...existing,
         ...updates,
         updatedAt: new Date().toISOString()
       }
-      this.updateTimestamp()
+      this.updatedAt = new Date().toISOString()
     }
   }
 
   getImagePointCount(): number {
-    return Object.keys(this._data.imagePoints).length
+    return Object.keys(this.imagePoints).length
   }
 
   getImagePointsForWorldPoint(worldPointId: string): ImagePointDto[] {
-    return Object.values(this._data.imagePoints).filter(ip => ip.worldPointId === worldPointId)
+    return Object.values(this.imagePoints).filter(ip => ip.worldPointId === worldPointId)
   }
 
   getVisibleImagePoints(): ImagePointDto[] {
-    return Object.values(this._data.imagePoints).filter(ip => ip.isVisible)
+    return Object.values(this.imagePoints).filter(ip => ip.isVisible)
   }
 
   // ============================================================================
@@ -374,11 +501,11 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
   // ============================================================================
 
   getIntrinsicMatrix(): number[][] {
-    const fx = this._data.focalLength
-    const fy = this._data.focalLength * this._data.aspectRatio
-    const cx = this._data.principalPointX
-    const cy = this._data.principalPointY
-    const s = this._data.skewCoefficient
+    const fx = this.focalLength
+    const fy = this.focalLength * this.aspectRatio
+    const cx = this.principalPointX
+    const cy = this.principalPointY
+    const s = this.skewCoefficient
 
     return [
       [fx, s, cx],
@@ -388,50 +515,63 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
   }
 
   getAspectRatio(): number {
-    return this._data.imageWidth / this._data.imageHeight
+    return this.imageWidth / this.imageHeight
   }
 
   isInBounds(u: number, v: number): boolean {
-    return u >= 0 && u <= this._data.imageWidth && v >= 0 && v <= this._data.imageHeight
+    return u >= 0 && u <= this.imageWidth && v >= 0 && v <= this.imageHeight
   }
 
   pixelToNormalized(u: number, v: number): [number, number] {
-    return [u / this._data.imageWidth, v / this._data.imageHeight]
+    return [u / this.imageWidth, v / this.imageHeight]
   }
 
   normalizedToPixel(u: number, v: number): [number, number] {
-    return [u * this._data.imageWidth, v * this._data.imageHeight]
+    return [u * this.imageWidth, v * this.imageHeight]
   }
 
   clone(newId: ViewpointId, newName?: string): Viewpoint {
     const now = new Date().toISOString()
-    const clonedData: ViewpointDto = {
-      ...this._data,
-      id: newId,
-      name: newName || `${this._data.name} (copy)`,
-      radialDistortion: [...this._data.radialDistortion],
-      tangentialDistortion: [...this._data.tangentialDistortion],
-      position: [...this._data.position],
-      rotation: [...this._data.rotation],
-      imagePoints: { ...this._data.imagePoints },
-      metadata: this._data.metadata ? { ...this._data.metadata } : undefined,
-      createdAt: now,
-      updatedAt: now
-    }
-    return new Viewpoint(clonedData)
+    return new Viewpoint(
+      newId,
+      newName || `${this.name} (copy)`,
+      this.filename,
+      this.url,
+      this.imageWidth,
+      this.imageHeight,
+      this.focalLength,
+      this.principalPointX,
+      this.principalPointY,
+      this.skewCoefficient,
+      this.aspectRatio,
+      [...this.radialDistortion],
+      [...this.tangentialDistortion],
+      [...this.position],
+      [...this.rotation],
+      { ...this.imagePoints },
+      this.calibrationAccuracy,
+      this.calibrationDate,
+      this.calibrationNotes,
+      this.isProcessed,
+      this.processingNotes,
+      this.metadata ? { ...this.metadata } : undefined,
+      this.isVisible,
+      this.opacity,
+      this.color,
+      this.group,
+      this.tags,
+      now,
+      now
+    )
   }
 
   setVisible(visible: boolean): void {
-    this._data.isVisible = visible
-    this.updateTimestamp()
+    this.isVisible = visible
+    this.updatedAt = new Date().toISOString()
   }
 
   setPoseLocked(locked: boolean): void {
-    this._isPoseLocked = locked
-  }
-
-  private updateTimestamp(): void {
-    this._data.updatedAt = new Date().toISOString()
+    this.isPoseLocked = locked
   }
 
   // ============================================================================
@@ -448,40 +588,36 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
   ): Value[] {
     const variables: Value[] = []
     const {
-      optimizePose = !this._isPoseLocked,
+      optimizePose = !this.isPoseLocked,
       optimizeIntrinsics = false,
       optimizeDistortion = false
     } = options
 
-    // Position
-    const px = optimizePose ? V.W(this._data.position[0]) : V.C(this._data.position[0])
-    const py = optimizePose ? V.W(this._data.position[1]) : V.C(this._data.position[1])
-    const pz = optimizePose ? V.W(this._data.position[2]) : V.C(this._data.position[2])
+    const px = optimizePose ? V.W(this.position[0]) : V.C(this.position[0])
+    const py = optimizePose ? V.W(this.position[1]) : V.C(this.position[1])
+    const pz = optimizePose ? V.W(this.position[2]) : V.C(this.position[2])
     const position = new Vec3(px, py, pz)
     if (optimizePose) variables.push(px, py, pz)
 
-    // Rotation quaternion
-    const qw = optimizePose ? V.W(this._data.rotation[0]) : V.C(this._data.rotation[0])
-    const qx = optimizePose ? V.W(this._data.rotation[1]) : V.C(this._data.rotation[1])
-    const qy = optimizePose ? V.W(this._data.rotation[2]) : V.C(this._data.rotation[2])
-    const qz = optimizePose ? V.W(this._data.rotation[3]) : V.C(this._data.rotation[3])
+    const qw = optimizePose ? V.W(this.rotation[0]) : V.C(this.rotation[0])
+    const qx = optimizePose ? V.W(this.rotation[1]) : V.C(this.rotation[1])
+    const qy = optimizePose ? V.W(this.rotation[2]) : V.C(this.rotation[2])
+    const qz = optimizePose ? V.W(this.rotation[3]) : V.C(this.rotation[3])
     const rotation = new Vec4(qw, qx, qy, qz)
     if (optimizePose) variables.push(qw, qx, qy, qz)
 
-    // Intrinsics
-    const focalLength = optimizeIntrinsics ? V.W(this._data.focalLength) : V.C(this._data.focalLength)
-    const aspectRatio = optimizeIntrinsics ? V.W(this._data.aspectRatio) : V.C(this._data.aspectRatio)
-    const principalPointX = optimizeIntrinsics ? V.W(this._data.principalPointX) : V.C(this._data.principalPointX)
-    const principalPointY = optimizeIntrinsics ? V.W(this._data.principalPointY) : V.C(this._data.principalPointY)
-    const skew = optimizeIntrinsics ? V.W(this._data.skewCoefficient) : V.C(this._data.skewCoefficient)
+    const focalLength = optimizeIntrinsics ? V.W(this.focalLength) : V.C(this.focalLength)
+    const aspectRatio = optimizeIntrinsics ? V.W(this.aspectRatio) : V.C(this.aspectRatio)
+    const principalPointX = optimizeIntrinsics ? V.W(this.principalPointX) : V.C(this.principalPointX)
+    const principalPointY = optimizeIntrinsics ? V.W(this.principalPointY) : V.C(this.principalPointY)
+    const skew = optimizeIntrinsics ? V.W(this.skewCoefficient) : V.C(this.skewCoefficient)
     if (optimizeIntrinsics) variables.push(focalLength, aspectRatio, principalPointX, principalPointY, skew)
 
-    // Distortion
-    const k1 = optimizeDistortion ? V.W(this._data.radialDistortion[0]) : V.C(this._data.radialDistortion[0])
-    const k2 = optimizeDistortion ? V.W(this._data.radialDistortion[1]) : V.C(this._data.radialDistortion[1])
-    const k3 = optimizeDistortion ? V.W(this._data.radialDistortion[2]) : V.C(this._data.radialDistortion[2])
-    const p1 = optimizeDistortion ? V.W(this._data.tangentialDistortion[0]) : V.C(this._data.tangentialDistortion[0])
-    const p2 = optimizeDistortion ? V.W(this._data.tangentialDistortion[1]) : V.C(this._data.tangentialDistortion[1])
+    const k1 = optimizeDistortion ? V.W(this.radialDistortion[0]) : V.C(this.radialDistortion[0])
+    const k2 = optimizeDistortion ? V.W(this.radialDistortion[1]) : V.C(this.radialDistortion[1])
+    const k3 = optimizeDistortion ? V.W(this.radialDistortion[2]) : V.C(this.radialDistortion[2])
+    const p1 = optimizeDistortion ? V.W(this.tangentialDistortion[0]) : V.C(this.tangentialDistortion[0])
+    const p2 = optimizeDistortion ? V.W(this.tangentialDistortion[1]) : V.C(this.tangentialDistortion[1])
     if (optimizeDistortion) variables.push(k1, k2, k3, p1, p2)
 
     const cameraValues: CameraValues = {
@@ -503,7 +639,6 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
     const cameraValues = valueMap.cameras.get(this as any)
     if (!cameraValues) return []
 
-    // Enforce unit quaternion: |q|² = 1
     return [quaternionNormalizationResidual(cameraValues.rotation)]
   }
 
@@ -511,22 +646,18 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
     const cameraValues = valueMap.cameras.get(this as any)
     if (!cameraValues) return
 
-    this._data.position = [cameraValues.position.x.data, cameraValues.position.y.data, cameraValues.position.z.data]
-    this._data.rotation = [cameraValues.rotation.w.data, cameraValues.rotation.x.data, cameraValues.rotation.y.data, cameraValues.rotation.z.data]
-    this._data.focalLength = cameraValues.focalLength.data
-    this._data.aspectRatio = cameraValues.aspectRatio.data
-    this._data.principalPointX = cameraValues.principalPointX.data
-    this._data.principalPointY = cameraValues.principalPointY.data
-    this._data.skewCoefficient = cameraValues.skew.data
-    this._data.radialDistortion = [cameraValues.k1.data, cameraValues.k2.data, cameraValues.k3.data]
-    this._data.tangentialDistortion = [cameraValues.p1.data, cameraValues.p2.data]
+    this.position = [cameraValues.position.x.data, cameraValues.position.y.data, cameraValues.position.z.data]
+    this.rotation = [cameraValues.rotation.w.data, cameraValues.rotation.x.data, cameraValues.rotation.y.data, cameraValues.rotation.z.data]
+    this.focalLength = cameraValues.focalLength.data
+    this.aspectRatio = cameraValues.aspectRatio.data
+    this.principalPointX = cameraValues.principalPointX.data
+    this.principalPointY = cameraValues.principalPointY.data
+    this.skewCoefficient = cameraValues.skew.data
+    this.radialDistortion = [cameraValues.k1.data, cameraValues.k2.data, cameraValues.k3.data]
+    this.tangentialDistortion = [cameraValues.p1.data, cameraValues.p2.data]
 
     const residuals = this.computeResiduals(valueMap)
-    this._lastResiduals = residuals.map(r => r.data)
-    this.updateTimestamp()
-  }
-
-  getLastResiduals(): number[] {
-    return [...this._lastResiduals]
+    this.lastResiduals = residuals.map(r => r.data)
+    this.updatedAt = new Date().toISOString()
   }
 }

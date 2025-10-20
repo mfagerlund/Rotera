@@ -1,7 +1,7 @@
 // Test utilities and mock data
 import React from 'react'
 import { render, RenderOptions } from '@testing-library/react'
-import { EntityProject, ProjectSettings } from '../types/project-entities'
+import { Project, ProjectSettings } from '../entities/project'
 import { WorldPoint } from '../entities/world-point/WorldPoint'
 import { Viewpoint } from '../entities/viewpoint/Viewpoint'
 import { DistanceConstraint } from '../entities/constraints/distance-constraint'
@@ -178,24 +178,29 @@ const mockConstraint2 = DistanceConstraint.create(
 )
 
 // Mock project data for testing
-export const mockProject: EntityProject = {
+export const mockProject = {
   id: 'test-project-1',
   name: 'Test Project',
   createdAt: '2024-01-01T00:00:00.000Z',
   updatedAt: '2024-01-01T00:00:00.000Z',
-  settings: mockSettings,
+  ...mockSettings,
   history: [],
-  worldPoints: new Map([
-    ['point-1', mockPoint1],
-    ['point-2', mockPoint2],
-    ['point-3', mockPoint3]
-  ]),
-  lines: new Map(),
-  viewpoints: new Map([
-    ['viewpoint-1', mockViewpoint1]
-  ]),
-  constraints: [mockConstraint1, mockConstraint2]
-}
+  worldPoints: new Set([mockPoint1, mockPoint2, mockPoint3]),
+  lines: new Set(),
+  viewpoints: new Set([mockViewpoint1]),
+  constraints: [mockConstraint1, mockConstraint2],
+  // Mock Project methods for testing
+  addWorldPoint: jest.fn(),
+  removeWorldPoint: jest.fn(),
+  addLine: jest.fn(),
+  removeLine: jest.fn(),
+  addViewpoint: jest.fn(),
+  removeViewpoint: jest.fn(),
+  addConstraint: jest.fn(),
+  removeConstraint: jest.fn(),
+  getStats: jest.fn(() => ({ worldPoints: 3, lines: 0, viewpoints: 1, constraints: 2 })),
+  clone: jest.fn()
+} as unknown as Project
 
 export const mockWorldPoint = WorldPoint.create('test-point', 'Test Point', {
   xyz: [1, 2, 3],
@@ -234,7 +239,7 @@ export const mockViewpoint = Viewpoint.create(
 
 // Custom render function for components that need project context
 interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
-  project?: EntityProject
+  project?: Project
 }
 
 export const renderWithProject = (

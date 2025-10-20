@@ -1,19 +1,19 @@
 // Project history management for undo/redo functionality
 
 import { useState, useCallback } from 'react'
-import { EntityProject } from '../types/project-entities'
+import { Project } from '../entities/project'
 import { ProjectHistoryEntry } from '../types/ui-types'
 
 export const useHistory = () => {
   const [historyIndex, setHistoryIndex] = useState(-1)
 
   const addHistoryEntry = useCallback((
-    project: EntityProject,
+    project: Project,
     action: string,
     description: string,
     before?: any,
     after?: any
-  ): EntityProject => {
+  ): Project => {
     const entry: ProjectHistoryEntry = {
       id: crypto.randomUUID(),
       timestamp: new Date().toISOString(),
@@ -30,11 +30,9 @@ export const useHistory = () => {
     // Limit history to last 50 entries to prevent memory issues
     const limitedHistory = newHistory.slice(-50)
 
-    const updatedProject = {
-      ...project,
-      history: limitedHistory,
-      updatedAt: new Date().toISOString()
-    }
+    const updatedProject = project.clone()
+    updatedProject.history = limitedHistory
+    updatedProject.updatedAt = new Date().toISOString()
 
     // Update history index to point to the new entry
     setHistoryIndex(limitedHistory.length - 1)
@@ -42,15 +40,15 @@ export const useHistory = () => {
     return updatedProject
   }, [historyIndex])
 
-  const canUndo = useCallback((project: EntityProject) => {
+  const canUndo = useCallback((project: Project) => {
     return historyIndex > 0 && project.history.length > 0
   }, [historyIndex])
 
-  const canRedo = useCallback((project: EntityProject) => {
+  const canRedo = useCallback((project: Project) => {
     return historyIndex < project.history.length - 1
   }, [historyIndex])
 
-  const undo = useCallback((project: EntityProject): EntityProject | null => {
+  const undo = useCallback((project: Project): Project | null => {
     if (!canUndo(project)) return null
 
     const targetIndex = historyIndex - 1
@@ -61,14 +59,13 @@ export const useHistory = () => {
     setHistoryIndex(targetIndex)
 
     // Apply the "before" state
-    return {
-      ...project,
-      ...targetEntry.before,
-      updatedAt: new Date().toISOString()
-    }
+    const restored = project.clone()
+    Object.assign(restored, targetEntry.before)
+    restored.updatedAt = new Date().toISOString()
+    return restored
   }, [historyIndex, canUndo])
 
-  const redo = useCallback((project: EntityProject): EntityProject | null => {
+  const redo = useCallback((project: Project): Project | null => {
     if (!canRedo(project)) return null
 
     const targetIndex = historyIndex + 1
@@ -79,19 +76,18 @@ export const useHistory = () => {
     setHistoryIndex(targetIndex)
 
     // Apply the "after" state
-    return {
-      ...project,
-      ...targetEntry.after,
-      updatedAt: new Date().toISOString()
-    }
+    const restored = project.clone()
+    Object.assign(restored, targetEntry.after)
+    restored.updatedAt = new Date().toISOString()
+    return restored
   }, [historyIndex, canRedo])
 
-  const getCurrentEntry = useCallback((project: EntityProject): ProjectHistoryEntry | null => {
+  const getCurrentEntry = useCallback((project: Project): ProjectHistoryEntry | null => {
     if (historyIndex < 0 || historyIndex >= project.history.length) return null
     return project.history[historyIndex]
   }, [historyIndex])
 
-  const getHistoryStats = useCallback((project: EntityProject) => {
+  const getHistoryStats = useCallback((project: Project) => {
     return {
       currentIndex: historyIndex,
       totalEntries: project.history.length,
@@ -101,13 +97,12 @@ export const useHistory = () => {
     }
   }, [historyIndex, canUndo, canRedo, getCurrentEntry])
 
-  const resetHistory = useCallback((project: EntityProject): EntityProject => {
+  const resetHistory = useCallback((project: Project): Project => {
     setHistoryIndex(-1)
-    return {
-      ...project,
-      history: [],
-      updatedAt: new Date().toISOString()
-    }
+    const reset = project.clone()
+    reset.history = []
+    reset.updatedAt = new Date().toISOString()
+    return reset
   }, [])
 
   return {

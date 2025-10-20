@@ -61,7 +61,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
     }
   }
 
-  const [imageWidth, imageHeight] = viewpoint.imageDimensions
+  const [imageWidth, imageHeight] = [viewpoint.imageWidth, viewpoint.imageHeight]
 
   return (
     <>

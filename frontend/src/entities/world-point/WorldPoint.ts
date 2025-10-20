@@ -6,7 +6,17 @@ import type { IValidatable, ValidationContext, ValidationResult, ValidationError
 import type { IValueMapContributor, ValueMap } from '../../optimization/IOptimizable'
 import { ValidationHelpers } from '../../validation/validator'
 import { V, Value, Vec3 } from 'scalar-autograd'
-import type { WorldPointDto, AxisLock } from './WorldPointDto'
+
+/**
+ * Per-axis locking configuration.
+ * If undefined, all axes are unlocked.
+ * If defined, only specified axes are locked (true = locked, false/undefined = unlocked).
+ */
+export interface AxisLock {
+  x?: boolean
+  y?: boolean
+  z?: boolean
+}
 
 // Forward declarations to avoid circular dependencies
 export interface IWorldPoint {
@@ -28,59 +38,93 @@ export interface IConstraint {
 }
 
 export class WorldPoint implements ISelectable, IValidatable, IWorldPoint, IValueMapContributor {
-  private _selected = false
+  selected = false
 
-  // Relationship tracking (inlined from WorldPointRelationshipManager)
-  private _connectedLines: Set<ILine> = new Set()
-  private _referencingConstraints: Set<IConstraint> = new Set()
+  connectedLines: Set<ILine> = new Set()
+  referencingConstraints: Set<IConstraint> = new Set()
 
-  // Store residuals from intrinsic constraints
-  private _lastResiduals: number[] = []
+  lastResiduals: number[] = []
+
+  id: PointId  // Do *not* use this id as a reference, use the full entity everywhere!
+  name: string
+  xyz: [number | null, number | null, number | null] | undefined
+  color: string
+  isVisible: boolean
+  isOrigin: boolean
+  lockedAxes: AxisLock | undefined
+  isOptimized: boolean
+  optimizedAt: Date | null
+  group: string | undefined
+  tags: string[]
+  createdAt: string
+  updatedAt: string
 
   private constructor(
-    private _id: PointId,
-    private _name: string,
-    private _xyz: [number | null, number | null, number | null] | undefined,
-    private _color: string,
-    private _isVisible: boolean,
-    private _isOrigin: boolean,
-    private _lockedAxes: AxisLock | undefined,
-    private _isOptimized: boolean,
-    private _optimizedAt: Date | null,
-    private _group: string | undefined,
-    private _tags: string[],
-    private _createdAt: string,
-    private _updatedAt: string
-  ) {}
+    id: PointId,
+    name: string,
+    xyz: [number | null, number | null, number | null] | undefined,
+    color: string,
+    isVisible: boolean,
+    isOrigin: boolean,
+    lockedAxes: AxisLock | undefined,
+    isOptimized: boolean,
+    optimizedAt: Date | null,
+    group: string | undefined,
+    tags: string[],
+    createdAt: string,
+    updatedAt: string
+  ) {
+    this.id = id
+    this.name = name
+    this.xyz = xyz
+    this.color = color
+    this.isVisible = isVisible
+    this.isOrigin = isOrigin
+    this.lockedAxes = lockedAxes
+    this.isOptimized = isOptimized
+    this.optimizedAt = optimizedAt
+    this.group = group
+    this.tags = tags
+    this.createdAt = createdAt
+    this.updatedAt = updatedAt
+  }
 
   // ============================================================================
   // Factory methods
   // ============================================================================
 
-  static fromDTO(dto: WorldPointDto): WorldPoint {
-    const validation = WorldPoint.validateDto(dto)
-    if (!validation.isValid) {
-      throw new Error(`Invalid WorldPoint DTO: ${validation.errors.map(e => e.message).join(', ')}`)
-    }
-
-    // Convert legacy provenance to simplified flags
-    const isOptimized = dto.xyzProvenance?.source === 'optimized'
-    const optimizedAt = dto.xyzProvenance?.timestamp || null
-
+  /**
+   * @internal Used only by Serialization class - do not use directly
+   */
+  static createFromSerialized(
+    id: PointId,
+    name: string,
+    xyz: [number | null, number | null, number | null] | undefined,
+    color: string,
+    isVisible: boolean,
+    isOrigin: boolean,
+    lockedAxes: AxisLock | undefined,
+    isOptimized: boolean,
+    optimizedAt: Date | null,
+    group: string | undefined,
+    tags: string[],
+    createdAt: string,
+    updatedAt: string
+  ): WorldPoint {
     return new WorldPoint(
-      dto.id,
-      dto.name,
-      dto.xyz,
-      dto.color,
-      dto.isVisible,
-      dto.isOrigin,
-      dto.lockedAxes || (dto.isLocked ? { x: true, y: true, z: true } : undefined),
+      id,
+      name,
+      xyz,
+      color,
+      isVisible,
+      isOrigin,
+      lockedAxes,
       isOptimized,
       optimizedAt,
-      dto.group,
-      dto.tags || [],
-      dto.createdAt,
-      dto.updatedAt
+      group,
+      tags,
+      createdAt,
+      updatedAt
     )
   }
 
@@ -125,37 +169,11 @@ export class WorldPoint implements ISelectable, IValidatable, IWorldPoint, IValu
   }
 
   // ============================================================================
-  // Serialization
-  // ============================================================================
-
-  toDTO(): WorldPointDto {
-    return {
-      id: this._id,
-      name: this._name,
-      xyz: this._xyz,
-      xyzProvenance: this._isOptimized ? {
-        source: 'optimized',
-        timestamp: this._optimizedAt || new Date(),
-        metadata: {}
-      } : undefined,
-      color: this._color,
-      isVisible: this._isVisible,
-      isOrigin: this._isOrigin,
-      isLocked: this.isLocked(), // backward compatibility
-      lockedAxes: this._lockedAxes,
-      group: this._group,
-      tags: [...this._tags],
-      createdAt: this._createdAt,
-      updatedAt: this._updatedAt
-    }
-  }
-
-  // ============================================================================
   // ISelectable implementation
   // ============================================================================
 
   getId(): PointId {
-    return this._id
+    return this.id
   }
 
   getType(): SelectableType {
@@ -163,79 +181,62 @@ export class WorldPoint implements ISelectable, IValidatable, IWorldPoint, IValu
   }
 
   getName(): string {
-    return this._name
+    return this.name
   }
 
-  isVisible(): boolean {
-    return this._isVisible
-  }
-
-  /**
-   * Check if point is locked (returns true if any axis is locked).
-   */
   isLocked(): boolean {
-    if (this._lockedAxes) {
-      return this._lockedAxes.x === true || this._lockedAxes.y === true || this._lockedAxes.z === true
+    if (this.lockedAxes) {
+      return this.lockedAxes.x === true || this.lockedAxes.y === true || this.lockedAxes.z === true
     }
     return false
   }
 
-  /**
-   * Check if X axis is locked.
-   */
   isXLocked(): boolean {
-    return this._lockedAxes?.x === true
+    return this.lockedAxes?.x === true
   }
 
-  /**
-   * Check if Y axis is locked.
-   */
   isYLocked(): boolean {
-    return this._lockedAxes?.y === true
+    return this.lockedAxes?.y === true
   }
 
-  /**
-   * Check if Z axis is locked.
-   */
   isZLocked(): boolean {
-    return this._lockedAxes?.z === true
+    return this.lockedAxes?.z === true
   }
 
   getDependencies(): EntityId[] {
-    // Points don't depend on other entities (they're leaf nodes)
     return []
   }
 
   getDependents(): EntityId[] {
     const dependents: string[] = []
-    this._connectedLines.forEach(line => dependents.push(line.getId()))
-    this._referencingConstraints.forEach(constraint => dependents.push(constraint.getId()))
+    this.connectedLines.forEach(line => dependents.push(line.getId()))
+    this.referencingConstraints.forEach(constraint => dependents.push(constraint.getId()))
     return dependents as EntityId[]
   }
 
   isSelected(): boolean {
-    return this._selected
+    return this.selected
   }
 
   setSelected(selected: boolean): void {
-    this._selected = selected
+    this.selected = selected
   }
 
   canDelete(): boolean {
-    return this._connectedLines.size === 0 && this._referencingConstraints.size === 0
+    return this.connectedLines.size === 0 && this.referencingConstraints.size === 0
   }
 
   getDeleteWarning(): string | null {
-    if (this._connectedLines.size === 0 && this._referencingConstraints.size === 0) {
+    if (this.connectedLines.size === 0 && this.referencingConstraints.size === 0) {
       return null
     }
 
     const parts: string[] = []
-    if (this._connectedLines.size > 0) {
-      parts.push(`${this._connectedLines.size} line${this._connectedLines.size === 1 ? '' : 's'}`)
+    if (this.connectedLines.size > 0) {
+      parts.push(`${this.connectedLines.size} line${this.connectedLines.size === 1 ? '' : 's'}`)
     }
-    if (this._referencingConstraints.size > 0) {
-      parts.push(`${this._referencingConstraints.size} constraint${this._referencingConstraints.size === 1 ? '' : 's'}`)
+    if (this.referencingConstraints.size > 0) {
+      parts.push(`${this.referencingConstraints.size} constraint${this.referencingConstraints.size === 1 ? '' : 's'}`)
     }
 
     return `Deleting this point will also delete ${parts.join(' and ')}`
@@ -246,14 +247,14 @@ export class WorldPoint implements ISelectable, IValidatable, IWorldPoint, IValu
   // ============================================================================
 
   validate(context: ValidationContext): ValidationResult {
-    return WorldPoint.validateWorldPoint(this._id, this._name, this._xyz, this._color)
+    return WorldPoint.validateWorldPoint(this.id, this.name, this.xyz, this.color)
   }
 
   // ============================================================================
   // Validation methods (inlined from WorldPointValidator)
   // ============================================================================
 
-  static validateDto(dto: WorldPointDto): ValidationResult {
+  static validateDto(dto: any): ValidationResult {
     const errors: ValidationError[] = []
 
     if (!dto.id) {
@@ -296,7 +297,7 @@ export class WorldPoint implements ISelectable, IValidatable, IWorldPoint, IValu
           'point',
           'xyz'
         ))
-      } else if (!dto.xyz.every(coord => coord === null || (typeof coord === 'number' && !isNaN(coord)))) {
+      } else if (!dto.xyz.every((coord: number | null) => coord === null || (typeof coord === 'number' && !isNaN(coord)))) {
         errors.push(ValidationHelpers.createError(
           'INVALID_COORDINATES',
           'xyz coordinates must be null or valid numbers',
@@ -376,93 +377,16 @@ export class WorldPoint implements ISelectable, IValidatable, IWorldPoint, IValu
     }
   }
 
-  // ============================================================================
-  // Domain getters/setters
-  // ============================================================================
-
-  get name(): string {
-    return this._name
-  }
-
-  set name(value: string) {
-    this._name = value
-    this.updateTimestamp()
-  }
-
-  get xyz(): [number | null, number | null, number | null] | undefined {
-    return this._xyz ? [...this._xyz] : undefined
-  }
-
-  set xyz(value: [number | null, number | null, number | null] | undefined) {
-    this._xyz = value ? [...value] : undefined
-    this.updateTimestamp()
-  }
-
-  get color(): string {
-    return this._color
-  }
-
-  set color(value: string) {
-    this._color = value
-    this.updateTimestamp()
-  }
-
-  get isOrigin(): boolean {
-    return this._isOrigin
-  }
-
-  set isOrigin(value: boolean) {
-    this._isOrigin = value
-    this.updateTimestamp()
-  }
-
-  get group(): string | undefined {
-    return this._group
-  }
-
-  set group(value: string | undefined) {
-    this._group = value
-    this.updateTimestamp()
-  }
-
-  get tags(): string[] {
-    return [...this._tags]
-  }
-
-  set tags(value: string[]) {
-    this._tags = [...value]
-    this.updateTimestamp()
-  }
-
-  get createdAt(): string {
-    return this._createdAt
-  }
-
-  get updatedAt(): string {
-    return this._updatedAt
-  }
-
-  get lockedAxes(): AxisLock | undefined {
-    return this._lockedAxes ? { ...this._lockedAxes } : undefined
-  }
 
   // ============================================================================
-  // Relationship management (inlined from WorldPointRelationshipManager)
+  // Relationship management
   // ============================================================================
 
-  get connectedLines(): ILine[] {
-    return Array.from(this._connectedLines)
-  }
-
-  get referencingConstraints(): IConstraint[] {
-    return Array.from(this._referencingConstraints)
-  }
-
-  get connectedPoints(): IWorldPoint[] {
+  getConnectedPoints(): IWorldPoint[] {
     const connectedPoints: IWorldPoint[] = []
     const seenPoints = new Set<IWorldPoint>()
 
-    for (const line of this._connectedLines) {
+    for (const line of this.connectedLines) {
       if (line.pointA !== this) {
         if (!seenPoints.has(line.pointA)) {
           connectedPoints.push(line.pointA)
@@ -481,31 +405,31 @@ export class WorldPoint implements ISelectable, IValidatable, IWorldPoint, IValu
   }
 
   addConnectedLine(line: ILine): void {
-    this._connectedLines.add(line)
+    this.connectedLines.add(line)
   }
 
   removeConnectedLine(line: ILine): void {
-    this._connectedLines.delete(line)
+    this.connectedLines.delete(line)
   }
 
   addReferencingConstraint(constraint: IConstraint): void {
-    this._referencingConstraints.add(constraint)
+    this.referencingConstraints.add(constraint)
   }
 
   removeReferencingConstraint(constraint: IConstraint): void {
-    this._referencingConstraints.delete(constraint)
+    this.referencingConstraints.delete(constraint)
   }
 
   getConnectedLineIds(): EntityId[] {
-    return Array.from(this._connectedLines).map(line => line.getId()) as EntityId[]
+    return Array.from(this.connectedLines).map(line => line.getId()) as EntityId[]
   }
 
   getReferencingConstraintIds(): EntityId[] {
-    return Array.from(this._referencingConstraints).map(constraint => constraint.getId()) as EntityId[]
+    return Array.from(this.referencingConstraints).map(constraint => constraint.getId()) as EntityId[]
   }
 
   getDegree(): number {
-    return this._connectedLines.size
+    return this.connectedLines.size
   }
 
   isIsolated(): boolean {
@@ -525,17 +449,17 @@ export class WorldPoint implements ISelectable, IValidatable, IWorldPoint, IValu
   // ============================================================================
 
   hasCoordinates(): boolean {
-    return this._xyz !== undefined &&
-           this._xyz[0] !== null &&
-           this._xyz[1] !== null &&
-           this._xyz[2] !== null
+    return this.xyz !== undefined &&
+           this.xyz[0] !== null &&
+           this.xyz[1] !== null &&
+           this.xyz[2] !== null
   }
 
   getDefinedCoordinates(): [number, number, number] | undefined {
     if (!this.hasCoordinates()) {
       return undefined
     }
-    return this._xyz as [number, number, number]
+    return this.xyz as [number, number, number]
   }
 
   distanceTo(other: WorldPoint): number | null {
@@ -553,7 +477,7 @@ export class WorldPoint implements ISelectable, IValidatable, IWorldPoint, IValu
       return null
     }
 
-    const connectedPoints = this.connectedPoints
+    const connectedPoints = this.getConnectedPoints()
       .map(p => p.getDefinedCoordinates())
       .filter((xyz): xyz is [number, number, number] => xyz !== undefined)
 
@@ -786,58 +710,45 @@ export class WorldPoint implements ISelectable, IValidatable, IWorldPoint, IValu
     const now = new Date().toISOString()
     return new WorldPoint(
       newId,
-      newName || `${this._name} (copy)`,
-      this._xyz ? [...this._xyz] : undefined,
-      this._color,
-      this._isVisible,
-      this._isOrigin,
-      this._lockedAxes ? { ...this._lockedAxes } : undefined,
-      this._isOptimized,
-      this._optimizedAt,
-      this._group,
-      [...this._tags],
+      newName || `${this.name} (copy)`,
+      this.xyz ? [...this.xyz] : undefined,
+      this.color,
+      this.isVisible,
+      this.isOrigin,
+      this.lockedAxes ? { ...this.lockedAxes } : undefined,
+      this.isOptimized,
+      this.optimizedAt,
+      this.group,
+      [...this.tags],
       now,
       now
     )
   }
 
   setVisible(visible: boolean): void {
-    this._isVisible = visible
-    this.updateTimestamp()
+    this.isVisible = visible
+    this.updatedAt = new Date().toISOString()
   }
 
-  /**
-   * Set locked state for all axes.
-   */
   setLocked(locked: boolean): void {
     if (locked) {
-      this._lockedAxes = { x: true, y: true, z: true }
+      this.lockedAxes = { x: true, y: true, z: true }
     } else {
-      this._lockedAxes = undefined
+      this.lockedAxes = undefined
     }
-    this.updateTimestamp()
+    this.updatedAt = new Date().toISOString()
   }
 
-  /**
-   * Set per-axis locking.
-   */
   setLockedAxes(lockedAxes: AxisLock | undefined): void {
-    this._lockedAxes = lockedAxes ? { ...lockedAxes } : undefined
-    this.updateTimestamp()
+    this.lockedAxes = lockedAxes ? { ...lockedAxes } : undefined
+    this.updatedAt = new Date().toISOString()
   }
 
-  /**
-   * Apply optimization results and mark coordinates as optimized.
-   */
   applyOptimizationResult(result: { xyz: [number, number, number], residual?: number }): void {
-    this._xyz = [...result.xyz] as [number | null, number | null, number | null]
-    this._isOptimized = true
-    this._optimizedAt = new Date()
-    this.updateTimestamp()
-  }
-
-  private updateTimestamp(): void {
-    this._updatedAt = new Date().toISOString()
+    this.xyz = [...result.xyz] as [number | null, number | null, number | null]
+    this.isOptimized = true
+    this.optimizedAt = new Date()
+    this.updatedAt = new Date().toISOString()
   }
 
   // ============================================================================
@@ -893,22 +804,12 @@ export class WorldPoint implements ISelectable, IValidatable, IWorldPoint, IValu
 
     const xyz: [number, number, number] = [vec.x.data, vec.y.data, vec.z.data]
     const residuals = this.computeResiduals(valueMap)
-    this._lastResiduals = residuals.map(r => r.data)
+    this.lastResiduals = residuals.map(r => r.data)
     this.applyOptimizationResult({ xyz })
   }
 
-  /**
-   * Get the last computed residuals from intrinsic constraints.
-   */
-  getLastResiduals(): number[] {
-    return [...this._lastResiduals]
-  }
-
-  /**
-   * Get optimization information for this point.
-   */
   getOptimizationInfo() {
-    const residuals = this.getLastResiduals()
+    const residuals = this.lastResiduals
     const totalResidual = residuals.length > 0
       ? Math.sqrt(residuals.reduce((sum, r) => sum + r * r, 0))
       : 0
@@ -918,8 +819,8 @@ export class WorldPoint implements ISelectable, IValidatable, IWorldPoint, IValu
       residuals: residuals,
       totalResidual: totalResidual,
       rmsResidual: residuals.length > 0 ? totalResidual / Math.sqrt(residuals.length) : 0,
-      isOptimized: this._isOptimized,
-      lastOptimizedAt: this._optimizedAt,
+      isOptimized: this.isOptimized,
+      lastOptimizedAt: this.optimizedAt,
     }
   }
 }

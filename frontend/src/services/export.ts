@@ -1,7 +1,4 @@
-// Export functionality for various file formats
-
-import { EntityProject } from '../types/project-entities'
-// Export uses entities and converts to simple export format
+import { Project } from '../entities/project'
 import type { ConstraintDto } from '../entities/constraints/dtos/ConstraintDto'
 
 // Simple export format (not the same as DTOs)
@@ -37,9 +34,9 @@ export interface ExportResult {
 }
 
 export class ExportService {
-  private project: EntityProject
+  private project: Project
 
-  constructor(project: EntityProject) {
+  constructor(project: Project) {
     this.project = project
   }
 
@@ -93,7 +90,7 @@ export class ExportService {
     if (options.includeImages) {
       exportData.images = (this.project as any).images
       exportData.cameras = (this.project as any).cameras
-      exportData.viewpoints = Array.from(this.project.viewpoints.entries()).reduce((acc, [id, vp]) => ({ ...acc, [id]: vp }), {})
+      exportData.viewpoints = Array.from(this.project.viewpoints).reduce((acc, vp) => ({ ...acc, [vp.id]: vp }), {} as Record<string, any>)
     }
 
     if (options.includeMetadata) {
@@ -381,11 +378,10 @@ EOF
   }
 
   private getFormattedWorldPoints(options: ExportOptions): Record<string, ExportWorldPoint> {
-    // Convert Map to Record for export
     const worldPoints: Record<string, ExportWorldPoint> = {}
-    for (const [id, wp] of this.project.worldPoints.entries()) {
+    for (const wp of this.project.worldPoints) {
       const coords = wp.getDefinedCoordinates()
-      worldPoints[id] = {
+      worldPoints[wp.getId()] = {
         id: wp.getId(),
         name: wp.getName(),
         xyz: coords || null,

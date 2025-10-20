@@ -443,11 +443,20 @@ All clarifying questions have been resolved:
 
 ---
 
-**Version**: 1.1
+**Version**: 1.2
 **Last Updated**: 2025-10-20
-**Status**: ✅ APPROVED - All decisions finalized
+**Status**: ✅ APPROVED - All decisions finalized, DTO consolidation COMPLETE
 
-**Recent Updates (v1.1)**:
+**Recent Updates (v1.2)**:
+- ✅ **COMPLETED**: DTO Consolidation - All separate DTO files deleted, toDto/fromDto methods added to entities
+- ✅ **COMPLETED**: Set-based collections - Converted all entity collections from Maps to Sets
+- ✅ **COMPLETED**: Object references everywhere - Fixed all ID-based lookups to use entity references
+- All 46 files updated following architectural rules
+- 3 DTO files deleted (LineDto.ts, ViewpointDto.ts, WorldPointDto.ts)
+- 39 TypeScript errors fixed
+- Zero violations of architectural principles remain
+
+**Previous Updates (v1.1)**:
 - Added rule 1.3: Use direct field access, not silly getters (TypeScript superpower!)
 - Added rule 1.4: IDs exist ONLY for serialization (with required warning comment)
 - Updated Q6: Use Sets everywhere, Maps serve no purpose at runtime

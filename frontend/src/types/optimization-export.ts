@@ -1,14 +1,44 @@
 // Optimization Export DTOs for Python testing
 // This file defines the export format for sending project data to the optimization backend
 
-import type { WorldPointDto } from '../entities/world-point/WorldPointDto'
-import type { LineDto } from '../entities/line/LineDto'
-import type { ViewpointDto } from '../entities/viewpoint/ViewpointDto'
 import type { ConstraintDto } from '../entities/constraints/base-constraint'
 
+// DTO types for optimization export (serialized format)
+type WorldPointDto = any
+type LineDto = any
+type ViewpointDto = any
+
 // Lightweight viewpoint DTO without base64 image blob
-export interface ViewpointDtoLight extends Omit<ViewpointDto, 'url'> {
-  url: string // Just filename or placeholder, not base64 data
+export interface ViewpointDtoLight {
+  url: string
+  id: string
+  name: string
+  filename: string
+  imageWidth: number
+  imageHeight: number
+  focalLength: number
+  principalPointX: number
+  principalPointY: number
+  skewCoefficient: number
+  aspectRatio: number
+  radialDistortion: [number, number, number]
+  tangentialDistortion: [number, number]
+  position: [number, number, number]
+  rotation: [number, number, number, number]
+  imagePoints: Record<string, any>
+  calibrationAccuracy: number
+  calibrationDate?: string
+  calibrationNotes?: string
+  isProcessed: boolean
+  processingNotes?: string
+  metadata?: any
+  isVisible: boolean
+  opacity: number
+  color: string
+  group?: string
+  tags?: string[]
+  createdAt: string
+  updatedAt: string
 }
 
 // Main export structure for optimization
@@ -78,7 +108,7 @@ export function calculateExportStatistics(
   constraints: ConstraintDto[]
 ): OptimizationExportDto['statistics'] {
   const worldPointsWithCoordinates = worldPoints.filter(wp =>
-    wp.xyz && wp.xyz.some(coord => coord !== null)
+    wp.xyz && wp.xyz.some((coord: number | null) => coord !== null)
   ).length
 
   const worldPointsWithoutCoordinates = worldPoints.length - worldPointsWithCoordinates

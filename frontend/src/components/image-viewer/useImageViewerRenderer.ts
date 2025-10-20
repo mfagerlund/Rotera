@@ -70,7 +70,7 @@ export const useImageViewerRenderer = ({
       Array.from(worldPoints.values()).forEach(wp => {
         const imagePoints = viewpoint.getImagePointsForWorldPoint(wp.getId())
         const imagePoint = imagePoints.length > 0 ? imagePoints[0] : null
-        if (!imagePoint || !wp.isVisible()) {
+        if (!imagePoint || !wp.isVisible) {
           return
         }
 

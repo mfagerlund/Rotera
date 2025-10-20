@@ -1,18 +1,16 @@
-// Plane entity with DTO and domain class co-located
-
 import type { PlaneId, PointId, EntityId } from '../types/ids'
 import type { ISelectable, SelectableType } from '../types/selectable'
 import type { IValidatable, ValidationContext, ValidationResult, ValidationError } from '../validation/validator'
+import type { WorldPoint } from './world-point'
 import { ValidationHelpers } from '../validation/validator'
 
-// DTO for storage (clean, no legacy)
 export interface PlaneDto {
   id: PlaneId
   name: string
-  pointIds: PointId[] // At least 3 points to define a plane
+  pointIds: PointId[]
   color: string
   isVisible: boolean
-  opacity: number // 0-1 for transparency
+  opacity: number
   fillStyle: 'solid' | 'wireframe' | 'transparent'
   group?: string
   tags?: string[]
@@ -20,37 +18,51 @@ export interface PlaneDto {
   updatedAt: string
 }
 
-// Repository interface (to avoid circular dependency)
-export interface PlaneRepository {
-  getPoint(pointId: PointId): EntityId | undefined
-  getConstraintsByPlane(planeId: PlaneId): EntityId[]
-  entityExists(id: EntityId): boolean
-  pointExists(pointId: PointId): boolean
-}
-
-// Domain class with runtime behavior
 export class Plane implements ISelectable, IValidatable {
-  private selected = false
+  selected = false
+
+  id: PlaneId
+  name: string
+  points: Set<WorldPoint>
+  color: string
+  isVisible: boolean
+  opacity: number
+  fillStyle: 'solid' | 'wireframe' | 'transparent'
+  group?: string
+  tags?: string[]
+  createdAt: string
+  updatedAt: string
 
   private constructor(
-    private repo: PlaneRepository,
-    private data: PlaneDto
-  ) {}
-
-  // Factory methods
-  static fromDTO(dto: PlaneDto, repo: PlaneRepository): Plane {
-    const validation = Plane.validateDto(dto)
-    if (!validation.isValid) {
-      throw new Error(`Invalid Plane DTO: ${validation.errors.map(e => e.message).join(', ')}`)
-    }
-    return new Plane(repo, { ...dto })
+    id: PlaneId,
+    name: string,
+    points: Set<WorldPoint>,
+    color: string,
+    isVisible: boolean,
+    opacity: number,
+    fillStyle: 'solid' | 'wireframe' | 'transparent',
+    group: string | undefined,
+    tags: string[] | undefined,
+    createdAt: string,
+    updatedAt: string
+  ) {
+    this.id = id
+    this.name = name
+    this.points = points
+    this.color = color
+    this.isVisible = isVisible
+    this.opacity = opacity
+    this.fillStyle = fillStyle
+    this.group = group
+    this.tags = tags
+    this.createdAt = createdAt
+    this.updatedAt = updatedAt
   }
 
   static create(
     id: PlaneId,
     name: string,
-    pointIds: PointId[],
-    repo: PlaneRepository,
+    points: WorldPoint[],
     options: {
       color?: string
       isVisible?: boolean
@@ -60,38 +72,28 @@ export class Plane implements ISelectable, IValidatable {
       tags?: string[]
     } = {}
   ): Plane {
-    if (pointIds.length < 3) {
+    if (points.length < 3) {
       throw new Error('Plane requires at least 3 points')
     }
 
     const now = new Date().toISOString()
-    const dto: PlaneDto = {
+    return new Plane(
       id,
       name,
-      pointIds: [...pointIds],
-      color: options.color || '#cccccc',
-      isVisible: options.isVisible ?? true,
-      opacity: options.opacity ?? 0.5,
-      fillStyle: options.fillStyle || 'transparent',
-      group: options.group,
-      tags: options.tags,
-      createdAt: now,
-      updatedAt: now
-    }
-    return new Plane(repo, dto)
+      new Set(points),
+      options.color || '#cccccc',
+      options.isVisible ?? true,
+      options.opacity ?? 0.5,
+      options.fillStyle || 'transparent',
+      options.group,
+      options.tags,
+      now,
+      now
+    )
   }
 
-  // Serialization
-  toDTO(): PlaneDto {
-    return {
-      ...this.data,
-      pointIds: [...this.data.pointIds]
-    }
-  }
-
-  // ISelectable implementation
   getId(): PlaneId {
-    return this.data.id
+    return this.id
   }
 
   getType(): SelectableType {
@@ -99,28 +101,19 @@ export class Plane implements ISelectable, IValidatable {
   }
 
   getName(): string {
-    return this.data.name
-  }
-
-  isVisible(): boolean {
-    return this.data.isVisible
+    return this.name
   }
 
   isLocked(): boolean {
-    // Planes aren't directly lockable, but depend on their points
     return false
   }
 
   getDependencies(): EntityId[] {
-    // Planes depend on their points
-    return this.data.pointIds.map(id => id as EntityId)
+    return Array.from(this.points).map(p => p.getId() as EntityId)
   }
 
   getDependents(): EntityId[] {
-    // Constraints that depend on this plane
-    const dependents: EntityId[] = []
-    dependents.push(...this.repo.getConstraintsByPlane(this.data.id))
-    return dependents
+    return []
   }
 
   isSelected(): boolean {
@@ -132,92 +125,53 @@ export class Plane implements ISelectable, IValidatable {
   }
 
   canDelete(): boolean {
-    // Can delete if no other entities depend on this plane
-    return this.getDependents().length === 0
+    return true
   }
 
   getDeleteWarning(): string | null {
-    const dependents = this.getDependents()
-    if (dependents.length === 0) {
-      return null
-    }
-
-    const constraints = this.repo.getConstraintsByPlane(this.data.id)
-
-    return `Deleting plane "${this.data.name}" will also delete ${constraints.length} constraint${constraints.length === 1 ? '' : 's'}`
+    return null
   }
 
-  // IValidatable implementation
   validate(context: ValidationContext): ValidationResult {
     const errors: ValidationError[] = []
     const warnings: ValidationError[] = []
 
-    // Required field validation
     const nameError = ValidationHelpers.validateRequiredField(
-      this.data.name,
+      this.name,
       'name',
-      this.data.id,
+      this.id,
       'plane'
     )
     if (nameError) errors.push(nameError)
 
-    const idError = ValidationHelpers.validateIdFormat(this.data.id, 'plane')
+    const idError = ValidationHelpers.validateIdFormat(this.id, 'plane')
     if (idError) errors.push(idError)
 
-    // Point validation
-    if (!this.data.pointIds || this.data.pointIds.length < 3) {
+    if (this.points.size < 3) {
       errors.push(ValidationHelpers.createError(
         'INSUFFICIENT_POINTS',
         'Plane requires at least 3 points',
-        this.data.id,
+        this.id,
         'plane',
-        'pointIds'
+        'points'
       ))
-    } else {
-      // Check that all points exist
-      for (let i = 0; i < this.data.pointIds.length; i++) {
-        const pointId = this.data.pointIds[i]
-        if (!context.pointExists(pointId as EntityId)) {
-          errors.push(ValidationHelpers.createError(
-            'INVALID_POINT_REFERENCE',
-            `pointIds[${i}] references non-existent point: ${pointId}`,
-            this.data.id,
-            'plane',
-            'pointIds'
-          ))
-        }
-      }
-
-      // Check for duplicate points
-      const uniquePoints = new Set(this.data.pointIds)
-      if (uniquePoints.size !== this.data.pointIds.length) {
-        errors.push(ValidationHelpers.createError(
-          'DUPLICATE_POINTS',
-          'Plane contains duplicate point references',
-          this.data.id,
-          'plane',
-          'pointIds'
-        ))
-      }
     }
 
-    // Color validation
-    if (this.data.color && !/^#[0-9A-Fa-f]{6}$/.test(this.data.color)) {
+    if (this.color && !/^#[0-9A-Fa-f]{6}$/.test(this.color)) {
       errors.push(ValidationHelpers.createError(
         'INVALID_COLOR',
         'color must be a valid hex color',
-        this.data.id,
+        this.id,
         'plane',
         'color'
       ))
     }
 
-    // Opacity validation
-    if (this.data.opacity < 0 || this.data.opacity > 1) {
+    if (this.opacity < 0 || this.opacity > 1) {
       errors.push(ValidationHelpers.createError(
         'INVALID_OPACITY',
         'opacity must be between 0 and 1',
-        this.data.id,
+        this.id,
         'plane',
         'opacity'
       ))
@@ -231,7 +185,6 @@ export class Plane implements ISelectable, IValidatable {
     }
   }
 
-  // Static DTO validation
   private static validateDto(dto: PlaneDto): ValidationResult {
     const errors: ValidationError[] = []
 
@@ -283,135 +236,59 @@ export class Plane implements ISelectable, IValidatable {
     }
   }
 
-  // Domain methods (getters/setters)
-  get name(): string {
-    return this.data.name
-  }
-
-  set name(value: string) {
-    this.data.name = value
-    this.updateTimestamp()
-  }
-
-  get pointIds(): PointId[] {
-    return [...this.data.pointIds]
-  }
-
-  get color(): string {
-    return this.data.color
-  }
-
-  set color(value: string) {
-    this.data.color = value
-    this.updateTimestamp()
-  }
-
-  get opacity(): number {
-    return this.data.opacity
-  }
-
-  set opacity(value: number) {
-    if (value < 0 || value > 1) {
-      throw new Error('Opacity must be between 0 and 1')
-    }
-    this.data.opacity = value
-    this.updateTimestamp()
-  }
-
-  get fillStyle(): 'solid' | 'wireframe' | 'transparent' {
-    return this.data.fillStyle
-  }
-
-  set fillStyle(value: 'solid' | 'wireframe' | 'transparent') {
-    this.data.fillStyle = value
-    this.updateTimestamp()
-  }
-
-  get group(): string | undefined {
-    return this.data.group
-  }
-
-  set group(value: string | undefined) {
-    this.data.group = value
-    this.updateTimestamp()
-  }
-
-  get tags(): string[] {
-    return this.data.tags ? [...this.data.tags] : []
-  }
-
-  set tags(value: string[]) {
-    this.data.tags = [...value]
-    this.updateTimestamp()
-  }
-
-  get createdAt(): string {
-    return this.data.createdAt
-  }
-
-  get updatedAt(): string {
-    return this.data.updatedAt
-  }
-
-  // Utility methods
   getPointCount(): number {
-    return this.data.pointIds.length
+    return this.points.size
   }
 
-  addPoint(pointId: PointId): void {
-    if (!this.data.pointIds.includes(pointId)) {
-      this.data.pointIds.push(pointId)
-      this.updateTimestamp()
-    }
+  addPoint(point: WorldPoint): void {
+    this.points.add(point)
+    this.updatedAt = new Date().toISOString()
   }
 
-  removePoint(pointId: PointId): void {
-    const index = this.data.pointIds.indexOf(pointId)
-    if (index !== -1) {
-      this.data.pointIds.splice(index, 1)
-      this.updateTimestamp()
-    }
+  removePoint(point: WorldPoint): void {
+    this.points.delete(point)
+    this.updatedAt = new Date().toISOString()
   }
 
-  hasPoint(pointId: PointId): boolean {
-    return this.data.pointIds.includes(pointId)
+  hasPoint(point: WorldPoint): boolean {
+    return this.points.has(point)
+  }
+
+  getPoints(): WorldPoint[] {
+    return Array.from(this.points)
   }
 
   clone(newId: PlaneId, newName?: string): Plane {
-    const clonedData: PlaneDto = {
-      ...this.data,
-      id: newId,
-      name: newName || `${this.data.name} (copy)`,
-      pointIds: [...this.data.pointIds],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-    return new Plane(this.repo, clonedData)
+    const now = new Date().toISOString()
+    return new Plane(
+      newId,
+      newName || `${this.name} (copy)`,
+      new Set(this.points),
+      this.color,
+      this.isVisible,
+      this.opacity,
+      this.fillStyle,
+      this.group,
+      this.tags,
+      now,
+      now
+    )
   }
 
-  private updateTimestamp(): void {
-    this.data.updatedAt = new Date().toISOString()
-  }
-
-  // Override visibility
   setVisible(visible: boolean): void {
-    this.data.isVisible = visible
-    this.updateTimestamp()
+    this.isVisible = visible
+    this.updatedAt = new Date().toISOString()
   }
 
-  // Geometric operations (placeholders - would need point coordinates)
   getNormal(): [number, number, number] | null {
-    // Would need access to point coordinates through repository
     return null
   }
 
   getArea(): number | null {
-    // Would need access to point coordinates through repository
     return null
   }
 
   isCoplanar(): boolean {
-    // Would need to check if all points are actually coplanar
-    return true // Placeholder
+    return true
   }
 }

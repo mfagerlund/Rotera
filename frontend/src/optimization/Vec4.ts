@@ -91,7 +91,7 @@ export class Vec4 {
     const outW = Value.makeNary(
       nw,
       [this.w, this.x, this.y, this.z],
-      (out) => () => {
+      (out: Value) => () => {
         this.w.grad += out.grad * (1 - nw * nw) * invMag;
         this.x.grad += out.grad * (-nw * nx) * invMag;
         this.y.grad += out.grad * (-nw * ny) * invMag;
@@ -104,7 +104,7 @@ export class Vec4 {
     const outX = Value.makeNary(
       nx,
       [this.w, this.x, this.y, this.z],
-      (out) => () => {
+      (out: Value) => () => {
         this.w.grad += out.grad * (-nx * nw) * invMag;
         this.x.grad += out.grad * (1 - nx * nx) * invMag;
         this.y.grad += out.grad * (-nx * ny) * invMag;
@@ -117,7 +117,7 @@ export class Vec4 {
     const outY = Value.makeNary(
       ny,
       [this.w, this.x, this.y, this.z],
-      (out) => () => {
+      (out: Value) => () => {
         this.w.grad += out.grad * (-ny * nw) * invMag;
         this.x.grad += out.grad * (-ny * nx) * invMag;
         this.y.grad += out.grad * (1 - ny * ny) * invMag;
@@ -130,7 +130,7 @@ export class Vec4 {
     const outZ = Value.makeNary(
       nz,
       [this.w, this.x, this.y, this.z],
-      (out) => () => {
+      (out: Value) => () => {
         this.w.grad += out.grad * (-nz * nw) * invMag;
         this.x.grad += out.grad * (-nz * nx) * invMag;
         this.y.grad += out.grad * (-nz * ny) * invMag;

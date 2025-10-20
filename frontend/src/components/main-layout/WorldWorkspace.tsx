@@ -1,12 +1,12 @@
 import React from 'react'
 
 import WorldView, { WorldViewRef } from '../WorldView'
-import { EntityProject } from '../../types/project-entities'
+import { Project } from '../../entities/project'
 import { WorldPoint } from '../../entities/world-point'
 import { Line } from '../../entities/line'
 
 interface WorldWorkspaceProps {
-  project: EntityProject
+  project: Project
   worldViewRef: React.RefObject<WorldViewRef>
   selectedPointIds: string[]
   selectedLineIds: string[]

@@ -263,7 +263,7 @@ describe('Real Data Optimization', () => {
     console.log('\nInitial line lengths:');
     lineEntities.slice(0, 5).forEach(line => {
       const length = line.length();
-      const target = line.targetLength;
+      const target = line.constraints.targetLength;
       console.log(`  ${line.name}: length=${length?.toFixed(2)}, target=${target}`);
     });
 
@@ -290,7 +290,7 @@ describe('Real Data Optimization', () => {
     console.log('\nFinal line lengths:');
     lineEntities.slice(0, 5).forEach(line => {
       const length = line.length();
-      const target = line.targetLength;
+      const target = line.constraints.targetLength;
       const error = target ? Math.abs(length! - target) : 0;
       console.log(`  ${line.name}: length=${length?.toFixed(2)}, target=${target}, error=${error.toFixed(4)}`);
     });

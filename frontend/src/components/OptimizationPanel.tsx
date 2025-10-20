@@ -4,12 +4,12 @@
 import React, { useState, useCallback } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faBullseye, faGear, faStop } from '@fortawesome/free-solid-svg-icons'
-import { EntityProject } from '../types/project-entities'
+import { Project } from '../entities/project'
 import { useOptimization } from '../hooks/useOptimization'
 import { defaultOptimizationSettings } from '../services/optimization'
 
 interface OptimizationPanelProps {
-  project: EntityProject
+  project: Project
   onOptimizationComplete: (success: boolean, message: string) => void
 }
 

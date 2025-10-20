@@ -297,7 +297,7 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
       const imgElement = imgRef.current
       const containerWidth = parentRect.width
       const containerHeight = parentRect.height
-      const [imageNaturalWidth, imageNaturalHeight] = image.imageDimensions
+      const [imageNaturalWidth, imageNaturalHeight] = [image.imageWidth, image.imageHeight]
 
       // Calculate the scale factor for object-fit: contain
       const scaleX = containerWidth / imageNaturalWidth
@@ -328,7 +328,7 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
     }
 
     return () => observer.disconnect()
-  }, [thumbnailHeight, image.imageDimensions])
+  }, [thumbnailHeight, image, image.imageWidth, image.imageHeight])
 
   return (
     <div
@@ -478,7 +478,7 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
               // This accounts for centering and actual size
               if (imgBounds.width === 0 || imgBounds.height === 0) return null
 
-              const [imgWidth, imgHeight] = image.imageDimensions
+              const [imgWidth, imgHeight] = [image.imageWidth, image.imageHeight]
               // Calculate position as percentage of rendered image size, plus offset for centering
               const thumbnailX = imgBounds.offsetX + (imagePoint.u / imgWidth) * imgBounds.width
               const thumbnailY = imgBounds.offsetY + (imagePoint.v / imgHeight) * imgBounds.height

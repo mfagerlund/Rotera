@@ -4,7 +4,7 @@
 
 import { useState, useEffect } from 'react'
 import { loadFromLocalStorage, saveToLocalStorage, loadProjectFromJson } from '../store/project-serialization'
-import { EntityProject } from '../types/project-entities'
+import { Project } from '../entities/project'
 import { newProject } from '../store/project-store'
 
 const STORAGE_KEY = 'pictorigo-project'
@@ -15,7 +15,7 @@ const STORAGE_KEY = 'pictorigo-project'
  * ALL runtime work uses entities
  */
 export const useEntityProject = () => {
-  const [entityProject, setEntityProject] = useState<EntityProject | null>(null)
+  const [entityProject, setEntityProject] = useState<Project | null>(null)
   const [currentImageId, setCurrentImageId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -28,9 +28,9 @@ export const useEntityProject = () => {
         console.log('Loaded project from localStorage')
         setEntityProject(loaded)
         // Set current image to first viewpoint if available
-        const viewpointIds = Array.from(loaded.viewpoints.keys())
-        if (viewpointIds.length > 0) {
-          setCurrentImageId(viewpointIds[0])
+        const firstViewpoint = Array.from(loaded.viewpoints)[0]
+        if (firstViewpoint) {
+          setCurrentImageId(firstViewpoint.getId())
         }
       } else {
         console.log('Creating new empty project')

@@ -108,7 +108,7 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
       setPointSlot2(existingLine.pointB)
       setLineName(existingLine.name || '')
       setLineColor(existingLine.color || '#0696d7')
-      setIsVisible(existingLine.isVisible())
+      setIsVisible(existingLine.isVisible)
       setIsConstruction(existingLine.isConstruction || false)
 
       // Load constraint settings from line properties

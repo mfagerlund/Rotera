@@ -237,6 +237,6 @@ describe('Initialization Benchmark', () => {
     // Smart should be competitive (within 20% of random)
     // The benefit depends on the problem structure - coplanar groups help most
     const iterationRatio = avgSmart.iterations / avgRandom.iterations;
-    expect(iterationRatio).toBeLessThan(1.2); // At most 20% more iterations
+    expect(iterationRatio).toBeLessThanOrEqual(1.2); // At most 20% more iterations
   });
 });

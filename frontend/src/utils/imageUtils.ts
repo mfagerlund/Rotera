@@ -1,7 +1,5 @@
 // Image processing utilities for project management
 
-// ViewpointDto is the DTO type used for serialization
-import type { ViewpointDto } from '../entities/viewpoint/ViewpointDto'
 import type { ViewpointId } from '../types/ids'
 
 export interface ImageLoadResult {

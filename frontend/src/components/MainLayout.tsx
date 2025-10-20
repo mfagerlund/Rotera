@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faFolderOpen, faFloppyDisk, faFileExport, faTrash, faRuler, faGear, faArrowRight, faCamera, faSquare, faBullseye } from '@fortawesome/free-solid-svg-icons'
+import { Project } from '../entities/project'
 import { useEntityProject } from '../hooks/useEntityProject'
 import { useDomainOperations } from '../hooks/useDomainOperations'
 import { useSelection, useSelectionKeyboard } from '../hooks/useSelection'
@@ -96,11 +97,32 @@ export const MainLayout: React.FC = () => {
   const [constructionPreview, setConstructionPreview] = useState<ConstructionPreview | null>(null)
 
   // Derived data from project (entities - used DIRECTLY, no conversion!)
-  const currentImage = project && currentImageId ? project.viewpoints.get(currentImageId) : null
-  const worldPointEntities = Array.from(project?.worldPoints.values() || [])
-  const lineEntities = Array.from(project?.lines.values() || [])
-  const viewpointEntities = Array.from(project?.viewpoints.values() || [])
+  const currentImage = project && currentImageId ? Array.from(project.viewpoints).find(v => v.id === currentImageId) || null : null
+  const worldPointEntities = Array.from(project?.worldPoints || [])
+  const lineEntities = Array.from(project?.lines || [])
+  const viewpointEntities = Array.from(project?.viewpoints || [])
   const constraints = project?.constraints || []
+
+  // Convert Sets to Maps for components that still need Map interface (memoized for performance)
+  const worldPointsMap = useMemo(() => {
+    const map = new Map<string, WorldPoint>()
+    if (project?.worldPoints) {
+      for (const item of project.worldPoints) {
+        map.set(item.id, item)
+      }
+    }
+    return map
+  }, [project?.worldPoints])
+
+  const linesMap = useMemo(() => {
+    const map = new Map<string, LineEntity>()
+    if (project?.lines) {
+      for (const item of project.lines) {
+        map.set(item.id, item)
+      }
+    }
+    return map
+  }, [project?.lines])
 
   // Pure object-based selection
   const {
@@ -191,7 +213,7 @@ export const MainLayout: React.FC = () => {
   // Image sort order state with project persistence
   const [imageSortOrder, setImageSortOrder] = useState<string[]>(() => {
     // Try to get from project settings first, then localStorage
-    const projectOrder = project?.settings?.imageSortOrder
+    const projectOrder = project?.imageSortOrder
     if (projectOrder) return projectOrder
 
     const saved = localStorage.getItem('pictorigo-image-sort-order')
@@ -279,14 +301,14 @@ export const MainLayout: React.FC = () => {
     }
 
     return new Map(
-      Array.from(project.lines.values()).map((line) => {
+      Array.from(project.lines).map((line) => {
         const viewerLine: LineData = {
           id: line.getId(),
           name: line.name,
           pointA: line.pointA,
           pointB: line.pointB,
           color: line.color,
-          isVisible: line.isVisible(),
+          isVisible: line.isVisible,
           isConstruction: false, // TODO: Get from entity
           createdAt: line.createdAt,
           updatedAt: undefined,
@@ -304,7 +326,7 @@ export const MainLayout: React.FC = () => {
   const availableConstraints: AvailableConstraint[] = []
 
   const worldPointNames = Object.fromEntries(
-    Array.from(project?.worldPoints.values() || []).map((wp) => [wp.getId(), wp.getName()])
+    Array.from(project?.worldPoints || []).map((wp) => [wp.getId(), wp.getName()])
   )
 
   // Point interaction handlers
@@ -571,9 +593,9 @@ export const MainLayout: React.FC = () => {
     <ImageWorkspace
       image={currentImage || null}
       imageViewerRef={imageViewerRef}
-      worldPoints={project?.worldPoints || new Map()}
+      worldPoints={worldPointsMap}
       lines={viewerLines}
-      lineEntities={project?.lines || new Map()}
+      lineEntities={linesMap}
       selectedPoints={selectedPointEntities}
       selectedLines={selectedLineEntities}
       hoveredConstraintId={hoveredConstraintId}
@@ -612,8 +634,8 @@ export const MainLayout: React.FC = () => {
     hoveredConstraintId,
     hoveredWorldPoint,
     viewerLines,
-    project?.worldPoints,
-    project?.lines,
+    worldPointsMap,
+    linesMap,
     handleRequestAddImage
   ])
 
@@ -698,11 +720,11 @@ export const MainLayout: React.FC = () => {
             selectedLines={selectedLineEntities}
             allConstraints={allConstraints}
             onConstraintClick={() => {/* TODO: Implement constraint creation */}}
-            showPointNames={project!.settings.showPointNames}
+            showPointNames={project!.showPointNames}
             onTogglePointNames={() => {/* TODO: Update project settings */}}
             showComponentOverlay={showComponentNames}
             onToggleComponentOverlay={handleComponentOverlayToggle}
-            visualFeedbackLevel={project!.settings.visualFeedbackLevel || 'standard'}
+            visualFeedbackLevel={project!.visualFeedbackLevel || 'standard'}
             onVisualFeedbackChange={() => {/* TODO: Update visual feedback */}}
             confirm={confirm}
           />
@@ -785,8 +807,8 @@ export const MainLayout: React.FC = () => {
                 activeTool={activeTool}
                 onToolChange={setActiveTool}
                 worldPointNames={worldPointNames}
-                worldPoints={project?.worldPoints}
-                existingLines={project?.lines}
+                worldPoints={worldPointsMap}
+                existingLines={linesMap}
                 onCreatePoint={(imageId: string, u: number, v: number) => handleImageClick(u, v)}
                 onCreateLine={(pointA, pointB, lineConstraints) => {
                   try {
@@ -912,7 +934,7 @@ export const MainLayout: React.FC = () => {
                   >
                     <span className="button-icon" style={{ fontSize: '10px' }}><FontAwesomeIcon icon={faCamera} /></span>
                     <span className="button-label">IPs</span>
-                    <span className="button-count">{Array.from(project?.viewpoints.values() || []).reduce((total, vp) => total + vp.getImagePoints().length, 0)}</span>
+                    <span className="button-count">{Array.from(project?.viewpoints || []).reduce((total, vp) => total + vp.getImagePoints().length, 0)}</span>
                   </button>
 
                   <button
@@ -950,7 +972,7 @@ export const MainLayout: React.FC = () => {
             {/* Object counts */}
             <div style={{display: 'flex', gap: '12px', fontSize: '12px', color: '#888'}}>
               <span>World Points: {project?.worldPoints.size || 0}</span>
-              <span>Image Points: {Array.from(project?.viewpoints.values() || []).reduce((total, vp) => total + vp.getImagePoints().length, 0)}</span>
+              <span>Image Points: {Array.from(project?.viewpoints || []).reduce((total, vp) => total + vp.getImagePoints().length, 0)}</span>
               <span>Lines: {project?.lines.size || 0}</span>
               <span>Planes: {0}</span>
               <span>Constraints: {constraints.length}</span>
@@ -1015,7 +1037,7 @@ export const MainLayout: React.FC = () => {
         deleteLine(line)
       }}
       onDeleteAllLines={() => {
-        Array.from(project?.lines.values() || []).forEach(line => {
+        Array.from(project?.lines || []).forEach(line => {
           deleteLine(line)
         })
       }}
@@ -1074,7 +1096,7 @@ export const MainLayout: React.FC = () => {
       onClose={() => setShowConstraintsPopup(false)}
       constraints={constraints as any}
       worldPointNames={worldPointNames}
-      lineNames={Object.fromEntries(Array.from(project?.lines.values() || []).map((line) => [line.getId(), line.name]))}
+      lineNames={Object.fromEntries(Array.from(project?.lines || []).map((line) => [line.getId(), line.name]))}
       onEditConstraint={(constraintId) => {
         // TODO: Implement constraint editing
       }}
@@ -1106,7 +1128,7 @@ export const MainLayout: React.FC = () => {
               // Entities are modified in-place during optimization
               // Trigger re-render to show updated values
               saveProject()
-              setProject({ ...project }) // Force re-render
+              setProject(project.clone()) // Force re-render
             }}
           />
         )}

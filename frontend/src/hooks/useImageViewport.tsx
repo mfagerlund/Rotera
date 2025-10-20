@@ -159,7 +159,7 @@ export const useImageViewport = (
     const imageX = (canvasX - viewport.offset.x) / viewport.scale
     const imageY = (canvasY - viewport.offset.y) / viewport.scale
 
-    const [width, height] = image.imageDimensions
+    const [width, height] = [image.imageWidth, image.imageHeight]
 
     // Check if coordinates are within image bounds
     if (imageX < 0 || imageX > width || imageY < 0 || imageY > height) {

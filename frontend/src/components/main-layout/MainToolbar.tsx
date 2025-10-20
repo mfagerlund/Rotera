@@ -15,7 +15,7 @@ import {
 import { WorkspaceSwitcher } from '../WorkspaceManager'
 import { ConstraintToolbar } from '../ConstraintToolbar'
 import type { AvailableConstraint } from '../../types/ui-types'
-import type { EntityProject } from '../../types/project-entities'
+import type { Project } from '../../entities/project'
 import { Line } from '../../entities/line'
 import { WorldPoint } from '../../entities/world-point'
 import type { OptimizationExportDto } from '../../types/optimization-export'
@@ -28,7 +28,7 @@ interface MainToolbarProps {
   worldHasContent: boolean
 
   // Project
-  project: EntityProject | null
+  project: Project | null
   onExportOptimization: () => OptimizationExportDto | null
   onClearProject: () => void
 

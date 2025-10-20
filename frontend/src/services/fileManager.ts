@@ -1,6 +1,5 @@
-// Project file management service
-import { EntityProject } from '../types/project-entities'
-import { ProjectDto, projectToDto, dtoToProject } from '../store/project-serialization'
+import { Project } from '../entities/project'
+import { saveProjectToJson, loadProjectFromJson } from '../store/project-serialization'
 import { errorToMessage } from '../types/utils'
 
 export interface ProjectFileMetadata {
@@ -16,7 +15,7 @@ export interface ProjectFileMetadata {
 
 export interface ProjectFile {
   metadata: ProjectFileMetadata
-  project: EntityProject
+  project: Project
 }
 
 export class FileManagerService {
@@ -24,17 +23,12 @@ export class FileManagerService {
   private static readonly FILE_EXTENSION = '.pictorigo'
   private static readonly MIME_TYPE = 'application/json'
 
-  // Save project to file
   static async saveProjectToFile(
-    project: EntityProject,
+    project: Project,
     metadata: Partial<ProjectFileMetadata> = {}
   ): Promise<void> {
     try {
-      // Convert EntityProject to DTO for serialization
-      const projectDto = projectToDto({
-        ...project,
-        updatedAt: new Date().toISOString()
-      })
+      const projectJson = saveProjectToJson(project)
 
       const projectFile = {
         metadata: {
@@ -47,7 +41,7 @@ export class FileManagerService {
           tags: metadata.tags || [],
           thumbnailUrl: metadata.thumbnailUrl
         },
-        project: projectDto
+        project: JSON.parse(projectJson)
       }
 
       const jsonString = JSON.stringify(projectFile, null, 2)
@@ -92,11 +86,8 @@ export class FileManagerService {
         throw new Error(`Incompatible project version: ${rawFile.metadata.version}`)
       }
 
-      // Migrate if necessary (migrates the DTO)
       const migratedDto = this.migrateProjectDto(rawFile.project, rawFile.metadata.version)
-
-      // Convert DTO to EntityProject
-      const entityProject = dtoToProject(migratedDto)
+      const entityProject = loadProjectFromJson(JSON.stringify(migratedDto))
 
       return {
         metadata: {
@@ -111,20 +102,19 @@ export class FileManagerService {
     }
   }
 
-  // Export project data only (without metadata)
   static async exportProjectData(
-    project: EntityProject,
+    project: Project,
     format: 'json' | 'backup' = 'json'
   ): Promise<void> {
     try {
-      const projectDto = projectToDto(project)
+      const projectJson = saveProjectToJson(project)
       let data: string
       let filename: string
       let mimeType: string
 
       switch (format) {
         case 'json':
-          data = JSON.stringify(projectDto, null, 2)
+          data = projectJson
           filename = `${this.sanitizeFilename(project.name || 'project')}_data.json`
           mimeType = 'application/json'
           break
@@ -132,7 +122,7 @@ export class FileManagerService {
           data = JSON.stringify({
             version: this.CURRENT_VERSION,
             exportedAt: new Date().toISOString(),
-            project: projectDto
+            project: JSON.parse(projectJson)
           }, null, 2)
           filename = `${this.sanitizeFilename(project.name || 'project')}_backup.json`
           mimeType = 'application/json'
@@ -158,31 +148,29 @@ export class FileManagerService {
     }
   }
 
-  // Import project data from various formats
-  static async importProjectData(file: File): Promise<EntityProject> {
+  static async importProjectData(file: File): Promise<Project> {
     try {
       const text = await file.text()
-      let projectDto: ProjectDto
 
       if (file.name.endsWith('.json')) {
         const parsedData = JSON.parse(text)
 
         // Handle different JSON formats - all contain DTOs
+        let jsonToLoad: string
         if (parsedData.project && !parsedData.version) {
           // Full project file format
-          projectDto = parsedData.project
+          jsonToLoad = JSON.stringify(parsedData.project)
         } else if (parsedData.version && parsedData.project) {
           // Backup format
-          projectDto = parsedData.project
+          jsonToLoad = JSON.stringify(parsedData.project)
         } else if (parsedData.id || parsedData.name || parsedData.worldPoints) {
           // Direct project data (DTO)
-          projectDto = parsedData
+          jsonToLoad = JSON.stringify(parsedData)
         } else {
           throw new Error('Unrecognized JSON format')
         }
 
-        // Convert DTO to EntityProject
-        return dtoToProject(projectDto)
+        return loadProjectFromJson(jsonToLoad)
       } else {
         throw new Error('Unsupported file format for import')
       }
@@ -192,9 +180,8 @@ export class FileManagerService {
     }
   }
 
-  // Create project thumbnail
   static async createProjectThumbnail(
-    project: EntityProject,
+    project: Project,
     canvasElement?: HTMLCanvasElement
   ): Promise<string | null> {
     try {
@@ -245,18 +232,16 @@ export class FileManagerService {
         return false
       }
 
-      // Check required project fields (EntityProject)
       if (!projectFile.project.id) {
         return false
       }
 
-      // Validate data types (EntityProject uses Maps)
       const proj = projectFile.project
-      if (!proj.worldPoints || !(proj.worldPoints instanceof Map)) {
+      if (!proj.worldPoints || !(proj.worldPoints instanceof Set)) {
         return false
       }
 
-      if (!proj.viewpoints || !(proj.viewpoints instanceof Map)) {
+      if (!proj.viewpoints || !(proj.viewpoints instanceof Set)) {
         return false
       }
 
@@ -293,9 +278,7 @@ export class FileManagerService {
     return major <= currentMajor
   }
 
-  private static migrateProjectDto(dto: any, fromVersion: string): ProjectDto {
-    // Handle version migrations here on DTOs
-    // DTOs use Record, not Map
+  private static migrateProjectDto(dto: any, fromVersion: string): any {
     return {
       id: dto.id || crypto.randomUUID(),
       name: dto.name || 'Migrated Project',
@@ -329,16 +312,15 @@ export class FileManagerService {
     }
   }
 
-  // Auto-save functionality
   static enableAutoSave(
-    project: EntityProject,
-    intervalMs: number = 30000 // 30 seconds
+    project: Project,
+    intervalMs: number = 30000
   ): () => void {
     const saveToLocalStorage = () => {
       try {
-        const projectDto = projectToDto(project)
+        const projectJson = saveProjectToJson(project)
         const autoSaveData = {
-          project: projectDto,
+          project: JSON.parse(projectJson),
           savedAt: new Date().toISOString()
         }
         localStorage.setItem('pictorigo_autosave', JSON.stringify(autoSaveData))
@@ -356,8 +338,7 @@ export class FileManagerService {
     }
   }
 
-  // Recover auto-saved project
-  static recoverAutoSavedProject(): { project: EntityProject; savedAt: string } | null {
+  static recoverAutoSavedProject(): { project: Project; savedAt: string } | null {
     try {
       const autoSaveData = localStorage.getItem('pictorigo_autosave')
       if (!autoSaveData) return null
@@ -365,8 +346,7 @@ export class FileManagerService {
       const data = JSON.parse(autoSaveData)
       if (!data.project || !data.savedAt) return null
 
-      // Convert DTO to EntityProject
-      const entityProject = dtoToProject(data.project)
+      const entityProject = loadProjectFromJson(JSON.stringify(data.project))
 
       return {
         project: entityProject,

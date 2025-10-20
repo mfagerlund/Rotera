@@ -1,12 +1,12 @@
 // localStorage-based project management system
 
-import { EntityProject, ProjectSettings } from '../types/project-entities'
+import { Project } from '../entities/project'
 
 const PROJECT_KEY = 'pictorigo_project'
 const SETTINGS_KEY = 'pictorigo_settings'
 
 export class ProjectStorage {
-  static save(project: EntityProject): void {
+  static save(project: Project): void {
     try {
       project.updatedAt = new Date().toISOString()
       const projectData = JSON.stringify(project)
@@ -26,7 +26,7 @@ export class ProjectStorage {
     }
   }
 
-  static load(): EntityProject | null {
+  static load(): Project | null {
     try {
       const data = localStorage.getItem(PROJECT_KEY)
       return data ? JSON.parse(data) : null
@@ -56,11 +56,7 @@ export class ProjectStorage {
     return { used, available, warning }
   }
 
-  static saveSettings(settings: ProjectSettings): void {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
-  }
-
-  static loadSettings(): ProjectSettings {
+  static loadSettings() {
     try {
       const data = localStorage.getItem(SETTINGS_KEY)
       return data ? JSON.parse(data) : {
@@ -102,30 +98,19 @@ export class ProjectStorage {
     }
   }
 
-  static createEmptyProject(): EntityProject {
-    return {
-      id: crypto.randomUUID(),
-      name: 'New Project',
-      worldPoints: new Map(),
-      lines: new Map(),
-      viewpoints: new Map(),
-      constraints: [],
-      history: [],
-      settings: this.loadSettings(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
+  static createEmptyProject(): Project {
+    return Project.create('New Project')
   }
 }
 
 export class StorageManager {
-  static compressImages(project: EntityProject): EntityProject {
+  static compressImages(project: Project): Project {
     // TODO: Implement image compression if storage is getting full
     console.warn('Image compression not yet implemented')
     return project
   }
 
-  static estimateProjectSize(project: EntityProject): number {
+  static estimateProjectSize(project: Project): number {
     return JSON.stringify(project).length
   }
 

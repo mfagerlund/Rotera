@@ -2,7 +2,7 @@
 // These are NOT domain entities or DTOs - they describe UI state and tooling
 
 import { Line } from '../entities/line'
-import { EntityProject } from './project-entities'
+import { Project } from '../entities/project'
 
 // ============================================================================
 // Selection State
@@ -115,6 +115,6 @@ export interface OptimizationProgress {
 }
 
 export interface OptimizationService {
-  optimize: (project: EntityProject) => Promise<EntityProject>
-  simulateOptimization: (project: EntityProject) => Promise<EntityProject>
+  optimize: (project: Project) => Promise<Project>
+  simulateOptimization: (project: Project) => Promise<Project>
 }

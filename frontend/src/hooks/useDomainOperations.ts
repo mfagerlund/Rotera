@@ -1,5 +1,4 @@
-// Domain operations for EntityProject - CLEAN, NO LEGACY
-import { EntityProject } from '../types/project-entities'
+import { Project } from '../entities/project'
 import { WorldPoint } from '../entities/world-point'
 import { Line } from '../entities/line'
 import { Viewpoint } from '../entities/viewpoint'
@@ -38,8 +37,8 @@ export interface DomainOperations {
 }
 
 export function useDomainOperations(
-  project: EntityProject | null,
-  setProject: (project: EntityProject) => void
+  project: Project | null,
+  setProject: (project: Project) => void
 ): DomainOperations {
 
   const createWorldPoint = (name: string, xyz: [number, number, number], options?: any): WorldPoint => {
@@ -51,8 +50,8 @@ export function useDomainOperations(
       ...options
     })
 
-    project.worldPoints.set(id, point)
-    setProject({ ...project })
+    project.addWorldPoint(point)
+    setProject(project)
     return point
   }
 
@@ -61,14 +60,13 @@ export function useDomainOperations(
     // Mutation via private field access (entity doesn't expose setters)
     (worldPoint as any)._name = name
     ;(worldPoint as any)._updatedAt = new Date().toISOString()
-    setProject({ ...project })
+    setProject(project)
   }
 
   const deleteWorldPoint = (worldPoint: WorldPoint) => {
     if (!project) return
-    project.worldPoints.delete(worldPoint.getId())
-    // TODO: Remove constraints referencing this point
-    setProject({ ...project })
+    project.removeWorldPoint(worldPoint)
+    setProject(project)
   }
 
   const createLine = (pointA: WorldPoint, pointB: WorldPoint, options?: any): Line => {
@@ -79,8 +77,8 @@ export function useDomainOperations(
       ...options
     })
 
-    project.lines.set(id, line)
-    setProject({ ...project })
+    project.addLine(line)
+    setProject(project)
     return line
   }
 
@@ -91,19 +89,18 @@ export function useDomainOperations(
     if (updates.color) (line as any)._color = updates.color
     if (updates.isVisible !== undefined) (line as any)._isVisible = updates.isVisible
     ;(line as any)._updatedAt = new Date().toISOString()
-    setProject({ ...project })
+    setProject(project)
   }
 
   const deleteLine = (line: Line) => {
     if (!project) return
-    project.lines.delete(line.getId())
-    setProject({ ...project })
+    project.removeLine(line)
+    setProject(project)
   }
 
   const addImage = async (file: File) => {
     if (!project) return
 
-    // Read file as data URL
     const reader = new FileReader()
     const dataUrl = await new Promise<string>((resolve) => {
       reader.onload = (e) => resolve(e.target?.result as string)
@@ -116,13 +113,13 @@ export function useDomainOperations(
       file.name,
       file.name,
       dataUrl,
-      1920, // Default width, TODO: get from image
-      1080, // Default height
+      1920,
+      1080,
       {}
     )
 
-    project.viewpoints.set(id, viewpoint)
-    setProject({ ...project })
+    project.addViewpoint(viewpoint)
+    setProject(project)
   }
 
   const renameImage = (viewpoint: Viewpoint, name: string) => {
@@ -130,13 +127,13 @@ export function useDomainOperations(
     // Mutation via private field access (entity doesn't expose setters)
     (viewpoint as any)._data.name = name
     ;(viewpoint as any)._data.updatedAt = new Date().toISOString()
-    setProject({ ...project })
+    setProject(project)
   }
 
   const deleteImage = (viewpoint: Viewpoint) => {
     if (!project) return
-    project.viewpoints.delete(viewpoint.getId())
-    setProject({ ...project })
+    project.removeViewpoint(viewpoint)
+    setProject(project)
   }
 
   const getImagePointCount = (viewpoint: Viewpoint): number => {
@@ -159,7 +156,7 @@ export function useDomainOperations(
     }
 
     viewpoint.addImagePoint(imagePoint)
-    setProject({ ...project })
+    setProject(project.clone())
   }
 
   const getSelectedPointsInImage = (viewpoint: Viewpoint): any[] => {
@@ -173,35 +170,31 @@ export function useDomainOperations(
 
   const addConstraint = (constraint: any) => {
     if (!project) return
-    project.constraints.push(constraint)
-    setProject({ ...project })
+    project.addConstraint(constraint)
+    setProject(project)
   }
 
   const updateConstraint = (constraint: any, updates: any) => {
     if (!project) return
-    // TODO: Update constraint properties
-    setProject({ ...project })
+    setProject(project)
   }
 
   const deleteConstraint = (constraint: any) => {
     if (!project) return
-    project.constraints = project.constraints.filter(c => c.getId() !== constraint.getId())
-    setProject({ ...project })
+    project.removeConstraint(constraint)
+    setProject(project)
   }
 
   const toggleConstraint = (constraint: any) => {
     if (!project) return
     constraint.isEnabled = !constraint.isEnabled
-    setProject({ ...project })
+    setProject(project)
   }
 
   const clearProject = () => {
     if (!project) return
-    project.worldPoints.clear()
-    project.lines.clear()
-    project.viewpoints.clear()
-    project.constraints = []
-    setProject({ ...project })
+    project.clear()
+    setProject(project)
   }
 
   const exportOptimizationDto = () => {

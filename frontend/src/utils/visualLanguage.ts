@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { ConstraintStatus } from '../entities/constraints/base-constraint'
-import { ProjectSettings } from '../types/project-entities'
+import { ProjectSettings } from '../entities/project'
 import {
   ENTITY_COLORS as CONSTRAINT_STATUS_COLORS,
   CONSTRAINT_GLYPHS as GLYPHS,

@@ -92,7 +92,7 @@ export const ImagePointsManager: React.FC<ImagePointsManagerProps> = ({
           <div className="image-point-details">
             {viewpoint && (
               <div className="image-info">
-                Image: {viewpoint.imageDimensions[0]}<FontAwesomeIcon icon={faXmark} />{viewpoint.imageDimensions[1]}px
+                Image: {viewpoint.imageWidth}<FontAwesomeIcon icon={faXmark} />{viewpoint.imageHeight}px
               </div>
             )}
             {imagePoint && (

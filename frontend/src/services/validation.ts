@@ -1,10 +1,15 @@
 // Constraint validation service for geometric consistency
 
-// Use DTOs for validation (serialized data, not runtime entities)
-import type { WorldPointDto } from '../entities/world-point/WorldPointDto'
 // Constraint validation still uses legacy format (not migrated to new ConstraintDto yet)
 import type { Constraint } from '../types/project'
 import { getConstraintPointIds } from '../types/utils'
+
+// Internal type for validation - represents serialized world point data
+interface WorldPointData {
+  name: string
+  xyz?: (number | null)[]
+  isLocked?: boolean
+}
 
 export interface ValidationResult {
   isValid: boolean
@@ -44,11 +49,11 @@ export interface ValidationSuggestion {
 }
 
 export class ConstraintValidator {
-  private worldPoints: Record<string, WorldPointDto>
+  private worldPoints: Record<string, WorldPointData>
   private constraints: Constraint[]
   private tolerance: number
 
-  constructor(worldPoints: Record<string, WorldPointDto>, constraints: Constraint[], tolerance: number = 1e-6) {
+  constructor(worldPoints: Record<string, WorldPointData>, constraints: Constraint[], tolerance: number = 1e-6) {
     this.worldPoints = worldPoints
     this.constraints = constraints
     this.tolerance = tolerance

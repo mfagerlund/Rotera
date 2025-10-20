@@ -69,8 +69,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
   const getImagePointCount = (worldPointId: string): number => {
     let count = 0
     for (const viewpoint of viewpoints.values()) {
-      const dto = viewpoint.toDTO()
-      if (Object.values(dto.imagePoints).some(ip => ip.worldPointId === worldPointId)) {
+      if (Object.values(viewpoint.imagePoints).some(ip => ip.worldPointId === worldPointId)) {
         count++
       }
     }
@@ -81,8 +80,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
   const isWorldPointInImage = (worldPointId: string, imageId: string): boolean => {
     const viewpoint = viewpoints.get(imageId)
     if (!viewpoint) return false
-    const dto = viewpoint.toDTO()
-    return Object.values(dto.imagePoints).some(ip => ip.worldPointId === worldPointId)
+    return Object.values(viewpoint.imagePoints).some(ip => ip.worldPointId === worldPointId)
   }
 
   useEffect(() => {
@@ -567,7 +565,7 @@ const EnhancedWorldPointItem: React.FC<EnhancedWorldPointItemProps> = ({
         {showConstraints && involvedConstraints.length > 0 && (
           <div className="wp-constraints">
             {involvedConstraints.map(constraint => {
-              const isEnabled = constraint.isVisible()
+              const isEnabled = constraint.isVisible
               const constraintType = constraint.getConstraintType()
               return (
                 <div

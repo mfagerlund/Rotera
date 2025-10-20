@@ -54,10 +54,10 @@ export const LinesManager: React.FC<LinesManagerProps> = ({
       additionalInfo: [
         line.isConstruction ? 'Construction line' : 'Driving line',
         ...(dirLabel !== 'free' ? [`Direction: ${dirLabel}`] : []),
-        ...(line.targetLength ? [`Length: ${line.targetLength}m`] : [])
+        ...(line.constraints.targetLength ? [`Length: ${line.constraints.targetLength}m`] : [])
       ],
       color: line.color,
-      isVisible: line.isVisible(),
+      isVisible: line.isVisible,
       isActive: selectedLines.includes(line.getId())
     }
   })
@@ -108,9 +108,9 @@ export const LinesManager: React.FC<LinesManagerProps> = ({
           const dirVector = line.getDirection()
           return (
             <div className="line-details">
-              {line.targetLength && (
+              {line.constraints.targetLength && (
                 <div className="constraint-badge">
-                  Length: {line.targetLength}m
+                  Length: {line.constraints.targetLength}m
                 </div>
               )}
               {dirVector && (
