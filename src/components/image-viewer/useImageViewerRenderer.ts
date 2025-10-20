@@ -68,7 +68,7 @@ export const useImageViewerRenderer = ({
 
     const renderWorldPoints = () => {
       Array.from(worldPoints.values()).forEach(wp => {
-        const imagePoints = viewpoint.getImagePointsForWorldPoint(wp.id)
+        const imagePoints = viewpoint.getImagePointsForWorldPoint(wp)
         const imagePoint = imagePoints.length > 0 ? imagePoints[0] : null
         if (!imagePoint || !wp.isVisible) {
           return
@@ -77,10 +77,10 @@ export const useImageViewerRenderer = ({
         const x = imagePoint.u * scale + offset.x
         const y = imagePoint.v * scale + offset.y
 
-        const isSelected = selectedPoints.includes(wp.id)
-        const isBeingDragged = isDraggingPoint && draggedPointId === wp.id
-        const isHovered = hoveredPointId === wp.id
-        const isGloballyHovered = hoveredWorldPointId === wp.id
+        const isSelected = selectedPoints.includes(wp)
+        const isBeingDragged = isDraggingPoint && draggedPointId === wp
+        const isHovered = hoveredPointId === wp
+        const isGloballyHovered = hoveredWorldPointId === wp
 
         if (isBeingDragged) {
           ctx.strokeStyle = 'rgba(255, 140, 0, 0.8)'
@@ -133,11 +133,10 @@ export const useImageViewerRenderer = ({
     }
 
     const renderSelectionOverlay = () => {
-      selectedPoints.forEach((pointId, index) => {
-        const wp = worldPoints.get(pointId)
+      selectedPoints.forEach((wp, index) => {
         if (!wp) return
 
-        const imagePoints = viewpoint.getImagePointsForWorldPoint(wp.id)
+        const imagePoints = viewpoint.getImagePointsForWorldPoint(wp)
         const imagePoint = imagePoints.length > 0 ? imagePoints[0] : null
         if (!imagePoint) {
           return
@@ -382,8 +381,8 @@ export const useImageViewerRenderer = ({
           return
         }
 
-        const ipA = viewpoint.getImagePointsForWorldPoint(pointA.id)[0] || null
-        const ipB = viewpoint.getImagePointsForWorldPoint(pointB.id)[0] || null
+        const ipA = viewpoint.getImagePointsForWorldPoint(pointA)[0] || null
+        const ipB = viewpoint.getImagePointsForWorldPoint(pointB)[0] || null
 
         if (!ipA || !ipB) {
           return
@@ -394,7 +393,7 @@ export const useImageViewerRenderer = ({
         const x2 = ipB.u * scale + offset.x
         const y2 = ipB.v * scale + offset.y
 
-        const isSelected = selectedLines.includes(lineId)
+        const isSelected = selectedLines.includes(line)
         const isHovered = hoveredLineId === lineId
 
         let strokeColor = line.isConstruction ? 'rgba(0, 150, 255, 0.6)' : line.color
@@ -428,8 +427,8 @@ export const useImageViewerRenderer = ({
         const midY = (y1 + y2) / 2
 
         let directionGlyph = ''
-        if (line.constraints?.direction && line.constraints.direction !== 'free') {
-          switch (line.constraints.direction) {
+        if (line.direction && line.direction !== 'free') {
+          switch (line.direction) {
             case 'horizontal': directionGlyph = '↔'; break
             case 'vertical': directionGlyph = '↕'; break
             case 'x-aligned': directionGlyph = 'X'; break
@@ -437,10 +436,10 @@ export const useImageViewerRenderer = ({
           }
         }
 
-        const displayText = line.constraints?.targetLength
+        const displayText = line.targetLength
           ? directionGlyph
-            ? `${line.name} ${directionGlyph} ${line.constraints.targetLength.toFixed(1)}m`
-            : `${line.name} ${line.constraints.targetLength.toFixed(1)}m`
+            ? `${line.name} ${directionGlyph} ${line.targetLength.toFixed(1)}m`
+            : `${line.name} ${line.targetLength.toFixed(1)}m`
           : directionGlyph
             ? `${line.name} ${directionGlyph}`
             : `${line.name}`
@@ -471,8 +470,8 @@ export const useImageViewerRenderer = ({
           const wpB = segment.pointB
           if (!wpA || !wpB) return
 
-          const ipA = viewpoint.getImagePointsForWorldPoint(wpA.id)[0] || null
-          const ipB = viewpoint.getImagePointsForWorldPoint(wpB.id)[0] || null
+          const ipA = viewpoint.getImagePointsForWorldPoint(wpA)[0] || null
+          const ipB = viewpoint.getImagePointsForWorldPoint(wpB)[0] || null
           if (!ipA || !ipB) return
 
           const x1 = ipA.u * scale + offset.x
@@ -504,7 +503,7 @@ export const useImageViewerRenderer = ({
           const lastSegment = segments[segments.length - 1]
           const lastPoint = lastSegment.pointB
           if (lastPoint) {
-            const ipLast = viewpoint.getImagePointsForWorldPoint(lastPoint.id)[0] || null
+            const ipLast = viewpoint.getImagePointsForWorldPoint(lastPoint)[0] || null
             if (ipLast) {
               const x1 = ipLast.u * scale + offset.x
               const y1 = ipLast.v * scale + offset.y
@@ -543,7 +542,7 @@ export const useImageViewerRenderer = ({
           return
         }
 
-        const ipA = viewpoint.getImagePointsForWorldPoint(wpA.id)[0] || null
+        const ipA = viewpoint.getImagePointsForWorldPoint(wpA)[0] || null
         if (!ipA) {
           return
         }
@@ -571,8 +570,8 @@ export const useImageViewerRenderer = ({
           return
         }
 
-        const ipA = viewpoint.getImagePointsForWorldPoint(wpA.id)[0] || null
-        const ipB = viewpoint.getImagePointsForWorldPoint(wpB.id)[0] || null
+        const ipA = viewpoint.getImagePointsForWorldPoint(wpA)[0] || null
+        const ipB = viewpoint.getImagePointsForWorldPoint(wpB)[0] || null
         if (!ipA || !ipB) {
           return
         }

@@ -2,52 +2,69 @@
 
 ## Context: Object-Reference Architecture Migration
 
-**Status**: Phase 1 COMPLETE! Core components fixed. ~381 errors remaining.
+**Status**: Phase 2 IN PROGRESS! 7 components fixed across 2 sessions. ~350 errors remaining.
 
-**Total TypeScript Errors**: 427 → **~381 remaining** (46 eliminated)
+**Total TypeScript Errors**: 427 → **~350 remaining** (77 eliminated across 2 sessions)
 
 ---
 
-## ✅ Session Progress (2025-01-20)
+## ✅ Session Progress - UPDATED (Latest Session)
 
-**Completed:**
+**Phase 2 Continued - 3 More Components Fixed (31 errors eliminated):**
+
+5. ✅ **useImageViewerRenderer.ts (14 errors fixed)**
+   - Fixed all `wp.id` → `wp` (pass WorldPoint object directly)
+   - Fixed `selectedPoints.includes(wp.id)` → `selectedPoints.includes(wp)` (object comparison)
+   - Fixed `selectedLines.includes(lineId)` → `selectedLines.includes(line)` (object comparison)
+   - Fixed `viewpoint.getImagePointsForWorldPoint(wp.id)` → `viewpoint.getImagePointsForWorldPoint(wp)`
+   - Fixed `line.constraints?.direction` → `line.direction` (direct property access)
+   - Fixed `line.constraints?.targetLength` → `line.targetLength` (direct property access)
+   - Updated renderSelectionOverlay to iterate over WorldPoint objects instead of IDs
+
+6. ✅ **OptimizationPanel.tsx (9 errors fixed)**
+   - Fixed `project.constraints.length` → `project.constraints.size` (Set property)
+   - Fixed `project.constraints.filter()` → `Array.from(project.constraints).filter()` (convert Set to Array)
+   - Fixed `point.id` → `point.getName()` for React keys
+   - Fixed `line.id` → `line.getName()` for React keys
+
+7. ✅ **ImagePointsManager.tsx (8 errors fixed)**
+   - Fixed `Object.values(viewpoint.imagePoints)` → `Array.from(viewpoint.imagePoints)` (Set iteration)
+   - Fixed `imagePoint.worldPointId` → `imagePoint.worldPoint` (object reference)
+   - Fixed `viewpoint.imagePoints[worldPoint.id]` → `Array.from(viewpoint.imagePoints).find(ip => ip.worldPoint === ref.worldPoint)` (Set lookup)
+   - Fixed composite keys to use `getEntityKey()` instead of `getName()`
+
+8. ✅ **React Keys Refactor - All Components**
+   - Replaced all `getName()` uses for React keys with `getEntityKey()` utility
+   - Uses WeakMap to generate stable, unique keys for entity objects
+   - Applied to: OptimizationPanel, ImagePointsManager, ImageNavigationToolbar
+   - Names are now ONLY for display, not for identification
+   - See: `src/utils/entityKeys.ts`
+
+**Previous Session Completed:**
 1. ✅ **MainLayout.tsx (19 errors fixed)**
-   - Changed `currentImageId` → `currentViewpoint` (entity object)
-   - Removed all ID-based Maps → converted to entity arrays
-   - Fixed `.id` property accesses (changed to `.getName()`)
-   - Fixed Set.length → Set.size
-   - Eliminated `any` type for `updatedLine` parameter
-
 2. ✅ **ImageNavigationToolbar.tsx (15 errors fixed)**
-   - Changed interface from `Map<string, Viewpoint>` → `Viewpoint[]`
-   - Changed `currentImageId` → `currentViewpoint`
-   - Fixed all `viewpoint.id` → `viewpoint.getName()`
-   - Fixed drag-and-drop to use entity names instead of IDs
-   - Fixed imagePoints iteration: `Object.values()` → `Array.from(Set)`
-
 3. ✅ **ImageViewer.tsx (12 errors fixed)**
-   - Fixed all `worldPoint.id` → `worldPoint` (pass object directly)
-   - Fixed `line.isVisible()` → `line.isVisible` (property not method)
-   - Updated `ImageViewerRenderState` to use entity objects instead of ID arrays
-   - Eliminated ALL `any` types in render state interface
-
 4. ✅ **image-viewer/types.ts (Type safety improvements)**
-   - Changed `selectedPoints: string[]` → `selectedPoints: WorldPoint[]`
-   - Changed `selectedLines: any[]` → `selectedLines: Line[]`
-   - Changed `hoveredLine: any | null` → `hoveredLine: Line | null`
-   - Added proper Line import
 
 **Key Patterns Applied:**
 - ✅ Entity objects passed directly (no `.id` lookups)
 - ✅ Collections as Arrays/Sets (no ID-based Maps)
-- ✅ `getName()` used for React keys and comparisons
+- ✅ `getEntityKey()` used for React keys (WeakMap-based, NOT names or IDs!)
+- ✅ `getName()` only for display purposes, never as unique identifiers
 - ✅ Circular references maintained (WorldPoint.imagePoints properly populated)
 - ✅ Zero tolerance for naked `any` types
+- ✅ Direct property access on Line (e.g., `line.direction`, `line.targetLength`, not `line.constraints.*`)
+- ✅ Set operations: `.size` instead of `.length`, `Array.from()` before using array methods
+
+**Total Progress:**
+- **77 errors eliminated** (46 in previous session + 31 in this session)
+- **~350 errors remaining** (427 original → ~350 remaining)
 
 **Next Priority:**
-- useImageViewerRenderer.ts (14 errors)
-- OptimizationPanel.tsx (9 errors)
-- ImagePointsManager.tsx (8 errors)
+- LinesManager.tsx (6 errors)
+- ConstraintPropertyPanel.tsx (5+ errors)
+- WorldView.tsx (8 errors)
+- WorldPointPanel.tsx (8 errors)
 
 ---
 
@@ -158,38 +175,35 @@ All issues resolved:
 
 ---
 
-### Medium Priority - Image Viewer Components (41 errors)
+### ✅ Medium Priority - Image Viewer Components (41 errors) - COMPLETE
 
-#### **src/components/ImageNavigationToolbar.tsx** (15 errors)
-- Multiple `.id` accesses on Viewpoint objects
-- Lines 91, 118-122, 126-127, 131, 181, 186, 198, 367, 381, 391: Viewpoint.id
-- Line 508: WorldPoint.id
+#### ✅ **src/components/ImageNavigationToolbar.tsx** (15 errors) - FIXED
+- Fixed in previous session
 
-#### **src/components/image-viewer/useImageViewerRenderer.ts** (14 errors)
-- All accessing `.id` on WorldPoint objects
-- Lines 71, 80-83, 140, 385-386, 474-475, 507, 546, 574-575
+#### ✅ **src/components/image-viewer/useImageViewerRenderer.ts** (14 errors) - FIXED
+- Fixed all `.id` accesses on WorldPoint objects
+- Fixed object comparisons for selectedPoints and selectedLines
+- Fixed line.constraints references to direct properties
 
-#### **src/components/ImageViewer.tsx** (12 errors)
-- Lines 149, 191, 327, 330-331, 334, 383, 492, 757, 760: WorldPoint.id
-- Lines 328, 332: Line.id
+#### ✅ **src/components/ImageViewer.tsx** (12 errors) - FIXED
+- Fixed in previous session
 
-#### **src/components/ImagePointsManager.tsx** (8 errors)
-- Lines 46-47, 67, 99: Accessing `.id` on WorldPoint and Viewpoint
-- Lines 46, 99: Set indexing issue
-
-**Common issues**:
-- Accessing `.id` on WorldPoint, Viewpoint entities
-- Need to use entity object references for React keys
+#### ✅ **src/components/ImagePointsManager.tsx** (8 errors) - FIXED
+- Fixed Set iteration and lookups
+- Fixed object reference usage instead of IDs
+- Fixed composite key generation using getName()
 
 ---
 
-### Medium Priority - Other Components (35 errors)
+### Medium Priority - Other Components (26 errors remaining, 9 fixed)
 
 #### **src/services/export.ts** (16 errors)
 Export/serialization service - needs ID generation for DTOs
 
-#### **src/components/OptimizationPanel.tsx** (9 errors)
-- Lines 35, 39: Using `.length` and `.filter` on `Set<Constraint>` (should convert to array first)
+#### ✅ **src/components/OptimizationPanel.tsx** (9 errors) - FIXED
+- Fixed Set.length → Set.size
+- Fixed Set.filter() → Array.from().filter()
+- Fixed entity.id → entity.getName() for React keys
 
 #### **src/components/tools/LineCreationTool.tsx** (10 errors)
 Line creation tool errors
@@ -238,21 +252,34 @@ These are in the entity layer but related to constraints:
 
 ## Common Patterns to Fix
 
-### Pattern 1: Accessing .id on entities
+### Pattern 1: React Keys for Entities
+```typescript
+// ❌ WRONG - Don't use names (not guaranteed unique!)
+<div key={worldPoint.getName()}>
+
+// ❌ WRONG - Don't use IDs (entities don't have them!)
+<div key={worldPoint.id}>
+
+// ✅ CORRECT - Use getEntityKey() utility
+import { getEntityKey } from '../utils/entityKeys'
+<div key={getEntityKey(worldPoint)}>
+
+// For composite keys (e.g., ImagePoint = WorldPoint + Viewpoint)
+const compositeKey = `${getEntityKey(worldPoint)}-${getEntityKey(viewpoint)}`
+```
+
+### Pattern 2: Accessing .id on entities
 ```typescript
 // ❌ WRONG
 const id = worldPoint.id
 const key = line.id
 
-// ✅ CORRECT - Use Symbol for React keys
-const key = Symbol.keyFor(worldPoint as any) || worldPoint.getName()
-
-// OR create temporary ID map when needed
-const pointIds = new Map<WorldPoint, string>()
-project.worldPoints.forEach((p, i) => pointIds.set(p, `point_${i}`))
+// ✅ CORRECT - Use object references
+const point = line.pointA  // Direct reference
+if (selectedPoints.includes(worldPoint)) { ... }  // Object comparison
 ```
 
-### Pattern 2: Set.length → Set.size
+### Pattern 3: Set.length → Set.size
 ```typescript
 // ❌ WRONG
 if (project.constraints.length > 0)
@@ -263,7 +290,7 @@ if (project.constraints.size > 0)
 const filtered = Array.from(constraints).filter(c => c.isEnabled)
 ```
 
-### Pattern 3: currentImageId → currentViewpoint
+### Pattern 4: currentImageId → currentViewpoint
 ```typescript
 // ❌ WRONG
 const { currentImageId, setCurrentImageId } = useEntityProject()
@@ -272,7 +299,7 @@ const { currentImageId, setCurrentImageId } = useEntityProject()
 const { currentViewpoint, setCurrentViewpoint } = useEntityProject()
 ```
 
-### Pattern 4: Line.constraints property
+### Pattern 5: Line.constraints property
 ```typescript
 // ❌ WRONG
 line.constraints.direction

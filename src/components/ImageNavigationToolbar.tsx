@@ -7,6 +7,7 @@ import { faCircle } from '@fortawesome/free-regular-svg-icons'
 import { Viewpoint } from '../entities/viewpoint'
 import { WorldPoint } from '../entities/world-point'
 import { ImageUtils } from '../utils/imageUtils'
+import { getEntityKey } from '../utils/entityKeys'
 import { useConfirm } from './ConfirmDialog'
 import ImageEditor from './ImageEditor'
 
@@ -177,7 +178,7 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
         {imageList.length > 0 ? (
           imageList.map(image => (
             <ImageNavigationItem
-              key={image.getName()}
+              key={getEntityKey(image)}
               image={image}
               worldPoints={worldPoints}
               selectedWorldPoints={selectedWorldPoints}
@@ -489,7 +490,7 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
 
               return (
                 <div
-                  key={wp.getName()}
+                  key={getEntityKey(wp)}
                   className={`wp-location-dot ${isSelected ? 'selected' : ''} ${isGloballyHovered ? 'globally-hovered' : ''}`}
                   style={{
                     left: `${thumbnailX}px`,

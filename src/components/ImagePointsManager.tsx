@@ -4,6 +4,7 @@ import { faBullseye, faXmark } from '@fortawesome/free-solid-svg-icons'
 import EntityListPopup, { EntityListItem } from './EntityListPopup'
 import { WorldPoint } from '../entities/world-point'
 import { Viewpoint } from '../entities/viewpoint'
+import { getEntityKey } from '../utils/entityKeys'
 
 export interface ImagePointReference {
   worldPoint: WorldPoint
@@ -34,8 +35,8 @@ export const ImagePointsManager: React.FC<ImagePointsManagerProps> = ({
   const allImagePointRefs: ImagePointReference[] = []
 
   Array.from(images.values()).forEach(viewpoint => {
-    Object.values(viewpoint.imagePoints).forEach(imagePoint => {
-      const worldPoint = worldPoints.get(imagePoint.worldPointId)
+    Array.from(viewpoint.imagePoints).forEach(imagePoint => {
+      const worldPoint = imagePoint.worldPoint
       if (worldPoint) {
         allImagePointRefs.push({ worldPoint, viewpoint })
       }
@@ -43,8 +44,8 @@ export const ImagePointsManager: React.FC<ImagePointsManagerProps> = ({
   })
 
   const imagePointEntities: EntityListItem[] = allImagePointRefs.map(ref => {
-    const imagePoint = ref.viewpoint.imagePoints[ref.worldPoint.id]
-    const compositeKey = `${ref.worldPoint.id}-${ref.viewpoint.id}`
+    const imagePoint = Array.from(ref.viewpoint.imagePoints).find(ip => ip.worldPoint === ref.worldPoint)
+    const compositeKey = `${getEntityKey(ref.worldPoint)}-${getEntityKey(ref.viewpoint)}`
     const isSelected = selectedImagePoints.some(sel =>
       sel.worldPoint === ref.worldPoint && sel.viewpoint === ref.viewpoint
     )
@@ -64,7 +65,7 @@ export const ImagePointsManager: React.FC<ImagePointsManagerProps> = ({
 
   const refMap = new Map<string, ImagePointReference>()
   allImagePointRefs.forEach(ref => {
-    refMap.set(`${ref.worldPoint.id}-${ref.viewpoint.id}`, ref)
+    refMap.set(`${getEntityKey(ref.worldPoint)}-${getEntityKey(ref.viewpoint)}`, ref)
   })
 
   const handleEdit = (compositeKey: string) => {
@@ -96,7 +97,7 @@ export const ImagePointsManager: React.FC<ImagePointsManagerProps> = ({
       renderEntityDetails={(entity) => {
         const ref = refMap.get(entity.id)
         if (!ref) return null
-        const imagePoint = ref.viewpoint.imagePoints[ref.worldPoint.id]
+        const imagePoint = Array.from(ref.viewpoint.imagePoints).find(ip => ip.worldPoint === ref.worldPoint)
 
         return (
           <div className="image-point-details">

@@ -7,6 +7,7 @@ import { faBullseye, faGear, faStop } from '@fortawesome/free-solid-svg-icons'
 import { Project } from '../entities/project'
 import { useOptimization } from '../hooks/useOptimization'
 import { defaultOptimizationSettings } from '../services/optimization'
+import { getEntityKey } from '../utils/entityKeys'
 
 interface OptimizationPanelProps {
   project: Project
@@ -32,11 +33,11 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
 
     const unlockedPoints = pointArray.filter(p => !p.isLocked())
     const totalDOF = (unlockedPoints.length * 3) + (viewpointArray.length * 6)
-    const constraintDOF = project.constraints.length
+    const constraintDOF = project.constraints.size
     const netDOF = Math.max(0, totalDOF - constraintDOF)
 
     // Count projection constraints
-    const projectionCount = project.constraints.filter(
+    const projectionCount = Array.from(project.constraints).filter(
       c => c.getConstraintType() === 'projection_point_camera'
     ).length
 
@@ -45,12 +46,12 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
       unlockedPointCount: unlockedPoints.length,
       lineCount: lineArray.length,
       viewpointCount: viewpointArray.length,
-      constraintCount: project.constraints.length,
+      constraintCount: project.constraints.size,
       projectionConstraintCount: projectionCount,
       totalDOF,
       constraintDOF,
       netDOF,
-      canOptimize: project.constraints.length > 0 && (unlockedPoints.length > 0 || viewpointArray.length > 0)
+      canOptimize: project.constraints.size > 0 && (unlockedPoints.length > 0 || viewpointArray.length > 0)
     }
   }, [project])
 
@@ -236,7 +237,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                     .map(point => {
                       const info = point.getOptimizationInfo()
                       return (
-                        <div key={point.id} className="entity-item">
+                        <div key={getEntityKey(point)} className="entity-item">
                           <div className="entity-name">{point.getName()}</div>
                           <div className="entity-data">
                             <div className="data-row">
@@ -264,7 +265,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                     {Array.from(project.lines.values()).map(line => {
                       const info = line.getOptimizationInfo()
                       return (
-                        <div key={line.id} className="entity-item">
+                        <div key={getEntityKey(line)} className="entity-item">
                           <div className="entity-name">{line.getName()}</div>
                           <div className="entity-data">
                             <div className="data-row">
