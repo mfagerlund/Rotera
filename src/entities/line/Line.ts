@@ -245,8 +245,8 @@ export class Line implements ISelectable, ILine, IResidualProvider {
   // ============================================================================
 
   static calculateLength(pointA: WorldPoint, pointB: WorldPoint): number | null {
-    const aCoords = pointA.getDefinedCoordinates()
-    const bCoords = pointB.getDefinedCoordinates()
+    const aCoords = pointA.optimizedXyz
+    const bCoords = pointB.optimizedXyz
 
     if (!aCoords || !bCoords) {
       return null
@@ -263,8 +263,8 @@ export class Line implements ISelectable, ILine, IResidualProvider {
   }
 
   static getDirectionVector(pointA: WorldPoint, pointB: WorldPoint): [number, number, number] | null {
-    const aCoords = pointA.getDefinedCoordinates()
-    const bCoords = pointB.getDefinedCoordinates()
+    const aCoords = pointA.optimizedXyz
+    const bCoords = pointB.optimizedXyz
 
     if (!aCoords || !bCoords) {
       return null
@@ -284,8 +284,8 @@ export class Line implements ISelectable, ILine, IResidualProvider {
   }
 
   static getMidpoint(pointA: WorldPoint, pointB: WorldPoint): [number, number, number] | null {
-    const aCoords = pointA.getDefinedCoordinates()
-    const bCoords = pointB.getDefinedCoordinates()
+    const aCoords = pointA.optimizedXyz
+    const bCoords = pointB.optimizedXyz
 
     if (!aCoords || !bCoords) {
       return null
@@ -307,8 +307,8 @@ export class Line implements ISelectable, ILine, IResidualProvider {
     testPoint: [number, number, number],
     tolerance: number = 1e-6
   ): boolean {
-    const aCoords = pointA.getDefinedCoordinates()
-    const bCoords = pointB.getDefinedCoordinates()
+    const aCoords = pointA.optimizedXyz
+    const bCoords = pointB.optimizedXyz
 
     if (!aCoords || !bCoords) {
       return false
@@ -338,8 +338,8 @@ export class Line implements ISelectable, ILine, IResidualProvider {
     pointB: WorldPoint,
     testPoint: [number, number, number]
   ): number | null {
-    const aCoords = pointA.getDefinedCoordinates()
-    const bCoords = pointB.getDefinedCoordinates()
+    const aCoords = pointA.optimizedXyz
+    const bCoords = pointB.optimizedXyz
 
     if (!aCoords || !bCoords) {
       return null

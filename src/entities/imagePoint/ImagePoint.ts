@@ -9,7 +9,6 @@ export class ImagePoint implements ISelectable, IImagePoint {
     u: number
     v: number
     isVisible: boolean
-    isManuallyPlaced: boolean
     confidence: number
 
     public constructor(
@@ -18,7 +17,6 @@ export class ImagePoint implements ISelectable, IImagePoint {
         u: number,
         v: number,
         isVisible: boolean,
-        isManuallyPlaced: boolean,
         confidence: number,
     ) {
         this.worldPoint = worldPoint
@@ -26,7 +24,6 @@ export class ImagePoint implements ISelectable, IImagePoint {
         this.u = u
         this.v = v
         this.isVisible = isVisible
-        this.isManuallyPlaced = isManuallyPlaced
         this.confidence = confidence
     }
 
@@ -38,7 +35,6 @@ export class ImagePoint implements ISelectable, IImagePoint {
         options: {
             id?: string
             isVisible?: boolean
-            isManuallyPlaced?: boolean
             confidence?: number
         } = {}
     ): ImagePoint {
@@ -49,7 +45,6 @@ export class ImagePoint implements ISelectable, IImagePoint {
             u,
             v,
             options.isVisible ?? true,
-            options.isManuallyPlaced ?? true,
             options.confidence ?? 1.0
         )
     }

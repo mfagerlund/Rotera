@@ -14,6 +14,7 @@ export interface IConstraint {
 
 export interface IImagePoint {
     worldPoint: IWorldPoint
+    viewpoint: IViewpoint
     u: number
     v: number
     isVisible: boolean

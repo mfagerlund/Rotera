@@ -1,7 +1,4 @@
-// Consolidated WorldPoint domain class
-
 import type {ISelectable, SelectableType} from '../../types/selectable'
-import type {IValidatable, ValidationContext, ValidationResult, ValidationError} from '../../validation/validator'
 import type {IValueMapContributor, ValueMap} from '../../optimization/IOptimizable'
 import type {IWorldPoint, ILine, IConstraint, IImagePoint} from '../interfaces'
 import {V, Value, Vec3} from 'scalar-autograd'

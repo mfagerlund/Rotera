@@ -4,8 +4,7 @@ import { Line } from './line/Line'
 import { Viewpoint } from './viewpoint/Viewpoint'
 import { ImagePoint } from './imagePoint/ImagePoint'
 import type { IImagePoint } from './interfaces'
-import { Plane } from './plane'
-import type { LineId, ViewpointId, PlaneId, PointId, ImagePointId } from '../types/ids'
+import { Constraint } from './constraints'
 
 // ============================================================================
 // DTOs - PRIVATE, NEVER EXPORTED
@@ -14,46 +13,26 @@ import type { LineId, ViewpointId, PlaneId, PointId, ImagePointId } from '../typ
 interface WorldPointDto {
   id: string
   name: string
-  xyz?: [number | null, number | null, number | null]
-  xyzProvenance?: {
-    source: 'manual' | 'imported' | 'optimized'
-    timestamp: Date
-    metadata?: any
-  }
+  lockedXyz: [number | null, number | null, number | null]
+  optimizedXyz?: [number, number, number]
   color: string
   isVisible: boolean
   isOrigin: boolean
-  isLocked?: boolean
-  lockedAxes?: {
-    x?: boolean
-    y?: boolean
-    z?: boolean
-  }
-  group?: string
-  tags?: string[]
-  createdAt: string
-  updatedAt: string
 }
 
 interface LineDto {
   id: string
   name: string
-  pointA: string
-  pointB: string
+  pointAId: string
+  pointBId: string
   color: string
   isVisible: boolean
   isConstruction: boolean
   lineStyle: 'solid' | 'dashed' | 'dotted'
   thickness: number
-  constraints: {
-    direction: 'free' | 'horizontal' | 'vertical' | 'x-aligned' | 'z-aligned'
-    targetLength?: number
-    tolerance?: number
-  }
-  group?: string
-  tags?: string[]
-  createdAt: string
-  updatedAt: string
+  direction: 'free' | 'horizontal' | 'vertical' | 'x-aligned' | 'z-aligned'
+  targetLength?: number
+  tolerance?: number
 }
 
 interface ImagePointDto {
@@ -63,10 +42,7 @@ interface ImagePointDto {
   u: number
   v: number
   isVisible: boolean
-  isManuallyPlaced: boolean
   confidence: number
-  createdAt: string
-  updatedAt: string
 }
 
 interface ViewpointDto {
@@ -94,27 +70,21 @@ interface ViewpointDto {
   isVisible: boolean
   opacity: number
   color: string
-  group?: string
-  tags?: string[]
-  createdAt: string
-  updatedAt: string
 }
 
-interface PlaneDto {
+interface ConstraintDto {
   id: string
-  name: string
-  pointIds: string[]
-  color: string
-  isVisible: boolean
-  opacity: number
-  fillStyle: 'solid' | 'wireframe' | 'transparent'
-  group?: string
-  tags?: string[]
-  createdAt: string
-  updatedAt: string
+  type: string
+  [key: string]: any
 }
 
-interface ProjectSettingsDto {
+interface ProjectDto {
+  name: string
+  worldPoints: WorldPointDto[]
+  lines: LineDto[]
+  viewpoints: ViewpointDto[]
+  imagePoints: ImagePointDto[]
+  constraints: ConstraintDto[]
   showPointNames: boolean
   autoSave: boolean
   theme: 'dark' | 'light'
@@ -131,20 +101,6 @@ interface ProjectSettingsDto {
   constraintPreview: boolean
   visualFeedbackLevel: 'minimal' | 'standard' | 'detailed'
   imageSortOrder?: 'name' | 'date'
-}
-
-interface ProjectDto {
-  id: string
-  name: string
-  worldPoints: Record<string, WorldPointDto>
-  lines: Record<string, LineDto>
-  viewpoints: Record<string, ViewpointDto>
-  imagePoints: Record<string, ImagePointDto>
-  planes?: Record<string, PlaneDto>
-  constraints: any[]
-  settings: ProjectSettingsDto
-  createdAt: string
-  updatedAt: string
 }
 
 // ============================================================================
@@ -164,190 +120,196 @@ export class Serialization {
   }
 
   private static projectToDto(project: Project): ProjectDto {
-    const worldPoints: Record<string, WorldPointDto> = {}
+    const worldPointIds = new Map<WorldPoint, string>()
+    const viewpointIds = new Map<Viewpoint, string>()
+    const imagePointIds = new Map<IImagePoint, string>()
+
+    let idCounter = 0
+    const generateId = () => `temp_${idCounter++}`
+
     project.worldPoints.forEach(point => {
-      worldPoints[point.id] = this.worldPointToDto(point)
+      worldPointIds.set(point, generateId())
     })
 
-    const lines: Record<string, LineDto> = {}
-    project.lines.forEach(line => {
-      lines[line.id] = this.lineToDto(line)
-    })
-
-    const viewpoints: Record<string, ViewpointDto> = {}
     project.viewpoints.forEach(viewpoint => {
-      viewpoints[viewpoint.id] = this.viewpointToDto(viewpoint)
+      viewpointIds.set(viewpoint, generateId())
     })
 
-    const imagePoints: Record<string, ImagePointDto> = {}
     project.imagePoints.forEach(imagePoint => {
-      imagePoints[imagePoint.id] = this.imagePointToDto(imagePoint)
+      imagePointIds.set(imagePoint, generateId())
     })
+
+    const worldPoints: WorldPointDto[] = []
+    project.worldPoints.forEach(point => {
+      worldPoints.push(this.worldPointToDto(point, worldPointIds))
+    })
+
+    const lines: LineDto[] = []
+    project.lines.forEach(line => {
+      lines.push(this.lineToDto(line, worldPointIds))
+    })
+
+    const viewpoints: ViewpointDto[] = []
+    project.viewpoints.forEach(viewpoint => {
+      viewpoints.push(this.viewpointToDto(viewpoint, viewpointIds))
+    })
+
+    const imagePoints: ImagePointDto[] = []
+    project.imagePoints.forEach(imagePoint => {
+      imagePoints.push(this.imagePointToDto(imagePoint, worldPointIds, viewpointIds, imagePointIds))
+    })
+
+    const constraints: ConstraintDto[] = []
 
     return {
-      id: project.id,
       name: project.name,
       worldPoints,
       lines,
       viewpoints,
       imagePoints,
-      constraints: [],
-      settings: {
-        showPointNames: project.showPointNames,
-        autoSave: project.autoSave,
-        theme: project.theme,
-        measurementUnits: project.measurementUnits,
-        precisionDigits: project.precisionDigits,
-        showConstraintGlyphs: project.showConstraintGlyphs,
-        showMeasurements: project.showMeasurements,
-        autoOptimize: project.autoOptimize,
-        gridVisible: project.gridVisible,
-        snapToGrid: project.snapToGrid,
-        defaultWorkspace: project.defaultWorkspace,
-        showConstructionGeometry: project.showConstructionGeometry,
-        enableSmartSnapping: project.enableSmartSnapping,
-        constraintPreview: project.constraintPreview,
-        visualFeedbackLevel: project.visualFeedbackLevel,
-        imageSortOrder: project.imageSortOrder
-      },
-      createdAt: project.createdAt,
-      updatedAt: project.updatedAt
+      constraints,
+      showPointNames: project.showPointNames,
+      autoSave: project.autoSave,
+      theme: project.theme,
+      measurementUnits: project.measurementUnits,
+      precisionDigits: project.precisionDigits,
+      showConstraintGlyphs: project.showConstraintGlyphs,
+      showMeasurements: project.showMeasurements,
+      autoOptimize: project.autoOptimize,
+      gridVisible: project.gridVisible,
+      snapToGrid: project.snapToGrid,
+      defaultWorkspace: project.defaultWorkspace,
+      showConstructionGeometry: project.showConstructionGeometry,
+      enableSmartSnapping: project.enableSmartSnapping,
+      constraintPreview: project.constraintPreview,
+      visualFeedbackLevel: project.visualFeedbackLevel,
+      imageSortOrder: project.imageSortOrder
     }
   }
 
   private static dtoToProject(dto: ProjectDto): Project {
-    const tempPointMap = new Map<string, WorldPoint>()
-    Object.entries(dto.worldPoints).forEach(([id, pointDto]) => {
+    const idToWorldPoint = new Map<string, WorldPoint>()
+    dto.worldPoints.forEach(pointDto => {
       const point = this.dtoToWorldPoint(pointDto)
-      tempPointMap.set(id, point)
+      idToWorldPoint.set(pointDto.id, point)
     })
-    const worldPoints = new Set(tempPointMap.values())
 
-    const linesSet = new Set<Line>()
-    Object.entries(dto.lines).forEach(([id, lineDto]) => {
-      const pointA = tempPointMap.get(lineDto.pointA)
-      const pointB = tempPointMap.get(lineDto.pointB)
+    const idToViewpoint = new Map<string, Viewpoint>()
+    dto.viewpoints.forEach(viewpointDto => {
+      const viewpoint = this.dtoToViewpoint(viewpointDto)
+      idToViewpoint.set(viewpointDto.id, viewpoint)
+    })
+
+    const lines = new Set<Line>()
+    dto.lines.forEach(lineDto => {
+      const pointA = idToWorldPoint.get(lineDto.pointAId)
+      const pointB = idToWorldPoint.get(lineDto.pointBId)
       if (pointA && pointB) {
-        linesSet.add(this.dtoToLine(lineDto, pointA, pointB))
+        lines.add(this.dtoToLine(lineDto, pointA, pointB))
       }
     })
 
-    const tempViewpointMap = new Map<string, Viewpoint>()
-    Object.entries(dto.viewpoints).forEach(([id, viewpointDto]) => {
-      const viewpoint = this.dtoToViewpoint(viewpointDto)
-      tempViewpointMap.set(id, viewpoint)
-    })
-    const viewpointsSet = new Set(tempViewpointMap.values())
-
-    const imagePointsSet = new Set<IImagePoint>()
-    Object.entries(dto.imagePoints || {}).forEach(([id, imagePointDto]) => {
-      const worldPoint = tempPointMap.get(imagePointDto.worldPointId)
-      const viewpoint = tempViewpointMap.get(imagePointDto.viewpointId)
+    const imagePoints = new Set<IImagePoint>()
+    dto.imagePoints.forEach(imagePointDto => {
+      const worldPoint = idToWorldPoint.get(imagePointDto.worldPointId)
+      const viewpoint = idToViewpoint.get(imagePointDto.viewpointId)
       if (worldPoint && viewpoint) {
         const imagePoint = this.dtoToImagePoint(imagePointDto, worldPoint, viewpoint)
-        imagePointsSet.add(imagePoint)
+        imagePoints.add(imagePoint)
         worldPoint.addImagePoint(imagePoint)
         viewpoint.addImagePoint(imagePoint)
       }
     })
 
+    const constraints = new Set<Constraint>()
+
     return Project.createFull(
-      dto.id,
       dto.name,
-      worldPoints,
-      linesSet,
-      viewpointsSet,
-      imagePointsSet,
-      dto.settings,
-      dto.createdAt,
-      dto.updatedAt
+      new Set(idToWorldPoint.values()),
+      lines,
+      new Set(idToViewpoint.values()),
+      imagePoints,
+      constraints,
+      dto.showPointNames,
+      dto.autoSave,
+      dto.theme,
+      dto.measurementUnits,
+      dto.precisionDigits,
+      dto.showConstraintGlyphs,
+      dto.showMeasurements,
+      dto.autoOptimize,
+      dto.gridVisible,
+      dto.snapToGrid,
+      dto.defaultWorkspace,
+      dto.showConstructionGeometry,
+      dto.enableSmartSnapping,
+      dto.constraintPreview,
+      dto.visualFeedbackLevel,
+      dto.imageSortOrder
     )
   }
 
-  private static worldPointToDto(point: WorldPoint): WorldPointDto {
+  private static worldPointToDto(point: WorldPoint, idMap: Map<WorldPoint, string>): WorldPointDto {
     return {
-      id: point.id,
+      id: idMap.get(point)!,
       name: point.name,
-      xyz: point.lockedXyz,
-      xyzProvenance: point.isOptimized ? {
-        source: 'optimized',
-        timestamp: point.optimizedAt || new Date(),
-        metadata: {}
-      } : undefined,
+      lockedXyz: point.lockedXyz,
+      optimizedXyz: point.optimizedXyz,
       color: point.color,
       isVisible: point.isVisible,
-      isOrigin: point.isOrigin,
-      isLocked: point.isLocked(),
-      lockedAxes: point.lockedAxes,
-      group: point.group,
-      tags: [...point.tags],
-      createdAt: point.createdAt,
-      updatedAt: point.updatedAt
+      isOrigin: point.isOrigin
     }
   }
 
   private static dtoToWorldPoint(dto: WorldPointDto): WorldPoint {
-    const isOptimized = dto.xyzProvenance?.source === 'optimized'
-    const optimizedAt = dto.xyzProvenance?.timestamp || null
-
     return WorldPoint.createFromSerialized(
-      dto.id,
       dto.name,
-      dto.xyz,
+      dto.lockedXyz,
       dto.color,
       dto.isVisible,
       dto.isOrigin,
-      dto.lockedAxes || (dto.isLocked ? { x: true, y: true, z: true } : undefined),
-      isOptimized,
-      optimizedAt,
-      dto.group,
-      dto.tags || [],
-      dto.createdAt,
-      dto.updatedAt
+      dto.optimizedXyz
     )
   }
 
-  private static lineToDto(line: Line): LineDto {
+  private static lineToDto(line: Line, worldPointIds: Map<WorldPoint, string>): LineDto {
     return {
-      id: line.id,
+      id: `line_${line.name}`,
       name: line.name,
-      pointA: line.pointA.id,
-      pointB: line.pointB.id,
+      pointAId: worldPointIds.get(line.pointA)!,
+      pointBId: worldPointIds.get(line.pointB)!,
       color: line.color,
       isVisible: line.isVisible,
       isConstruction: line.isConstruction,
       lineStyle: line.lineStyle,
       thickness: line.thickness,
-      constraints: { ...line.constraints },
-      group: line.group,
-      tags: [...line.tags],
-      createdAt: line.createdAt,
-      updatedAt: line.updatedAt
+      direction: line.direction,
+      targetLength: line.targetLength,
+      tolerance: line.tolerance
     }
   }
 
   private static dtoToLine(dto: LineDto, pointA: WorldPoint, pointB: WorldPoint): Line {
-    return Line.createFromSerialized(
-      dto.id,
+    return Line.create(
       dto.name,
       pointA,
       pointB,
-      dto.color,
-      dto.isVisible,
-      dto.isConstruction,
-      dto.lineStyle,
-      dto.thickness,
-      dto.constraints,
-      dto.group,
-      dto.tags || [],
-      dto.createdAt,
-      dto.updatedAt
+      {
+        color: dto.color,
+        isVisible: dto.isVisible,
+        isConstruction: dto.isConstruction,
+        lineStyle: dto.lineStyle,
+        thickness: dto.thickness,
+        direction: dto.direction,
+        targetLength: dto.targetLength,
+        tolerance: dto.tolerance
+      }
     )
   }
 
-  private static viewpointToDto(viewpoint: Viewpoint): ViewpointDto {
+  private static viewpointToDto(viewpoint: Viewpoint, idMap: Map<Viewpoint, string>): ViewpointDto {
     return {
-      id: viewpoint.id,
+      id: idMap.get(viewpoint)!,
       name: viewpoint.name,
       filename: viewpoint.filename,
       url: viewpoint.url,
@@ -360,7 +322,7 @@ export class Serialization {
       aspectRatio: viewpoint.aspectRatio,
       radialDistortion: [...viewpoint.radialDistortion],
       tangentialDistortion: [...viewpoint.tangentialDistortion],
-      lockedXyz: [...viewpoint.position],
+      position: [...viewpoint.position],
       rotation: [...viewpoint.rotation],
       calibrationAccuracy: viewpoint.calibrationAccuracy,
       calibrationDate: viewpoint.calibrationDate,
@@ -370,17 +332,12 @@ export class Serialization {
       metadata: viewpoint.metadata ? { ...viewpoint.metadata } : undefined,
       isVisible: viewpoint.isVisible,
       opacity: viewpoint.opacity,
-      color: viewpoint.color,
-      group: viewpoint.group,
-      tags: viewpoint.tags,
-      createdAt: viewpoint.createdAt,
-      updatedAt: viewpoint.updatedAt
+      color: viewpoint.color
     }
   }
 
   private static dtoToViewpoint(dto: ViewpointDto): Viewpoint {
     return Viewpoint.createFromSerialized(
-      dto.id,
       dto.name,
       dto.filename,
       dto.url,
@@ -403,41 +360,37 @@ export class Serialization {
       dto.metadata,
       dto.isVisible,
       dto.opacity,
-      dto.color,
-      dto.group,
-      dto.tags,
-      dto.createdAt,
-      dto.updatedAt
+      dto.color
     )
   }
 
-  private static imagePointToDto(imagePoint: ImagePoint): ImagePointDto {
+  private static imagePointToDto(
+    imagePoint: IImagePoint,
+    worldPointIds: Map<WorldPoint, string>,
+    viewpointIds: Map<Viewpoint, string>,
+    imagePointIds: Map<IImagePoint, string>
+  ): ImagePointDto {
     return {
-      id: imagePoint.id,
-      worldPointId: imagePoint.worldPoint.id,
-      viewpointId: imagePoint.viewpoint.id,
+      id: imagePointIds.get(imagePoint)!,
+      worldPointId: worldPointIds.get(imagePoint.worldPoint as WorldPoint)!,
+      viewpointId: viewpointIds.get(imagePoint.viewpoint as Viewpoint)!,
       u: imagePoint.u,
       v: imagePoint.v,
       isVisible: imagePoint.isVisible,
-      isManuallyPlaced: imagePoint.isManuallyPlaced,
-      confidence: imagePoint.confidence,
-      createdAt: imagePoint.createdAt,
-      updatedAt: imagePoint.updatedAt
+      confidence: imagePoint.confidence
     }
   }
 
   private static dtoToImagePoint(dto: ImagePointDto, worldPoint: WorldPoint, viewpoint: Viewpoint): ImagePoint {
-    return ImagePoint.createFromSerialized(
-      dto.id,
+    return ImagePoint.create(
       worldPoint,
       viewpoint,
       dto.u,
       dto.v,
-      dto.isVisible,
-      dto.isManuallyPlaced,
-      dto.confidence,
-      dto.createdAt,
-      dto.updatedAt
+      {
+        isVisible: dto.isVisible,
+        confidence: dto.confidence
+      }
     )
   }
 
