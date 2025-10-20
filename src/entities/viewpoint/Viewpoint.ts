@@ -2,7 +2,6 @@
 import type {ISelectable, SelectableType} from '../../types/selectable'
 import type {IValueMapContributor, ValueMap, CameraValues} from '../../optimization/IOptimizable'
 import type {IWorldPoint, IImagePoint, IViewpoint} from '../interfaces'
-import {ValidationHelpers} from '../../validation/validator'
 import {V, Value, Vec3} from 'scalar-autograd'
 import {Vec4} from 'scalar-autograd'
 import {Quaternion} from '../../optimization/Quaternion'
