@@ -20,7 +20,7 @@ class TestRepository implements ConstraintRepository {
   private points: Map<PointId, WorldPoint> = new Map();
 
   addPoint(point: WorldPoint): void {
-    this.points.set(point.getId(), point);
+    this.points.set(point.id, point);
   }
 
   getPoint(pointId: PointId): EntityId | undefined {
@@ -100,8 +100,8 @@ describe('ConstraintSystem - All Constraint Types', () => {
       const constraint = DistanceConstraint.create(
         'c1',
         'Distance 100',
-        p1.getId(),
-        p2.getId(),
+        p1.id,
+        p2.id,
         100,
         repo,
         { tolerance: 1e-4 }
@@ -141,9 +141,9 @@ describe('ConstraintSystem - All Constraint Types', () => {
       const constraint = AngleConstraint.create(
         'c1',
         'Angle 60',
-        pA.getId(),
-        vertex.getId(),
-        pC.getId(),
+        pA.id,
+        vertex.id,
+        pC.id,
         60, // degrees
         repo,
         { tolerance: 1e-4 }
@@ -188,7 +188,7 @@ describe('ConstraintSystem - All Constraint Types', () => {
       const constraint = CollinearPointsConstraint.create(
         'c1',
         'Collinear',
-        [p1.getId(), p2.getId(), p3.getId()],
+        [p1.id, p2.id, p3.id],
         repo,
         { tolerance: 1e-4 }
       );
@@ -224,7 +224,7 @@ describe('ConstraintSystem - All Constraint Types', () => {
       const constraint = CoplanarPointsConstraint.create(
         'c1',
         'Coplanar',
-        [p1.getId(), p2.getId(), p3.getId(), p4.getId()],
+        [p1.id, p2.id, p3.id, p4.id],
         repo,
         { tolerance: 1e-4 }
       );
@@ -262,8 +262,8 @@ describe('ConstraintSystem - All Constraint Types', () => {
         'c1',
         'Equal Distances',
         [
-          [p1.getId(), p2.getId()],
-          [p3.getId(), p4.getId()]
+          [p1.id, p2.id],
+          [p3.id, p4.id]
         ],
         repo,
         { tolerance: 1e-4 }
@@ -316,8 +316,8 @@ describe('ConstraintSystem - All Constraint Types', () => {
         'c1',
         'Equal Angles',
         [
-          [pA1.getId(), v1.getId(), pC1.getId()],
-          [pA2.getId(), v2.getId(), pC2.getId()]
+          [pA1.id, v1.id, pC1.id],
+          [pA2.id, v2.id, pC2.id]
         ],
         repo,
         { tolerance: 1e-4 }
@@ -377,9 +377,9 @@ describe('ConstraintSystem - All Constraint Types', () => {
         'c1',
         'Equal sides',
         [
-          [p1.getId(), p2.getId()],
-          [p2.getId(), p3.getId()],
-          [p3.getId(), p1.getId()]
+          [p1.id, p2.id],
+          [p2.id, p3.id],
+          [p3.id, p1.id]
         ],
         repo,
         { tolerance: 1e-4 }
@@ -390,9 +390,9 @@ describe('ConstraintSystem - All Constraint Types', () => {
         'c2',
         'Equal angles',
         [
-          [p2.getId(), p1.getId(), p3.getId()],
-          [p1.getId(), p2.getId(), p3.getId()],
-          [p2.getId(), p3.getId(), p1.getId()]
+          [p2.id, p1.id, p3.id],
+          [p1.id, p2.id, p3.id],
+          [p2.id, p3.id, p1.id]
         ],
         repo,
         { tolerance: 1e-4 }

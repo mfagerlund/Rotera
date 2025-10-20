@@ -1,12 +1,11 @@
 // Unified selection interface for co-selecting entities like points, lines, planes
 
-import type { EntityId, PointId, LineId, PlaneId, CameraId, ImageId, ConstraintId } from './ids'
+import type { EntityId } from './ids'
 
 export type SelectableType = 'point' | 'line' | 'plane' | 'viewpoint' | 'camera' | 'image' | 'constraint'
 
 export interface ISelectable {
   // Core identification
-  getId(): EntityId
   getType(): SelectableType
   getName(): string
 
@@ -15,10 +14,6 @@ export interface ISelectable {
 
   // Methods
   isLocked(): boolean
-
-  // Dependency tracking for referential integrity
-  getDependencies(): EntityId[]  // What this entity depends on
-  getDependents(): EntityId[]    // What depends on this entity
 
   // Selection state
   isSelected(): boolean
@@ -44,8 +39,6 @@ export interface EntitySelection {
 
   // Query operations
   has(item: ISelectable): boolean
-  hasId(id: EntityId): boolean
-  getById(id: EntityId): ISelectable | undefined
   getByType<T extends ISelectable>(type: SelectableType): T[]
 
   // Bulk operations
@@ -56,8 +49,6 @@ export interface EntitySelection {
   // Dependency operations
   selectWithDependencies(item: ISelectable): void  // Select item and all its dependencies
   selectWithDependents(item: ISelectable): void    // Select item and all dependents
-  getSelectionDependencies(): EntityId[]          // All dependencies of selected items
-  getSelectionDependents(): EntityId[]            // All dependents of selected items
 
   // Validation
   canDeleteSelection(): boolean
@@ -145,15 +136,7 @@ export class EntitySelectionImpl implements EntitySelection {
   has(item: ISelectable): boolean {
     return this.selectedItems.has(item)
   }
-
-  hasId(id: EntityId): boolean {
-    return Array.from(this.selectedItems).some(item => item.getId() === id)
-  }
-
-  getById(id: EntityId): ISelectable | undefined {
-    return Array.from(this.selectedItems).find(item => item.getId() === id)
-  }
-
+  
   getByType<T extends ISelectable>(type: SelectableType): T[] {
     return Array.from(this.selectedItems).filter(item => item.getType() === type) as T[]
   }
@@ -174,37 +157,11 @@ export class EntitySelectionImpl implements EntitySelection {
   }
 
   selectWithDependencies(item: ISelectable): void {
-    const dependencies = item.getDependencies()
-    // Note: Would need repository access to resolve EntityId to ISelectable
-    // This is a placeholder for the interface
     this.add(item)
   }
 
   selectWithDependents(item: ISelectable): void {
-    const dependents = item.getDependents()
-    // Note: Would need repository access to resolve EntityId to ISelectable
-    // This is a placeholder for the interface
     this.add(item)
-  }
-
-  getSelectionDependencies(): EntityId[] {
-    const dependencies = new Set<EntityId>()
-    for (const item of this.selectedItems) {
-      for (const dep of item.getDependencies()) {
-        dependencies.add(dep)
-      }
-    }
-    return Array.from(dependencies)
-  }
-
-  getSelectionDependents(): EntityId[] {
-    const dependents = new Set<EntityId>()
-    for (const item of this.selectedItems) {
-      for (const dep of item.getDependents()) {
-        dependents.add(dep)
-      }
-    }
-    return Array.from(dependents)
   }
 
   canDeleteSelection(): boolean {

@@ -5,6 +5,7 @@ import type { ValidationResult } from '../../validation/validator'
 import type { ValueMap } from '../../optimization/IOptimizable'
 import { V, type Value } from 'scalar-autograd'
 import { ValidationHelpers } from '../../validation/validator'
+import type { WorldPoint } from '../world-point'
 import {
   Constraint,
   type ConstraintRepository,
@@ -36,8 +37,8 @@ export class DistanceConstraint extends Constraint {
   static create(
     id: ConstraintId,
     name: string,
-    pointAId: PointId,
-    pointBId: PointId,
+    pointA: WorldPoint,
+    pointB: WorldPoint,
     targetDistance: number,
     repo: ConstraintRepository,
     options: {
@@ -57,7 +58,7 @@ export class DistanceConstraint extends Constraint {
       type: 'distance_point_point',
       status: 'satisfied',
       entities: {
-        points: [pointAId, pointBId]
+        points: [pointA.id as PointId, pointB.id as PointId]
       },
       parameters: {
         targetDistance,
@@ -72,7 +73,11 @@ export class DistanceConstraint extends Constraint {
       createdAt: now,
       updatedAt: now
     }
-    return new DistanceConstraint(repo, data)
+    const constraint = new DistanceConstraint(repo, data)
+    constraint._points.add(pointA)
+    constraint._points.add(pointB)
+    constraint._entitiesPreloaded = true
+    return constraint
   }
 
   static fromDto(dto: ConstraintDto, repo: ConstraintRepository): DistanceConstraint {
@@ -189,12 +194,12 @@ export class DistanceConstraint extends Constraint {
     this.updateTimestamp()
   }
 
-  get pointAId(): PointId {
-    return this.data.entities.points[0]
+  get pointA(): WorldPoint {
+    return this.points[0]
   }
 
-  get pointBId(): PointId {
-    return this.data.entities.points[1]
+  get pointB(): WorldPoint {
+    return this.points[1]
   }
 
   protected getTargetValue(): number {
@@ -207,22 +212,16 @@ export class DistanceConstraint extends Constraint {
    * Should be 0 when the distance between points equals the target.
    */
   computeResiduals(valueMap: ValueMap): Value[] {
-    // Find points in valueMap by ID
-    let pointA: ReturnType<typeof valueMap.points.get> | undefined
-    let pointB: ReturnType<typeof valueMap.points.get> | undefined
+    const pointAVec = valueMap.points.get(this.pointA)
+    const pointBVec = valueMap.points.get(this.pointB)
 
-    for (const [point, vec] of valueMap.points) {
-      if (point.getId() === this.pointAId) pointA = vec
-      if (point.getId() === this.pointBId) pointB = vec
-    }
-
-    if (!pointA || !pointB) {
+    if (!pointAVec || !pointBVec) {
       console.warn(`Distance constraint ${this.data.id}: points not found in valueMap`)
       return []
     }
 
     // Calculate actual distance using Vec3 API
-    const diff = pointB.sub(pointA)
+    const diff = pointBVec.sub(pointAVec)
     const dist = diff.magnitude
 
     // Residual = actual - target

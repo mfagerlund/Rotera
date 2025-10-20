@@ -1,17 +1,53 @@
 import { Project } from '../entities/project'
-import { WorldPoint } from '../entities/world-point'
-import { Line } from '../entities/line'
+import { WorldPoint, AxisLock } from '../entities/world-point'
+import { Line, LineConstraintSettings } from '../entities/line'
 import { Viewpoint } from '../entities/viewpoint'
+import { Constraint } from '../entities/constraints'
+import type { OptimizationExportDto } from '../types/optimization-export'
+
+export interface WorldPointOptions {
+  xyz?: [number | null, number | null, number | null]
+  color?: string
+  isVisible?: boolean
+  isOrigin?: boolean
+  lockedAxes?: AxisLock
+  group?: string
+  tags?: string[]
+}
+
+export interface LineOptions {
+  name?: string
+  color?: string
+  isVisible?: boolean
+  isConstruction?: boolean
+  lineStyle?: 'solid' | 'dashed' | 'dotted'
+  thickness?: number
+  constraints?: LineConstraintSettings
+  group?: string
+  tags?: string[]
+}
+
+export interface LineUpdates {
+  name?: string
+  color?: string
+  isVisible?: boolean
+}
+
+export interface ConstraintUpdates {
+  name?: string
+  isEnabled?: boolean
+  parameters?: Record<string, unknown>
+}
 
 export interface DomainOperations {
   // World Points
-  createWorldPoint: (name: string, xyz: [number, number, number], options?: any) => WorldPoint
+  createWorldPoint: (name: string, xyz: [number, number, number], options?: WorldPointOptions) => WorldPoint
   renameWorldPoint: (worldPoint: WorldPoint, name: string) => void
   deleteWorldPoint: (worldPoint: WorldPoint) => void
 
   // Lines
-  createLine: (pointA: WorldPoint, pointB: WorldPoint, options?: any) => Line
-  updateLine: (line: Line, updates: any) => void
+  createLine: (pointA: WorldPoint, pointB: WorldPoint, options?: LineOptions) => Line
+  updateLine: (line: Line, updates: LineUpdates) => void
   deleteLine: (line: Line) => void
 
   // Viewpoints (Images)
@@ -22,18 +58,19 @@ export interface DomainOperations {
 
   // Image Points
   addImagePointToWorldPoint: (worldPoint: WorldPoint, viewpoint: Viewpoint, u: number, v: number) => void
-  getSelectedPointsInImage: (viewpoint: Viewpoint) => any[]
+  moveImagePoint: (worldPoint: WorldPoint, viewpoint: Viewpoint, u: number, v: number) => void
+  getSelectedPointsInImage: (viewpoint: Viewpoint) => WorldPoint[]
   copyPointsFromImageToImage: (fromViewpoint: Viewpoint, toViewpoint: Viewpoint) => void
 
   // Constraints
-  addConstraint: (constraint: any) => void
-  updateConstraint: (constraint: any, updates: any) => void
-  deleteConstraint: (constraint: any) => void
-  toggleConstraint: (constraint: any) => void
+  addConstraint: (constraint: Constraint) => void
+  updateConstraint: (constraint: Constraint, updates: ConstraintUpdates) => void
+  deleteConstraint: (constraint: Constraint) => void
+  toggleConstraint: (constraint: Constraint) => void
 
   // Project
   clearProject: () => void
-  exportOptimizationDto: () => any
+  exportOptimizationDto: () => OptimizationExportDto | null
 }
 
 export function useDomainOperations(
@@ -41,11 +78,12 @@ export function useDomainOperations(
   setProject: (project: Project) => void
 ): DomainOperations {
 
-  const createWorldPoint = (name: string, xyz: [number, number, number], options?: any): WorldPoint => {
+  const createWorldPoint = (name: string, xyz: [number, number, number], options?: WorldPointOptions): WorldPoint => {
     if (!project) throw new Error('No project')
 
     const id = `wp-${crypto.randomUUID()}`
-    const point = WorldPoint.create(id, name, {
+    const point = WorldPoint.create(name, {
+      id,
       xyz,
       ...options
     })
@@ -69,7 +107,7 @@ export function useDomainOperations(
     setProject(project)
   }
 
-  const createLine = (pointA: WorldPoint, pointB: WorldPoint, options?: any): Line => {
+  const createLine = (pointA: WorldPoint, pointB: WorldPoint, options?: LineOptions): Line => {
     if (!project) throw new Error('No project')
 
     const id = `line-${crypto.randomUUID()}`
@@ -82,7 +120,7 @@ export function useDomainOperations(
     return line
   }
 
-  const updateLine = (line: Line, updates: any) => {
+  const updateLine = (line: Line, updates: LineUpdates) => {
     if (!project) return
     // Mutation via private field access (entity doesn't expose setters)
     if (updates.name) (line as any)._name = updates.name
@@ -101,25 +139,32 @@ export function useDomainOperations(
   const addImage = async (file: File) => {
     if (!project) return
 
+    console.log('addImage: Starting to load file:', file.name)
+
     const reader = new FileReader()
     const dataUrl = await new Promise<string>((resolve) => {
       reader.onload = (e) => resolve(e.target?.result as string)
       reader.readAsDataURL(file)
     })
 
+    console.log('addImage: File loaded, dataUrl length:', dataUrl.length)
+
     const id = `vp-${crypto.randomUUID()}`
     const viewpoint = Viewpoint.create(
-      id,
       file.name,
       file.name,
       dataUrl,
       1920,
       1080,
-      {}
+      { id }
     )
 
+    console.log('addImage: Created viewpoint:', viewpoint.id, viewpoint.getName())
+
     project.addViewpoint(viewpoint)
-    setProject(project)
+    console.log('addImage: Added to project, viewpoint count:', project.viewpoints.size)
+    setProject(project.clone())
+    console.log('addImage: Project updated')
   }
 
   const renameImage = (viewpoint: Viewpoint, name: string) => {
@@ -137,7 +182,7 @@ export function useDomainOperations(
   }
 
   const getImagePointCount = (viewpoint: Viewpoint): number => {
-    return viewpoint.getImagePoints().length
+    return Object.keys(viewpoint.imagePoints).length
   }
 
   const addImagePointToWorldPoint = (worldPoint: WorldPoint, viewpoint: Viewpoint, u: number, v: number) => {
@@ -145,7 +190,7 @@ export function useDomainOperations(
 
     const imagePoint = {
       id: `ip-${crypto.randomUUID()}`,
-      worldPointId: worldPoint.getId(),
+      worldPointId: worldPoint.id,
       u,
       v,
       isVisible: true,
@@ -159,7 +204,18 @@ export function useDomainOperations(
     setProject(project.clone())
   }
 
-  const getSelectedPointsInImage = (viewpoint: Viewpoint): any[] => {
+  const moveImagePoint = (worldPoint: WorldPoint, viewpoint: Viewpoint, u: number, v: number) => {
+    if (!project) return
+
+    const existingImagePoints = viewpoint.getImagePointsForWorldPoint(worldPoint.id)
+    if (existingImagePoints.length > 0) {
+      const imagePoint = existingImagePoints[0]
+      viewpoint.updateImagePoint(imagePoint.id, { u, v })
+      setProject(project.clone())
+    }
+  }
+
+  const getSelectedPointsInImage = (viewpoint: Viewpoint): WorldPoint[] => {
     // TODO: Implement selection tracking
     return []
   }
@@ -168,24 +224,25 @@ export function useDomainOperations(
     // TODO: Implement point copying
   }
 
-  const addConstraint = (constraint: any) => {
+  const addConstraint = (constraint: Constraint) => {
     if (!project) return
     project.addConstraint(constraint)
     setProject(project)
   }
 
-  const updateConstraint = (constraint: any, updates: any) => {
+  const updateConstraint = (constraint: Constraint, updates: ConstraintUpdates) => {
     if (!project) return
+    // TODO: Implement constraint updates
     setProject(project)
   }
 
-  const deleteConstraint = (constraint: any) => {
+  const deleteConstraint = (constraint: Constraint) => {
     if (!project) return
     project.removeConstraint(constraint)
     setProject(project)
   }
 
-  const toggleConstraint = (constraint: any) => {
+  const toggleConstraint = (constraint: Constraint) => {
     if (!project) return
     constraint.isEnabled = !constraint.isEnabled
     setProject(project)
@@ -197,7 +254,7 @@ export function useDomainOperations(
     setProject(project)
   }
 
-  const exportOptimizationDto = () => {
+  const exportOptimizationDto = (): OptimizationExportDto | null => {
     // TODO: Implement proper export
     return null
   }
@@ -214,6 +271,7 @@ export function useDomainOperations(
     deleteImage,
     getImagePointCount,
     addImagePointToWorldPoint,
+    moveImagePoint,
     getSelectedPointsInImage,
     copyPointsFromImageToImage,
     addConstraint,

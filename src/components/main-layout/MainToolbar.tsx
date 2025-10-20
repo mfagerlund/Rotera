@@ -148,7 +148,7 @@ export const MainToolbar: React.FC<MainToolbarProps> = ({
 
       {/* Context-sensitive constraint toolbar */}
       <ConstraintToolbar
-        selectedPoints={selectedPoints.map(p => p.getId())}
+        selectedPoints={selectedPoints.map(p => p.id)}
         selectedLines={selectedLines}
         availableConstraints={allConstraints}
         selectionSummary="" // Remove redundant selection display

@@ -5,6 +5,7 @@ import type { ValidationResult } from '../../validation/validator'
 import type { ValueMap } from '../../optimization/IOptimizable'
 import { Vec3, type Value } from 'scalar-autograd'
 import { ValidationHelpers } from '../../validation/validator'
+import type { WorldPoint } from '../world-point/WorldPoint'
 import {
   Constraint,
   type ConstraintRepository,
@@ -33,7 +34,7 @@ export class CoplanarPointsConstraint extends Constraint {
   static create(
     id: ConstraintId,
     name: string,
-    pointIds: PointId[], // At least 4 points
+    points: WorldPoint[], // At least 4 points
     repo: ConstraintRepository,
     options: {
       tolerance?: number
@@ -45,7 +46,7 @@ export class CoplanarPointsConstraint extends Constraint {
       notes?: string
     } = {}
   ): CoplanarPointsConstraint {
-    if (pointIds.length < 4) {
+    if (points.length < 4) {
       throw new Error('CoplanarPointsConstraint requires at least 4 points')
     }
 
@@ -56,7 +57,7 @@ export class CoplanarPointsConstraint extends Constraint {
       type: 'coplanar_points',
       status: 'satisfied',
       entities: {
-        points: [...pointIds]
+        points: points.map(p => p.id as PointId)
       },
       parameters: {
         tolerance: options.tolerance ?? 0.001,
@@ -70,7 +71,10 @@ export class CoplanarPointsConstraint extends Constraint {
       createdAt: now,
       updatedAt: now
     }
-    return new CoplanarPointsConstraint(repo, data)
+    const constraint = new CoplanarPointsConstraint(repo, data)
+    points.forEach(p => constraint._points.add(p))
+    constraint._entitiesPreloaded = true
+    return constraint
   }
 
   static fromDto(dto: ConstraintDto, repo: ConstraintRepository): CoplanarPointsConstraint {
@@ -224,24 +228,22 @@ export class CoplanarPointsConstraint extends Constraint {
     return new CoplanarPointsConstraint(this.repo, clonedData)
   }
 
-  // Specific getters
-  get pointIds(): PointId[] {
-    return [...this.data.entities.points]
-  }
-
-  addPoint(pointId: PointId): void {
+  // Specific methods
+  addPoint(point: WorldPoint): void {
+    const pointId = point.id as PointId
     if (!this.data.entities.points.includes(pointId)) {
       this.data.entities.points.push(pointId)
-      this.invalidateReferences()
+      this._points.add(point)
       this.updateTimestamp()
     }
   }
 
-  removePoint(pointId: PointId): void {
+  removePoint(point: WorldPoint): void {
+    const pointId = point.id as PointId
     const index = this.data.entities.points.indexOf(pointId)
     if (index !== -1) {
       this.data.entities.points.splice(index, 1)
-      this.invalidateReferences()
+      this._points.delete(point)
       this.updateTimestamp()
     }
   }
@@ -257,31 +259,22 @@ export class CoplanarPointsConstraint extends Constraint {
    * Returns 1 residual (the scalar triple product).
    */
   computeResiduals(valueMap: ValueMap): Value[] {
-    const pointIds = this.pointIds
+    const points = this.points
 
-    if (pointIds.length < 4) {
+    if (points.length < 4) {
       console.warn('Coplanar constraint requires at least 4 points')
       return []
     }
 
-    // Find first 4 points in valueMap
-    const points: Vec3[] = []
-    for (const [point, vec] of valueMap.points) {
-      if (pointIds.includes(point.getId())) {
-        points.push(vec)
-        if (points.length === 4) break
-      }
-    }
+    const p0 = valueMap.points.get(points[0])
+    const p1 = valueMap.points.get(points[1])
+    const p2 = valueMap.points.get(points[2])
+    const p3 = valueMap.points.get(points[3])
 
-    if (points.length < 4) {
+    if (!p0 || !p1 || !p2 || !p3) {
       console.warn(`Coplanar constraint ${this.data.id}: not enough points found in valueMap`)
       return []
     }
-
-    const p0 = points[0]
-    const p1 = points[1]
-    const p2 = points[2]
-    const p3 = points[3]
 
     // Calculate vectors from p0 using Vec3 API
     const v1 = p1.sub(p0)
@@ -296,9 +289,5 @@ export class CoplanarPointsConstraint extends Constraint {
 
     // Should be 0 for coplanar points
     return [scalarTripleProduct]
-  }
-
-  getPointIds(): PointId[] {
-    return this.pointIds
   }
 }

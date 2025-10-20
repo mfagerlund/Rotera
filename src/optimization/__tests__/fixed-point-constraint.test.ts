@@ -17,7 +17,7 @@ class TestRepository implements ConstraintRepository {
   private points: Map<PointId, WorldPoint> = new Map();
 
   addPoint(point: WorldPoint): void {
-    this.points.set(point.getId(), point);
+    this.points.set(point.id, point);
   }
 
   getPoint(pointId: PointId): EntityId | undefined {
@@ -99,7 +99,7 @@ describe('FixedPointConstraint - Solver Integration', () => {
     const constraint = FixedPointConstraint.create(
       'c1',
       'Lock P1 to Origin',
-      point.getId(),
+      point.id,
       [0, 0, 0], // Target position
       repo,
       { tolerance: 1e-6 }
@@ -144,7 +144,7 @@ describe('FixedPointConstraint - Solver Integration', () => {
     const constraint = FixedPointConstraint.create(
       'c1',
       'Lock to Target',
-      point.getId(),
+      point.id,
       targetXyz,
       repo,
       { tolerance: 1e-4 } // Match test tolerance
@@ -175,7 +175,7 @@ describe('FixedPointConstraint - Solver Integration', () => {
     const constraint = FixedPointConstraint.create(
       'c1',
       'Try to move locked point',
-      point.getId(),
+      point.id,
       [0, 0, 0],
       repo
     );
@@ -210,7 +210,7 @@ describe('FixedPointConstraint - Solver Integration', () => {
     const constraint1 = FixedPointConstraint.create(
       'c1',
       'Fix P1',
-      point1.getId(),
+      point1.id,
       [1, 2, 3],
       repo,
       { tolerance: 1e-4 }
@@ -219,7 +219,7 @@ describe('FixedPointConstraint - Solver Integration', () => {
     const constraint2 = FixedPointConstraint.create(
       'c2',
       'Fix P2',
-      point2.getId(),
+      point2.id,
       [4, 5, 6],
       repo,
       { tolerance: 1e-4 }
@@ -259,7 +259,7 @@ describe('FixedPointConstraint - Solver Integration', () => {
     const constraint = FixedPointConstraint.create(
       'c1',
       'Fix to origin',
-      point.getId(),
+      point.id,
       [0, 0, 0],
       repo,
       { tolerance: 1e-4 }

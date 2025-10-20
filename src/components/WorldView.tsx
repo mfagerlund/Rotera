@@ -1,17 +1,16 @@
 // 3D World View for geometric primitives and constraints
-import React, { useRef, useEffect, useCallback, useState } from 'react'
+import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowRight } from '@fortawesome/free-solid-svg-icons'
 import type { Project } from '../entities/project'
 import type { WorldPoint } from '../entities/world-point/WorldPoint'
 import type { Line } from '../entities/line/Line'
 import type { Plane } from '../entities/plane'
+import type { ISelectable } from '../types/selectable'
 
 interface WorldViewProps {
   project: Project
-  selectedPoints: string[]
-  selectedLines: string[]
-  selectedPlanes: string[]
+  selectedEntities: ISelectable[]
   hoveredConstraintId?: string | null
   onPointClick: (worldPoint: WorldPoint, ctrlKey: boolean, shiftKey: boolean) => void
   onLineClick?: (line: Line, ctrlKey: boolean, shiftKey: boolean) => void
@@ -30,9 +29,7 @@ export interface WorldViewRef {
 
 export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
   project,
-  selectedPoints,
-  selectedLines,
-  selectedPlanes,
+  selectedEntities,
   hoveredConstraintId,
   onPointClick,
   onLineClick,
@@ -42,6 +39,9 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
   onLineHover,
   onPointHover
 }, ref) => {
+  // Create selection set for quick lookup
+  const selectedSet = useMemo(() => new Set(selectedEntities), [selectedEntities])
+  const selectedIds = useMemo(() => new Set(selectedEntities.map(e => (e as any).id).filter(Boolean)), [selectedEntities])
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [viewMatrix, setViewMatrix] = useState({
     scale: 100,
@@ -115,7 +115,7 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
       if (!coords) return
 
       const projected = project3DTo2D(coords)
-      const isSelected = selectedPoints.includes(point.id)
+      const isSelected = selectedIds.has(point.id)
       const isHovered = hoverState.hoveredPointId === point.id
       const radius = isSelected ? 6 : (isHovered ? 5 : 4)
 
@@ -144,7 +144,7 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
         ctx.fillText(point.name, projected.x, projected.y - 12)
       }
     })
-  }, [project, selectedPoints, hoverState, project3DTo2D])
+  }, [project, selectedIds, hoverState, project3DTo2D])
 
   // Render lines
   const renderLines = useCallback((ctx: CanvasRenderingContext2D) => {
@@ -159,7 +159,7 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
 
       const projA = project3DTo2D(coordsA)
       const projB = project3DTo2D(coordsB)
-      const isSelected = selectedLines.includes(line.id)
+      const isSelected = selectedIds.has(line.id)
       const isHovered = hoverState.hoveredLineId === line.id
 
       ctx.beginPath()
@@ -230,13 +230,13 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
       ctx.fillStyle = '#000'
       ctx.fillText(displayText, midX, midY + 2)
     })
-  }, [project, selectedLines, hoverState, project3DTo2D])
+  }, [project, selectedIds, hoverState, project3DTo2D])
 
   // Render planes
   const renderPlanes = useCallback((ctx: CanvasRenderingContext2D) => {
     // TODO: Planes not yet implemented in Project
     // Will be added when Plane entity is integrated into project structure
-  }, [project, selectedPlanes, project3DTo2D])
+  }, [project, selectedIds, project3DTo2D])
 
   // Render coordinate axes
   const renderAxes = useCallback((ctx: CanvasRenderingContext2D) => {
@@ -308,7 +308,7 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
         lastX: x,
         lastY: y,
         dragType: 'point',
-        draggedPointId: clickedPoint.getId()
+        draggedPointId: clickedPoint.id
       })
       return
     }
@@ -343,8 +343,8 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
       const hoveredLine = findLineAt(x, y)
 
       // Update hover state if changed
-      const hoveredPointId = hoveredPoint?.getId() || null
-      const hoveredLineId = hoveredLine?.getId() || null
+      const hoveredPointId = hoveredPoint?.id || null
+      const hoveredLineId = hoveredLine?.id || null
 
       if (hoveredPointId !== hoverState.hoveredPointId || hoveredLineId !== hoverState.hoveredLineId) {
         setHoverState({

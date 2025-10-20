@@ -139,7 +139,7 @@ export class ConstraintSystem {
           const constraintResiduals = constraint.computeResiduals(valueMap);
           residuals.push(...constraintResiduals);
         } catch (error) {
-          console.error(`[ConstraintSystem] Error computing residuals for constraint ${constraint.getId()}:`, error);
+          console.error(`[ConstraintSystem] Error computing residuals for constraint ${constraint.id}:`, error);
           throw error;
         }
       }

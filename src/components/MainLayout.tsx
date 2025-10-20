@@ -12,6 +12,8 @@ import { AvailableConstraint } from '../types/ui-types'
 import { ConstructionPreview, LineData } from './image-viewer/types'
 import { Line as LineEntity } from '../entities/line'
 import { WorldPoint } from '../entities/world-point'
+import { Viewpoint } from '../entities/viewpoint'
+import type { ISelectable } from '../types/selectable'
 import { COMPONENT_OVERLAY_EVENT, isComponentOverlayEnabled, setComponentOverlayEnabled } from '../utils/componentNameOverlay'
 import { useConfirm } from './ConfirmDialog'
 import { filterImageBlobs } from '../types/optimization-export'
@@ -79,6 +81,7 @@ export const MainLayout: React.FC = () => {
     deleteImage,
     getImagePointCount,
     addImagePointToWorldPoint,
+    moveImagePoint,
     getSelectedPointsInImage,
     copyPointsFromImageToImage,
     addConstraint,
@@ -112,7 +115,7 @@ export const MainLayout: React.FC = () => {
       }
     }
     return map
-  }, [project?.worldPoints])
+  }, [project])
 
   const linesMap = useMemo(() => {
     const map = new Map<string, LineEntity>()
@@ -122,7 +125,17 @@ export const MainLayout: React.FC = () => {
       }
     }
     return map
-  }, [project?.lines])
+  }, [project])
+
+  const viewpointsMap = useMemo(() => {
+    const map = new Map<string, Viewpoint>()
+    if (project?.viewpoints) {
+      for (const item of project.viewpoints) {
+        map.set(item.id, item)
+      }
+    }
+    return map
+  }, [project])
 
   // Pure object-based selection
   const {
@@ -291,9 +304,12 @@ export const MainLayout: React.FC = () => {
   const selectedLineEntities = getSelectedByType<LineEntity>('line')
   const selectedPointEntities = getSelectedByType<WorldPoint>('point')
   const selectedPlaneEntities = getSelectedByType('plane')
-  const selectedPointIds = useMemo(() => selectedPointEntities.map(p => p.getId()), [selectedPointEntities])
-  const selectedLineIds = useMemo(() => selectedLineEntities.map(l => l.getId()), [selectedLineEntities])
-  const selectedPlaneIds = useMemo(() => selectedPlaneEntities.map(p => p.getId()), [selectedPlaneEntities])
+
+  // Combined selected entities for components that accept ISelectable[]
+  const selectedEntities = useMemo(() =>
+    [...selectedPointEntities, ...selectedLineEntities, ...selectedPlaneEntities] as ISelectable[],
+    [selectedPointEntities, selectedLineEntities, selectedPlaneEntities]
+  )
 
   const viewerLines = useMemo<Map<string, LineData>>(() => {
     if (!project?.lines) {
@@ -303,7 +319,7 @@ export const MainLayout: React.FC = () => {
     return new Map(
       Array.from(project.lines).map((line) => {
         const viewerLine: LineData = {
-          id: line.getId(),
+          id: line.id,
           name: line.name,
           pointA: line.pointA,
           pointB: line.pointB,
@@ -315,7 +331,7 @@ export const MainLayout: React.FC = () => {
           length: undefined,
           constraints: undefined
         }
-        return [line.getId(), viewerLine]
+        return [line.id, viewerLine]
       })
     )
   }, [project?.lines])
@@ -325,17 +341,14 @@ export const MainLayout: React.FC = () => {
   const allConstraints: AvailableConstraint[] = []
   const availableConstraints: AvailableConstraint[] = []
 
-  const worldPointNames = Object.fromEntries(
-    Array.from(project?.worldPoints || []).map((wp) => [wp.getId(), wp.getName()])
-  )
 
   // Point interaction handlers
   const handleEnhancedPointClick = (worldPoint: WorldPoint, ctrlKey: boolean, shiftKey: boolean) => {
     // If Line tool is active, dispatch event for slot filling
     if (activeTool === 'line') {
-      const event = new CustomEvent('lineToolPointClick', { detail: { pointId: worldPoint.getId() } })
+      const event = new CustomEvent('lineToolPointClick', { detail: { worldPoint } })
       window.dispatchEvent(event)
-      return // Don't do normal selection when line tool is active
+      return
     }
 
     // If Loop tool is active, treat normal clicks as additive only
@@ -346,8 +359,8 @@ export const MainLayout: React.FC = () => {
         handleEntityClick(worldPoint, false, true)
       } else {
         // Check if clicking the first selected point (to close loop)
-        const firstSelectedId = selectedPointEntities.length > 0 ? selectedPointEntities[0].getId() : null
-        if (firstSelectedId && worldPoint.getId() === firstSelectedId && selectedPointEntities.length >= 3) {
+        const firstSelected = selectedPointEntities.length > 0 ? selectedPointEntities[0] : null
+        if (firstSelected && worldPoint === firstSelected && selectedPointEntities.length >= 3) {
           // Dispatch event to toggle closed loop
           window.dispatchEvent(new CustomEvent('loopToolSetClosed', { detail: { closed: true } }))
         } else {
@@ -398,7 +411,7 @@ export const MainLayout: React.FC = () => {
 
   const handleMovePoint = (worldPoint: WorldPoint, u: number, v: number) => {
     if (currentImage) {
-      addImagePointToWorldPoint(worldPoint, currentImage, u, v)
+      moveImagePoint(worldPoint, currentImage, u, v)
     }
   }
 
@@ -454,7 +467,7 @@ export const MainLayout: React.FC = () => {
   // Enhanced line click handler for selection and editing
   const handleEnhancedLineClick = (line: LineEntity, ctrlKey: boolean, shiftKey: boolean) => {
     // Don't allow line switching during edit mode
-    if (editingLine && line.getId() !== editingLine.getId()) {
+    if (editingLine && line.id !== editingLine.id) {
       return
     }
 
@@ -525,10 +538,10 @@ export const MainLayout: React.FC = () => {
 
       // Delete key handling
       if (event.key === 'Delete' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
-        const selectedPoints = selectedPointEntities.map(p => p.getId())
-        const selectedLines = selectedLineEntities.map(l => l.getId())
-        const selectedPlanes = selectedPlaneEntities.map(p => p.getId())
-        const selectedConstraints = getSelectedByType<any>('constraint').map(c => c.getId())
+        const selectedPoints = selectedPointEntities
+        const selectedLines = selectedLineEntities
+        const selectedPlanes = selectedPlaneEntities
+        const selectedConstraints = getSelectedByType<any>('constraint')
 
         const totalSelected = selectedPoints.length + selectedLines.length + selectedPlanes.length + selectedConstraints.length
 
@@ -566,7 +579,7 @@ export const MainLayout: React.FC = () => {
             setActiveTool(activeTool === 'point' ? 'select' : 'point')
             break
           case 'l':
-            if (selectedPointEntities.map(p => p.getId()).length <= 2) { // Only activate if valid selection
+            if (selectedPointEntities.map(p => p.id).length <= 2) { // Only activate if valid selection
               if (activeTool === 'line') {
                 setActiveTool('select')
                 setEditingLine(null)
@@ -648,9 +661,7 @@ export const MainLayout: React.FC = () => {
       <WorldWorkspace
         project={project}
         worldViewRef={worldViewRef}
-        selectedPointIds={selectedPointIds}
-        selectedLineIds={selectedLineIds}
-        selectedPlaneIds={selectedPlaneIds}
+        selectedEntities={selectedEntities}
         hoveredConstraintId={hoveredConstraintId}
         onPointClick={handleEnhancedPointClick}
         onLineClick={handleEnhancedLineClick}
@@ -663,9 +674,7 @@ export const MainLayout: React.FC = () => {
     handlePlaneClick,
     hoveredConstraintId,
     project,
-    selectedLineIds,
-    selectedPlaneIds,
-    selectedPointIds
+    selectedEntities
   ])
 
   const handleSplitRatioChange = useCallback((ratio: number) => {
@@ -737,14 +746,14 @@ export const MainLayout: React.FC = () => {
               style={{ width: `${leftSidebarWidth}px` }}
             >
               <ImageNavigationToolbar
-                images={project?.viewpoints as any}
+                images={viewpointsMap}
                 currentImageId={currentImageId}
-                worldPoints={project?.worldPoints as any}
+                worldPoints={worldPointsMap}
                 selectedWorldPoints={selectedPointEntities}
                 hoveredWorldPoint={hoveredWorldPoint}
                 isCreatingConstraint={!!activeConstraintType}
                 onImageSelect={setCurrentImageId}
-                onImageAdd={addImage as any}
+                onImageAdd={addImage}
                 onImageRename={renameImage}
                 onImageDelete={deleteImage}
                 getImagePointCount={getImagePointCount}
@@ -801,13 +810,10 @@ export const MainLayout: React.FC = () => {
             <div className="sidebar-right">
               {/* Creation Tools */}
               <CreationToolsManager
-                selectedPoints={selectedPointEntities.map(p => p.getId())}
-                selectedLines={selectedLineEntities.map(l => l.getId())}
-                selectedPlanes={selectedPlaneEntities.map(p => p.getId())}
+                selectedEntities={selectedEntities}
                 activeTool={activeTool}
                 onToolChange={setActiveTool}
-                worldPointNames={worldPointNames}
-                worldPoints={worldPointsMap}
+                allWorldPoints={worldPointEntities}
                 existingLines={linesMap}
                 onCreatePoint={(imageId: string, u: number, v: number) => handleImageClick(u, v)}
                 onCreateLine={(pointA, pointB, lineConstraints) => {
@@ -871,19 +877,19 @@ export const MainLayout: React.FC = () => {
 
               <ConstraintPropertyPanel
                 activeConstraintType={activeConstraintType}
-                selectedPoints={selectedPointEntities.map(p => p.getId())}
+                selectedPoints={selectedPointEntities.map(p => p.id)}
                 selectedLines={selectedLineEntities}
                 parameters={constraintParameters}
                 isComplete={isConstraintComplete()}
-                worldPointNames={worldPointNames}
+                allWorldPoints={worldPointEntities}
                 onParameterChange={updateParameter}
                 onApply={applyConstraint}
                 onCancel={cancelConstraintCreation}
               />
 
               <WorldPointPanel
-                worldPoints={project?.worldPoints as any}
-                viewpoints={project?.viewpoints as any}
+                worldPoints={worldPointsMap}
+                viewpoints={viewpointsMap}
                 constraints={constraints as any}
                 selectedWorldPoints={selectedPointEntities}
                 hoveredWorldPoint={hoveredWorldPoint}
@@ -934,7 +940,7 @@ export const MainLayout: React.FC = () => {
                   >
                     <span className="button-icon" style={{ fontSize: '10px' }}><FontAwesomeIcon icon={faCamera} /></span>
                     <span className="button-label">IPs</span>
-                    <span className="button-count">{Array.from(project?.viewpoints || []).reduce((total, vp) => total + vp.getImagePoints().length, 0)}</span>
+                    <span className="button-count">{Array.from(project?.viewpoints || []).reduce((total, vp) => total + Object.keys(vp.imagePoints).length, 0)}</span>
                   </button>
 
                   <button
@@ -972,7 +978,7 @@ export const MainLayout: React.FC = () => {
             {/* Object counts */}
             <div style={{display: 'flex', gap: '12px', fontSize: '12px', color: '#888'}}>
               <span>World Points: {project?.worldPoints.size || 0}</span>
-              <span>Image Points: {Array.from(project?.viewpoints || []).reduce((total, vp) => total + vp.getImagePoints().length, 0)}</span>
+              <span>Image Points: {Array.from(project?.viewpoints || []).reduce((total, vp) => total + Object.keys(vp.imagePoints).length, 0)}</span>
               <span>Lines: {project?.lines.size || 0}</span>
               <span>Planes: {0}</span>
               <span>Constraints: {constraints.length}</span>
@@ -1025,10 +1031,9 @@ export const MainLayout: React.FC = () => {
     <LinesManager
       isOpen={showLinesPopup}
       onClose={() => setShowLinesPopup(false)}
-      lines={project?.lines as any}
-      worldPoints={project?.worldPoints as any}
-      worldPointNames={worldPointNames}
-      selectedLines={selectedLineEntities.map(l => l.getId())}
+      lines={linesMap}
+      allWorldPoints={worldPointEntities}
+      selectedLines={selectedLineEntities}
       onEditLine={(line) => {
         handleEditLineOpen(line)
         setShowLinesPopup(false)
@@ -1059,8 +1064,8 @@ export const MainLayout: React.FC = () => {
       isOpen={showPlanesPopup}
       onClose={() => setShowPlanesPopup(false)}
       planes={{}}
-      worldPointNames={worldPointNames}
-      selectedPlanes={selectedPlaneEntities.map(p => p.getId())}
+      allWorldPoints={worldPointEntities}
+      selectedPlanes={selectedPlaneEntities}
       onEditPlane={(planeId) => {
         // TODO: Implement plane editing
       }}
@@ -1078,8 +1083,8 @@ export const MainLayout: React.FC = () => {
     <ImagePointsManager
       isOpen={showImagePointsPopup}
       onClose={() => setShowImagePointsPopup(false)}
-      worldPoints={project?.worldPoints as any}
-      images={project?.viewpoints as any}
+      worldPoints={worldPointsMap}
+      images={viewpointsMap}
       onEditImagePoint={(imagePointId) => {
         // TODO: Implement image point editing
       }}
@@ -1095,18 +1100,18 @@ export const MainLayout: React.FC = () => {
       isOpen={showConstraintsPopup}
       onClose={() => setShowConstraintsPopup(false)}
       constraints={constraints as any}
-      worldPointNames={worldPointNames}
-      lineNames={Object.fromEntries(Array.from(project?.lines || []).map((line) => [line.getId(), line.name]))}
-      onEditConstraint={(constraintId) => {
+      allWorldPoints={worldPointEntities}
+      allLines={lineEntities}
+      onEditConstraint={(constraint) => {
         // TODO: Implement constraint editing
       }}
-      onDeleteConstraint={(constraintId) => {
-        deleteConstraint(constraintId)
+      onDeleteConstraint={(constraint) => {
+        deleteConstraint(constraint)
       }}
-      onToggleConstraint={(constraintId) => {
-        toggleConstraint(constraintId)
+      onToggleConstraint={(constraint) => {
+        toggleConstraint(constraint)
       }}
-      onSelectConstraint={(constraintId) => {
+      onSelectConstraint={(constraint) => {
         // TODO: Implement constraint selection
       }}
     />
@@ -1140,13 +1145,13 @@ export const MainLayout: React.FC = () => {
       <WorldPointEditor
         isOpen={worldPointEditWindow.isOpen}
         onClose={handleWorldPointEditClose}
-        worldPoint={worldPointEditWindow.worldPoint as any}
-        onUpdateWorldPoint={handleWorldPointUpdate as any}
+        worldPoint={worldPointEditWindow.worldPoint}
+        onUpdateWorldPoint={handleWorldPointUpdate}
         onDeleteWorldPoint={(worldPoint) => {
           deleteWorldPoint(worldPoint)
           handleWorldPointEditClose()
         }}
-        images={project?.viewpoints as any}
+        images={viewpointsMap}
       />
     )}
     {dialog}

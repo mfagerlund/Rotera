@@ -381,8 +381,8 @@ EOF
     const worldPoints: Record<string, ExportWorldPoint> = {}
     for (const wp of this.project.worldPoints) {
       const coords = wp.getDefinedCoordinates()
-      worldPoints[wp.getId()] = {
-        id: wp.getId(),
+      worldPoints[wp.id] = {
+        id: wp.id,
         name: wp.getName(),
         xyz: coords || null,
         color: wp.color,

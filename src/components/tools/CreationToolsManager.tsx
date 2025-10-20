@@ -1,6 +1,6 @@
 // Creation Tools Manager - Handles all geometry creation tools
 
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useMemo } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faLocationDot, faRuler, faSquare } from '@fortawesome/free-solid-svg-icons'
 import LineCreationTool from './LineCreationTool'
@@ -9,6 +9,7 @@ import FloatingWindow from '../FloatingWindow'
 import { Line, LineConstraintSettings } from '../../entities/line'
 import { WorldPoint } from '../../entities/world-point'
 import { ConstructionPreview } from '../image-viewer/types'
+import type { ISelectable } from '../../types/selectable'
 import '../../styles/tools.css'
 
 type ToolType = 'select' | 'point' | 'line' | 'plane' | 'circle' | 'loop'
@@ -22,14 +23,11 @@ interface LineConstraints {
 }
 
 interface CreationToolsManagerProps {
-  selectedPoints: string[]
-  selectedLines: string[]
-  selectedPlanes: string[]
+  selectedEntities: ISelectable[]
   activeTool: ToolType
   onToolChange: (tool: ToolType) => void
-  worldPointNames: Record<string, string>
-  worldPoints?: Map<string, WorldPoint>
-  existingLines: Map<string, any> // Existing lines for duplicate checking
+  allWorldPoints: WorldPoint[]
+  existingLines: Map<string, Line>
   onCreatePoint: (imageId: string, u: number, v: number) => void
   onCreateLine: (pointA: WorldPoint, pointB: WorldPoint, constraints?: LineConstraints) => void
   onCreateConstraint?: (constraint: any) => void
@@ -46,13 +44,10 @@ interface CreationToolsManagerProps {
 }
 
 export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
-  selectedPoints,
-  selectedLines,
-  selectedPlanes,
+  selectedEntities,
   activeTool,
   onToolChange,
-  worldPointNames,
-  worldPoints,
+  allWorldPoints,
   existingLines,
   onCreatePoint,
   onCreateLine,
@@ -70,7 +65,20 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
 }) => {
   const [toolMessage, setToolMessage] = useState<string>('')
 
-  // Wrapper to convert between entity-based ConstructionPreview and string-based line preview
+  // Split selected entities by type
+  const selectedPoints = useMemo(() =>
+    selectedEntities.filter(e => e.getType() === 'point') as WorldPoint[],
+    [selectedEntities]
+  )
+  const selectedLines = useMemo(() =>
+    selectedEntities.filter(e => e.getType() === 'line') as Line[],
+    [selectedEntities]
+  )
+  const selectedPlanes = useMemo(() =>
+    selectedEntities.filter(e => e.getType() === 'plane'),
+    [selectedEntities]
+  )
+
   const handleLinePreviewChange = useCallback((linePreview: {
     type: 'line'
     pointA?: string
@@ -78,25 +86,17 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
     showToCursor?: boolean
   } | null) => {
     if (!onConstructionPreviewChange) return
-
     if (!linePreview) {
       onConstructionPreviewChange(null)
       return
     }
-
-    // Convert string IDs to WorldPoint entities
-    const pointAEntity = linePreview.pointA ? worldPointNames[linePreview.pointA] : undefined
-    const pointBEntity = linePreview.pointB ? worldPointNames[linePreview.pointB] : undefined
-
-    // For now, we need to find the actual entities - this is a temporary bridge
-    // The proper fix is to make LineCreationTool use entities directly
     onConstructionPreviewChange({
       type: 'line',
-      pointA: undefined, // TODO: Get actual entity
-      pointB: undefined, // TODO: Get actual entity
+      pointA: undefined,
+      pointB: undefined,
       showToCursor: linePreview.showToCursor
     })
-  }, [onConstructionPreviewChange, worldPointNames])
+  }, [onConstructionPreviewChange])
 
   const handleToolActivation = useCallback((tool: ToolType) => {
     if (activeTool === tool) {
@@ -330,8 +330,7 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
       >
         <LineCreationTool
           selectedPoints={editingLine ? [] : selectedPoints}
-          worldPointNames={worldPointNames}
-          worldPoints={worldPoints || new Map()}
+          allWorldPoints={allWorldPoints}
           existingLines={existingLines}
           onCreateLine={onCreateLine}
           onCancel={handleToolCancel}
@@ -346,8 +345,8 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
               ? Object.values(projectConstraints).filter(c => {
                   const constraintLineIds = c.entities?.lines || []
                   const constraintPointIds = c.entities?.points || []
-                  return constraintLineIds.includes(editingLine.getId()) ||
-                         (constraintPointIds.includes(editingLine.pointA.getId()) && constraintPointIds.includes(editingLine.pointB.getId()))
+                  return constraintLineIds.includes(editingLine.id) ||
+                         (constraintPointIds.includes(editingLine.pointA.id) && constraintPointIds.includes(editingLine.pointB.id))
                 })
               : []
           }
@@ -373,8 +372,7 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
       >
         <LoopTraceTool
           selectedPoints={selectedPoints}
-          worldPointNames={worldPointNames}
-          worldPoints={worldPoints}
+          allWorldPoints={allWorldPoints}
           existingLines={existingLines}
           onCreateLine={onCreateLine}
           onCreateConstraint={onCreateConstraint}

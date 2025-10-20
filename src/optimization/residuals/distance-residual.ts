@@ -13,19 +13,10 @@ export function computeDistanceResiduals(
   constraint: DistanceConstraint,
   valueMap: ValueMap
 ): Value[] {
-  const pointAId = constraint.pointAId;
-  const pointBId = constraint.pointBId;
+  const pointAVec = valueMap.points.get(constraint.pointA);
+  const pointBVec = valueMap.points.get(constraint.pointB);
 
-  // Find points in valueMap
-  let pointA: Vec3 | undefined;
-  let pointB: Vec3 | undefined;
-
-  for (const [point, vec] of valueMap.points) {
-    if (point.getId() === pointAId) pointA = vec;
-    if (point.getId() === pointBId) pointB = vec;
-  }
-
-  if (!pointA || !pointB) {
+  if (!pointAVec || !pointBVec) {
     console.warn(`Distance constraint: points not found in valueMap`);
     return [];
   }
@@ -33,7 +24,7 @@ export function computeDistanceResiduals(
   const targetDistance = constraint.targetDistance;
 
   // Calculate actual distance using Vec3 API
-  const diff = pointB.sub(pointA);
+  const diff = pointBVec.sub(pointAVec);
   const dist = diff.magnitude;
 
   // Residual = actual - target

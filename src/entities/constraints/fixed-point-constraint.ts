@@ -5,6 +5,7 @@ import type { ValidationResult } from '../../validation/validator'
 import type { ValueMap } from '../../optimization/IOptimizable'
 import { V, type Value } from 'scalar-autograd'
 import { ValidationHelpers } from '../../validation/validator'
+import type { WorldPoint } from '../world-point/WorldPoint'
 import {
   Constraint,
   type ConstraintRepository,
@@ -36,7 +37,7 @@ export class FixedPointConstraint extends Constraint {
   static create(
     id: ConstraintId,
     name: string,
-    pointId: PointId,
+    point: WorldPoint,
     targetXyz: [number, number, number],
     repo: ConstraintRepository,
     options: {
@@ -56,7 +57,7 @@ export class FixedPointConstraint extends Constraint {
       type: 'fixed_point',
       status: 'satisfied',
       entities: {
-        points: [pointId]
+        points: [point.id as PointId]
       },
       parameters: {
         targetXyz: [...targetXyz] as [number, number, number],
@@ -71,7 +72,10 @@ export class FixedPointConstraint extends Constraint {
       createdAt: now,
       updatedAt: now
     }
-    return new FixedPointConstraint(repo, data)
+    const constraint = new FixedPointConstraint(repo, data)
+    constraint._points.add(point)
+    constraint._entitiesPreloaded = true
+    return constraint
   }
 
   static fromDto(dto: ConstraintDto, repo: ConstraintRepository): FixedPointConstraint {
@@ -209,8 +213,8 @@ export class FixedPointConstraint extends Constraint {
     this.updateTimestamp()
   }
 
-  get pointId(): PointId {
-    return this.data.entities.points[0]
+  get point(): WorldPoint {
+    return this.points[0]
   }
 
   protected getTargetValue(): number {
@@ -223,15 +227,7 @@ export class FixedPointConstraint extends Constraint {
    * Returns [dx, dy, dz] where each component should be 0 when constraint is satisfied.
    */
   computeResiduals(valueMap: ValueMap): Value[] {
-    // Find the point in the valueMap by comparing IDs
-    let pointVec: ReturnType<typeof valueMap.points.get> | undefined
-
-    for (const [point, vec] of valueMap.points) {
-      if (point.getId() === this.pointId) {
-        pointVec = vec
-        break
-      }
-    }
+    const pointVec = valueMap.points.get(this.point)
 
     if (!pointVec) {
       console.warn(`Fixed point constraint ${this.data.id}: point not found in valueMap`)

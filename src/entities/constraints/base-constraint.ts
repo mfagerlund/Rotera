@@ -23,13 +23,6 @@ export interface ConstraintEvaluation {
 
 // Repository interface (to avoid circular dependency)
 export interface ConstraintRepository {
-  getPoint(pointId: PointId): EntityId | undefined
-  getLine(lineId: LineId): EntityId | undefined
-  getPlane(planeId: PlaneId): EntityId | undefined
-  entityExists(id: EntityId): boolean
-  pointExists(pointId: PointId): boolean
-  lineExists(lineId: LineId): boolean
-  planeExists(planeId: PlaneId): boolean
   getReferenceManager?(): {
     resolve<T extends ISelectable>(id: EntityId, type: string): T | undefined
     batchResolve<T extends ISelectable>(ids: EntityId[], type: string): T[]
@@ -131,6 +124,7 @@ export interface ProjectionConstraintDto {
 
 // Abstract base constraint class
 export abstract class Constraint implements ISelectable, IValidatable, IResidualProvider {
+  readonly id: string  // For serialization and React keys only - do NOT use for runtime references!
   private selected = false
 
   // Direct object references for performance
@@ -142,7 +136,9 @@ export abstract class Constraint implements ISelectable, IValidatable, IResidual
   protected constructor(
     protected repo: ConstraintRepository,
     protected data: BaseConstraintDto
-  ) {}
+  ) {
+    this.id = data.id
+  }
 
   // Abstract methods that must be implemented by subclasses
   abstract getConstraintType(): string
@@ -537,23 +533,7 @@ export abstract class Constraint implements ISelectable, IValidatable, IResidual
   isViolated(): boolean {
     return this.data.status === 'violated'
   }
-
-  getEntityIds(): EntityId[] {
-    return this.getDependencies()
-  }
-
-  getPointIds(): PointId[] {
-    return this.data.entities.points || []
-  }
-
-  getLineIds(): LineId[] {
-    return this.data.entities.lines || []
-  }
-
-  getPlaneIds(): PlaneId[] {
-    return this.data.entities.planes || []
-  }
-
+  
   protected updateTimestamp(): void {
     this.data.updatedAt = new Date().toISOString()
   }

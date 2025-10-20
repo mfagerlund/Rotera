@@ -4,13 +4,12 @@ import WorldView, { WorldViewRef } from '../WorldView'
 import { Project } from '../../entities/project'
 import { WorldPoint } from '../../entities/world-point'
 import { Line } from '../../entities/line'
+import type { ISelectable } from '../../types/selectable'
 
 interface WorldWorkspaceProps {
   project: Project
   worldViewRef: React.RefObject<WorldViewRef>
-  selectedPointIds: string[]
-  selectedLineIds: string[]
-  selectedPlaneIds: string[]
+  selectedEntities: ISelectable[]
   hoveredConstraintId: string | null
   onPointClick: (worldPoint: WorldPoint, ctrlKey: boolean, shiftKey: boolean) => void
   onLineClick: (line: Line, ctrlKey: boolean, shiftKey: boolean) => void
@@ -20,9 +19,7 @@ interface WorldWorkspaceProps {
 const WorldWorkspace: React.FC<WorldWorkspaceProps> = ({
   project,
   worldViewRef,
-  selectedPointIds,
-  selectedLineIds,
-  selectedPlaneIds,
+  selectedEntities,
   hoveredConstraintId,
   onPointClick,
   onLineClick,
@@ -32,9 +29,7 @@ const WorldWorkspace: React.FC<WorldWorkspaceProps> = ({
     <WorldView
       ref={worldViewRef}
       project={project}
-      selectedPoints={selectedPointIds}
-      selectedLines={selectedLineIds}
-      selectedPlanes={selectedPlaneIds}
+      selectedEntities={selectedEntities}
       hoveredConstraintId={hoveredConstraintId}
       onPointClick={onPointClick}
       onLineClick={onLineClick}

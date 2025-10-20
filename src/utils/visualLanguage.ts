@@ -8,7 +8,8 @@ import {
   CONSTRAINT_GLYPHS as GLYPHS,
   THEME_COLORS,
   FEEDBACK_LEVELS,
-  ENTITY_STYLES
+  ENTITY_STYLES,
+  getConstraintGlyph as getConstraintGlyphFromConstants
 } from '../constants/visualLanguage'
 
 // Entity type definitions
@@ -36,32 +37,32 @@ export interface ColorScheme {
   }
 }
 
-// Default color scheme
+// Default color scheme - derived from ENTITY_COLORS constants
 export const defaultColorScheme: ColorScheme = {
   entities: {
     point: {
-      default: '#2196F3',
-      selected: '#FFC107',
-      highlighted: '#FF9800',
-      construction: '#9E9E9E'
+      default: CONSTRAINT_STATUS_COLORS.worldGeometry,
+      selected: CONSTRAINT_STATUS_COLORS.selection,
+      highlighted: CONSTRAINT_STATUS_COLORS.warning,
+      construction: CONSTRAINT_STATUS_COLORS.construction
     },
     line: {
-      default: '#4CAF50',
-      selected: '#FFC107',
-      highlighted: '#FF9800',
-      construction: '#9E9E9E'
+      default: CONSTRAINT_STATUS_COLORS.satisfied,
+      selected: CONSTRAINT_STATUS_COLORS.selection,
+      highlighted: CONSTRAINT_STATUS_COLORS.warning,
+      construction: CONSTRAINT_STATUS_COLORS.construction
     },
     plane: {
       default: '#9C27B0',
-      selected: '#FFC107',
-      highlighted: '#FF9800',
-      construction: '#9E9E9E'
+      selected: CONSTRAINT_STATUS_COLORS.selection,
+      highlighted: CONSTRAINT_STATUS_COLORS.warning,
+      construction: CONSTRAINT_STATUS_COLORS.construction
     },
     circle: {
-      default: '#FF5722',
-      selected: '#FFC107',
-      highlighted: '#FF9800',
-      construction: '#9E9E9E'
+      default: CONSTRAINT_STATUS_COLORS.imageGuides,
+      selected: CONSTRAINT_STATUS_COLORS.selection,
+      highlighted: CONSTRAINT_STATUS_COLORS.warning,
+      construction: CONSTRAINT_STATUS_COLORS.construction
     }
   },
   constraints: {
@@ -74,16 +75,16 @@ export const defaultColorScheme: ColorScheme = {
     undefined: CONSTRAINT_STATUS_COLORS.worldGeometry
   },
   workspaces: {
-    image: '#2196F3',
-    world: '#4CAF50',
+    image: CONSTRAINT_STATUS_COLORS.worldGeometry,
+    world: CONSTRAINT_STATUS_COLORS.satisfied,
     split: '#9C27B0'
   },
   states: {
-    active: '#FFC107',
+    active: CONSTRAINT_STATUS_COLORS.selection,
     inactive: '#757575',
-    processing: '#FF9800',
-    error: '#F44336',
-    success: '#4CAF50'
+    processing: CONSTRAINT_STATUS_COLORS.warning,
+    error: CONSTRAINT_STATUS_COLORS.violated,
+    success: CONSTRAINT_STATUS_COLORS.satisfied
   }
 }
 
@@ -206,31 +207,9 @@ export class VisualLanguageManager {
       .join(' ')
   }
 
-  // Get constraint glyph
+  // Get constraint glyph - delegates to constants
   getConstraintGlyph(constraintType: string): string {
-    const glyphMap: Record<string, string> = {
-      'points_distance': '↔',
-      'distance_point_point': '↔',
-      'points_equal_distance': '∠',
-      'angle_three_points': '∠',
-      'lines_parallel': '∥',
-      'lines_perpendicular': '⊥',
-      'point_fixed_coord': '📌',
-      'point_fixed_position': '📌',
-      // NOTE: line_axis_aligned moved to Line constraint properties
-      'points_horizontal': '⟷',
-      'points_vertical': '↕',
-      'points_colinear': '─',
-      'points_collinear': '─',
-      'shape_circle': '○',
-      'points_coplanar': '▭',
-      'shape_rectangle': '▭',
-      'coplanar': '◱',
-      'coincident': '●',
-      'symmetry': '⚌'
-    }
-
-    return glyphMap[constraintType] || '?'
+    return getConstraintGlyphFromConstants(constraintType)
   }
 
   // Apply visual feedback based on settings

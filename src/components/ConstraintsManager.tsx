@@ -5,34 +5,36 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faBullseye, faDraftingCompass, faWrench } from '@fortawesome/free-solid-svg-icons'
 import EntityListPopup, { EntityListItem } from './EntityListPopup'
 import type { Constraint } from '../entities/constraints'
+import { WorldPoint } from '../entities/world-point'
+import { Line } from '../entities/line'
 
 interface ConstraintsPopupProps {
   isOpen: boolean
   onClose: () => void
   constraints: Constraint[]
-  worldPointNames: Record<string, string>
-  lineNames: Record<string, string>
+  allWorldPoints: WorldPoint[]
+  allLines: Line[]
   selectedConstraints?: string[]
-  onEditConstraint?: (constraintId: string) => void
-  onDeleteConstraint?: (constraintId: string) => void
-  onToggleConstraint?: (constraintId: string) => void
-  onSelectConstraint?: (constraintId: string) => void
+  onEditConstraint?: (constraint: Constraint) => void
+  onDeleteConstraint?: (constraint: Constraint) => void
+  onToggleConstraint?: (constraint: Constraint) => void
+  onSelectConstraint?: (constraint: Constraint) => void
 }
 
 export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
   isOpen,
   onClose,
   constraints,
-  worldPointNames,
-  lineNames,
+  allWorldPoints,
+  allLines,
   selectedConstraints = [],
   onEditConstraint,
   onDeleteConstraint,
   onToggleConstraint,
   onSelectConstraint
 }) => {
-  const getPointName = (pointId: string) => worldPointNames[pointId] || pointId
-  const getLineName = (lineId: string) => lineNames[lineId] || lineId
+  const getPointName = (pointId: string) => allWorldPoints.find(p => p.id === pointId)?.getName() || pointId
+  const getLineName = (lineId: string) => allLines.find(l => l.id === lineId)?.getName() || lineId
 
   const getConstraintDisplayName = (type: string) => {
     return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
@@ -120,12 +122,24 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
       entities={constraintEntities}
       emptyMessage="No constraints created yet"
       storageKey="constraints-popup"
-      onEdit={onEditConstraint}
-      onDelete={onDeleteConstraint}
-      onToggleVisibility={onToggleConstraint}
-      onSelect={onSelectConstraint}
+      onEdit={onEditConstraint ? (id) => {
+        const constraint = constraints.find(c => c.id === id)
+        if (constraint) onEditConstraint(constraint)
+      } : undefined}
+      onDelete={onDeleteConstraint ? (id) => {
+        const constraint = constraints.find(c => c.id === id)
+        if (constraint) onDeleteConstraint(constraint)
+      } : undefined}
+      onToggleVisibility={onToggleConstraint ? (id) => {
+        const constraint = constraints.find(c => c.id === id)
+        if (constraint) onToggleConstraint(constraint)
+      } : undefined}
+      onSelect={onSelectConstraint ? (id) => {
+        const constraint = constraints.find(c => c.id === id)
+        if (constraint) onSelectConstraint(constraint)
+      } : undefined}
       renderEntityDetails={(entity) => {
-        const constraint = constraints.find(c => c.getId() === entity.id)
+        const constraint = constraints.find(c => c.id === entity.id)
         if (!constraint) return null
 
         const dto = constraint.toConstraintDto()
@@ -160,7 +174,7 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
         )
       }}
       renderCustomActions={(entity) => {
-        const constraint = constraints.find(c => c.getId() === entity.id)
+        const constraint = constraints.find(c => c.id === entity.id)
         if (!constraint) return null
 
         const dto = constraint.toConstraintDto()

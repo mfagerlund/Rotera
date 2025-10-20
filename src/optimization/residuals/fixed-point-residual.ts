@@ -13,21 +13,10 @@ export function computeFixedPointResiduals(
   constraint: FixedPointConstraint,
   valueMap: ValueMap
 ): Value[] {
-  // Get the point ID from the constraint
-  const pointId = constraint.pointId;
-
-  // Find the point in the valueMap by comparing IDs
-  let pointVec: Vec3 | undefined;
-  for (const [point, vec] of valueMap.points) {
-    if (point.getId() === pointId) {
-      pointVec = vec;
-      break;
-    }
-  }
+  const pointVec = valueMap.points.get(constraint.point);
 
   if (!pointVec) {
-    // Point not in valueMap
-    console.warn(`Point ${pointId} not found in valueMap`);
+    console.warn(`Fixed point constraint: point not found in valueMap`);
     return [];
   }
 

@@ -13,9 +13,9 @@ interface LineConstraints {
 }
 
 interface UseLoopTraceProps {
-  selectedPoints: string[]
-  worldPoints?: Map<string, WorldPoint>
-  existingLines: Record<string, any>
+  selectedPoints: WorldPoint[]
+  allWorldPoints: WorldPoint[]
+  existingLines: Map<string, any>
   onCreateLine: (pointA: WorldPoint, pointB: WorldPoint, constraints?: LineConstraints) => void
   onCreateConstraint?: (constraint: any) => void
   orientation: LineDirection
@@ -35,7 +35,7 @@ interface SegmentStatus {
 
 export function useLoopTrace({
   selectedPoints,
-  worldPoints,
+  allWorldPoints,
   existingLines,
   onCreateLine,
   onCreateConstraint,
@@ -48,8 +48,8 @@ export function useLoopTrace({
 }: UseLoopTraceProps) {
 
   // Check if a line exists between two points (bidirectional)
-  const lineExists = useCallback((pointA: string, pointB: string): { exists: boolean; lineId?: string } => {
-    const existingLine = Object.values(existingLines).find(line =>
+  const lineExists = useCallback((pointA: WorldPoint, pointB: WorldPoint): { exists: boolean; lineId?: string } => {
+    const existingLine = Array.from(existingLines.values()).find(line =>
       (line.pointA === pointA && line.pointB === pointB) ||
       (line.pointA === pointB && line.pointB === pointA)
     )
@@ -61,21 +61,17 @@ export function useLoopTrace({
 
   // Calculate segment statuses for preview based on selection order
   const segments = useMemo((): SegmentStatus[] => {
-    if (!worldPoints) return []
     const result: SegmentStatus[] = []
 
     for (let i = 0; i < selectedPoints.length - 1; i++) {
-      const pointAId = selectedPoints[i]
-      const pointBId = selectedPoints[i + 1]
-      const entityA = worldPoints.get(pointAId)
-      const entityB = worldPoints.get(pointBId)
-      if (!entityA || !entityB) continue
+      const pointA = selectedPoints[i]
+      const pointB = selectedPoints[i + 1]
 
-      const { exists, lineId } = lineExists(pointAId, pointBId)
+      const { exists, lineId } = lineExists(pointA, pointB)
 
       result.push({
-        pointA: entityA,
-        pointB: entityB,
+        pointA,
+        pointB,
         status: exists ? 'exists' : 'new',
         existingLineId: lineId
       })
@@ -83,24 +79,20 @@ export function useLoopTrace({
 
     // Add closing line if closedLoop is enabled and we have at least 3 points
     if (closedLoop && selectedPoints.length >= 3) {
-      const pointAId = selectedPoints[selectedPoints.length - 1]
-      const pointBId = selectedPoints[0]
-      const entityA = worldPoints.get(pointAId)
-      const entityB = worldPoints.get(pointBId)
-      if (entityA && entityB) {
-        const { exists, lineId } = lineExists(pointAId, pointBId)
+      const pointA = selectedPoints[selectedPoints.length - 1]
+      const pointB = selectedPoints[0]
+      const { exists, lineId } = lineExists(pointA, pointB)
 
-        result.push({
-          pointA: entityA,
-          pointB: entityB,
-          status: exists ? 'exists' : 'new',
-          existingLineId: lineId
-        })
-      }
+      result.push({
+        pointA,
+        pointB,
+        status: exists ? 'exists' : 'new',
+        existingLineId: lineId
+      })
     }
 
     return result
-  }, [selectedPoints, worldPoints, lineExists, closedLoop])
+  }, [selectedPoints, lineExists, closedLoop])
 
   // Count of lines to create vs existing
   const lineCounts = useMemo(() => {
@@ -132,12 +124,6 @@ export function useLoopTrace({
         continue
       }
 
-      // Lookup entities
-      if (!worldPoints) continue
-      const entityA = worldPoints.get(pointA)
-      const entityB = worldPoints.get(pointB)
-      if (!entityA || !entityB) continue
-
       // Create new line with optional prefix
       const lineName = namePrefix
         ? `${namePrefix}_${i + 1}`
@@ -154,8 +140,8 @@ export function useLoopTrace({
         }
       }
 
-      onCreateLine(entityA, entityB, constraints)
-      created.push(`${pointA}-${pointB}`)
+      onCreateLine(pointA, pointB, constraints)
+      created.push(`${pointA.getName()}-${pointB.getName()}`)
     }
 
     // Create coplanar constraint if enabled and we have at least 4 points
@@ -185,7 +171,7 @@ export function useLoopTrace({
     }
 
     return { created, skipped }
-  }, [selectedPoints, worldPoints, orientation, lineExists, onCreateLine, namePrefix, closedLoop, coplanarEnabled, onCreateConstraint])
+  }, [selectedPoints, orientation, lineExists, onCreateLine, namePrefix, closedLoop, coplanarEnabled, onCreateConstraint])
 
   return {
     segments,

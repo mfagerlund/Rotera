@@ -53,8 +53,8 @@ function runOptimizationBenchmark(
   });
 
   Object.values(project.lines || {}).forEach((line: any) => {
-    const pointA = pointEntities.find(p => p.getId() === line.pointA);
-    const pointB = pointEntities.find(p => p.getId() === line.pointB);
+    const pointA = pointEntities.find(p => p.id === line.pointA);
+    const pointB = pointEntities.find(p => p.id === line.pointB);
 
     if (pointA && pointB && line.constraints) {
       const entity = LineEntity.create(

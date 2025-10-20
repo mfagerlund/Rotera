@@ -5,6 +5,7 @@ import type { ValidationResult } from '../../validation/validator'
 import type { ValueMap } from '../../optimization/IOptimizable'
 import { Vec3, type Value } from 'scalar-autograd'
 import { ValidationHelpers } from '../../validation/validator'
+import type { WorldPoint } from '../world-point/WorldPoint'
 import {
   Constraint,
   type ConstraintRepository,
@@ -33,7 +34,7 @@ export class CollinearPointsConstraint extends Constraint {
   static create(
     id: ConstraintId,
     name: string,
-    pointIds: PointId[], // At least 3 points
+    points: WorldPoint[], // At least 3 points
     repo: ConstraintRepository,
     options: {
       tolerance?: number
@@ -45,7 +46,7 @@ export class CollinearPointsConstraint extends Constraint {
       notes?: string
     } = {}
   ): CollinearPointsConstraint {
-    if (pointIds.length < 3) {
+    if (points.length < 3) {
       throw new Error('CollinearPointsConstraint requires at least 3 points')
     }
 
@@ -56,7 +57,7 @@ export class CollinearPointsConstraint extends Constraint {
       type: 'collinear_points',
       status: 'satisfied',
       entities: {
-        points: [...pointIds]
+        points: points.map(p => p.id as PointId)
       },
       parameters: {
         tolerance: options.tolerance ?? 0.001,
@@ -70,7 +71,10 @@ export class CollinearPointsConstraint extends Constraint {
       createdAt: now,
       updatedAt: now
     }
-    return new CollinearPointsConstraint(repo, data)
+    const constraint = new CollinearPointsConstraint(repo, data)
+    points.forEach(p => constraint._points.add(p))
+    constraint._entitiesPreloaded = true
+    return constraint
   }
 
   static fromDto(dto: ConstraintDto, repo: ConstraintRepository): CollinearPointsConstraint {
@@ -211,24 +215,22 @@ export class CollinearPointsConstraint extends Constraint {
     return new CollinearPointsConstraint(this.repo, clonedData)
   }
 
-  // Specific getters
-  get pointIds(): PointId[] {
-    return [...this.data.entities.points]
-  }
-
-  addPoint(pointId: PointId): void {
+  // Specific methods
+  addPoint(point: WorldPoint): void {
+    const pointId = point.id as PointId
     if (!this.data.entities.points.includes(pointId)) {
       this.data.entities.points.push(pointId)
-      this.invalidateReferences()
+      this._points.add(point)
       this.updateTimestamp()
     }
   }
 
-  removePoint(pointId: PointId): void {
+  removePoint(point: WorldPoint): void {
+    const pointId = point.id as PointId
     const index = this.data.entities.points.indexOf(pointId)
     if (index !== -1) {
       this.data.entities.points.splice(index, 1)
-      this.invalidateReferences()
+      this._points.delete(point)
       this.updateTimestamp()
     }
   }
@@ -244,30 +246,21 @@ export class CollinearPointsConstraint extends Constraint {
    * Returns 3 residuals (x, y, z components of cross product).
    */
   computeResiduals(valueMap: ValueMap): Value[] {
-    const pointIds = this.pointIds
+    const points = this.points
 
-    if (pointIds.length < 3) {
+    if (points.length < 3) {
       console.warn('Collinear constraint requires at least 3 points')
       return []
     }
 
-    // Find first 3 points in valueMap
-    const points: Vec3[] = []
-    for (const [point, vec] of valueMap.points) {
-      if (pointIds.includes(point.getId())) {
-        points.push(vec)
-        if (points.length === 3) break
-      }
-    }
+    const p0 = valueMap.points.get(points[0])
+    const p1 = valueMap.points.get(points[1])
+    const p2 = valueMap.points.get(points[2])
 
-    if (points.length < 3) {
+    if (!p0 || !p1 || !p2) {
       console.warn(`Collinear constraint ${this.data.id}: not enough points found in valueMap`)
       return []
     }
-
-    const p0 = points[0]
-    const p1 = points[1]
-    const p2 = points[2]
 
     // Calculate vectors from p0 using Vec3 API
     const v1 = p1.sub(p0)
@@ -277,9 +270,5 @@ export class CollinearPointsConstraint extends Constraint {
     const cross = Vec3.cross(v1, v2)
 
     return [cross.x, cross.y, cross.z]
-  }
-
-  getPointIds(): PointId[] {
-    return this.pointIds
   }
 }

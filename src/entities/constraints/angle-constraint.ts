@@ -5,6 +5,7 @@ import type { ValidationResult, ValidationError } from '../../validation/validat
 import type { ValueMap } from '../../optimization/IOptimizable'
 import { V, Vec3, type Value } from 'scalar-autograd'
 import { ValidationHelpers } from '../../validation/validator'
+import type { WorldPoint } from '../world-point/WorldPoint'
 import {
   Constraint,
   type ConstraintRepository,
@@ -36,9 +37,9 @@ export class AngleConstraint extends Constraint {
   static create(
     id: ConstraintId,
     name: string,
-    pointAId: PointId,
-    vertexId: PointId,
-    pointCId: PointId,
+    pointA: WorldPoint,
+    vertex: WorldPoint,
+    pointC: WorldPoint,
     targetAngle: number,
     repo: ConstraintRepository,
     options: {
@@ -58,7 +59,7 @@ export class AngleConstraint extends Constraint {
       type: 'angle_point_point_point',
       status: 'satisfied',
       entities: {
-        points: [pointAId, vertexId, pointCId]
+        points: [pointA.id as PointId, vertex.id as PointId, pointC.id as PointId]
       },
       parameters: {
         targetAngle,
@@ -73,7 +74,12 @@ export class AngleConstraint extends Constraint {
       createdAt: now,
       updatedAt: now
     }
-    return new AngleConstraint(repo, data)
+    const constraint = new AngleConstraint(repo, data)
+    constraint._points.add(pointA)
+    constraint._points.add(vertex)
+    constraint._points.add(pointC)
+    constraint._entitiesPreloaded = true
+    return constraint
   }
 
   static fromDto(dto: ConstraintDto, repo: ConstraintRepository): AngleConstraint {
@@ -188,16 +194,16 @@ export class AngleConstraint extends Constraint {
     this.updateTimestamp()
   }
 
-  get pointAId(): PointId {
-    return this.data.entities.points[0]
+  get pointA(): WorldPoint {
+    return this.points[0]
   }
 
-  get vertexId(): PointId {
-    return this.data.entities.points[1]
+  get vertex(): WorldPoint {
+    return this.points[1]
   }
 
-  get pointCId(): PointId {
-    return this.data.entities.points[2]
+  get pointC(): WorldPoint {
+    return this.points[2]
   }
 
   protected getTargetValue(): number {
@@ -210,18 +216,11 @@ export class AngleConstraint extends Constraint {
    * Should be 0 when the angle at the vertex equals the target.
    */
   computeResiduals(valueMap: ValueMap): Value[] {
-    // Find points in valueMap
-    let pointA: ReturnType<typeof valueMap.points.get> | undefined
-    let vertex: ReturnType<typeof valueMap.points.get> | undefined
-    let pointC: ReturnType<typeof valueMap.points.get> | undefined
+    const pointAVec = valueMap.points.get(this.pointA)
+    const vertexVec = valueMap.points.get(this.vertex)
+    const pointCVec = valueMap.points.get(this.pointC)
 
-    for (const [point, vec] of valueMap.points) {
-      if (point.getId() === this.pointAId) pointA = vec
-      if (point.getId() === this.vertexId) vertex = vec
-      if (point.getId() === this.pointCId) pointC = vec
-    }
-
-    if (!pointA || !vertex || !pointC) {
+    if (!pointAVec || !vertexVec || !pointCVec) {
       console.warn(`Angle constraint ${this.data.id}: points not found in valueMap`)
       return []
     }
@@ -229,8 +228,8 @@ export class AngleConstraint extends Constraint {
     const targetAngleRadians = (this.targetAngle * Math.PI) / 180
 
     // Calculate vectors from vertex using Vec3 API
-    const v1 = pointA.sub(vertex)
-    const v2 = pointC.sub(vertex)
+    const v1 = pointAVec.sub(vertexVec)
+    const v2 = pointCVec.sub(vertexVec)
 
     // Calculate angle using Vec3.angleBetween
     const actualAngle = Vec3.angleBetween(v1, v2)

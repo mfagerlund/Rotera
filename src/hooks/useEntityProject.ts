@@ -30,7 +30,7 @@ export const useEntityProject = () => {
         // Set current image to first viewpoint if available
         const firstViewpoint = Array.from(loaded.viewpoints)[0]
         if (firstViewpoint) {
-          setCurrentImageId(firstViewpoint.getId())
+          setCurrentImageId(firstViewpoint.id)
         }
       } else {
         console.log('Creating new empty project')

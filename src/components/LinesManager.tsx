@@ -11,9 +11,8 @@ interface LinesManagerProps {
   isOpen: boolean
   onClose: () => void
   lines: Map<string, Line>
-  worldPoints: Map<string, WorldPoint>
-  worldPointNames: Record<string, string>
-  selectedLines?: string[]
+  allWorldPoints: WorldPoint[]
+  selectedLines?: Line[]
   onEditLine?: (line: Line) => void
   onDeleteLine?: (line: Line) => void
   onDeleteAllLines?: () => void
@@ -27,8 +26,7 @@ export const LinesManager: React.FC<LinesManagerProps> = ({
   isOpen,
   onClose,
   lines,
-  worldPoints,
-  worldPointNames,
+  allWorldPoints,
   selectedLines = [],
   onEditLine,
   onDeleteLine,
@@ -40,17 +38,15 @@ export const LinesManager: React.FC<LinesManagerProps> = ({
 }) => {
   const [editingLine, setEditingLine] = useState<Line | null>(null)
 
-  const getPointName = (pointId: string) => worldPointNames[pointId] || pointId
-
   // Convert lines to EntityListItem format
   const lineEntities: EntityListItem[] = Array.from(lines.values()).map(line => {
     const dirVector = line.getDirection()
     const dirLabel = dirVector ? 'constrained' : 'free'
 
     return {
-      id: line.getId(),
+      id: line.id,
       name: line.getName(),
-      displayInfo: `${getPointName(line.pointA.getId())} ↔ ${getPointName(line.pointB.getId())}`,
+      displayInfo: `${line.pointA.getName()} ↔ ${line.pointB.getName()}`,
       additionalInfo: [
         line.isConstruction ? 'Construction line' : 'Driving line',
         ...(dirLabel !== 'free' ? [`Direction: ${dirLabel}`] : []),
@@ -58,7 +54,7 @@ export const LinesManager: React.FC<LinesManagerProps> = ({
       ],
       color: line.color,
       isVisible: line.isVisible,
-      isActive: selectedLines.includes(line.getId())
+      isActive: selectedLines.some(l => l === line)
     }
   })
 
@@ -146,11 +142,10 @@ export const LinesManager: React.FC<LinesManagerProps> = ({
           } : undefined}
         >
           <LineCreationTool
-            selectedPoints={[editingLine.pointA.getId(), editingLine.pointB.getId()]}
-            worldPointNames={worldPointNames}
-            worldPoints={worldPoints}
+            selectedPoints={[editingLine.pointA, editingLine.pointB]}
+            allWorldPoints={allWorldPoints}
             existingLines={lines}
-            onCreateLine={() => {}} // Not used in edit mode
+            onCreateLine={() => {}}
             onCancel={handleCloseEdit}
             isActive={true}
             showHeader={false}

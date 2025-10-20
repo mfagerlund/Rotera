@@ -15,32 +15,34 @@ export function computeEqualAnglesResiduals(
   constraint: EqualAnglesConstraint,
   valueMap: ValueMap
 ): Value[] {
-  const angleTriplets = constraint.angleTriplets;
+  const points = constraint.points;
+  const pointMap = new Map<PointId, typeof points[0]>();
+  points.forEach(p => pointMap.set(p.id as PointId, p));
+
+  const angleTriplets = (constraint as any).data.parameters.angleTriplets as [PointId, PointId, PointId][];
 
   if (angleTriplets.length < 2) {
     console.warn('Equal angles constraint requires at least 2 triplets');
     return [];
   }
 
-  // Helper to find point in valueMap
-  const findPoint = (pointId: PointId): Vec3 | undefined => {
-    for (const [point, vec] of valueMap.points) {
-      if (point.getId() === pointId) return vec;
-    }
-    return undefined;
-  };
-
   // Calculate angle for a triplet [pointA, vertex, pointC] using Vec3 API
   const calculateAngle = (triplet: [PointId, PointId, PointId]): Value | undefined => {
-    const pointA = findPoint(triplet[0]);
-    const vertex = findPoint(triplet[1]);
-    const pointC = findPoint(triplet[2]);
+    const pointA = pointMap.get(triplet[0]);
+    const vertex = pointMap.get(triplet[1]);
+    const pointC = pointMap.get(triplet[2]);
 
     if (!pointA || !vertex || !pointC) return undefined;
 
+    const pointAVec = valueMap.points.get(pointA);
+    const vertexVec = valueMap.points.get(vertex);
+    const pointCVec = valueMap.points.get(pointC);
+
+    if (!pointAVec || !vertexVec || !pointCVec) return undefined;
+
     // Calculate vectors from vertex using Vec3 API
-    const v1 = pointA.sub(vertex);
-    const v2 = pointC.sub(vertex);
+    const v1 = pointAVec.sub(vertexVec);
+    const v2 = pointCVec.sub(vertexVec);
 
     // Calculate angle using Vec3.angleBetween
     return Vec3.angleBetween(v1, v2);

@@ -46,8 +46,8 @@ describe('Real Data Optimization', () => {
 
     // Convert lines to entities
     Object.values(testProject.lines || {}).forEach((line: any) => {
-      const pointA = pointEntities.find(p => p.getId() === line.pointA);
-      const pointB = pointEntities.find(p => p.getId() === line.pointB);
+      const pointA = pointEntities.find(p => p.id === line.pointA);
+      const pointB = pointEntities.find(p => p.id === line.pointB);
 
       if (pointA && pointB) {
         const entity = LineEntity.create(
@@ -132,8 +132,8 @@ describe('Real Data Optimization', () => {
 
     // Create line entities
     Object.values(testProject.lines || {}).forEach((line: any) => {
-      const pointA = pointEntities.find(p => p.getId() === line.pointA);
-      const pointB = pointEntities.find(p => p.getId() === line.pointB);
+      const pointA = pointEntities.find(p => p.id === line.pointA);
+      const pointB = pointEntities.find(p => p.id === line.pointB);
 
       if (pointA && pointB) {
         const entity = LineEntity.create(
@@ -233,8 +233,8 @@ describe('Real Data Optimization', () => {
 
     // Create line entities WITH constraints
     Object.values(testProject.lines || {}).forEach((line: any) => {
-      const pointA = pointEntities.find(p => p.getId() === line.pointA);
-      const pointB = pointEntities.find(p => p.getId() === line.pointB);
+      const pointA = pointEntities.find(p => p.id === line.pointA);
+      const pointB = pointEntities.find(p => p.id === line.pointB);
 
       if (pointA && pointB && line.constraints) {
         const entity = LineEntity.create(

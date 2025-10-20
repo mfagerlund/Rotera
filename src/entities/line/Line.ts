@@ -29,7 +29,7 @@ export class Line implements ISelectable, IValidatable, ILine, IResidualProvider
   selected = false
   referencingConstraints: Set<IConstraint> = new Set()
 
-  id: LineId
+  readonly id: LineId
   name: string
   pointA: WorldPoint
   pointB: WorldPoint
@@ -177,16 +177,6 @@ export class Line implements ISelectable, IValidatable, ILine, IResidualProvider
 
   isLocked(): boolean {
     return this.pointA.isLocked() || this.pointB.isLocked()
-  }
-
-  getDependencies(): EntityId[] {
-    return [this.pointA.getId(), this.pointB.getId()] as EntityId[]
-  }
-
-  getDependents(): EntityId[] {
-    const dependents: string[] = []
-    this.referencingConstraints.forEach(constraint => dependents.push(constraint.getId()))
-    return dependents as EntityId[]
   }
 
   isSelected(): boolean {

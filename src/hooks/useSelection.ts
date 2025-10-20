@@ -151,8 +151,6 @@ export const useSelection = () => {
       selection.getByType<T>(type),
     getSelectedEntities: (): ISelectable[] =>
       Array.from(selection.items),
-    getSelectedIds: (): string[] =>
-      selection.items.map(e => e.getId()),
   }
 }
 

@@ -15,29 +15,30 @@ export function computeEqualDistancesResiduals(
   constraint: EqualDistancesConstraint,
   valueMap: ValueMap
 ): Value[] {
-  const distancePairs = constraint.distancePairs;
+  const points = constraint.points;
+  const pointMap = new Map<PointId, typeof points[0]>();
+  points.forEach(p => pointMap.set(p.id as PointId, p));
+
+  const distancePairs = (constraint as any).data.parameters.distancePairs as [PointId, PointId][];
 
   if (distancePairs.length < 2) {
     console.warn('Equal distances constraint requires at least 2 pairs');
     return [];
   }
 
-  // Helper to find point in valueMap
-  const findPoint = (pointId: PointId): Vec3 | undefined => {
-    for (const [point, vec] of valueMap.points) {
-      if (point.getId() === pointId) return vec;
-    }
-    return undefined;
-  };
-
   // Calculate distance for a pair using Vec3 API
   const calculateDistance = (pair: [PointId, PointId]): Value | undefined => {
-    const p1 = findPoint(pair[0]);
-    const p2 = findPoint(pair[1]);
+    const p1 = pointMap.get(pair[0]);
+    const p2 = pointMap.get(pair[1]);
 
     if (!p1 || !p2) return undefined;
 
-    const diff = p2.sub(p1);
+    const p1Vec = valueMap.points.get(p1);
+    const p2Vec = valueMap.points.get(p2);
+
+    if (!p1Vec || !p2Vec) return undefined;
+
+    const diff = p2Vec.sub(p1Vec);
     return diff.magnitude;
   };
 

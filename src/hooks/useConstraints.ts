@@ -21,9 +21,9 @@ type ConstraintType =
 export const useConstraints = (
   constraints: Constraint[],
   onAddConstraint: (constraint: Constraint) => void,
-  onUpdateConstraint: (id: string, updates: Partial<Constraint>) => void,
-  onDeleteConstraint: (id: string) => void,
-  onToggleConstraint: (id: string) => void
+  onUpdateConstraint: (constraint: Constraint, updates: { name?: string; isEnabled?: boolean; parameters?: Record<string, unknown> }) => void,
+  onDeleteConstraint: (constraint: Constraint) => void,
+  onToggleConstraint: (constraint: Constraint) => void
 ) => {
   const [activeConstraintType, setActiveConstraintType] = useState<string | null>(null)
   const [constraintParameters, setConstraintParameters] = useState<Record<string, any>>({})
@@ -418,10 +418,10 @@ function getInitialConstraintParameters(
         params.line2_end = selectedPoints[2]
       } else if (selectedLines.length >= 2) {
         // Angle between two lines
-        params.line1_wp_a = selectedLines[0].pointA.getId()
-        params.line1_wp_b = selectedLines[0].pointB.getId()
-        params.line2_wp_a = selectedLines[1].pointA.getId()
-        params.line2_wp_b = selectedLines[1].pointB.getId()
+        params.line1_wp_a = selectedLines[0].pointA.id
+        params.line1_wp_b = selectedLines[0].pointB.id
+        params.line2_wp_a = selectedLines[1].pointA.id
+        params.line2_wp_b = selectedLines[1].pointB.id
       } else if (selectedPoints.length > 3) {
         // Circle constraint: multiple points
         params.point_ids = selectedPoints
@@ -431,10 +431,10 @@ function getInitialConstraintParameters(
     case 'lines_perpendicular':
     case 'lines_parallel':
       if (selectedLines.length >= 2) {
-        params.line1_wp_a = selectedLines[0].pointA.getId()
-        params.line1_wp_b = selectedLines[0].pointB.getId()
-        params.line2_wp_a = selectedLines[1].pointA.getId()
-        params.line2_wp_b = selectedLines[1].pointB.getId()
+        params.line1_wp_a = selectedLines[0].pointA.id
+        params.line1_wp_b = selectedLines[0].pointB.id
+        params.line2_wp_a = selectedLines[1].pointA.id
+        params.line2_wp_b = selectedLines[1].pointB.id
       }
       break
 

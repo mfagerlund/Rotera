@@ -74,7 +74,7 @@ export const useImageViewport = (
     const containerRect = container.getBoundingClientRect()
 
     // Get image points for selected world points from this image
-    const imagePoints = image.getImagePoints().filter(ip =>
+    const imagePoints = Object.values(image.imagePoints).filter(ip =>
       selectedPointIds.includes(ip.worldPointId)
     )
 
@@ -116,7 +116,7 @@ export const useImageViewport = (
   const zoomToFitAll = useCallback((worldPoints: Record<string, WorldPoint>) => {
     if (!image || !containerRef.current) return
 
-    const imagePoints = image.getImagePoints()
+    const imagePoints = Object.values(image.imagePoints)
 
     if (imagePoints.length === 0) {
       fitToContainer()

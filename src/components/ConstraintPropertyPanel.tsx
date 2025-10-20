@@ -2,6 +2,7 @@
 
 import React, { useEffect } from 'react'
 import { Line } from '../entities/line/Line'
+import { WorldPoint } from '../entities/world-point'
 
 interface ConstraintPropertyPanelProps {
   activeConstraintType: string | null
@@ -9,7 +10,7 @@ interface ConstraintPropertyPanelProps {
   selectedLines: Line[]
   parameters: Record<string, any>
   isComplete: boolean
-  worldPointNames: Record<string, string>
+  allWorldPoints: WorldPoint[]
   onParameterChange: (key: string, value: any) => void
   onApply: () => void
   onCancel: () => void
@@ -21,12 +22,12 @@ export const ConstraintPropertyPanel: React.FC<ConstraintPropertyPanelProps> = (
   selectedLines,
   parameters,
   isComplete,
-  worldPointNames,
+  allWorldPoints,
   onParameterChange,
   onApply,
   onCancel
 }) => {
-  const getPointName = (pointId: string) => worldPointNames[pointId] || pointId
+  const getPointName = (pointId: string) => allWorldPoints.find(p => p.id === pointId)?.getName() || pointId
 
   // Handle ESC key to cancel constraint creation
   useEffect(() => {
@@ -146,7 +147,7 @@ const ConstraintParameterForm: React.FC<ConstraintParameterFormProps> = ({
                 <span>Angle: {getPointNames(selectedPoints.slice(0, 3)).join(' - ')}</span>
               ) : (
                 <span>Lines: {selectedLines.map(line =>
-                  `${getPointName(line.pointA.getId())}-${getPointName(line.pointB.getId())}`
+                  `${getPointName(line.pointA.id)}-${getPointName(line.pointB.id)}`
                 ).join(' and ')}</span>
               )
             ) : (
@@ -192,7 +193,7 @@ const ConstraintParameterForm: React.FC<ConstraintParameterFormProps> = ({
           <div className="selected-lines-preview">
             <span>
               Lines: {selectedLines.map(line =>
-                `${getPointName(line.pointA.getId())}-${getPointName(line.pointB.getId())}`
+                `${getPointName(line.pointA.id)}-${getPointName(line.pointB.id)}`
               ).join(' and ')}
             </span>
           </div>

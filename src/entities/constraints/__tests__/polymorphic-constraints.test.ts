@@ -63,7 +63,7 @@ describe('🧪 Polymorphic Constraint System', () => {
 
       const constraint = createConstraintFromDto(dto, mockRepo)
       expect(constraint).toBeInstanceOf(DistanceConstraint)
-      expect(constraint.getId()).toBe('test-distance')
+      expect(constraint.id).toBe('test-distance')
       expect(constraint.getName()).toBe('Test Distance')
     })
 
@@ -92,7 +92,7 @@ describe('🧪 Polymorphic Constraint System', () => {
 
       const constraint = createConstraintFromDto(dto, mockRepo)
       expect(constraint).toBeInstanceOf(AngleConstraint)
-      expect(constraint.getId()).toBe('test-angle')
+      expect(constraint.id).toBe('test-angle')
     })
 
     it('should throw error for unknown constraint type', () => {

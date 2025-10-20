@@ -88,7 +88,7 @@ export const useOptimization = () => {
         );
 
         residuals.push({
-          constraintId: constraint.getId(),
+          constraintId: constraint.id,
           residual: residualMagnitude,
           satisfied: residualMagnitude < (constraint.tolerance || 1e-6),
         });

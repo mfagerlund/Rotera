@@ -22,13 +22,11 @@ const PRESET_COLORS = [
 
 // RENAME_TO: LineEditor (handles both creation and editing)
 interface LineCreationToolProps {
-  selectedPoints: string[]
-  worldPointNames: Record<string, string> // Map of pointId -> pointName
-  worldPoints: Map<string, WorldPoint> // Map of world point entities for lookup
-  existingLines: Record<string, any> // Existing lines for duplicate checking
+  selectedPoints: WorldPoint[]
+  allWorldPoints: WorldPoint[]
+  existingLines: Map<string, Line>
   onCreateLine: (pointA: WorldPoint, pointB: WorldPoint, constraints?: LineConstraints) => void
   onCancel: () => void
-  onPointSlotClick?: (pointId: string) => void // For clicking points to fill slots
   onConstructionPreviewChange?: (preview: {
     type: 'line'
     pointA?: string
@@ -36,12 +34,11 @@ interface LineCreationToolProps {
     showToCursor?: boolean
   } | null) => void
   isActive: boolean
-  showHeader?: boolean // Whether to show the internal header (false when wrapped in FloatingWindow)
-  showActionButtons?: boolean // Whether to show internal action buttons (false when using FloatingWindow's buttons)
-  // Edit mode props
+  showHeader?: boolean
+  showActionButtons?: boolean
   editMode?: boolean
-  existingLine?: Line // Line being edited
-  existingConstraints?: any[] // Constraints applied to this line
+  existingLine?: Line
+  existingConstraints?: any[]
   onUpdateLine?: (lineEntity: Line, updatedLine: any) => void
   onDeleteLine?: (line: Line) => void
 }
@@ -59,12 +56,10 @@ interface LineConstraints {
 // RENAME_TO: LineEditor
 export const LineCreationTool: React.FC<LineCreationToolProps> = ({
   selectedPoints,
-  worldPointNames,
-  worldPoints,
+  allWorldPoints,
   existingLines,
   onCreateLine,
   onCancel,
-  onPointSlotClick,
   onConstructionPreviewChange,
   isActive,
   showHeader = true,
@@ -164,8 +159,8 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
     if (!wasActive && isNowActive && !editMode) {
       if (selectedPoints.length > 0) {
         console.log('[LineCreationTool] ✓ Pre-populating slots:', selectedPoints)
-        setPointSlot1(worldPoints.get(selectedPoints[0]) || null)
-        setPointSlot2(worldPoints.get(selectedPoints[1]) || null)
+        setPointSlot1(selectedPoints[0] || null)
+        setPointSlot2(selectedPoints[1] || null)
       } else {
         console.log('[LineCreationTool] ✗ Not pre-populating - no points selected')
       }
@@ -186,31 +181,26 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
   useEffect(() => {
     if (!isActive) return
 
-    const handleGlobalPointClick = (event: CustomEvent<{ pointId: string }>) => {
-      const pointId = event.detail.pointId
-      const point = worldPoints.get(pointId)
-      if (!point) return
+    const handleGlobalPointClick = (event: CustomEvent<{ worldPoint: WorldPoint }>) => {
+      const point = event.detail.worldPoint
 
-      // Prevent selecting the same point twice
       if (point === pointSlot1 || point === pointSlot2) {
         return
       }
 
       if (!pointSlot1) {
         setPointSlot1(point)
-        setActiveSlot(2) // Next slot becomes active
+        setActiveSlot(2)
       } else if (!pointSlot2) {
         setPointSlot2(point)
-        setActiveSlot(null) // No more slots to fill
+        setActiveSlot(null)
       } else {
-        // Both slots filled, replace first slot and clear second
         setPointSlot1(point)
         setPointSlot2(null)
-        setActiveSlot(2) // Second slot becomes active
+        setActiveSlot(2)
       }
     }
 
-    // Listen for point clicks from the main app
     window.addEventListener('lineToolPointClick', handleGlobalPointClick as EventListener)
     return () => window.removeEventListener('lineToolPointClick', handleGlobalPointClick as EventListener)
   }, [isActive, pointSlot1, pointSlot2])
@@ -255,15 +245,15 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
       // Both points selected - show complete line preview
       onConstructionPreviewChange({
         type: 'line',
-        pointA: pointSlot1.getId(),
-        pointB: pointSlot2.getId(),
+        pointA: pointSlot1.id,
+        pointB: pointSlot2.id,
         showToCursor: false
       })
     } else if (pointSlot1) {
       // Only first point selected - show line to cursor
       onConstructionPreviewChange({
         type: 'line',
-        pointA: pointSlot1.getId(),
+        pointA: pointSlot1.id,
         showToCursor: true
       })
     } else {
@@ -294,14 +284,13 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
   const handleSlot2Focus = () => setActiveSlot(2)
 
   // Check if a line already exists between two points
-  const lineAlreadyExists = useCallback((pointA: string, pointB: string): { exists: boolean, lineName?: string } => {
+  const lineAlreadyExists = useCallback((pointA: WorldPoint | null, pointB: WorldPoint | null): { exists: boolean, lineName?: string } => {
     if (!pointA || !pointB) return { exists: false }
 
-    const foundLine = Object.values(existingLines || {}).find(line =>
-      // Exclude the current line being edited
-      line.getId() !== existingLine?.getId() &&
-      ((line.pointA.getId() === pointA && line.pointB.getId() === pointB) ||
-       (line.pointA.getId() === pointB && line.pointB.getId() === pointA))
+    const foundLine = Array.from(existingLines.values()).find(line =>
+      line !== existingLine &&
+      ((line.pointA === pointA && line.pointB === pointB) ||
+       (line.pointA === pointB && line.pointB === pointA))
     )
 
     return {
@@ -310,7 +299,7 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
     }
   }, [existingLines, existingLine])
 
-  const lineCheck = lineAlreadyExists(pointSlot1?.getId() || '', pointSlot2?.getId() || '')
+  const lineCheck = lineAlreadyExists(pointSlot1, pointSlot2)
   const canCreateLine = pointSlot1 && pointSlot2 && pointSlot1 !== pointSlot2 && !lineCheck.exists
 
   const handleCreateLine = () => {
@@ -380,12 +369,6 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
       }
     }
   }
-
-  // Get available world points for dropdowns
-  const availablePoints = Object.entries(worldPointNames).map(([id, name]) => ({
-    id,
-    name: name || id
-  }))
 
   if (!isActive) return null
 
@@ -470,15 +453,18 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
             <label style={{minWidth: '50px', fontSize: '12px'}}>Point 1</label>
             <div style={{display: 'flex', alignItems: 'center', gap: '4px', flex: 1}}>
               <select
-                value={pointSlot1?.getId() || ''}
-                onChange={(e) => setPointSlot1(worldPoints.get(e.target.value) || null)}
+                value={pointSlot1 ? allWorldPoints.indexOf(pointSlot1) : -1}
+                onChange={(e) => {
+                  const index = parseInt(e.target.value)
+                  setPointSlot1(index >= 0 ? allWorldPoints[index] : null)
+                }}
                 onFocus={handleSlot1Focus}
                 style={{flex: 1, fontSize: '12px', padding: '2px'}}
               >
-                <option value="">Select point...</option>
-                {availablePoints.map(point => (
-                  <option key={point.id} value={point.id}>
-                    {point.name}
+                <option value={-1}>Select point...</option>
+                {allWorldPoints.map((point, index) => (
+                  <option key={point.id} value={index}>
+                    {point.getName()}
                   </option>
                 ))}
               </select>
@@ -498,15 +484,18 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
             <label style={{minWidth: '50px', fontSize: '12px'}}>Point 2</label>
             <div style={{display: 'flex', alignItems: 'center', gap: '4px', flex: 1}}>
               <select
-                value={pointSlot2?.getId() || ''}
-                onChange={(e) => setPointSlot2(worldPoints.get(e.target.value) || null)}
+                value={pointSlot2 ? allWorldPoints.indexOf(pointSlot2) : -1}
+                onChange={(e) => {
+                  const index = parseInt(e.target.value)
+                  setPointSlot2(index >= 0 ? allWorldPoints[index] : null)
+                }}
                 onFocus={handleSlot2Focus}
                 style={{flex: 1, fontSize: '12px', padding: '2px'}}
               >
-                <option value="">Select point...</option>
-                {availablePoints.map(point => (
-                  <option key={point.id} value={point.id} disabled={point.id === pointSlot1?.getId()}>
-                    {point.name}
+                <option value={-1}>Select point...</option>
+                {allWorldPoints.map((point, index) => (
+                  <option key={point.id} value={index} disabled={point === pointSlot1}>
+                    {point.getName()}
                   </option>
                 ))}
               </select>

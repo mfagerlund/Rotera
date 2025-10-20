@@ -360,7 +360,7 @@ export class OptimizationService {
     await new Promise(resolve => setTimeout(resolve, 100))
 
     project.constraints.forEach((constraint: any) => {
-      constraintErrors[constraint.getId()] = Math.random() * 0.01
+      constraintErrors[constraint.id] = Math.random() * 0.01
     })
 
     const maxError = Math.max(...Object.values(constraintErrors))

@@ -21,10 +21,9 @@ interface LineConstraints {
 import { ConstructionPreview } from '../image-viewer/types'
 
 interface LoopTraceToolProps {
-  selectedPoints: string[]
-  worldPointNames: Record<string, string>
-  worldPoints?: Map<string, WorldPoint>
-  existingLines: Record<string, any>
+  selectedPoints: WorldPoint[]
+  allWorldPoints: WorldPoint[]
+  existingLines: Map<string, any>
   onCreateLine: (pointA: WorldPoint, pointB: WorldPoint, constraints?: LineConstraints) => void
   onCreateConstraint?: (constraint: any) => void
   onCancel: () => void
@@ -37,8 +36,7 @@ interface LoopTraceToolProps {
 
 export const LoopTraceTool: React.FC<LoopTraceToolProps> = ({
   selectedPoints,
-  worldPointNames,
-  worldPoints,
+  allWorldPoints,
   existingLines,
   onCreateLine,
   onCreateConstraint,
@@ -62,7 +60,7 @@ export const LoopTraceTool: React.FC<LoopTraceToolProps> = ({
     complete
   } = useLoopTrace({
     selectedPoints,
-    worldPoints,
+    allWorldPoints,
     existingLines,
     onCreateLine,
     onCreateConstraint,
@@ -100,7 +98,7 @@ export const LoopTraceTool: React.FC<LoopTraceToolProps> = ({
     } else {
       onConstructionPreviewChange(null)
     }
-  }, [isActive, segments, worldPoints])
+  }, [isActive, segments, onConstructionPreviewChange])
 
   // Clear preview when tool is deactivated
   useEffect(() => {
@@ -190,7 +188,7 @@ export const LoopTraceTool: React.FC<LoopTraceToolProps> = ({
   const getSelectionDisplay = () => {
     if (selectedPoints.length === 0) return 'No points selected'
 
-    const names = selectedPoints.map(id => worldPointNames[id] || id)
+    const names = selectedPoints.map(p => p.getName())
 
     if (names.length <= 4) {
       return names.join(' → ')

@@ -110,19 +110,19 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
   }, [worldPoints])
 
   // Find constraints involving a world point
-  const getConstraintsForWorldPoint = (wpId: string): Constraint[] => {
+  const getConstraintsForWorldPoint = (wp: WorldPoint): Constraint[] => {
     return constraints.filter(constraint => {
-      const pointIds = constraint.getPointIds()
-      return pointIds.includes(wpId)
+      const constraintPoints = constraint.points
+      return constraintPoints.some(p => p === wp)
     })
   }
 
   // Check if world point has any broken constraints
-  const hasBrokenConstraints = (wpId: string): boolean => {
-    const wpConstraints = getConstraintsForWorldPoint(wpId)
+  const hasBrokenConstraints = (wp: WorldPoint): boolean => {
+    const wpConstraints = getConstraintsForWorldPoint(wp)
     return wpConstraints.some(constraint => {
-      const pointIds = constraint.getPointIds()
-      return pointIds.some((id: string) => !worldPoints.get(id))
+      const constraintPoints = constraint.points
+      return constraintPoints.some(p => !worldPoints.get(p.id))
     })
   }
 
@@ -160,7 +160,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
 
   const getContextMenuItems = (worldPoint: WorldPoint): ContextMenuItem[] => {
     const items: ContextMenuItem[] = []
-    const isMissingFromImage = currentImageId && !isWorldPointInImage(worldPoint.getId(), currentImageId)
+    const isMissingFromImage = currentImageId && !isWorldPointInImage(worldPoint.id, currentImageId)
 
     // Edit (full properties)
     if (onEditWorldPoint) {
@@ -212,8 +212,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
   // Removed handleKeyPress - no longer needed for inline editing
 
   const handleDelete = async (wp: WorldPoint) => {
-    const wpId = wp.getId()
-    const involvedConstraints = getConstraintsForWorldPoint(wpId)
+    const involvedConstraints = getConstraintsForWorldPoint(wp)
 
     let message = `Delete world point "${wp.getName()}"?`
     if (involvedConstraints.length > 0) {
@@ -229,7 +228,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
   }
 
   const handlePlacement = (wp: WorldPoint) => {
-    const wpId = wp.getId()
+    const wpId = wp.id
     onStartPlacement(wp)
     setJustPlaced(prev => new Set(prev).add(wpId))
 
@@ -245,7 +244,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
   // Check if world point is missing from current image
   const isWorldPointMissingFromImage = (wp: WorldPoint): boolean => {
     if (!currentImageId) return false
-    return !isWorldPointInImage(wp.getId(), currentImageId)
+    return !isWorldPointInImage(wp.id, currentImageId)
   }
 
   // Group world points by presence in current image
@@ -306,16 +305,16 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
       <div className="world-point-list">
         {worldPointsList.length > 0 ? (
           worldPointsList.map(wp => {
-            const wpId = wp.getId()
-            const isSelected = selectedWorldPoints.some(swp => swp.getId() === wpId)
-            const involvedConstraints = getConstraintsForWorldPoint(wpId)
-            const hasBroken = hasBrokenConstraints(wpId)
+            const wpId = wp.id
+            const isSelected = selectedWorldPoints.some(swp => swp === wp)
+            const involvedConstraints = getConstraintsForWorldPoint(wp)
+            const hasBroken = hasBrokenConstraints(wp)
             const isEditing = false // Removed inline editing
             const isMissingFromImage = isWorldPointMissingFromImage(wp)
-            const isInPlacementMode = placementMode.worldPoint?.getId() === wpId
+            const isInPlacementMode = placementMode.worldPoint === wp
             const wasRecentlyCreated = recentlyCreated.has(wpId)
             const wasJustPlaced = justPlaced.has(wpId)
-            const isGloballyHovered = hoveredWorldPoint?.getId() === wpId
+            const isGloballyHovered = hoveredWorldPoint === wp
 
             return (
               <EnhancedWorldPointItem
@@ -454,7 +453,7 @@ const EnhancedWorldPointItem: React.FC<EnhancedWorldPointItemProps> = ({
           // Set drag data
           e.dataTransfer.setData('application/json', JSON.stringify({
             type: 'world-point',
-            worldPointId: worldPoint.getId(),
+            worldPointId: worldPoint.id,
             action: imagePointCount > 0 ? 'move' : 'place'
           }))
           e.dataTransfer.effectAllowed = 'copy'
@@ -488,7 +487,7 @@ const EnhancedWorldPointItem: React.FC<EnhancedWorldPointItemProps> = ({
       >
         <div className="wp-item-main">
           <div className="wp-item-content">
-            <div className="wp-color-dot world-point-hover" style={{ backgroundColor: worldPoint.color }} title={`Point ID: ${worldPoint.getId()}`} />
+            <div className="wp-color-dot world-point-hover" style={{ backgroundColor: worldPoint.color }} title={`Point ID: ${worldPoint.id}`} />
 
             <div className="wp-name" title={constraintsText}>{worldPoint.getName()}</div>
 
@@ -569,7 +568,7 @@ const EnhancedWorldPointItem: React.FC<EnhancedWorldPointItemProps> = ({
               const constraintType = constraint.getConstraintType()
               return (
                 <div
-                  key={constraint.getId()}
+                  key={constraint.id}
                   className={`wp-constraint-item ${!isEnabled ? 'disabled' : ''} ${isEnabled ? 'constraint-completion' : ''}`}
                 >
                   <span className="constraint-icon">{getConstraintIcon(constraintType)}</span>

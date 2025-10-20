@@ -236,7 +236,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                     .map(point => {
                       const info = point.getOptimizationInfo()
                       return (
-                        <div key={point.getId()} className="entity-item">
+                        <div key={point.id} className="entity-item">
                           <div className="entity-name">{point.getName()}</div>
                           <div className="entity-data">
                             <div className="data-row">
@@ -264,7 +264,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                     {Array.from(project.lines.values()).map(line => {
                       const info = line.getOptimizationInfo()
                       return (
-                        <div key={line.getId()} className="entity-item">
+                        <div key={line.id} className="entity-item">
                           <div className="entity-name">{line.getName()}</div>
                           <div className="entity-data">
                             <div className="data-row">

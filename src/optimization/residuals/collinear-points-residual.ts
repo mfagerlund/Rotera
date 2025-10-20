@@ -14,30 +14,21 @@ export function computeCollinearPointsResiduals(
   constraint: CollinearPointsConstraint,
   valueMap: ValueMap
 ): Value[] {
-  const pointIds = constraint.getPointIds();
+  const points = constraint.points;
 
-  if (pointIds.length < 3) {
+  if (points.length < 3) {
     console.warn('Collinear constraint requires at least 3 points');
     return [];
   }
 
-  // Find first 3 points in valueMap
-  const points: Vec3[] = [];
-  for (const [point, vec] of valueMap.points) {
-    if (pointIds.includes(point.getId())) {
-      points.push(vec);
-      if (points.length === 3) break;
-    }
-  }
+  const p0 = valueMap.points.get(points[0]);
+  const p1 = valueMap.points.get(points[1]);
+  const p2 = valueMap.points.get(points[2]);
 
-  if (points.length < 3) {
+  if (!p0 || !p1 || !p2) {
     console.warn('Collinear constraint: not enough points found in valueMap');
     return [];
   }
-
-  const p0 = points[0];
-  const p1 = points[1];
-  const p2 = points[2];
 
   // Calculate vectors from p0 using Vec3 API
   const v1 = p1.sub(p0);

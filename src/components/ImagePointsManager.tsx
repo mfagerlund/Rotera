@@ -30,13 +30,13 @@ export const ImagePointsManager: React.FC<ImagePointsManagerProps> = ({
   const allImagePoints: Array<{ u: number, v: number, viewpointId: string, worldPointId: string, worldPointName: string }> = []
 
   Array.from(images.values()).forEach(viewpoint => {
-    viewpoint.getImagePoints().forEach(imagePoint => {
+    Object.values(viewpoint.imagePoints).forEach(imagePoint => {
       const worldPoint = worldPoints.get(imagePoint.worldPointId)
       if (worldPoint) {
         allImagePoints.push({
           u: imagePoint.u,
           v: imagePoint.v,
-          viewpointId: viewpoint.getId(),
+          viewpointId: viewpoint.id,
           worldPointId: imagePoint.worldPointId,
           worldPointName: worldPoint.getName()
         })
@@ -86,7 +86,7 @@ export const ImagePointsManager: React.FC<ImagePointsManagerProps> = ({
       renderEntityDetails={(entity) => {
         const [worldPointId, imageId] = entity.id.split('-')
         const viewpoint = images.get(imageId)
-        const imagePoint = viewpoint?.getImagePoints().find(ip => ip.worldPointId === worldPointId)
+        const imagePoint = Object.values(viewpoint?.imagePoints || {}).find(ip => ip.worldPointId === worldPointId)
 
         return (
           <div className="image-point-details">

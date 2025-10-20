@@ -14,31 +14,22 @@ export function computeCoplanarPointsResiduals(
   constraint: CoplanarPointsConstraint,
   valueMap: ValueMap
 ): Value[] {
-  const pointIds = constraint.getPointIds();
+  const points = constraint.points;
 
-  if (pointIds.length < 4) {
+  if (points.length < 4) {
     console.warn('Coplanar constraint requires at least 4 points');
     return [];
   }
 
-  // Find first 4 points in valueMap
-  const points: Vec3[] = [];
-  for (const [point, vec] of valueMap.points) {
-    if (pointIds.includes(point.getId())) {
-      points.push(vec);
-      if (points.length === 4) break;
-    }
-  }
+  const p0 = valueMap.points.get(points[0]);
+  const p1 = valueMap.points.get(points[1]);
+  const p2 = valueMap.points.get(points[2]);
+  const p3 = valueMap.points.get(points[3]);
 
-  if (points.length < 4) {
+  if (!p0 || !p1 || !p2 || !p3) {
     console.warn('Coplanar constraint: not enough points found in valueMap');
     return [];
   }
-
-  const p0 = points[0];
-  const p1 = points[1];
-  const p2 = points[2];
-  const p3 = points[3];
 
   // Calculate vectors from p0 using Vec3 API
   const v1 = p1.sub(p0);

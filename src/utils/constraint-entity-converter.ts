@@ -26,32 +26,25 @@ class ConstraintConversionRepository {
     private lines: Map<string, Line>
   ) {}
 
-  getPoint(id: string): string | undefined {
-    return this.points.has(id) ? id : undefined;
-  }
+  getReferenceManager() {
+    const resolveEntity = <T>(id: string, type: string): T | undefined => {
+      if (type === 'point') return this.points.get(id) as T | undefined;
+      if (type === 'line') return this.lines.get(id) as T | undefined;
+      return undefined;
+    };
 
-  getLine(id: string): string | undefined {
-    return this.lines.has(id) ? id : undefined;
-  }
-
-  getPlane(id: string): string | undefined {
-    return undefined; // TODO: Add plane support
-  }
-
-  entityExists(id: string): boolean {
-    return this.points.has(id) || this.lines.has(id);
-  }
-
-  pointExists(id: string): boolean {
-    return this.points.has(id);
-  }
-
-  lineExists(id: string): boolean {
-    return this.lines.has(id);
-  }
-
-  planeExists(id: string): boolean {
-    return false; // TODO: Add plane support
+    return {
+      resolve: resolveEntity,
+      batchResolve: <T>(ids: string[], type: string): T[] => {
+        const results: T[] = [];
+        for (const id of ids) {
+          const entity = resolveEntity<T>(id, type);
+          if (entity) results.push(entity);
+        }
+        return results;
+      },
+      preloadReferences: () => {}
+    };
   }
 }
 
@@ -64,8 +57,8 @@ export function convertConstraintToEntity(
   lineEntities: Line[]
 ): ConstraintEntity | null {
   // Build lookup maps
-  const pointMap = new Map(pointEntities.map(p => [p.getId(), p]));
-  const lineMap = new Map(lineEntities.map(l => [l.getId(), l]));
+  const pointMap = new Map(pointEntities.map(p => [p.id, p]));
+  const lineMap = new Map(lineEntities.map(l => [l.id, l]));
 
   const repo = new ConstraintConversionRepository(pointMap, lineMap);
 
@@ -79,11 +72,15 @@ export function convertConstraintToEntity(
         const targetDistance = constraint.parameters.distance || constraint.parameters.value;
         if (typeof targetDistance !== 'number') return null;
 
+        const pointA = pointMap.get(pointIds[0]);
+        const pointB = pointMap.get(pointIds[1]);
+        if (!pointA || !pointB) return null;
+
         return DistanceConstraint.create(
           constraint.id as any,
           `Distance ${targetDistance.toFixed(2)}m`,
-          pointIds[0] as any,
-          pointIds[1] as any,
+          pointA,
+          pointB,
           targetDistance,
           repo,
           {
@@ -106,10 +103,13 @@ export function convertConstraintToEntity(
         // All three coordinates must be specified
         if (x === undefined || y === undefined || z === undefined) return null;
 
+        const point = pointMap.get(pointIds[0]);
+        if (!point) return null;
+
         return FixedPointConstraint.create(
           constraint.id as any,
           'Fixed Point',
-          pointIds[0] as any,
+          point,
           [x, y, z],
           repo,
           {
@@ -125,10 +125,13 @@ export function convertConstraintToEntity(
         const pointIds = constraint.entities.points || [];
         if (pointIds.length < 3) return null;
 
+        const points = pointIds.map(id => pointMap.get(id)).filter((p): p is WorldPoint => p !== undefined);
+        if (points.length !== pointIds.length) return null;
+
         return CollinearPointsConstraint.create(
           constraint.id as any,
           'Collinear Points',
-          pointIds as any[],
+          points,
           repo,
           {
             tolerance: constraint.parameters.tolerance || 0.01,
@@ -143,10 +146,13 @@ export function convertConstraintToEntity(
         const pointIds = constraint.entities.points || [];
         if (pointIds.length < 4) return null;
 
+        const points = pointIds.map(id => pointMap.get(id)).filter((p): p is WorldPoint => p !== undefined);
+        if (points.length !== pointIds.length) return null;
+
         return CoplanarPointsConstraint.create(
           constraint.id as any,
           'Coplanar Points',
-          pointIds as any[],
+          points,
           repo,
           {
             tolerance: constraint.parameters.tolerance || 0.01,
@@ -162,9 +168,12 @@ export function convertConstraintToEntity(
         if (pointIds.length < 4 || pointIds.length % 2 !== 0) return null;
 
         // Split into pairs: [p1, p2] and [p3, p4]
-        const pairs: [any, any][] = [];
+        const pairs: [WorldPoint, WorldPoint][] = [];
         for (let i = 0; i < pointIds.length; i += 2) {
-          pairs.push([pointIds[i] as any, pointIds[i + 1] as any]);
+          const p1 = pointMap.get(pointIds[i]);
+          const p2 = pointMap.get(pointIds[i + 1]);
+          if (!p1 || !p2) return null;
+          pairs.push([p1, p2]);
         }
 
         return EqualDistancesConstraint.create(
@@ -185,11 +194,15 @@ export function convertConstraintToEntity(
         const lineIds = constraint.entities.lines || [];
         if (lineIds.length !== 2) return null;
 
+        const lineA = lineMap.get(lineIds[0]);
+        const lineB = lineMap.get(lineIds[1]);
+        if (!lineA || !lineB) return null;
+
         return ParallelLinesConstraint.create(
           constraint.id as any,
           'Parallel Lines',
-          lineIds[0] as any,
-          lineIds[1] as any,
+          lineA,
+          lineB,
           repo,
           {
             tolerance: constraint.parameters.tolerance || 0.01,
@@ -204,11 +217,15 @@ export function convertConstraintToEntity(
         const lineIds = constraint.entities.lines || [];
         if (lineIds.length !== 2) return null;
 
+        const lineA = lineMap.get(lineIds[0]);
+        const lineB = lineMap.get(lineIds[1]);
+        if (!lineA || !lineB) return null;
+
         return PerpendicularLinesConstraint.create(
           constraint.id as any,
           'Perpendicular Lines',
-          lineIds[0] as any,
-          lineIds[1] as any,
+          lineA,
+          lineB,
           repo,
           {
             tolerance: constraint.parameters.tolerance || 0.01,

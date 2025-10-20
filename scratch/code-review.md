@@ -1,745 +1,1012 @@
 # Pictorigo Comprehensive Code Review
-**Generated:** 2025-10-18
-**Review Scope:** Full codebase analysis including frontend architecture, documentation, and architectural adherence
+
+**Date:** 2025-10-20
+**Reviewer:** Claude Code (Full Review Process)
+**Scope:** Complete codebase analysis focusing on duplication, architecture, patterns, and technical debt
 
 ---
 
 ## Executive Summary
 
-The Pictorigo codebase is architecturally sound with strong TypeScript foundations, but is currently **mid-migration** between legacy and modern patterns. The codebase contains **~1,500+ LOC of duplicated constraint code** representing parallel implementations, multiple task/documentation files with overlapping content, and numerous TODOs indicating incomplete features.
+The Pictorigo codebase is **architecturally sound** with strong adherence to domain-driven design principles. The recent DTO consolidation (v1.2) successfully eliminated major architectural violations. However, several **high-priority issues** remain:
 
-**Overall Health:** 🟡 **MODERATE** - Functional but needs cleanup
+### Key Findings
 
-**Key Findings:**
-- ✅ Clean modular entity architecture (Line, WorldPoint use composition pattern)
-- ✅ Strong TypeScript type safety throughout
-- ✅ Well-separated concerns (components, hooks, entities, services)
-- ❌ **CRITICAL**: Duplicate constraint architecture (PascalCase vs kebab-case)
-- ❌ Multiple overlapping documentation files need consolidation
-- ⚠️ 38+ TODO comments indicating incomplete features
-- ⚠️ Some very large files (MainLayout.tsx: 1,221 LOC)
+| Category | Status | Priority |
+|----------|--------|----------|
+| **Core Architecture** | ✅ Excellent | - |
+| **Documentation Consolidation** | ⚠️ Needs Work | HIGH |
+| **Code Duplication** | ⚠️ Visual Language | CRITICAL |
+| **Type Safety** | ⚠️ 50+ `any` uses | HIGH |
+| **Component Size** | ⚠️ MainLayout 1170 LOC | HIGH |
+| **Deprecated Types** | ⚠️ Still in union | MEDIUM |
+| **TODOs** | ⚠️ 48 instances | MEDIUM |
 
-**Immediate Action Required:**
-1. Eliminate duplicate constraint implementation (highest impact)
-2. Consolidate documentation files
-3. Address critical TODOs in MainLayout and entity management
-4. Remove orphaned files and legacy code
+### Priority Actions
+1. **CRITICAL:** Eliminate visual language duplication (constants vs utils)
+2. **HIGH:** Replace 25-30 problematic `any` types in hooks
+3. **HIGH:** Refactor MainLayout.tsx (1170 LOC → <400 LOC components)
+4. **MEDIUM:** Consolidate and archive obsolete documentation
+5. **MEDIUM:** Remove deprecated CameraId/ImageId from EntityId union
 
 ---
 
-## 1. Documentation Updates Required
+## 1. Documentation Review & Consolidation
 
-### Severity: MEDIUM
-**Impact:** Developer confusion, outdated guidance
+### Current Documentation Landscape
 
-### Files Requiring Action:
+**Primary Documentation (KEEP):**
+- ✅ `README.md` - Project overview, accurate status
+- ✅ `CLAUDE.md` - Project rules, up to date
+- ✅ `architectural-rules.md` - v1.2, comprehensive, complete
+- ✅ `IMPLEMENTATION_ROADMAP.md` - Active development tracking
+- ✅ `ENTITY_DRIVEN_OPTIMIZATION.md` - ScalarAutograd integration details
 
-#### **CONSOLIDATE:** Task tracking files
-**Files:**
-- `tasks.md` (536 LOC) - Main implementation tasks
-- `review-tasks.md` (467 LOC) - Frontend refactoring tasks
-- `review-tasks-2.md` (similar content)
-- `review-tasks-3.md` (similar content)
-- `backend-refactor-tasks.md` (310 LOC) - Backend tasks
-- `mtasks.md` (unknown content, likely duplicate)
+**Implementation Plans (STATUS UNCLEAR):**
+- ⚠️ `IMPLEMENTATION_PLAN.md` - 570 LOC detailed entity cleanup plan
+- ⚠️ `ENTITY_MIGRATION_COMPLETE.md` - Migration completion doc
+- ⚠️ `UI_MIGRATION.md` - UI migration guide
 
-**Problem:** 6 different task files with overlapping/conflicting information
+**Analysis Documents (ARCHIVE CANDIDATES):**
+- 📦 `architectural-violations-report.md` - Pre-v1.2, violations now fixed
+- 📦 `FIX-THE-LAST-VIOLATIONS.md` - Likely obsolete post-DTO consolidation
+- 📦 `milestones/M9_plan.md` - Milestone planning
+- 📦 `analysis/vanishing_line_design.md` - Design analysis
+- 📦 `plans/LoopTrace.md` - Feature planning
 
-**Recommendation:**
-1. Create single `IMPLEMENTATION_ROADMAP.md` combining all active tasks
-2. Archive completed tasks to `docs/archive/`
-3. Delete redundant task files
-4. **MY RECOMMENDATION:** Use this structure:
-   ```
-   IMPLEMENTATION_ROADMAP.md
-   ├── Current Sprint (from tasks.md lines 113-240)
-   ├── Architecture Refactoring (from review-tasks.md)
-   ├── Backend Tasks (from backend-refactor-tasks.md)
-   └── Completed Archive (link to docs/archive/)
-   ```
+**Scratch Documents (VERIFY & CLEAN):**
+- `scratch/cleanup-plan.md`
+- `scratch/architecture-discussion.md`
+- `scratch/project-management-spec.md`
+- `scratch/code-review.md` (this file)
+- `scratch/scalarautograd-test-plan.md`
+- `scratch/project-consolidation-explanation.md`
+- `scratch/entity-review-violations.md`
 
-#### **UPDATE:** README.md
-**File:** `README.md` (104 LOC)
+**Tasks/PRD Documents:**
+- `tasks/0001-prd-typescript-optimization-migration.md`
+- `tasks/tasks-0001-prd-typescript-optimization-migration.md` (DUPLICATE?)
+- `tasks/typescript-optimization-migration-questions.md`
 
-**Outdated Information:**
-- Line 20: References Python solver migration, but actually migrating to ScalarAutograd (C++ library)
-- Line 87-88: States "TypeScript-based constraint solver using ScalarAutograd" - unclear if this is complete
-- Missing: Current architecture diagram showing entity-driven design
+**Other:**
+- `README-TESTING.md` - Testing documentation
+- `TESTING-SUCCESS-SUMMARY.md` - Test results summary
+- `agents.md` - Agent system docs
+- `icons.md` - Icon reference
 
-**Recommendation:**
-1. Update solver status section with actual migration state
-2. Add entity-first architecture section
-3. Document current Line creation workflow (implemented)
-4. Remove references to incomplete features as "in progress" if completed
+### Redundancy & Contradictions
 
-#### **OBSOLETE:** Architecture guides may be outdated
-**Files:**
-- `TYPESCRIPT_CONVERSION_GUIDE.md` (475 LOC) - Still relevant or completed?
-- `CLEANUP_GUIDE.md` (566 LOC) - Python cleanup, but Python removed per commit de2f671
-
-**Problem:** CLEANUP_GUIDE references Python backend that was removed
+**ISSUE 1: Multiple Migration/Implementation Plans**
+- `IMPLEMENTATION_PLAN.md` (570 LOC) describes DTO consolidation phases
+- `ENTITY_MIGRATION_COMPLETE.md` states migration is complete
+- `architectural-rules.md` v1.2 confirms DTO consolidation complete
 
 **Recommendation:**
-1. Archive `CLEANUP_GUIDE.md` - no longer applicable after Python removal
-2. Review `TYPESCRIPT_CONVERSION_GUIDE.md` - mark sections as completed or delete if done
-3. Update `ENTITY_DRIVEN_OPTIMIZATION.md` to reflect current implementation state
+- ✅ **Archive** `IMPLEMENTATION_PLAN.md` → `docs/archive/entity-consolidation-plan.md`
+- ✅ **Delete** `ENTITY_MIGRATION_COMPLETE.md` (information merged into architectural-rules.md)
+- ✅ **Update** `architectural-rules.md` to reference archived plan if needed
 
-#### **CONSOLIDATE:** Visual language documentation
-**Files:**
-- `icons.md` - Icon usage
-- `analysis/vanishing_line_design.md` - Design document
-- Constants in `frontend/src/constants/visualLanguage.ts`
-- Utils in `frontend/src/utils/visualLanguage.ts`
+**ISSUE 2: Violations Reports Now Obsolete**
+- `architectural-violations-report.md` lists violations fixed in v1.2
+- `FIX-THE-LAST-VIOLATIONS.md` references pre-consolidation issues
+- `scratch/entity-review-violations.md` likely outdated
 
 **Recommendation:**
-1. Create `docs/VISUAL_LANGUAGE.md` combining icon usage, color schemes, constraint glyphs
-2. Reference implementation files from docs
-3. Delete redundant documentation
+- ✅ **Archive** all violation reports → `docs/archive/violations-fixed-v1.2/`
+- ✅ **Add note** in README referencing v1.2 cleanup completion
+
+**ISSUE 3: Duplicate Task Files**
+- `tasks/0001-prd-typescript-optimization-migration.md`
+- `tasks/tasks-0001-prd-typescript-optimization-migration.md`
+
+**Recommendation:**
+- ✅ **Verify** if these are duplicates (likely same content with different names)
+- ✅ **Delete** the duplicate, keep the canonical version
+
+**ISSUE 4: Scratch Document Sprawl**
+Seven scratch documents exist. Many may be obsolete.
+
+**Recommendation:**
+- ✅ **Review each** scratch document for current relevance
+- ✅ **Delete** obsolete ones (post-v1.2 issues)
+- ✅ **Archive** valuable discussions → `docs/archive/design-discussions/`
+
+### Documentation Consolidation Action Plan
+
+**Phase 1: Archive Completed Work** (Effort: Small)
+```bash
+mkdir -p docs/archive/v1.2-entity-consolidation
+mv IMPLEMENTATION_PLAN.md docs/archive/v1.2-entity-consolidation/
+mv architectural-violations-report.md docs/archive/v1.2-entity-consolidation/
+mv FIX-THE-LAST-VIOLATIONS.md docs/archive/v1.2-entity-consolidation/
+mv ENTITY_MIGRATION_COMPLETE.md docs/archive/v1.2-entity-consolidation/
+```
+
+**Phase 2: Clean Scratch** (Effort: Small)
+- Review and delete obsolete scratch documents
+- Keep only active working documents
+
+**Phase 3: Consolidate Tasks** (Effort: Small)
+- Identify and remove duplicate task files
+- Move completed tasks to archive
+
+**Phase 4: Update Primary Docs** (Effort: Small)
+- Add section to README: "Recent Major Changes"
+- Note v1.2 consolidation completion with archive reference
 
 ---
 
 ## 2. Code Duplication Issues
 
-### Severity: **CRITICAL** 🔴
-**Impact:** Maintenance nightmare, bug multiplication, ~1,500+ LOC waste
+### CRITICAL: Visual Language Duplication
 
-### Issue #1: Dual Constraint Architecture
-**Location:** `frontend/src/entities/constraints/`
+**Location:**
+- `src/constants/visualLanguage.ts` (211 LOC)
+- `src/utils/visualLanguage.ts` (403 LOC)
 
-**Problem:** TWO complete parallel constraint implementations exist:
+**Issue:** Color schemes and constraint glyphs are duplicated between files.
 
-**Legacy Implementation (PascalCase):**
-- `BaseConstraint.ts` (275 LOC)
-- `FixedPointConstraint.ts` (194 LOC)
-- `ParallelLinesConstraint.ts`
-- `DistancePointPointConstraint.ts`
+**Analysis:**
 
-**New Implementation (kebab-case):**
-- `base-constraint.ts` (616 LOC)
-- `fixed-point-constraint.ts` (217 LOC)
-- `parallel-lines-constraint.ts`
-- `distance-constraint.ts`
-- `angle-constraint.ts`
-- `perpendicular-lines-constraint.ts`
-- `equal-distances-constraint.ts`
-- `equal-angles-constraint.ts`
-- `collinear-points-constraint.ts`
-- `coplanar-points-constraint.ts`
+**`constants/visualLanguage.ts` defines:**
+- `ENTITY_COLORS` (satisfied, warning, violated, worldGeometry, etc.)
+- `CONSTRAINT_GLYPHS` (parallel, perpendicular, etc.)
+- `THEME_COLORS` (dark/light themes)
+- `FEEDBACK_LEVELS` (minimal, standard, detailed)
+- `ENTITY_STYLES` (sizing/styling)
+- Helper functions (`getConstraintStatusColor`, `getConstraintGlyph`)
 
-**Evidence:**
-```typescript
-// frontend/src/entities/constraints/BaseConstraint.ts:1
-export abstract class BaseConstraint { ... } // Legacy
+**`utils/visualLanguage.ts` defines:**
+- `defaultColorScheme` - **DUPLICATES** colors from constants
+- `highContrastColorScheme` - New scheme (not duplicated)
+- `VisualLanguageManager` class - **IMPORTS** some constants, but also **REDEFINES** constraint glyphs
+- `getConstraintGlyph()` method - **DUPLICATE LOGIC** with different glyph mappings
 
-// frontend/src/entities/constraints/base-constraint.ts:1
-export abstract class BaseConstraint { ... } // New
-```
+**Specific Duplications:**
 
-**Impact:**
-- ~1,000+ lines duplicated
-- Bugs must be fixed in two places
-- Unclear which implementation is active
-- Import confusion for developers
-
-**Recommended Fix:**
-1. **Determine active implementation** - Appears kebab-case is newer/active
-2. **Delete all PascalCase constraint files:**
-   - `BaseConstraint.ts`
-   - `FixedPointConstraint.ts`
-   - `ParallelLinesConstraint.ts`
-   - `DistancePointPointConstraint.ts`
-3. **Update all imports** to use kebab-case versions
-4. **Run tests** to verify no breakage
-5. **Commit atomically** with clear message
-
-**Estimated Effort:** MEDIUM (4-6 hours)
-**Risk:** LOW - If kebab-case version is truly active, safe to delete legacy
-
----
-
-### Issue #2: Entity Management Hook Proliferation
-**Location:** `frontend/src/hooks/`
-
-**Problem:** Three similar entity management hooks with unclear primary:
-
-**Files:**
-- `useEntityManager.ts` (599 LOC) - Most comprehensive
-- `useUnifiedEntityManager.ts` (175 LOC) - Uses useOptimizedRepository
-- `useOptimizedRepository.ts` (280 LOC) - Repository pattern
-
-**Recommendation:**
-1. **Audit usage** of each hook across codebase
-2. **Choose primary hook** - Likely `useEntityManager.ts` based on size/completeness
-3. **Delete unused hooks** or clearly document specialization
-4. **MY RECOMMENDATION:** Keep `useEntityManager.ts`, delete others if unused
-
-**Estimated Effort:** SMALL (2-3 hours)
-
----
-
-### Issue #3: Visual Language Duplication
-**Location:** `frontend/src/constants/` and `frontend/src/utils/`
-
-**Files:**
-- `constants/visualLanguage.ts` (197 LOC) - Constants exports
-- `utils/visualLanguage.ts` (394 LOC) - VisualLanguageManager class
-
-**Duplication:**
-Both files define similar color schemes and constraint glyphs:
+1. **Color Values:**
 ```typescript
 // constants/visualLanguage.ts
-export const ENTITY_COLORS = { ... }
-export const CONSTRAINT_GLYPHS = { ... }
+export const ENTITY_COLORS = {
+  satisfied: '#4CAF50',
+  warning: '#FF9800',
+  violated: '#F44336',
+  selection: '#FFC107'
+}
 
-// utils/visualLanguage.ts
-class VisualLanguageManager {
-  private colors = { ... } // Similar to ENTITY_COLORS
-  private glyphs = { ... } // Similar to CONSTRAINT_GLYPHS
+// utils/visualLanguage.ts (defaultColorScheme)
+point: {
+  selected: '#FFC107',  // Same as ENTITY_COLORS.selection
+  highlighted: '#FF9800',  // Same as ENTITY_COLORS.warning
+  construction: '#9E9E9E'  // Same as ENTITY_COLORS.construction
 }
 ```
 
-**Recommendation:**
-1. **Keep constants file** for static values
-2. **Refactor VisualLanguageManager** to import from constants
-3. **Remove duplication** in VisualLanguageManager
-4. **MY RECOMMENDATION:** Manager should extend/compose constants, not duplicate
+2. **Constraint Glyph Logic:**
+```typescript
+// constants/visualLanguage.ts (lines 149-186)
+export function getConstraintGlyph(constraintType: string): string {
+  switch (constraintType) {
+    case 'lines_parallel': return CONSTRAINT_GLYPHS.parallel
+    // ...
+  }
+}
 
-**Estimated Effort:** SMALL (1-2 hours)
+// utils/visualLanguage.ts (lines 210-234)
+getConstraintGlyph(constraintType: string): string {
+  const glyphMap: Record<string, string> = {
+    'points_distance': '↔',
+    'lines_parallel': '∥',  // DUPLICATE
+    // ...
+  }
+}
+```
+
+**Impact:**
+- ❌ **Maintenance Burden**: Changes must be made in two places
+- ❌ **Inconsistency Risk**: Glyphs/colors can diverge
+- ❌ **Confusion**: Which is source of truth?
+
+**Recommendation:**
+
+**OPTION A: Single Source of Truth in Constants** (RECOMMENDED)
+1. Keep `constants/visualLanguage.ts` as **canonical** source
+2. Refactor `VisualLanguageManager` to import ALL values from constants
+3. Remove duplicate definitions in utils
+4. Manager class becomes a **facade** over constants
+
+**OPTION B: Consolidate Everything into VisualLanguageManager**
+1. Move all constants into utils file
+2. Delete constants file
+3. Export singleton manager instance
+
+**My Recommendation: OPTION A**
+- Constants file is simpler, easier to maintain
+- Manager class adds complexity (state, settings)
+- Not all code needs the manager - some just needs constants
+
+**Implementation (Option A):**
+```typescript
+// utils/visualLanguage.ts (REFACTORED)
+import {
+  ENTITY_COLORS,
+  CONSTRAINT_GLYPHS,
+  THEME_COLORS,
+  getConstraintGlyph as getGlyph,
+  getConstraintStatusColor
+} from '../constants/visualLanguage'
+
+// Remove defaultColorScheme - build from ENTITY_COLORS instead
+export class VisualLanguageManager {
+  private colorScheme: ColorScheme
+
+  constructor(settings: ProjectSettings, highContrast = false) {
+    this.colorScheme = highContrast
+      ? highContrastColorScheme
+      : this.buildDefaultFromConstants()  // ✅ Build from constants
+  }
+
+  private buildDefaultFromConstants(): ColorScheme {
+    return {
+      entities: {
+        point: {
+          default: ENTITY_COLORS.worldGeometry,
+          selected: ENTITY_COLORS.selection,
+          highlighted: ENTITY_COLORS.warning,
+          construction: ENTITY_COLORS.construction
+        },
+        // ... (derived from constants)
+      },
+      constraints: {
+        satisfied: ENTITY_COLORS.satisfied,  // ✅ Use constants
+        warning: ENTITY_COLORS.warning,
+        violated: ENTITY_COLORS.violated,
+        // ...
+      }
+    }
+  }
+
+  getConstraintGlyph(constraintType: string): string {
+    return getGlyph(constraintType)  // ✅ Delegate to constants
+  }
+}
+```
+
+**Effort Estimate:** Medium (4-6 hours)
+- Refactor VisualLanguageManager to derive from constants
+- Update all imports
+- Test visual consistency
+- Remove duplicated code
 
 ---
 
-### Issue #4: TestApp Duplication
-**Location:** `frontend/src/`
+### Minor: Potential Function Duplication
 
-**Files:**
-- `TestApp.tsx` (12 LOC) - Root level
-- `components/TestApp.tsx` (13 LOC) - Component folder
+**Status:** ✅ No significant duplication found in domain logic
 
-**Problem:** Nearly identical test components in two locations
-
-**Recommendation:**
-1. **Delete** `frontend/src/TestApp.tsx` (root version)
-2. **Keep** `frontend/src/components/TestApp.tsx`
-3. **Update any imports** if necessary
-
-**Estimated Effort:** TRIVIAL (15 minutes)
-
----
-
-### Issue #5: useLines Hook - Potentially Obsolete
-**Location:** `frontend/src/hooks/useLines.ts` (167 LOC)
-
-**Problem:**
-- Centralized line management in useProject hook instead (per tasks.md:104-106)
-- Line creation bug was fixed by removing separate useLines hook
-- May be unused legacy code
-
-**Recommendation:**
-1. **Search for imports** of useLines across codebase
-2. **If unused**: Delete the file
-3. **If used**: Document why separate from useProject
-
-**Estimated Effort:** SMALL (1 hour)
+**Verified Clean:**
+- Entity classes have no duplicate methods
+- Constraint types properly inherit from BaseConstraint
+- Serialization logic consolidated in `Serialization.ts`
 
 ---
 
 ## 3. Pattern Violations
 
-### Severity: MEDIUM ⚠️
-**Impact:** Code inconsistency, developer confusion
+### HIGH: Excessive Use of `any` Type
 
-### Violation #1: File Naming Convention Inconsistency
-**Location:** `frontend/src/entities/constraints/`
+**Total Instances:** 50+
+**Problematic:** 25-30
 
-**Problem:** Mixed PascalCase and kebab-case file naming
+**Primary Offenders:**
 
-| Pattern | Files | Status |
-|---------|-------|--------|
-| PascalCase | `BaseConstraint.ts`, `FixedPointConstraint.ts` | Legacy ❌ |
-| kebab-case | `base-constraint.ts`, `fixed-point-constraint.ts` | Active ✅ |
+**1. `useDomainOperations.ts` (15+ instances)**
 
-**TypeScript Convention:** kebab-case for file names
+```typescript
+// Line 8, 14, 30, etc.
+createWorldPoint: (name: string, xyz: [number, number, number], options?: any) => WorldPoint
+updateLine: (line: Line, updates: any) => void
+addConstraint: (constraint: any) => void
+updateConstraint: (constraint: any, updates: any) => void
+```
+
+**Impact:**
+- ❌ No type safety on options/updates
+- ❌ Can pass invalid fields, discovered only at runtime
+- ❌ No IDE autocomplete for available options
 
 **Recommendation:**
-1. Ensure all new files use kebab-case
-2. After deleting legacy PascalCase files, verify consistency
-3. **MY RECOMMENDATION:** Enforce via ESLint rule: `"unicorn/filename-case": ["error", { "case": "kebabCase" }]`
+```typescript
+// Define proper option types
+interface WorldPointOptions {
+  color?: string
+  lockedAxes?: { x?: boolean; y?: boolean; z?: boolean }
+  isConstruction?: boolean
+  xyz?: [number, number, number]
+}
+
+interface LineOptions {
+  name?: string
+  color?: string
+  isVisible?: boolean
+  constraints?: {
+    direction?: 'free' | 'horizontal' | 'vertical' | 'x-aligned' | 'z-aligned'
+    targetLength?: number
+  }
+}
+
+interface LineUpdates {
+  name?: string
+  color?: string
+  isVisible?: boolean
+}
+
+// Use specific types
+createWorldPoint: (name: string, xyz: [number, number, number], options?: WorldPointOptions) => WorldPoint
+updateLine: (line: Line, updates: LineUpdates) => void
+```
+
+**2. `useConstraints.ts` (~5 instances)**
+
+```typescript
+const [constraintParameters, setConstraintParameters] = useState<Record<string, any>>({})
+```
+
+**Recommendation:**
+```typescript
+type ConstraintParameters =
+  | { type: 'distance'; target: number }
+  | { type: 'angle'; target: number }
+  | { type: 'parallel' }
+  // ... discriminated union
+```
+
+**3. `useHistory.ts` (8 instances)**
+
+```typescript
+worldPointDeleted: (worldPoint: any, constraints: any[]) => ({ ... })
+```
+
+**Status:** Partially acceptable - history payloads are polymorphic
+**Recommendation:** Use discriminated unions for better type safety
+
+**Effort Estimate:** Large (8-12 hours)
+- Define proper option/update interfaces (2 hours)
+- Update all function signatures (2 hours)
+- Update all call sites (3 hours)
+- Test for regressions (3 hours)
 
 ---
 
-### Violation #2: Export Pattern Inconsistency
-**Location:** Entity modules
+### MEDIUM: Deprecated Types Still in Union
 
-**Pattern A (Clean - Line, WorldPoint):**
+**File:** `src/types/ids.ts`
+
 ```typescript
-// entity.ts (barrel file)
-export * from './entity/index'
+export type CameraId = string // @deprecated Use ViewpointId
+export type ImageId = string // @deprecated Use ViewpointId
 
-// entity/index.ts
-export { Entity } from './Entity'
-export { EntityDto } from './EntityDto'
-export { EntityGeometry } from './EntityGeometry'
+// Still included in union! ❌
+export type EntityId = PointId | LineId | PlaneId | ViewpointId | CameraId | ImageId | ...
 ```
 
-**Pattern B (Complex - Constraints):**
-```typescript
-// constraint.ts
-export * from './constraints'
+**Issue:** Deprecated types are still part of `EntityId` union, allowing continued use.
 
-// constraints/index.ts
-export { createConstraint } from './ConstraintFactory' // Factory pattern
-export type { BaseConstraintDto } from './dtos/BaseConstraintDto'
-// Mixed re-exports with different patterns
+**Impact:**
+- ⚠️ **Confusion**: Developers might use deprecated types
+- ⚠️ **Inconsistency**: Code can mix ViewpointId, CameraId, ImageId
+
+**Verification:**
+```bash
+# Check for actual usage of deprecated types
+grep -r "CameraId\|ImageId" src --include="*.ts" --include="*.tsx"
 ```
+
+**Found:** Only in `types/ids.ts` and `types/selectable.ts` (import only)
 
 **Recommendation:**
-1. **Standardize on Pattern A** - Clean barrel exports
-2. **Remove factory functions** from index files
-3. **Simplify constraint exports** to match Line/WorldPoint pattern
+1. ✅ **Remove** `CameraId` and `ImageId` from `EntityId` union
+2. ✅ **Keep** type aliases with `@deprecated` JSDoc for gradual migration warnings
+3. ✅ **Update** `selectable.ts` to not import deprecated types
+
+```typescript
+// ids.ts (FIXED)
+/**
+ * @deprecated Use ViewpointId instead
+ */
+export type CameraId = ViewpointId
+
+/**
+ * @deprecated Use ViewpointId instead
+ */
+export type ImageId = ViewpointId
+
+// Remove from union
+export type EntityId = PointId | LineId | PlaneId | ViewpointId | ImagePointId | ConstraintId | ProjectId
+```
+
+**Effort Estimate:** Small (1-2 hours)
 
 ---
 
-### Violation #3: Large Monolithic Files
-**Location:** Various components
+### LOW: Direct Field Mutation in Hooks
 
-**Oversized Files:**
-- `MainLayout.tsx` - 1,221 LOC ❌
-- `ImageViewer.tsx` - 1,028 LOC ❌
-- `useProject.ts` - 752 LOC ⚠️
+**File:** `useDomainOperations.ts`
 
-**Problem:** Files exceeding 500 LOC become hard to maintain
+```typescript
+// Lines 61-62, 88-91
+const renameWorldPoint = (worldPoint: WorldPoint, name: string) => {
+  (worldPoint as any)._name = name  // ❌ Direct private field mutation
+  (worldPoint as any)._updatedAt = new Date().toISOString()
+}
+```
 
-**Recommendation:**
-1. **Split MainLayout.tsx:**
-   - Extract toolbar into `MainToolbar.tsx`
-   - Extract sidebar management into `SidebarManager.tsx`
-   - Extract modal dialogs into separate components
-   - **Target:** <400 LOC per file
+**Issue:** Circumvents entity encapsulation by directly mutating private fields.
 
-2. **Split ImageViewer.tsx:**
-   - Extract rendering logic into `useImageViewerRenderer.ts` (already exists!)
-   - Extract interaction handling into `useImageViewerInteractions.ts`
-   - Reduce to coordinating component
+**Why This Exists:** Entities are immutable by design (factory pattern), but UI needs updates.
 
-3. **Refactor useProject.ts:**
-   - Split persistence logic into `useProjectPersistence.ts`
-   - Split conversion logic into `useProjectConversion.ts`
-   - Keep only core state management
+**Status:** ⚠️ **Acceptable workaround** given architectural constraints, but not ideal
 
-**Estimated Effort:** LARGE (8-12 hours total)
+**Better Alternatives:**
+
+**Option 1: Add setter methods to entities**
+```typescript
+// WorldPoint.ts
+setName(name: string): void {
+  this._name = name
+  this._updatedAt = new Date().toISOString()
+}
+```
+
+**Option 2: Use factory to create updated instances**
+```typescript
+const renameWorldPoint = (worldPoint: WorldPoint, name: string) => {
+  const updated = WorldPoint.create(worldPoint.id, name, {
+    xyz: worldPoint.xyz,
+    color: worldPoint.color,
+    // ... copy all properties
+  })
+  project.replaceWorldPoint(worldPoint, updated)
+}
+```
+
+**My Recommendation:** **Option 1** - Controlled mutability
+- Less memory churn than full immutability
+- Maintains encapsulation
+- Simpler API for common updates
+
+**Effort Estimate:** Medium (4-6 hours)
 
 ---
 
 ## 4. Architecture Adherence
 
-### Severity: MEDIUM ⚠️
+### ✅ EXCELLENT: Object References, NOT IDs
 
-### Adherence Issue #1: Legacy Compatibility Code
-**Location:** `frontend/src/hooks/useSelection.ts`
+**Verification:** Searched entire `src/entities/` for `.get(.*id)` pattern.
 
-**Problem:** Per review-tasks.md, useSelection has 200+ lines of legacy code:
-- `legacyFilters` state
-- `legacySelectionState` computed value
-- `mapToPrimaryType` function
-- Mock `ISelectable` entity creation from string IDs
+**Result:** ✅ **ZERO MATCHES** - Perfect compliance!
 
-**Current Architecture Goal:** Pure object-based selection (no string IDs)
-
-**Recommendation:**
-1. Review if legacy code still needed (check for usages)
-2. If not needed: **DELETE** legacy compatibility code
-3. If needed: **DOCUMENT** why and plan removal
-4. **MY RECOMMENDATION:** Create migration ticket and set deadline for removal
-
----
-
-### Adherence Issue #2: DTO Misuse in Domain Logic
-**Source:** review-tasks.md Phase 4.2
-
-**Problem:** DTOs being used for internal frontend logic instead of just serialization
-
-**DTOs Should Only Be Used For:**
-- Serialization to backend
-- Deserialization from backend
-- File save/load operations
-
-**DTOs Should NEVER Be Used For:**
-- Internal frontend logic
-- Component props
-- State management
-- Entity relationships
-
-**Recommendation:**
-1. **Audit DTO usage** across components
-2. **Replace internal DTO usage** with domain objects (WorldPoint, Line, etc.)
-3. **Ensure DTOs only at boundaries** (persistence, API calls)
-
-**Estimated Effort:** MEDIUM (6-8 hours)
-
----
-
-### Adherence Issue #3: Incomplete Entity-Driven Architecture
-**Source:** ENTITY_DRIVEN_OPTIMIZATION.md
-
-**Vision:** Lines with embedded constraints optimize directly (no conversion to atomic constraints)
-
-**Current State:** Unclear if Line constraints are being used by solver or converted
-
-**Questions:**
-1. Is `LineConstraintResidual` implemented in optimizer?
-2. Are Line constraints sent directly to backend?
-3. Or are they still converted to atomic constraints?
-
-**Recommendation:**
-1. **Verify implementation state** of entity-driven optimization
-2. **Update ENTITY_DRIVEN_OPTIMIZATION.md** with current status
-3. **If incomplete:** Add to roadmap with priority
-4. **MY RECOMMENDATION:** Check backend solver for LineResidual class
-
----
-
-## 5. Recommendations (Actionable Fixes)
-
-### CRITICAL Priority (Do First)
-
-#### 1. Eliminate Duplicate Constraint Architecture
-**Severity:** Critical
-**Location:** `frontend/src/entities/constraints/`
-**Files:** All PascalCase constraint files
-
-**Steps:**
-1. Verify kebab-case versions are active (check imports in components)
-2. Run tests to establish baseline
-3. Delete PascalCase files:
-   ```bash
-   rm frontend/src/entities/constraints/BaseConstraint.ts
-   rm frontend/src/entities/constraints/FixedPointConstraint.ts
-   rm frontend/src/entities/constraints/ParallelLinesConstraint.ts
-   rm frontend/src/entities/constraints/DistancePointPointConstraint.ts
-   ```
-4. Update any remaining imports (if any)
-5. Run tests to verify no breakage
-6. Commit: "refactor: remove duplicate legacy constraint architecture"
-
-**Estimated Effort:** MEDIUM (4-6 hours)
-**Impact:** HIGH - Eliminates ~1,000+ LOC duplication
-
-**MY RECOMMENDATION:** ✅ Do this ASAP - highest impact cleanup
-
----
-
-#### 2. Consolidate Documentation
-**Severity:** High
-**Location:** Root directory
-**Files:** tasks.md, review-tasks*.md, backend-refactor-tasks.md
-
-**Steps:**
-1. Create `IMPLEMENTATION_ROADMAP.md`
-2. Extract active tasks from all task files
-3. Organize by priority and phase
-4. Archive completed tasks to `docs/archive/`
-5. Delete redundant task files
-6. Update CLAUDE.md references
-
-**Estimated Effort:** SMALL (2-3 hours)
-**Impact:** HIGH - Single source of truth for development
-
-**MY RECOMMENDATION:** ✅ Essential for maintaining clear roadmap
-
----
-
-### HIGH Priority (Next Week)
-
-#### 3. Address Critical TODOs
-**Severity:** High
-**Location:** Various files
-
-**Critical TODOs to Address:**
-
-**MainLayout.tsx (lines 327-328):**
+**Evidence:**
 ```typescript
-// TODO: Remove this legacy function - use entity objects directly
-// TODO: Update constraint system to use entity objects
-```
-**Action:** Refactor to use entity objects, remove legacy functions
+// WorldPoint.ts
+export class WorldPoint {
+  connectedLines: Set<ILine> = new Set()  // ✅ Direct references
+  referencingConstraints: Set<IConstraint> = new Set()  // ✅ Direct references
+}
 
-**useEnhancedProject.ts (lines 235, 350):**
+// Line.ts
+export class Line {
+  constructor(
+    public readonly pointA: WorldPoint,  // ✅ Object reference
+    public readonly pointB: WorldPoint   // ✅ Object reference
+  ) {}
+}
+```
+
+**UI Components DO use ID lookups** (acceptable per architecture):
+- `LinesManager.tsx`: `lines.get(lineId)` - UI layer, receiving Maps from state
+- `WorldPointPanel.tsx`: `viewpoints.get(imageId)` - UI layer
+
+**Status:** ✅ **Perfect adherence** - Domain uses objects, UI uses Maps from state
+
+---
+
+### ✅ GOOD: DTO Separation
+
+**Verification:** DTOs are properly isolated in `Serialization.ts`
+
+**Evidence:**
+- ✅ DTOs use string IDs for references (correct for JSON)
+- ✅ Entities use object references (correct for runtime)
+- ✅ Conversion functions sealed in `Serialization.ts`
+- ✅ No DTOs leak into domain logic
+
+**Example:**
 ```typescript
-// TODO: Implement migration from legacy project format
-// TODO: Implement conversion to legacy format
-```
-**Action:** Either implement or remove if no longer needed
+// Serialization.ts
+interface LineDto {
+  id: LineId
+  pointA: PointId  // ✅ String ID in DTO
+  pointB: PointId
+}
 
-**Line.ts (line 30):**
+// Line.ts
+export class Line {
+  pointA: WorldPoint  // ✅ Object reference in entity
+  pointB: WorldPoint
+}
+```
+
+---
+
+### ⚠️ GOOD: Circular References Handled Correctly
+
+**Pattern:** Bidirectional relationships using Sets
+
 ```typescript
-private _tags: string[], // TODO: Remove completely
+// WorldPoint knows its Lines
+class WorldPoint {
+  connectedLines: Set<ILine> = new Set()
+}
+
+// Line knows its Points
+class Line {
+  pointA: WorldPoint
+  pointB: WorldPoint
+}
 ```
-**Action:** Remove tags property if truly unused (search for usage first)
 
-**Estimated Effort:** MEDIUM (6-8 hours total)
-**Impact:** HIGH - Removes technical debt markers
+**Status:** ✅ Correctly implemented with Sets (not Maps - no ID lookups!)
 
 ---
 
-#### 4. Remove Orphaned Files
-**Severity:** Medium
-**Location:** Various
+## 5. Large Component Refactoring Needs
 
-**Files to Audit/Remove:**
-- `frontend/src/TestApp.tsx` - Duplicate (keep components/ version)
-- `frontend/src/hooks/useLines.ts` - May be obsolete (verify first)
-- `frontend/src/hooks/useUnifiedEntityManager.ts` - May be unused
-- `CLEANUP_GUIDE.md` - References removed Python backend
+### CRITICAL: MainLayout.tsx (1,170 LOC)
 
-**Steps:**
-1. Search for imports of each file
-2. If no imports found: **DELETE**
-3. If imports found: Document purpose or migrate away
+**File:** `src/components/MainLayout.tsx`
+**Size:** 43 KB, 1,170 lines
+**Status:** ❌ **Far too large**, violates 500 LOC guideline
 
-**Estimated Effort:** SMALL (2-3 hours)
-**Impact:** MEDIUM - Cleaner codebase
+**Responsibilities:** (Too many!)
+1. World point management
+2. Line creation & editing
+3. Constraint management
+4. Optimization coordination
+5. File I/O (save/load)
+6. Image management
+7. UI state coordination
+8. Modal dialogs
+9. Toolbar rendering
+10. Context menu handling
 
----
+**Recommendation:** Split into smaller components
 
-### MEDIUM Priority (This Month)
+**Proposed Structure:**
+```
+MainLayout.tsx (150-200 LOC)
+  ├─ MainToolbar.tsx (100 LOC)
+  ├─ SidebarManager.tsx (150 LOC)
+  ├─ modals/
+  │   ├─ LineEditModal.tsx (80 LOC)
+  │   ├─ PlaneEditModal.tsx (80 LOC)
+  │   ├─ ImagePointEditModal.tsx (60 LOC)
+  │   └─ ConstraintEditModal.tsx (100 LOC)
+  ├─ hooks/
+  │   ├─ useEntityManagement.ts (150 LOC) - point/line operations
+  │   ├─ useFileOperations.ts (100 LOC) - save/load
+  │   └─ useOptimization.ts (80 LOC) - optimization coordination
+  └─ MainLayoutContainer.tsx (120 LOC) - state & coordination
+```
 
-#### 5. Split Large Components
-**Severity:** Medium
-**Location:** `frontend/src/components/`
+**Benefits:**
+- ✅ Each component <200 LOC (readable)
+- ✅ Single Responsibility Principle
+- ✅ Easier testing (smaller units)
+- ✅ Better code reuse
 
-**MainLayout.tsx (1,221 LOC):**
-- Extract toolbar → `MainToolbar.tsx`
-- Extract sidebar → `SidebarManager.tsx`
-- Extract modals → Individual modal components
-- Target: <400 LOC main file
-
-**ImageViewer.tsx (1,028 LOC):**
-- Already has `useImageViewerRenderer.ts` hook ✅
-- Extract interactions → `useImageViewerInteractions.ts`
-- Extract tool management → `useImageViewerTools.ts`
-
-**Estimated Effort:** LARGE (8-12 hours)
-**Impact:** HIGH - Improved maintainability
-
----
-
-#### 6. Fix Visual Language Duplication
-**Severity:** Low
-**Location:** `frontend/src/constants/` and `frontend/src/utils/`
-
-**Steps:**
-1. Keep `constants/visualLanguage.ts` as source of truth
-2. Refactor `utils/visualLanguage.ts` to import constants
-3. Remove duplicated color/glyph definitions
-4. Add tests to prevent re-duplication
-
-**Estimated Effort:** SMALL (2-3 hours)
-**Impact:** MEDIUM - DRY principle
+**Effort Estimate:** Large (10-14 hours)
 
 ---
 
-## 6. Follow-up Questions
+### HIGH: ImageViewer.tsx (1,049 LOC)
 
-**Questions Requiring Your Decision:**
+**File:** `src/components/ImageViewer.tsx`
+**Size:** 36 KB, 1,049 lines
+**Status:** ❌ **Too large**
 
-### Q1: Constraint Architecture - Which to Keep?
-**Context:** Two parallel constraint implementations exist
-**Question:** Confirm kebab-case version is active and PascalCase can be deleted?
-**Impact:** Affects cleanup scope
+**Responsibilities:**
+1. Canvas rendering
+2. Mouse/touch interaction
+3. World point visualization
+4. Image point management
+5. Pan/zoom handling
+6. Selection handling
 
-**MY RECOMMENDATION:** ✅ Based on file analysis, delete PascalCase versions
+**Recommendation:** Extract interaction logic into hooks
 
----
+**Proposed Refactoring:**
+```
+ImageViewer.tsx (300 LOC) - rendering only
+  ├─ hooks/
+  │   ├─ useImageViewerRenderer.ts (exists, 200 LOC) ✅
+  │   ├─ useImageViewerInteractions.ts (250 LOC) - NEW
+  │   ├─ useImageViewerPanZoom.ts (150 LOC) - NEW
+  │   └─ useImageViewerSelection.ts (100 LOC) - NEW
+  └─ components/
+      ├─ ImageCanvas.tsx (120 LOC)
+      └─ ImageOverlay.tsx (80 LOC)
+```
 
-### Q2: Entity-Driven Optimization - Implementation Status?
-**Context:** ENTITY_DRIVEN_OPTIMIZATION.md describes vision
-**Question:** Is LineConstraintResidual actually implemented in the solver?
-**Impact:** Determines if documentation is aspirational or actual
-
-**Next Steps:** Check backend for LineResidual class implementation
-
----
-
-### Q3: Legacy Project Format Migration - Still Needed?
-**Context:** TODOs in useEnhancedProject.ts for legacy format
-**Question:** Do you have old project files that need migration?
-**Impact:** Determines if TODO should be implemented or removed
-
-**MY RECOMMENDATION:** If no old projects exist, delete the TODO
-
----
-
-### Q4: Python Backend Cleanup Guide - Archive?
-**Context:** CLEANUP_GUIDE.md references Python backend (removed in commit de2f671)
-**Question:** Safe to archive this document?
-**Impact:** Documentation clarity
-
-**MY RECOMMENDATION:** ✅ Archive to docs/archive/python-migration.md
+**Effort Estimate:** Medium (8-10 hours)
 
 ---
 
-## 7. Code Quality Metrics
+### MEDIUM: WorldPointPanel.tsx (632 LOC)
 
-| Metric | Value | Target | Status |
-|--------|-------|--------|--------|
-| **Total TypeScript Files** | ~130 | - | ✅ Good |
-| **Average File Size** | ~200 LOC | <500 LOC | ✅ Good |
-| **Largest File** | MainLayout.tsx (1,221 LOC) | <500 LOC | ❌ Needs split |
-| **Duplicated Code** | ~1,500 LOC | 0 | ❌ Critical |
-| **Files with TODOs** | 10 files (38 TODOs) | <5 | ⚠️ Moderate |
-| **Module Organization** | Well-separated | - | ✅ Excellent |
-| **Type Coverage** | Comprehensive | 100% | ✅ Excellent |
-| **Documentation Files** | 12+ (fragmented) | 3-5 | ⚠️ Needs consolidation |
+**File:** `src/components/WorldPointPanel.tsx`
+**Size:** 22 KB, 632 lines
+**Status:** ⚠️ **Slightly over** 500 LOC guideline
+
+**Recommendation:** Extract sub-components
+
+**Proposed Refactoring:**
+```
+WorldPointPanel.tsx (200 LOC)
+  ├─ CoordinateEditor.tsx (120 LOC)
+  ├─ ImagePointsList.tsx (150 LOC)
+  └─ ConstraintsList.tsx (120 LOC)
+```
+
+**Effort Estimate:** Small (4-6 hours)
 
 ---
 
-## 8. Testing & Validation
+## 6. Testing Coverage
 
-### Current Test State
-- Location: `frontend/src/tests/`
-- Test files found: `lineCreation.test.ts`, `simple.test.ts`, `setup.ts`
-- Comprehensive polymorphic constraint tests: `frontend/src/entities/constraints/__tests__/`
+### Current State
 
-### Testing Gaps Identified
+**✅ Well-Tested:**
+- Entity classes (WorldPoint, Line, Constraint types)
+- Polymorphic constraints
+- Line creation workflow
+- Serialization/deserialization
 
-**Missing Tests:**
-1. Entity management hooks (useEntityManager, useProject)
-2. Large components (MainLayout, ImageViewer)
-3. Selection system (useSelection)
-4. Visual language utilities
+**⚠️ Missing Tests:**
+- Hooks (`useEntityManager`, `useProject`, `useSelection`, `useDomainOperations`)
+- Large components (MainLayout, ImageViewer)
+- Visual language utilities
+- Optimization integration
 
 **Recommendation:**
-1. Add integration tests for entity creation workflows
-2. Add unit tests for large hooks before splitting
-3. Add visual regression tests for UI components
 
-**Estimated Effort:** LARGE (16+ hours for comprehensive coverage)
-
----
-
-## 9. Security & Performance
-
-### Security Review
-**Status:** ✅ No critical security issues identified
-
-**Observations:**
-- No API key exposure
-- No XSS vulnerabilities detected
-- LocalStorage usage appears safe (no sensitive data)
-- File upload validation present in fileManager.ts
-
-### Performance Review
-**Status:** ✅ Generally good
-
-**Potential Optimizations:**
-1. **Large component re-renders** - MainLayout.tsx could benefit from React.memo
-2. **Selection state updates** - Consider immer for immutable updates
-3. **Image rendering** - Already optimized with useImageViewerRenderer ✅
-
-**Low Priority:**
-- Bundle size optimization (not critical for desktop app)
-- Lazy loading for unused components
-
----
-
-## 10. Migration Roadmap
-
-Based on this review, recommended migration path:
-
-### Sprint 1: Critical Cleanup (Week 1-2)
-1. ✅ Delete duplicate constraint architecture
-2. ✅ Consolidate documentation files
-3. ✅ Remove orphaned files
-4. ✅ Address critical TODOs in MainLayout
-
-**Deliverable:** Clean codebase with single constraint implementation
-
----
-
-### Sprint 2: Architecture Refinement (Week 3-4)
-1. ✅ Split MainLayout.tsx into smaller components
-2. ✅ Refactor useProject.ts for clarity
-3. ✅ Fix visual language duplication
-4. ✅ Standardize export patterns
-
-**Deliverable:** Maintainable component structure
-
----
-
-### Sprint 3: Feature Completion (Week 5-6)
-1. ✅ Implement remaining TODOs or remove
-2. ✅ Complete entity-driven optimization (if incomplete)
-3. ✅ Add missing tests
-4. ✅ Update architecture documentation
-
-**Deliverable:** Feature-complete, well-tested codebase
-
----
-
-## Summary & Next Steps
-
-### What's Working Well ✅
-- Clean modular entity architecture (Line, WorldPoint composition)
-- Strong TypeScript type safety
-- Well-organized directory structure
-- Comprehensive visual language system
-- Good separation of concerns
-
-### Critical Issues ❌
-1. **Duplicate constraint architecture** (~1,500 LOC)
-2. **Fragmented documentation** (6+ task files)
-3. **Large monolithic files** (MainLayout: 1,221 LOC)
-4. **38+ TODOs** indicating incomplete features
-
-### Immediate Actions (This Week)
-1. **Delete PascalCase constraint files** - 4-6 hours
-2. **Consolidate documentation** - 2-3 hours
-3. **Remove TestApp.tsx duplicate** - 15 minutes
-4. **Run check.sh** to verify build health
-
-### Total Estimated Cleanup Time
-- **Critical issues:** 8-12 hours
-- **High priority:** 12-16 hours
-- **Medium priority:** 10-14 hours
-- **Total:** ~30-42 hours (1-2 weeks focused work)
-
----
-
-## Appendix: File References
-
-### Files Analyzed
-- **Documentation:** 12 files (README.md, tasks.md, CLAUDE.md, guides)
-- **Frontend Source:** ~130 TypeScript/TSX files
-- **Hooks:** 13 files in `frontend/src/hooks/`
-- **Components:** 41 files in `frontend/src/components/`
-- **Entities:** 40+ files in `frontend/src/entities/`
-- **Tests:** Multiple test files in `frontend/src/tests/`
-
-### Key Paths
-```
-c:\Dev\Pictorigo\
-├── frontend\src\
-│   ├── components\         (41 TSX files)
-│   ├── entities\          (40+ files)
-│   │   ├── constraints\   (DUPLICATE ARCHITECTURE HERE)
-│   │   ├── line\          (Clean modular design ✅)
-│   │   └── world-point\   (Clean modular design ✅)
-│   ├── hooks\             (13 files, some redundant)
-│   ├── services\          (5 files)
-│   ├── types\             (8 files)
-│   └── utils\             (3 files)
-├── docs\                  (NEEDS CREATION)
-├── CLAUDE.md
-├── README.md
-├── tasks.md               (TO CONSOLIDATE)
-├── review-tasks.md        (TO CONSOLIDATE)
-└── [other task files]     (TO CONSOLIDATE)
+**Phase 1: Hook Testing** (Priority: HIGH)
+```typescript
+// __tests__/useDomainOperations.test.ts
+describe('useDomainOperations', () => {
+  it('should create world point with options', () => { ... })
+  it('should update line properties', () => { ... })
+  it('should handle constraint operations', () => { ... })
+})
 ```
 
+**Phase 2: Component Testing** (Priority: MEDIUM)
+- Add tests BEFORE refactoring large components
+- Ensures no regressions during split
+
+**Phase 3: Integration Testing** (Priority: MEDIUM)
+- Full save/load cycles
+- Optimization round-trips
+- Multi-entity workflows
+
+**Effort Estimate:** Large (16+ hours)
+
 ---
 
-**Review conducted by:** Claude Code
-**Methodology:** Comprehensive static analysis, architecture review, pattern detection
-**Confidence Level:** HIGH - Based on thorough exploration and expert analysis
+## 7. TODOs & Technical Debt
 
-**Recommendation:** Proceed with Critical priority items immediately for maximum impact. The codebase is fundamentally sound and cleanup will significantly improve maintainability.
+### Summary: 48 TODOs Found
+
+**Category Breakdown:**
+
+| Category | Count | Priority |
+|----------|-------|----------|
+| UI Integration | 28 | MEDIUM |
+| Feature Implementation | 12 | LOW |
+| Refactoring | 5 | HIGH |
+| Documentation | 3 | LOW |
+
+### HIGH PRIORITY TODOs
+
+**1. Component Refactoring**
+```typescript
+// WorldPointEditor.tsx:1
+// TODO: This component needs to be refactored to work with entity classes
+```
+**Action:** Refactor to use entity classes (part of large component work)
+
+**2. Optimization Tracking**
+```typescript
+// MainLayout.tsx:506
+optimizationStatus: 'idle' // TODO: Get from actual optimization state
+```
+**Action:** Implement proper optimization status tracking
+
+**3. Plane Support**
+```typescript
+// constraint-entity-converter.ts:38, 54
+return undefined; // TODO: Add plane support
+```
+**Action:** Implement plane constraint conversion
+
+### MEDIUM PRIORITY TODOs
+
+**UI Integration (28 instances in MainLayout.tsx)**
+
+Most are placeholders for feature implementations:
+- Image add dialog
+- Plane creation/editing
+- Constraint creation UI
+- Visual feedback controls
+- Project settings updates
+
+**Recommendation:**
+- ✅ Group related TODOs into epics/issues
+- ✅ Prioritize based on user value
+- ✅ Clean up completed TODOs regularly
+
+### LOW PRIORITY TODOs
+
+**Feature Implementation**
+- Selection tracking (useDomainOperations.ts:171)
+- Point copying (useDomainOperations.ts:176)
+- Image compression (storage.ts:108)
+
+**Recommendation:** Move to backlog, not blocking
+
+---
+
+## 8. Critical Issues Priority
+
+### Ranked by Impact & Effort
+
+| # | Issue | Severity | Effort | ROI | Priority |
+|---|-------|----------|--------|-----|----------|
+| 1 | Visual Language Duplication | High | Medium | High | **CRITICAL** |
+| 2 | Remove `any` from hooks | High | Large | High | **HIGH** |
+| 3 | Refactor MainLayout.tsx | High | Large | Medium | **HIGH** |
+| 4 | Remove deprecated types from union | Medium | Small | High | **MEDIUM** |
+| 5 | Documentation consolidation | Medium | Small | Medium | **MEDIUM** |
+| 6 | Refactor ImageViewer.tsx | Medium | Medium | Medium | **MEDIUM** |
+| 7 | Add hook testing | Low | Large | High | **MEDIUM** |
+| 8 | Address HIGH priority TODOs | Medium | Medium | Low | **LOW** |
+
+---
+
+## 9. Recommendations
+
+### Immediate Actions (Next Sprint)
+
+**1. Fix Visual Language Duplication** (CRITICAL)
+- **Effort:** 4-6 hours
+- **My Recommendation:**
+  - Keep `constants/visualLanguage.ts` as single source of truth
+  - Refactor `VisualLanguageManager` to import and derive from constants
+  - Remove all duplicate color/glyph definitions
+  - Test visual consistency across app
+
+**2. Remove Deprecated Types from EntityId Union** (Quick Win)
+- **Effort:** 1-2 hours
+- **My Recommendation:**
+  - Remove `CameraId` and `ImageId` from union type
+  - Keep type aliases with `@deprecated` JSDoc
+  - Update `selectable.ts` imports
+  - Verify no usages exist
+
+**3. Clean Up Documentation** (Quick Win)
+- **Effort:** 2-3 hours
+- **My Recommendation:**
+  ```bash
+  # Archive completed migration docs
+  mkdir -p docs/archive/v1.2-entity-consolidation
+  mv IMPLEMENTATION_PLAN.md docs/archive/v1.2-entity-consolidation/
+  mv architectural-violations-report.md docs/archive/v1.2-entity-consolidation/
+
+  # Remove obsolete scratch docs
+  # (review each first)
+
+  # Update README with consolidation note
+  ```
+
+### Near-Term Actions (1-2 Sprints)
+
+**4. Replace `any` Types in Hooks** (HIGH ROI)
+- **Effort:** 8-12 hours
+- **My Recommendation:**
+  - Start with `useDomainOperations.ts` (highest usage)
+  - Define proper `WorldPointOptions`, `LineOptions`, `LineUpdates` interfaces
+  - Update all call sites
+  - Add type tests to catch regressions
+
+**5. Refactor MainLayout.tsx** (HIGH Impact)
+- **Effort:** 10-14 hours
+- **My Recommendation:**
+  - **FIRST:** Add tests to MainLayout before refactoring
+  - Split into: MainToolbar, SidebarManager, modal components
+  - Extract hooks: useEntityManagement, useFileOperations, useOptimization
+  - Test incrementally during refactoring
+
+### Long-Term Actions (Backlog)
+
+**6. Refactor ImageViewer.tsx**
+- Extract interaction hooks
+- Improve testability
+
+**7. Add Comprehensive Hook Testing**
+- Test all custom hooks
+- Integration tests for workflows
+
+**8. Address Feature TODOs**
+- Plane support
+- Constraint creation UI
+- Optimization status tracking
+
+---
+
+## 10. Follow-Up Questions
+
+These questions require your input to proceed with certain recommendations:
+
+### Q1: Documentation Strategy
+**Question:** Should we archive or delete the following completed migration documents?
+- `IMPLEMENTATION_PLAN.md` (detailed DTO consolidation plan, now complete)
+- `ENTITY_MIGRATION_COMPLETE.md` (completion announcement)
+- `architectural-violations-report.md` (violations fixed in v1.2)
+- `FIX-THE-LAST-VIOLATIONS.md` (pre-v1.2 issues)
+
+**My Recommendation:**
+- ✅ **Archive** to `docs/archive/v1.2-entity-consolidation/` (preserve history)
+- ✅ **Add note** in README: "See docs/archive/ for historical migration documentation"
+
+**Your Decision:** [ ] Archive  [ ] Delete  [ ] Keep
+
+---
+
+### Q2: Scratch Document Cleanup
+**Question:** The `scratch/` directory has 7 documents. Should we:
+A. Keep all scratch documents indefinitely
+B. Review each and delete obsolete ones
+C. Auto-archive scratch docs older than X months
+
+**My Recommendation:** **B** - Review each now, establish cleanup policy
+
+**Your Decision:** _____
+
+---
+
+### Q3: Entity Mutability Pattern
+**Question:** Entities currently use immutable factory pattern, but UI code circumvents this with `(entity as any)._field = value`. Should we:
+A. Accept this pattern (pragmatic, works)
+B. Add controlled setter methods to entities
+C. Switch to full immutability with copy-on-write
+
+**My Recommendation:** **B** - Add setters (`setName()`, `setColor()`, etc.) for controlled mutability
+
+**Your Decision:** [ ] A  [ ] B  [ ] C
+
+---
+
+### Q4: MainLayout Refactoring Priority
+**Question:** MainLayout.tsx is 1,170 LOC (too large). When should we refactor?
+A. Immediately (high priority)
+B. After visual language fix (next sprint)
+C. When adding major new features (deferred)
+
+**My Recommendation:** **B** - After visual language fix, before adding new features
+
+**Your Decision:** [ ] A  [ ] B  [ ] C
+
+---
+
+### Q5: Type Safety Investment
+**Question:** Replacing 25-30 `any` types is 8-12 hours effort. Should we:
+A. Do all at once (big bang)
+B. Do incrementally, file by file
+C. Defer until causing actual bugs
+
+**My Recommendation:** **B** - Start with `useDomainOperations.ts`, do 1-2 files per sprint
+
+**Your Decision:** [ ] A  [ ] B  [ ] C
+
+---
+
+### Q6: Testing Strategy
+**Question:** Hook testing is missing. What's the priority?
+A. Critical - block all PRs until hooks tested
+B. High - add tests over next 2-3 sprints
+C. Medium - add as bugs are found
+
+**My Recommendation:** **B** - High priority, but incremental (test before refactoring hooks)
+
+**Your Decision:** [ ] A  [ ] B  [ ] C
+
+---
+
+## 11. Success Metrics
+
+### How to measure review implementation success:
+
+**Code Quality Metrics:**
+- [ ] Zero duplicate color/glyph definitions (currently 2 files)
+- [ ] <10 uses of `any` type in hooks (currently 50+)
+- [ ] All files <500 LOC (currently 3 files >500 LOC)
+- [ ] Zero deprecated types in active unions (currently 2)
+
+**Documentation Metrics:**
+- [ ] All active docs updated within last 3 months
+- [ ] No obsolete violations reports in root directory
+- [ ] Scratch directory <5 documents
+- [ ] README reflects current architecture (v1.2)
+
+**Architecture Metrics:**
+- [ ] Zero ID-based lookups in domain logic (currently ✅)
+- [ ] All DTOs in sealed serialization layer (currently ✅)
+- [ ] Proper type safety on all public APIs (currently ⚠️)
+
+**Testing Metrics:**
+- [ ] All hooks have unit tests (currently 0%)
+- [ ] Coverage >80% on domain logic (current status unknown)
+- [ ] Integration tests for key workflows (partial)
+
+---
+
+## 12. Appendix: Detailed File Analysis
+
+### Files Reviewed (Sample)
+
+**Entities:**
+- `src/entities/world-point/WorldPoint.ts` (827 LOC) ✅ Clean
+- `src/entities/line/Line.ts` (881 LOC) ✅ Clean
+- `src/entities/viewpoint/Viewpoint.ts` (663 LOC) ✅ Clean
+- `src/entities/constraints/base-constraint.ts` (635 LOC) ✅ Clean
+
+**Hooks:**
+- `src/hooks/useDomainOperations.ts` ⚠️ Excessive `any` usage
+- `src/hooks/useHistory.ts` ⚠️ `any` in payloads
+- `src/hooks/useConstraints.ts` ⚠️ `any` in parameters
+
+**Components:**
+- `src/components/MainLayout.tsx` (1170 LOC) ❌ Too large
+- `src/components/ImageViewer.tsx` (1049 LOC) ❌ Too large
+- `src/components/WorldPointPanel.tsx` (632 LOC) ⚠️ Slightly over
+
+**Utilities:**
+- `src/constants/visualLanguage.ts` (211 LOC) ⚠️ Duplicated
+- `src/utils/visualLanguage.ts` (403 LOC) ⚠️ Duplicated
+
+**Types:**
+- `src/types/ids.ts` ⚠️ Deprecated types in union
+- `src/types/selectable.ts` ✅ Clean
+
+---
+
+## Conclusion
+
+The Pictorigo codebase is **architecturally excellent** following the v1.2 DTO consolidation. The major architectural violations have been eliminated, and the codebase strictly adheres to the "Object References, NOT IDs" principle.
+
+**Primary focus areas:**
+1. **CRITICAL:** Eliminate visual language duplication (DRY violation)
+2. **HIGH:** Improve type safety by replacing `any` types
+3. **HIGH:** Refactor oversized components (MainLayout, ImageViewer)
+4. **MEDIUM:** Clean up documentation and deprecated types
+
+The code is clean, maintainable, and follows good patterns. The issues identified are quality-of-life improvements rather than fundamental problems. With the recommended fixes, the codebase will be in excellent shape for continued development.
+
+**Estimated Total Effort for All Recommendations:** 40-55 hours
+**Recommended Phased Approach:** 3-4 sprints
+
+---
+
+**Review Complete.**
+**Next Steps:** Review questions above, approve recommendations, prioritize implementation.

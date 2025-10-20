@@ -109,7 +109,7 @@ export class Plane implements ISelectable, IValidatable {
   }
 
   getDependencies(): EntityId[] {
-    return Array.from(this.points).map(p => p.getId() as EntityId)
+    return Array.from(this.points).map(p => p.id as EntityId)
   }
 
   getDependents(): EntityId[] {

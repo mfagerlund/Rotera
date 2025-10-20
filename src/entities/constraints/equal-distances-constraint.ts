@@ -5,6 +5,7 @@ import type { ValidationResult } from '../../validation/validator'
 import type { ValueMap } from '../../optimization/IOptimizable'
 import { V, Vec3, type Value } from 'scalar-autograd'
 import { ValidationHelpers } from '../../validation/validator'
+import type { WorldPoint } from '../world-point/WorldPoint'
 import {
   Constraint,
   type ConstraintRepository,
@@ -36,7 +37,7 @@ export class EqualDistancesConstraint extends Constraint {
   static create(
     id: ConstraintId,
     name: string,
-    distancePairs: [PointId, PointId][], // At least 2 pairs
+    distancePairs: [WorldPoint, WorldPoint][], // At least 2 pairs
     repo: ConstraintRepository,
     options: {
       tolerance?: number
@@ -52,11 +53,11 @@ export class EqualDistancesConstraint extends Constraint {
       throw new Error('EqualDistancesConstraint requires at least 2 distance pairs')
     }
 
-    // Extract all unique point IDs
-    const allPointIds = new Set<PointId>()
+    // Extract all unique points
+    const allPoints = new Set<WorldPoint>()
     distancePairs.forEach(pair => {
-      allPointIds.add(pair[0])
-      allPointIds.add(pair[1])
+      allPoints.add(pair[0])
+      allPoints.add(pair[1])
     })
 
     const now = new Date().toISOString()
@@ -66,10 +67,13 @@ export class EqualDistancesConstraint extends Constraint {
       type: 'equal_distances',
       status: 'satisfied',
       entities: {
-        points: Array.from(allPointIds)
+        points: Array.from(allPoints).map(p => p.id as PointId)
       },
       parameters: {
-        distancePairs: distancePairs.map(pair => [...pair] as [PointId, PointId]),
+        distancePairs: distancePairs.map(pair => [
+          pair[0].id as PointId,
+          pair[1].id as PointId
+        ]),
         tolerance: options.tolerance ?? 0.001,
         priority: options.priority ?? 5
       },
@@ -81,7 +85,10 @@ export class EqualDistancesConstraint extends Constraint {
       createdAt: now,
       updatedAt: now
     }
-    return new EqualDistancesConstraint(repo, data)
+    const constraint = new EqualDistancesConstraint(repo, data)
+    allPoints.forEach(p => constraint._points.add(p))
+    constraint._entitiesPreloaded = true
+    return constraint
   }
 
   static fromDto(dto: ConstraintDto, repo: ConstraintRepository): EqualDistancesConstraint {
@@ -113,7 +120,7 @@ export class EqualDistancesConstraint extends Constraint {
 
     // Create a map for quick point lookup
     points.forEach(point => {
-      pointMap.set(point.getId() as PointId, point)
+      pointMap.set(point.id as PointId, point)
     })
 
     const distances: number[] = []
@@ -233,27 +240,27 @@ export class EqualDistancesConstraint extends Constraint {
     return new EqualDistancesConstraint(this.repo, clonedData)
   }
 
-  // Specific getters
-  get distancePairs(): [PointId, PointId][] {
-    return this.data.parameters.distancePairs.map(pair => [...pair] as [PointId, PointId])
-  }
-
-  addDistancePair(pointAId: PointId, pointBId: PointId): void {
-    if (pointAId === pointBId) {
+  // Specific methods
+  addDistancePair(pointA: WorldPoint, pointB: WorldPoint): void {
+    if (pointA === pointB) {
       throw new Error('Cannot add distance pair with identical points')
     }
 
+    const pointAId = pointA.id as PointId
+    const pointBId = pointB.id as PointId
+
     this.data.parameters.distancePairs.push([pointAId, pointBId])
 
-    // Update points list
+    // Update points list and set
     if (!this.data.entities.points.includes(pointAId)) {
       this.data.entities.points.push(pointAId)
+      this._points.add(pointA)
     }
     if (!this.data.entities.points.includes(pointBId)) {
       this.data.entities.points.push(pointBId)
+      this._points.add(pointB)
     }
 
-    this.invalidateReferences()
     this.updateTimestamp()
   }
 
@@ -269,7 +276,10 @@ export class EqualDistancesConstraint extends Constraint {
       })
       this.data.entities.points = Array.from(allPointIds)
 
-      this.invalidateReferences()
+      // Clear and rebuild point set
+      this._points.clear()
+      this._entitiesPreloaded = false
+
       this.updateTimestamp()
     }
   }
@@ -285,29 +295,30 @@ export class EqualDistancesConstraint extends Constraint {
    * each residual = distance_i - distance_0.
    */
   computeResiduals(valueMap: ValueMap): Value[] {
-    const distancePairs = this.distancePairs
+    const distancePairs = this.data.parameters.distancePairs
 
     if (distancePairs.length < 2) {
       console.warn('Equal distances constraint requires at least 2 pairs')
       return []
     }
 
-    // Helper to find point in valueMap
-    const findPoint = (pointId: PointId): Vec3 | undefined => {
-      for (const [point, vec] of valueMap.points) {
-        if (point.getId() === pointId) return vec
-      }
-      return undefined
-    }
+    const points = this.points
+    const pointMap = new Map<PointId, WorldPoint>()
+    points.forEach(p => pointMap.set(p.id as PointId, p))
 
     // Calculate distance for a pair using Vec3 API
     const calculateDistance = (pair: [PointId, PointId]): Value | undefined => {
-      const p1 = findPoint(pair[0])
-      const p2 = findPoint(pair[1])
+      const p1 = pointMap.get(pair[0])
+      const p2 = pointMap.get(pair[1])
 
       if (!p1 || !p2) return undefined
 
-      const diff = p2.sub(p1)
+      const p1Vec = valueMap.points.get(p1)
+      const p2Vec = valueMap.points.get(p2)
+
+      if (!p1Vec || !p2Vec) return undefined
+
+      const diff = p2Vec.sub(p1Vec)
       return diff.magnitude
     }
 

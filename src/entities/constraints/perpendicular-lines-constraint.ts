@@ -4,6 +4,7 @@ import type { ConstraintId, LineId } from '../../types/ids'
 import type { ValidationResult } from '../../validation/validator'
 import type { ValueMap } from '../../optimization/IOptimizable'
 import type { Value } from 'scalar-autograd'
+import type { Line } from '../line/Line'
 import {
   Constraint,
   type ConstraintRepository,
@@ -32,8 +33,8 @@ export class PerpendicularLinesConstraint extends Constraint {
   static create(
     id: ConstraintId,
     name: string,
-    lineAId: LineId,
-    lineBId: LineId,
+    lineA: Line,
+    lineB: Line,
     repo: ConstraintRepository,
     options: {
       tolerance?: number
@@ -52,7 +53,7 @@ export class PerpendicularLinesConstraint extends Constraint {
       type: 'perpendicular_lines',
       status: 'satisfied',
       entities: {
-        lines: [lineAId, lineBId]
+        lines: [lineA.id as LineId, lineB.id as LineId]
       },
       parameters: {
         tolerance: options.tolerance ?? 0.001,
@@ -66,7 +67,11 @@ export class PerpendicularLinesConstraint extends Constraint {
       createdAt: now,
       updatedAt: now
     }
-    return new PerpendicularLinesConstraint(repo, data)
+    const constraint = new PerpendicularLinesConstraint(repo, data)
+    constraint._lines.add(lineA)
+    constraint._lines.add(lineB)
+    constraint._entitiesPreloaded = true
+    return constraint
   }
 
   static fromDto(dto: ConstraintDto, repo: ConstraintRepository): PerpendicularLinesConstraint {
@@ -160,12 +165,12 @@ export class PerpendicularLinesConstraint extends Constraint {
   }
 
   // Specific getters
-  get lineAId(): LineId {
-    return this.data.entities.lines[0]
+  get lineA(): Line {
+    return this.lines[0]
   }
 
-  get lineBId(): LineId {
-    return this.data.entities.lines[1]
+  get lineB(): Line {
+    return this.lines[1]
   }
 
   protected getTargetValue(): number {

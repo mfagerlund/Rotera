@@ -38,3 +38,5 @@ function createConstraint(lineId: string, target: number) { ... }  // ❌ NO ID 
 - **No Repository pattern**: Simple functions for add/delete/query. Direct access to collections via Maps.
 
 See architectural-rules.md for complete details.
+- Do NOT use any to solve your problems. Proper casting is *important*!
+- DON'T ADD FUCKING WRAPPER FUCKING FUNCTIONS TO HANDLE ID BASED CALLS, FIX THE ISSUE BY CALLING USING FULL ENTITIES.

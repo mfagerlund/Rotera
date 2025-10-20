@@ -7,6 +7,7 @@ import type { ValueMap } from '../../optimization/IOptimizable';
 import { V, type Value } from 'scalar-autograd';
 import { projectWorldPointToPixel } from '../../optimization/camera-projection';
 import { ValidationHelpers } from '../../validation/validator';
+import type { WorldPoint } from '../world-point/WorldPoint';
 import {
   Constraint,
   type ConstraintRepository,
@@ -45,7 +46,7 @@ export class ProjectionConstraint extends Constraint {
   static create(
     id: ConstraintId,
     name: string,
-    worldPointId: PointId,
+    worldPoint: WorldPoint,
     cameraId: CameraId,
     observedU: number,
     observedV: number,
@@ -67,7 +68,7 @@ export class ProjectionConstraint extends Constraint {
       type: 'projection_point_camera',
       status: 'satisfied',
       entities: {
-        points: [worldPointId],
+        points: [worldPoint.id as PointId],
       },
       parameters: {
         cameraId,
@@ -84,7 +85,10 @@ export class ProjectionConstraint extends Constraint {
       createdAt: now,
       updatedAt: now,
     };
-    return new ProjectionConstraint(repo, data);
+    const constraint = new ProjectionConstraint(repo, data);
+    constraint._points.add(worldPoint);
+    constraint._entitiesPreloaded = true;
+    return constraint;
   }
 
   static fromDto(dto: ConstraintDto, repo: ConstraintRepository): ProjectionConstraint {
@@ -187,12 +191,8 @@ export class ProjectionConstraint extends Constraint {
   }
 
   // Specific getters/setters
-  get worldPointId(): PointId {
-    return this.data.entities.points[0];
-  }
-
-  get cameraId(): CameraId {
-    return this.data.parameters.cameraId;
+  get worldPoint(): WorldPoint {
+    return this.points[0];
   }
 
   get observedPixel(): [number, number] {
@@ -214,16 +214,9 @@ export class ProjectionConstraint extends Constraint {
    * This is the fundamental constraint in bundle adjustment.
    */
   computeResiduals(valueMap: ValueMap): Value[] {
-    // Find world point in valueMap
-    let worldPoint: ReturnType<typeof valueMap.points.get> | undefined;
-    for (const [point, vec] of valueMap.points) {
-      if (point.getId() === this.worldPointId) {
-        worldPoint = vec;
-        break;
-      }
-    }
+    const worldPointVec = valueMap.points.get(this.worldPoint);
 
-    if (!worldPoint) {
+    if (!worldPointVec) {
       console.warn(`Projection constraint ${this.data.id}: world point not found in valueMap`);
       return [];
     }
@@ -231,7 +224,7 @@ export class ProjectionConstraint extends Constraint {
     // Find camera in valueMap
     let cameraValues: ReturnType<typeof valueMap.cameras.get> | undefined;
     for (const [camera, values] of valueMap.cameras) {
-      if (camera.getId() === this.cameraId) {
+      if (camera.id === this.data.parameters.cameraId) {
         cameraValues = values;
         break;
       }
@@ -244,7 +237,7 @@ export class ProjectionConstraint extends Constraint {
 
     // Project world point through camera
     const projection = projectWorldPointToPixel(
-      worldPoint,
+      worldPointVec,
       cameraValues.position,
       cameraValues.rotation,
       cameraValues.focalLength,
