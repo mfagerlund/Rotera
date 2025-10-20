@@ -1,12 +1,12 @@
 // localStorage-based project management system
 
-import { Project, ProjectSettings } from '../types/project'
+import { EntityProject, ProjectSettings } from '../types/project-entities'
 
 const PROJECT_KEY = 'pictorigo_project'
 const SETTINGS_KEY = 'pictorigo_settings'
 
 export class ProjectStorage {
-  static save(project: Project): void {
+  static save(project: EntityProject): void {
     try {
       project.updatedAt = new Date().toISOString()
       const projectData = JSON.stringify(project)
@@ -26,7 +26,7 @@ export class ProjectStorage {
     }
   }
 
-  static load(): Project | null {
+  static load(): EntityProject | null {
     try {
       const data = localStorage.getItem(PROJECT_KEY)
       return data ? JSON.parse(data) : null
@@ -102,22 +102,16 @@ export class ProjectStorage {
     }
   }
 
-  static createEmptyProject(): Project {
+  static createEmptyProject(): EntityProject {
     return {
       id: crypto.randomUUID(),
       name: 'New Project',
-      worldPoints: {},
-      lines: {},
-      planes: {},
-      images: {},
-      cameras: {},
+      worldPoints: new Map(),
+      lines: new Map(),
+      viewpoints: new Map(),
       constraints: [],
-      nextWpNumber: 1,
-      nextLineNumber: 1,
-      nextPlaneNumber: 1,
-      settings: this.loadSettings(),
-      pointGroups: {},
       history: [],
+      settings: this.loadSettings(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }
@@ -125,13 +119,13 @@ export class ProjectStorage {
 }
 
 export class StorageManager {
-  static compressImages(project: Project): Project {
+  static compressImages(project: EntityProject): EntityProject {
     // TODO: Implement image compression if storage is getting full
     console.warn('Image compression not yet implemented')
     return project
   }
 
-  static estimateProjectSize(project: Project): number {
+  static estimateProjectSize(project: EntityProject): number {
     return JSON.stringify(project).length
   }
 

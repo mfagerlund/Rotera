@@ -1,0 +1,340 @@
+import React, { useState, useEffect } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faPencil, faTrash, faBullseye } from '@fortawesome/free-solid-svg-icons'
+import FloatingWindow from './FloatingWindow'
+import { useConfirm } from './ConfirmDialog'
+import { WorldPoint } from '../entities/world-point'
+import { Viewpoint } from '../entities/viewpoint'
+
+type ProjectImage = Viewpoint
+
+interface WorldPointEditorProps {
+  isOpen: boolean
+  onClose: () => void
+  worldPoint: WorldPoint
+  onUpdateWorldPoint: (updatedPoint: WorldPoint) => void
+  onDeleteWorldPoint?: (pointId: string) => void
+  images: Map<string, ProjectImage>
+}
+
+export const WorldPointEditor: React.FC<WorldPointEditorProps> = ({
+  isOpen,
+  onClose,
+  worldPoint,
+  onUpdateWorldPoint,
+  onDeleteWorldPoint,
+  images
+}) => {
+  const { confirm, dialog } = useConfirm()
+  const [editedPoint, setEditedPoint] = useState<WorldPoint>(worldPoint)
+  const [hasChanges, setHasChanges] = useState(false)
+
+  // Reset form when worldPoint changes
+  useEffect(() => {
+    setEditedPoint(worldPoint)
+    setHasChanges(false)
+  }, [worldPoint])
+
+  const handleInputChange = (field: keyof WorldPoint, value: any) => {
+    setEditedPoint(prev => ({
+      ...prev,
+      [field]: value
+    }))
+    setHasChanges(true)
+  }
+
+  const handleSave = () => {
+    onUpdateWorldPoint(editedPoint)
+    setHasChanges(false)
+    onClose()
+  }
+
+  const handleCancel = async () => {
+    if (hasChanges) {
+      if (await confirm('You have unsaved changes. Are you sure you want to cancel?')) {
+        setEditedPoint(worldPoint)
+        setHasChanges(false)
+        onClose()
+      }
+    } else {
+      onClose()
+    }
+  }
+
+  const handleDelete = async () => {
+    if (await confirm(`Are you sure you want to delete world point "${worldPoint.name}"?`)) {
+      onDeleteWorldPoint?.(worldPoint.id)
+      onClose()
+    }
+  }
+
+  const summarizeImageObservation = (imagePoint: WorldPoint['imagePoints'][number]) => {
+    const image = images.get(imagePoint.imageId)
+    const displayName = image?.name || imagePoint.imageId
+
+    if (!image || !image.width || !image.height) {
+      return {
+        displayName,
+        positionLabel: null as string | null,
+        percentLabel: null as string | null
+      }
+    }
+
+    const clampRatio = (value: number, max: number) => {
+      if (!Number.isFinite(value) || !Number.isFinite(max) || max <= 0) {
+        return 0
+      }
+      const ratio = value / max
+      return Math.min(Math.max(ratio, 0), 1)
+    }
+
+    const uRatio = clampRatio(imagePoint.u, image.width)
+    const vRatio = clampRatio(imagePoint.v, image.height)
+    const toPercent = (ratio: number) => Math.round(ratio * 100)
+
+    const horizontal = uRatio < 1 / 3 ? 'Left' : uRatio > 2 / 3 ? 'Right' : 'Center'
+    const vertical = vRatio < 1 / 3 ? 'Top' : vRatio > 2 / 3 ? 'Bottom' : 'Middle'
+    const segments: string[] = []
+
+    if (vertical !== 'Middle') {
+      segments.push(vertical)
+    }
+    if (horizontal !== 'Center') {
+      segments.push(horizontal)
+    }
+
+    const positionLabel = segments.length > 0 ? segments.join(' ') : 'Center'
+    const percentLabel = `${toPercent(uRatio)}% x ${toPercent(vRatio)}%`
+
+    return {
+      displayName,
+      positionLabel,
+      percentLabel
+    }
+  }
+
+  return (
+    <>
+      {dialog}
+      <FloatingWindow
+        title={`Edit World Point: ${worldPoint.name}`}
+        isOpen={isOpen}
+        onClose={handleCancel}
+        storageKey="world-point-edit"
+        showOkCancel={true}
+        onOk={handleSave}
+        onCancel={handleCancel}
+        onDelete={onDeleteWorldPoint ? handleDelete : undefined}
+        okText="Save"
+        cancelText="Cancel"
+        okDisabled={!hasChanges}
+      >
+        <div className="world-point-edit-content">
+
+          {/* Basic Properties */}
+          <div className="edit-section">
+            <h4>Basic Properties</h4>
+
+            <div className="form-row">
+              <label>Name</label>
+              <input
+                type="text"
+                value={editedPoint.name}
+                onChange={(e) => handleInputChange('name', e.target.value)}
+                className="form-input"
+                placeholder="Point name"
+              />
+            </div>
+
+            <div className="form-row">
+              <label>Color</label>
+              <input
+                type="color"
+                value={editedPoint.color || '#0696d7'}
+                onChange={(e) => handleInputChange('color', e.target.value)}
+                className="form-input color-input"
+              />
+            </div>
+          </div>
+
+          {/* World Coordinates */}
+          <div className="edit-section">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h4>Position (Known World Coordinates)</h4>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  setEditedPoint(prev => ({
+                    ...prev,
+                    xyz: undefined
+                  }))
+                  setHasChanges(true)
+                }}
+                disabled={!editedPoint.xyz}
+              >
+                Clear
+              </button>
+            </div>
+
+            <div className="form-row">
+              <label>Coordinate System</label>
+              <select
+                className="form-input"
+                value={editedPoint.group || ''}
+                onChange={(e) => handleInputChange('group', e.target.value || undefined)}
+              >
+                <option value="">Default</option>
+                <option value="world">World Space</option>
+                <option value="local">Local Frame</option>
+              </select>
+            </div>
+
+            <div className="form-row">
+              <label>Reference Tags</label>
+              <input
+                type="text"
+                className="form-input"
+                value={editedPoint.tags?.join(', ') || ''}
+                onChange={(e) => {
+                  const value = e.target.value
+                  handleInputChange('tags', value ? value.split(',').map(tag => tag.trim()).filter(Boolean) : undefined)
+                }}
+                placeholder="e.g. alignment, survey"
+              />
+            </div>
+
+            <div className="form-row">
+              <label>X, Y, Z</label>
+              <div style={{ display: 'flex', gap: '4px', flex: 1, minWidth: 0 }}>
+                <input
+                  type="number"
+                  step="0.0001"
+                  value={editedPoint.xyz?.[0] ?? ''}
+                  onChange={(e) => {
+                    const newValue = e.target.value === '' ? undefined : parseFloat(e.target.value)
+                    setEditedPoint(prev => ({
+                      ...prev,
+                      xyz: newValue !== undefined || prev.xyz?.[1] !== undefined || prev.xyz?.[2] !== undefined
+                        ? [newValue, prev.xyz?.[1], prev.xyz?.[2]] as [number | undefined, number | undefined, number | undefined] as any
+                        : undefined
+                    }))
+                    setHasChanges(true)
+                  }}
+                  className="form-input"
+                  placeholder="X"
+                  title="X coordinate (leave empty if unknown)"
+                  style={{ flex: 1, minWidth: 0, width: 0 }}
+                />
+                <input
+                  type="number"
+                  step="0.0001"
+                  value={editedPoint.xyz?.[1] ?? ''}
+                  onChange={(e) => {
+                    const newValue = e.target.value === '' ? undefined : parseFloat(e.target.value)
+                    setEditedPoint(prev => ({
+                      ...prev,
+                      xyz: prev.xyz?.[0] !== undefined || newValue !== undefined || prev.xyz?.[2] !== undefined
+                        ? [prev.xyz?.[0], newValue, prev.xyz?.[2]] as [number | undefined, number | undefined, number | undefined] as any
+                        : undefined
+                    }))
+                    setHasChanges(true)
+                  }}
+                  className="form-input"
+                  placeholder="Y"
+                  title="Y coordinate (leave empty if unknown)"
+                  style={{ flex: 1, minWidth: 0, width: 0 }}
+                />
+                <input
+                  type="number"
+                  step="0.0001"
+                  value={editedPoint.xyz?.[2] ?? ''}
+                  onChange={(e) => {
+                    const newValue = e.target.value === '' ? undefined : parseFloat(e.target.value)
+                    setEditedPoint(prev => ({
+                      ...prev,
+                      xyz: prev.xyz?.[0] !== undefined || prev.xyz?.[1] !== undefined || newValue !== undefined
+                        ? [prev.xyz?.[0], prev.xyz?.[1], newValue] as [number | undefined, number | undefined, number | undefined] as any
+                        : undefined
+                    }))
+                    setHasChanges(true)
+                  }}
+                  className="form-input"
+                  placeholder="Z"
+                  title="Z coordinate (leave empty if unknown)"
+                  style={{ flex: 1, minWidth: 0, width: 0 }}
+                />
+              </div>
+            </div>
+            <div className="form-hint" style={{ fontSize: '0.85em', color: '#888', marginTop: '4px' }}>
+              Set known coordinates to use as constraints. Leave empty if unknown.
+            </div>
+          </div>
+
+          {/* Image Points */}
+          <div className="edit-section">
+            <h4>Image Points ({editedPoint.imagePoints?.length || 0})</h4>
+            {editedPoint.imagePoints && editedPoint.imagePoints.length > 0 ? (
+              <div className="image-points-list">
+                {editedPoint.imagePoints.map((imagePoint, index) => {
+                  const summary = summarizeImageObservation(imagePoint)
+                  const pixelTooltip = `Pixels: ${Math.round(imagePoint.u)} x ${Math.round(imagePoint.v)}`
+
+                  return (
+                    <div key={index} className="image-point-item">
+                      <div className="image-point-header">
+                        <div className="image-point-info">
+                          <span className="image-point-chip" title={pixelTooltip}>
+                            <FontAwesomeIcon icon={faBullseye} />
+                            <span>{summary.displayName}</span>
+                          </span>
+                        </div>
+                        <div className="image-point-actions">
+                          <button
+                            className="btn-edit"
+                            onClick={() => {
+                              // Navigate to image viewer with this point selected
+                              console.log('Edit image point:', imagePoint)
+                            }}
+                            title="Edit image point"
+                          >
+                            <FontAwesomeIcon icon={faPencil} />
+                          </button>
+                          <button
+                            className="btn-delete"
+                            onClick={() => {
+                              const newImagePoints = editedPoint.imagePoints!.filter((_, i) => i !== index)
+                              setEditedPoint(prev => ({
+                                ...prev,
+                                imagePoints: newImagePoints
+                              }))
+                              setHasChanges(true)
+                            }}
+                            title="Delete image point"
+                          >
+                            <FontAwesomeIcon icon={faTrash} />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="image-point-meta">
+                        <span>{summary.positionLabel || 'Image metadata unavailable'}</span>
+                        {summary.percentLabel && <span>{summary.percentLabel}</span>}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="no-image-points">
+                No image points placed yet
+              </div>
+            )}
+          </div>
+        </div>
+      </FloatingWindow>
+      {dialog}
+    </>
+  )
+}
+
+export default WorldPointEditor

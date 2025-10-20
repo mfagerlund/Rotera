@@ -2,29 +2,32 @@ import React from 'react'
 
 import ImageViewer, { ImageViewerRef } from '../ImageViewer'
 import { LineData, ConstructionPreview } from '../image-viewer/types'
-import { ProjectImage, WorldPoint } from '../../types/project'
+import { Viewpoint } from '../../entities/viewpoint'
+import { WorldPoint } from '../../entities/world-point'
+import { Line as LineEntity } from '../../entities/line'
 
 interface ImageWorkspaceProps {
   isPointCreationActive: boolean
   isLoopTraceActive: boolean
-  image: ProjectImage | null
+  image: Viewpoint | null
   imageViewerRef: React.RefObject<ImageViewerRef>
   worldPoints: Map<string, WorldPoint>
   lines: Map<string, LineData>
-  selectedPointIds: string[]
-  selectedLineIds: string[]
+  lineEntities: Map<string, LineEntity>
+  selectedPoints: WorldPoint[]
+  selectedLines: LineEntity[]
   hoveredConstraintId: string | null
-  hoveredWorldPointId: string | null
-  placementMode: { active: boolean; worldPointId: string | null }
+  hoveredWorldPoint: WorldPoint | null
+  placementMode: { active: boolean; worldPoint: WorldPoint | null }
   activeConstraintType: string | null
   constructionPreview: ConstructionPreview | null
-  onPointClick: (pointId: string, ctrlKey: boolean, shiftKey: boolean) => void
-  onLineClick?: (lineId: string, ctrlKey: boolean, shiftKey: boolean) => void
+  onPointClick: (worldPoint: WorldPoint, ctrlKey: boolean, shiftKey: boolean) => void
+  onLineClick?: (line: LineEntity, ctrlKey: boolean, shiftKey: boolean) => void
   onCreatePoint?: (u: number, v: number) => void
-  onMovePoint?: (worldPointId: string, u: number, v: number) => void
-  onPointHover?: (pointId: string | null) => void
-  onPointRightClick?: (pointId: string) => void
-  onLineRightClick?: (lineId: string) => void
+  onMovePoint?: (worldPoint: WorldPoint, u: number, v: number) => void
+  onPointHover?: (worldPoint: WorldPoint | null) => void
+  onPointRightClick?: (worldPoint: WorldPoint) => void
+  onLineRightClick?: (line: LineEntity) => void
   onEmptySpaceClick?: (shiftKey: boolean) => void
   onRequestAddImage?: () => void
 }
@@ -34,10 +37,11 @@ const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({
   imageViewerRef,
   worldPoints,
   lines,
-  selectedPointIds,
-  selectedLineIds,
+  lineEntities,
+  selectedPoints,
+  selectedLines,
   hoveredConstraintId,
-  hoveredWorldPointId,
+  hoveredWorldPoint,
   placementMode,
   activeConstraintType,
   constructionPreview,
@@ -79,11 +83,11 @@ const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({
           ref={imageViewerRef}
           image={image}
           worldPoints={worldPoints}
-          lines={lines}
-          selectedPoints={selectedPointIds}
-          selectedLines={selectedLineIds}
+          lineEntities={lineEntities}
+          selectedPoints={selectedPoints}
+          selectedLines={selectedLines}
           hoveredConstraintId={hoveredConstraintId}
-          hoveredWorldPointId={hoveredWorldPointId}
+          hoveredWorldPoint={hoveredWorldPoint}
           placementMode={placementMode}
           activeConstraintType={activeConstraintType}
           constructionPreview={constructionPreview}

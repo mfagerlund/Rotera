@@ -1,4 +1,5 @@
-import { ProjectImage, WorldPoint } from '../../types/project'
+import { Viewpoint } from '../../entities/viewpoint'
+import { WorldPoint } from '../../entities/world-point'
 
 export interface CanvasPoint {
   x: number
@@ -16,22 +17,24 @@ export interface PanVelocity extends CanvasPoint {}
 
 export interface ConstructionPreview {
   type: 'line' | 'loop-chain'
-  pointA?: string
-  pointB?: string
+  pointA?: WorldPoint
+  pointB?: WorldPoint
   showToCursor?: boolean
   // For loop-chain type
   segments?: Array<{
-    pointA: string
-    pointB: string
+    pointA: WorldPoint
+    pointB: WorldPoint
     status: 'new' | 'exists' | 'building'
   }>
 }
 
+import { Line as LineEntity } from '../../entities/line'
+
 export interface LineData {
   id: string
   name: string
-  pointA: string
-  pointB: string
+  pointA: WorldPoint
+  pointB: WorldPoint
   length?: number
   color: string
   isVisible: boolean
@@ -46,21 +49,21 @@ export interface LineData {
 }
 
 export interface ImageViewerPropsBase {
-  image: ProjectImage
+  image: Viewpoint
   worldPoints: Map<string, WorldPoint>
-  lines?: Map<string, LineData>
-  selectedPoints: string[]
-  selectedLines?: string[]
+  lineEntities?: Map<string, LineEntity>
+  selectedPoints: WorldPoint[]
+  selectedLines?: LineEntity[]
   hoveredConstraintId: string | null
-  hoveredWorldPointId?: string | null
-  placementMode?: { active: boolean; worldPointId: string | null }
+  hoveredWorldPoint?: WorldPoint | null
+  placementMode?: { active: boolean; worldPoint: WorldPoint | null }
   isPointCreationActive?: boolean
   activeConstraintType?: string | null
   constructionPreview?: ConstructionPreview | null
 }
 
 export interface ImageViewerRenderState {
-  imageId: string
+  viewpoint: Viewpoint
   worldPoints: Map<string, WorldPoint>
   lines: Map<string, LineData>
   scale: number
@@ -86,4 +89,4 @@ export interface ImageViewerRenderState {
 
 export type CanvasToImage = (canvasX: number, canvasY: number) => ImageCoords | null
 export type ImageToCanvas = (u: number, v: number) => CanvasPoint
-export type OnMovePoint = ((worldPointId: string, u: number, v: number) => void) | undefined
+export type OnMovePoint = ((worldPoint: WorldPoint, u: number, v: number) => void) | undefined

@@ -14,9 +14,10 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { WorkspaceSwitcher } from '../WorkspaceManager'
 import { ConstraintToolbar } from '../ConstraintToolbar'
-import type { Project, AvailableConstraint } from '../../types/project'
-import type { Line } from '../../entities/line'
-import type { WorldPoint } from '../../entities/world-point'
+import type { AvailableConstraint } from '../../types/ui-types'
+import type { EntityProject } from '../../types/project-entities'
+import { Line } from '../../entities/line'
+import { WorldPoint } from '../../entities/world-point'
 import type { OptimizationExportDto } from '../../types/optimization-export'
 
 interface MainToolbarProps {
@@ -27,7 +28,7 @@ interface MainToolbarProps {
   worldHasContent: boolean
 
   // Project
-  project: Project | null
+  project: EntityProject | null
   onExportOptimization: () => OptimizationExportDto | null
   onClearProject: () => void
 
@@ -148,16 +149,7 @@ export const MainToolbar: React.FC<MainToolbarProps> = ({
       {/* Context-sensitive constraint toolbar */}
       <ConstraintToolbar
         selectedPoints={selectedPoints.map(p => p.getId())}
-        selectedLines={selectedLines.map(l => ({
-          id: l.getId(),
-          name: l.name,
-          pointA: l.pointA.getId(),
-          pointB: l.pointB.getId(),
-          type: 'segment' as const,
-          isVisible: l.isVisible(),
-          color: l.color,
-          isConstruction: l.isConstruction
-        }))}
+        selectedLines={selectedLines}
         availableConstraints={allConstraints}
         selectionSummary="" // Remove redundant selection display
         onConstraintClick={onConstraintClick}

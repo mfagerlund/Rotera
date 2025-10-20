@@ -2,44 +2,42 @@ import React, { useState, useEffect } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTrash } from '@fortawesome/free-solid-svg-icons'
 import FloatingWindow from './FloatingWindow'
-import { ProjectImage } from '../types/project'
+import type { Viewpoint } from '../entities/viewpoint'
 import { useConfirm } from './ConfirmDialog'
 
 interface ImageEditorProps {
   isOpen: boolean
   onClose: () => void
-  image: ProjectImage
-  onUpdateImage: (updatedImage: ProjectImage) => void
-  onDeleteImage?: (imageId: string) => void
+  viewpoint: Viewpoint
+  onUpdateViewpoint: (updatedViewpoint: Viewpoint) => void
+  onDeleteViewpoint?: (viewpoint: Viewpoint) => void
 }
 
 export const ImageEditor: React.FC<ImageEditorProps> = ({
   isOpen,
   onClose,
-  image,
-  onUpdateImage,
-  onDeleteImage
+  viewpoint,
+  onUpdateViewpoint,
+  onDeleteViewpoint
 }) => {
   const { confirm, dialog } = useConfirm()
-  const [editedImage, setEditedImage] = useState<ProjectImage>(image)
+  const [editedName, setEditedName] = useState(viewpoint.getName())
   const [hasChanges, setHasChanges] = useState(false)
 
-  // Reset form when image changes
+  // Reset form when viewpoint changes
   useEffect(() => {
-    setEditedImage(image)
+    setEditedName(viewpoint.getName())
     setHasChanges(false)
-  }, [image])
+  }, [viewpoint])
 
-  const handleInputChange = (field: keyof ProjectImage, value: any) => {
-    setEditedImage(prev => ({
-      ...prev,
-      [field]: value
-    }))
+  const handleNameChange = (value: string) => {
+    setEditedName(value)
     setHasChanges(true)
   }
 
   const handleSave = () => {
-    onUpdateImage(editedImage)
+    const updatedViewpoint = viewpoint.clone(viewpoint.getId(), editedName)
+    onUpdateViewpoint(updatedViewpoint)
     setHasChanges(false)
     onClose()
   }
@@ -47,7 +45,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
   const handleCancel = async () => {
     if (hasChanges) {
       if (await confirm('You have unsaved changes. Are you sure you want to cancel?')) {
-        setEditedImage(image)
+        setEditedName(viewpoint.getName())
         setHasChanges(false)
         onClose()
       }
@@ -57,17 +55,19 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
   }
 
   const handleDelete = async () => {
-    if (await confirm(`Are you sure you want to delete image "${image.name}"?`)) {
-      onDeleteImage?.(image.id)
+    if (await confirm(`Are you sure you want to delete viewpoint "${viewpoint.getName()}"?`)) {
+      onDeleteViewpoint?.(viewpoint)
       onClose()
     }
   }
+
+  const [imageWidth, imageHeight] = viewpoint.imageDimensions
 
   return (
     <>
       {dialog}
       <FloatingWindow
-        title={`Edit Image: ${image.name}`}
+        title={`Edit Viewpoint: ${viewpoint.getName()}`}
         isOpen={isOpen}
         onClose={handleCancel}
         width={450}
@@ -76,7 +76,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
         showOkCancel={true}
         onOk={handleSave}
         onCancel={handleCancel}
-        onDelete={onDeleteImage ? handleDelete : undefined}
+        onDelete={onDeleteViewpoint ? handleDelete : undefined}
         okText="Save"
         cancelText="Cancel"
         okDisabled={!hasChanges}
@@ -91,10 +91,10 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
               <label>Name</label>
               <input
                 type="text"
-                value={editedImage.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
+                value={editedName}
+                onChange={(e) => handleNameChange(e.target.value)}
                 className="form-input"
-                placeholder="Image name"
+                placeholder="Viewpoint name"
               />
             </div>
           </div>
@@ -113,8 +113,8 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
               borderRadius: '4px'
             }}>
               <img
-                src={editedImage.blob}
-                alt={editedImage.name}
+                src={viewpoint.url}
+                alt={viewpoint.getName()}
                 style={{
                   maxWidth: '100%',
                   maxHeight: '200px',
@@ -131,12 +131,12 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
             <div className="status-grid">
               <div className="status-item">
                 <label>Dimensions</label>
-                <span>{editedImage.width} × {editedImage.height} px</span>
+                <span>{imageWidth} × {imageHeight} px</span>
               </div>
 
               <div className="status-item">
-                <label>Image ID</label>
-                <span title={editedImage.id}>{editedImage.id}</span>
+                <label>Viewpoint ID</label>
+                <span title={viewpoint.getId()}>{viewpoint.getId()}</span>
               </div>
             </div>
           </div>

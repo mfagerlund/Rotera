@@ -1,7 +1,7 @@
 // Context-aware constraint property panel
 
 import React, { useEffect } from 'react'
-import { Line } from '../types/project'
+import { Line } from '../entities/line/Line'
 
 interface ConstraintPropertyPanelProps {
   activeConstraintType: string | null
@@ -146,7 +146,7 @@ const ConstraintParameterForm: React.FC<ConstraintParameterFormProps> = ({
                 <span>Angle: {getPointNames(selectedPoints.slice(0, 3)).join(' - ')}</span>
               ) : (
                 <span>Lines: {selectedLines.map(line =>
-                  `${getPointName(line.pointA)}-${getPointName(line.pointB)}`
+                  `${getPointName(line.pointA.getId())}-${getPointName(line.pointB.getId())}`
                 ).join(' and ')}</span>
               )
             ) : (
@@ -192,7 +192,7 @@ const ConstraintParameterForm: React.FC<ConstraintParameterFormProps> = ({
           <div className="selected-lines-preview">
             <span>
               Lines: {selectedLines.map(line =>
-                `${getPointName(line.pointA)}-${getPointName(line.pointB)}`
+                `${getPointName(line.pointA.getId())}-${getPointName(line.pointB.getId())}`
               ).join(' and ')}
             </span>
           </div>

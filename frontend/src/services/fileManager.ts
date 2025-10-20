@@ -1,5 +1,6 @@
 // Project file management service
-import { Project } from '../types/project'
+import { EntityProject } from '../types/project-entities'
+import { ProjectDto, projectToDto, dtoToProject } from '../store/project-serialization'
 import { errorToMessage } from '../types/utils'
 
 export interface ProjectFileMetadata {
@@ -15,7 +16,7 @@ export interface ProjectFileMetadata {
 
 export interface ProjectFile {
   metadata: ProjectFileMetadata
-  project: Project
+  project: EntityProject
 }
 
 export class FileManagerService {
@@ -25,11 +26,17 @@ export class FileManagerService {
 
   // Save project to file
   static async saveProjectToFile(
-    project: Project,
+    project: EntityProject,
     metadata: Partial<ProjectFileMetadata> = {}
   ): Promise<void> {
     try {
-      const projectFile: ProjectFile = {
+      // Convert EntityProject to DTO for serialization
+      const projectDto = projectToDto({
+        ...project,
+        updatedAt: new Date().toISOString()
+      })
+
+      const projectFile = {
         metadata: {
           name: metadata.name || project.name || 'Untitled Project',
           description: metadata.description,
@@ -40,10 +47,7 @@ export class FileManagerService {
           tags: metadata.tags || [],
           thumbnailUrl: metadata.thumbnailUrl
         },
-        project: {
-          ...project,
-          updatedAt: new Date().toISOString()
-        }
+        project: projectDto
       }
 
       const jsonString = JSON.stringify(projectFile, null, 2)
@@ -76,27 +80,30 @@ export class FileManagerService {
       }
 
       const text = await file.text()
-      const projectFile: ProjectFile = JSON.parse(text)
+      const rawFile = JSON.parse(text)
 
       // Validate file structure
-      if (!projectFile.metadata || !projectFile.project) {
+      if (!rawFile.metadata || !rawFile.project) {
         throw new Error('Invalid project file structure')
       }
 
       // Check version compatibility
-      if (!this.isVersionCompatible(projectFile.metadata.version)) {
-        throw new Error(`Incompatible project version: ${projectFile.metadata.version}`)
+      if (!this.isVersionCompatible(rawFile.metadata.version)) {
+        throw new Error(`Incompatible project version: ${rawFile.metadata.version}`)
       }
 
-      // Migrate if necessary
-      const migratedProject = this.migrateProject(projectFile.project, projectFile.metadata.version)
+      // Migrate if necessary (migrates the DTO)
+      const migratedDto = this.migrateProjectDto(rawFile.project, rawFile.metadata.version)
+
+      // Convert DTO to EntityProject
+      const entityProject = dtoToProject(migratedDto)
 
       return {
         metadata: {
-          ...projectFile.metadata,
+          ...rawFile.metadata,
           modifiedAt: new Date().toISOString()
         },
-        project: migratedProject
+        project: entityProject
       }
     } catch (error) {
       console.error('Error loading project from file:', error)
@@ -106,17 +113,18 @@ export class FileManagerService {
 
   // Export project data only (without metadata)
   static async exportProjectData(
-    project: Project,
+    project: EntityProject,
     format: 'json' | 'backup' = 'json'
   ): Promise<void> {
     try {
-      let data: any
+      const projectDto = projectToDto(project)
+      let data: string
       let filename: string
       let mimeType: string
 
       switch (format) {
         case 'json':
-          data = JSON.stringify(project, null, 2)
+          data = JSON.stringify(projectDto, null, 2)
           filename = `${this.sanitizeFilename(project.name || 'project')}_data.json`
           mimeType = 'application/json'
           break
@@ -124,7 +132,7 @@ export class FileManagerService {
           data = JSON.stringify({
             version: this.CURRENT_VERSION,
             exportedAt: new Date().toISOString(),
-            project
+            project: projectDto
           }, null, 2)
           filename = `${this.sanitizeFilename(project.name || 'project')}_backup.json`
           mimeType = 'application/json'
@@ -151,27 +159,30 @@ export class FileManagerService {
   }
 
   // Import project data from various formats
-  static async importProjectData(file: File): Promise<Project> {
+  static async importProjectData(file: File): Promise<EntityProject> {
     try {
       const text = await file.text()
-      let projectData: any
+      let projectDto: ProjectDto
 
       if (file.name.endsWith('.json')) {
-        projectData = JSON.parse(text)
+        const parsedData = JSON.parse(text)
 
-        // Handle different JSON formats
-        if (projectData.project && !projectData.version) {
+        // Handle different JSON formats - all contain DTOs
+        if (parsedData.project && !parsedData.version) {
           // Full project file format
-          return projectData.project
-        } else if (projectData.version && projectData.project) {
+          projectDto = parsedData.project
+        } else if (parsedData.version && parsedData.project) {
           // Backup format
-          return projectData.project
-        } else if (projectData.id || projectData.name || projectData.worldPoints) {
-          // Direct project data
-          return projectData as Project
+          projectDto = parsedData.project
+        } else if (parsedData.id || parsedData.name || parsedData.worldPoints) {
+          // Direct project data (DTO)
+          projectDto = parsedData
         } else {
           throw new Error('Unrecognized JSON format')
         }
+
+        // Convert DTO to EntityProject
+        return dtoToProject(projectDto)
       } else {
         throw new Error('Unsupported file format for import')
       }
@@ -183,7 +194,7 @@ export class FileManagerService {
 
   // Create project thumbnail
   static async createProjectThumbnail(
-    project: Project,
+    project: EntityProject,
     canvasElement?: HTMLCanvasElement
   ): Promise<string | null> {
     try {
@@ -205,8 +216,8 @@ export class FileManagerService {
         ctx.font = '14px Arial'
         ctx.textAlign = 'center'
 
-        const pointCount = Object.keys(project.worldPoints || {}).length
-        const imageCount = Object.keys(project.images || {}).length
+        const pointCount = project.worldPoints.size
+        const imageCount = (project as any).images ? Object.keys((project as any).images).length : project.viewpoints.size
         const constraintCount = (project.constraints || []).length
 
         ctx.fillText(project.name || 'Untitled', 100, 30)
@@ -234,21 +245,22 @@ export class FileManagerService {
         return false
       }
 
-      // Check required project fields
+      // Check required project fields (EntityProject)
       if (!projectFile.project.id) {
         return false
       }
 
-      // Validate data types
-      if (typeof projectFile.project.worldPoints !== 'object') {
+      // Validate data types (EntityProject uses Maps)
+      const proj = projectFile.project
+      if (!proj.worldPoints || !(proj.worldPoints instanceof Map)) {
         return false
       }
 
-      if (typeof projectFile.project.images !== 'object') {
+      if (!proj.viewpoints || !(proj.viewpoints instanceof Map)) {
         return false
       }
 
-      if (!Array.isArray(projectFile.project.constraints)) {
+      if (!Array.isArray(proj.constraints)) {
         return false
       }
 
@@ -281,31 +293,52 @@ export class FileManagerService {
     return major <= currentMajor
   }
 
-  private static migrateProject(project: Project, fromVersion: string): Project {
-    // Handle version migrations here
-    // For now, just return the project as-is since we're on version 1.0.0
+  private static migrateProjectDto(dto: any, fromVersion: string): ProjectDto {
+    // Handle version migrations here on DTOs
+    // DTOs use Record, not Map
     return {
-      ...project,
-      // Ensure required fields exist
-      id: project.id || crypto.randomUUID(),
-      name: project.name || 'Migrated Project',
-      worldPoints: project.worldPoints || {},
-      images: project.images || {},
-      constraints: project.constraints || [],
-      createdAt: project.createdAt || new Date().toISOString(),
+      id: dto.id || crypto.randomUUID(),
+      name: dto.name || 'Migrated Project',
+      worldPoints: dto.worldPoints || {},
+      lines: dto.lines || {},
+      viewpoints: dto.viewpoints || {},
+      constraints: dto.constraints || [],
+      settings: dto.settings || this.getDefaultSettings(),
+      createdAt: dto.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString()
+    }
+  }
+
+  private static getDefaultSettings() {
+    return {
+      showPointNames: true,
+      autoSave: false,
+      theme: 'light' as const,
+      measurementUnits: 'meters' as const,
+      precisionDigits: 2,
+      showConstraintGlyphs: true,
+      showMeasurements: true,
+      autoOptimize: false,
+      gridVisible: true,
+      snapToGrid: false,
+      defaultWorkspace: 'image' as const,
+      showConstructionGeometry: true,
+      enableSmartSnapping: true,
+      constraintPreview: true,
+      visualFeedbackLevel: 'standard' as const
     }
   }
 
   // Auto-save functionality
   static enableAutoSave(
-    project: Project,
+    project: EntityProject,
     intervalMs: number = 30000 // 30 seconds
   ): () => void {
     const saveToLocalStorage = () => {
       try {
+        const projectDto = projectToDto(project)
         const autoSaveData = {
-          project,
+          project: projectDto,
           savedAt: new Date().toISOString()
         }
         localStorage.setItem('pictorigo_autosave', JSON.stringify(autoSaveData))
@@ -324,7 +357,7 @@ export class FileManagerService {
   }
 
   // Recover auto-saved project
-  static recoverAutoSavedProject(): { project: Project; savedAt: string } | null {
+  static recoverAutoSavedProject(): { project: EntityProject; savedAt: string } | null {
     try {
       const autoSaveData = localStorage.getItem('pictorigo_autosave')
       if (!autoSaveData) return null
@@ -332,8 +365,11 @@ export class FileManagerService {
       const data = JSON.parse(autoSaveData)
       if (!data.project || !data.savedAt) return null
 
+      // Convert DTO to EntityProject
+      const entityProject = dtoToProject(data.project)
+
       return {
-        project: data.project,
+        project: entityProject,
         savedAt: data.savedAt
       }
     } catch (error) {

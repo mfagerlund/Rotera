@@ -1,8 +1,13 @@
 /**
- * Converts frontend Constraint objects to entity Constraint instances
+ * Converts legacy Constraint objects to entity Constraint instances
+ *
+ * NOTE: This is a temporary converter for backward compatibility during migration.
+ * The legacy Constraint type from types/project.ts uses different type names than
+ * the new DTO types. This converter bridges between the old and new representations.
  */
 
-import type { Constraint as FrontendConstraint } from '../types/project';
+// Legacy constraint type (deprecated - for backward compatibility only)
+import type { Constraint as LegacyConstraint } from '../types/project';
 import { Constraint as ConstraintEntity } from '../entities/constraints/base-constraint';
 import { DistanceConstraint } from '../entities/constraints/distance-constraint';
 import { FixedPointConstraint } from '../entities/constraints/fixed-point-constraint';
@@ -51,10 +56,10 @@ class ConstraintConversionRepository {
 }
 
 /**
- * Convert a frontend constraint to an entity constraint
+ * Convert a legacy constraint to an entity constraint
  */
 export function convertConstraintToEntity(
-  constraint: FrontendConstraint,
+  constraint: LegacyConstraint,
   pointEntities: WorldPoint[],
   lineEntities: Line[]
 ): ConstraintEntity | null {
@@ -224,10 +229,10 @@ export function convertConstraintToEntity(
 }
 
 /**
- * Convert all frontend constraints to entity constraints
+ * Convert all legacy constraints to entity constraints
  */
 export function convertAllConstraints(
-  constraints: FrontendConstraint[],
+  constraints: LegacyConstraint[],
   pointEntities: WorldPoint[],
   lineEntities: Line[]
 ): ConstraintEntity[] {

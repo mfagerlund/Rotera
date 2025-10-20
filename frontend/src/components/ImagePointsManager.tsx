@@ -2,13 +2,14 @@ import React from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faBullseye, faXmark } from '@fortawesome/free-solid-svg-icons'
 import EntityListPopup, { EntityListItem } from './EntityListPopup'
-import { ImagePoint, WorldPoint, ProjectImage } from '../types/project'
+import { WorldPoint } from '../entities/world-point'
+import { Viewpoint } from '../entities/viewpoint'
 
 interface ImagePointsManagerProps {
   isOpen: boolean
   onClose: () => void
   worldPoints: Map<string, WorldPoint>
-  images: Map<string, ProjectImage>
+  images: Map<string, Viewpoint>
   selectedImagePoints?: string[]
   onEditImagePoint?: (imagePointId: string) => void
   onDeleteImagePoint?: (imagePointId: string) => void
@@ -25,31 +26,36 @@ export const ImagePointsManager: React.FC<ImagePointsManagerProps> = ({
   onDeleteImagePoint,
   onSelectImagePoint
 }) => {
-  // Collect all image points from all world points
-  const allImagePoints: Array<ImagePoint & { worldPointId: string, worldPointName: string }> = []
+  // Collect all image points from all viewpoints
+  const allImagePoints: Array<{ u: number, v: number, viewpointId: string, worldPointId: string, worldPointName: string }> = []
 
-  Array.from(worldPoints.entries()).forEach(([wpId, worldPoint]) => {
-    worldPoint.imagePoints.forEach(imagePoint => {
-      allImagePoints.push({
-        ...imagePoint,
-        worldPointId: wpId,
-        worldPointName: worldPoint.name
-      })
+  Array.from(images.values()).forEach(viewpoint => {
+    viewpoint.getImagePoints().forEach(imagePoint => {
+      const worldPoint = worldPoints.get(imagePoint.worldPointId)
+      if (worldPoint) {
+        allImagePoints.push({
+          u: imagePoint.u,
+          v: imagePoint.v,
+          viewpointId: viewpoint.getId(),
+          worldPointId: imagePoint.worldPointId,
+          worldPointName: worldPoint.getName()
+        })
+      }
     })
   })
 
-  const getImageName = (imageId: string) => images.get(imageId)?.name || imageId
+  const getImageName = (imageId: string) => images.get(imageId)?.getName() || imageId
 
   // Convert image points to EntityListItem format
   const imagePointEntities: EntityListItem[] = allImagePoints.map(imagePoint => {
-    const imagePointId = `${imagePoint.worldPointId}-${imagePoint.imageId}`
+    const imagePointId = `${imagePoint.worldPointId}-${imagePoint.viewpointId}`
     return {
       id: imagePointId,
-      name: `${imagePoint.worldPointName} (${getImageName(imagePoint.imageId)})`,
+      name: `${imagePoint.worldPointName} (${getImageName(imagePoint.viewpointId)})`,
       displayInfo: `(${imagePoint.u.toFixed(1)}, ${imagePoint.v.toFixed(1)})`,
       additionalInfo: [
         `World Point: ${imagePoint.worldPointName}`,
-        `Image: ${getImageName(imagePoint.imageId)}`,
+        `Image: ${getImageName(imagePoint.viewpointId)}`,
         `Pixel coordinates: (${imagePoint.u.toFixed(1)}, ${imagePoint.v.toFixed(1)})`
       ],
       isActive: selectedImagePoints.includes(imagePointId)
@@ -79,15 +85,14 @@ export const ImagePointsManager: React.FC<ImagePointsManagerProps> = ({
       onSelect={onSelectImagePoint}
       renderEntityDetails={(entity) => {
         const [worldPointId, imageId] = entity.id.split('-')
-        const worldPoint = worldPoints.get(worldPointId)
-        const imagePoint = worldPoint?.imagePoints.find(ip => ip.imageId === imageId)
-        const image = images.get(imageId)
+        const viewpoint = images.get(imageId)
+        const imagePoint = viewpoint?.getImagePoints().find(ip => ip.worldPointId === worldPointId)
 
         return (
           <div className="image-point-details">
-            {image && (
+            {viewpoint && (
               <div className="image-info">
-                Image: {image.width}<FontAwesomeIcon icon={faXmark} />{image.height}px
+                Image: {viewpoint.imageDimensions[0]}<FontAwesomeIcon icon={faXmark} />{viewpoint.imageDimensions[1]}px
               </div>
             )}
             {imagePoint && (

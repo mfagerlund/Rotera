@@ -1,6 +1,9 @@
 // Constraint validation service for geometric consistency
 
-import { WorldPoint, Constraint } from '../types/project'
+// Use DTOs for validation (serialized data, not runtime entities)
+import type { WorldPointDto } from '../entities/world-point/WorldPointDto'
+// Constraint validation still uses legacy format (not migrated to new ConstraintDto yet)
+import type { Constraint } from '../types/project'
 import { getConstraintPointIds } from '../types/utils'
 
 export interface ValidationResult {
@@ -41,11 +44,11 @@ export interface ValidationSuggestion {
 }
 
 export class ConstraintValidator {
-  private worldPoints: Record<string, WorldPoint>
+  private worldPoints: Record<string, WorldPointDto>
   private constraints: Constraint[]
   private tolerance: number
 
-  constructor(worldPoints: Record<string, WorldPoint>, constraints: Constraint[], tolerance: number = 1e-6) {
+  constructor(worldPoints: Record<string, WorldPointDto>, constraints: Constraint[], tolerance: number = 1e-6) {
     this.worldPoints = worldPoints
     this.constraints = constraints
     this.tolerance = tolerance
@@ -293,17 +296,17 @@ export class ConstraintValidator {
       return { isValid: false, errors, warnings, suggestions: [] }
     }
 
-    // Calculate vectors for both lines
+    // Calculate vectors for both lines (handle null values)
     const vector1 = [
-      line1B.xyz[0] - line1A.xyz[0],
-      line1B.xyz[1] - line1A.xyz[1],
-      line1B.xyz[2] - line1A.xyz[2]
+      (line1B.xyz[0] ?? 0) - (line1A.xyz[0] ?? 0),
+      (line1B.xyz[1] ?? 0) - (line1A.xyz[1] ?? 0),
+      (line1B.xyz[2] ?? 0) - (line1A.xyz[2] ?? 0)
     ]
 
     const vector2 = [
-      line2B.xyz[0] - line2A.xyz[0],
-      line2B.xyz[1] - line2A.xyz[1],
-      line2B.xyz[2] - line2A.xyz[2]
+      (line2B.xyz[0] ?? 0) - (line2A.xyz[0] ?? 0),
+      (line2B.xyz[1] ?? 0) - (line2A.xyz[1] ?? 0),
+      (line2B.xyz[2] ?? 0) - (line2A.xyz[2] ?? 0)
     ]
 
     // Calculate angle between vectors (should be 0° or 180° for parallel lines)
@@ -370,17 +373,17 @@ export class ConstraintValidator {
       return { isValid: false, errors, warnings, suggestions: [] }
     }
 
-    // Calculate vectors for both lines
+    // Calculate vectors for both lines (handle null values)
     const vector1 = [
-      line1B.xyz[0] - line1A.xyz[0],
-      line1B.xyz[1] - line1A.xyz[1],
-      line1B.xyz[2] - line1A.xyz[2]
+      (line1B.xyz[0] ?? 0) - (line1A.xyz[0] ?? 0),
+      (line1B.xyz[1] ?? 0) - (line1A.xyz[1] ?? 0),
+      (line1B.xyz[2] ?? 0) - (line1A.xyz[2] ?? 0)
     ]
 
     const vector2 = [
-      line2B.xyz[0] - line2A.xyz[0],
-      line2B.xyz[1] - line2A.xyz[1],
-      line2B.xyz[2] - line2A.xyz[2]
+      (line2B.xyz[0] ?? 0) - (line2A.xyz[0] ?? 0),
+      (line2B.xyz[1] ?? 0) - (line2A.xyz[1] ?? 0),
+      (line2B.xyz[2] ?? 0) - (line2A.xyz[2] ?? 0)
     ]
 
     // Calculate angle between vectors (should be 90° for perpendicular lines)
@@ -516,16 +519,35 @@ export class ConstraintValidator {
 
   private getConstraintPointIds = getConstraintPointIds
 
-  private calculateDistance(pointA: number[], pointB: number[]): number {
-    const dx = pointA[0] - pointB[0]
-    const dy = pointA[1] - pointB[1]
-    const dz = pointA[2] - pointB[2]
+  private calculateDistance(pointA: (number | null)[], pointB: (number | null)[]): number {
+    // Filter out nulls - validation should have already checked for this
+    const ax = pointA[0] ?? 0
+    const ay = pointA[1] ?? 0
+    const az = pointA[2] ?? 0
+    const bx = pointB[0] ?? 0
+    const by = pointB[1] ?? 0
+    const bz = pointB[2] ?? 0
+
+    const dx = ax - bx
+    const dy = ay - by
+    const dz = az - bz
     return Math.sqrt(dx * dx + dy * dy + dz * dz)
   }
 
-  private calculateAngle(pointA: number[], vertex: number[], pointC: number[]): number {
-    const va = [pointA[0] - vertex[0], pointA[1] - vertex[1], pointA[2] - vertex[2]]
-    const vc = [pointC[0] - vertex[0], pointC[1] - vertex[1], pointC[2] - vertex[2]]
+  private calculateAngle(pointA: (number | null)[], vertex: (number | null)[], pointC: (number | null)[]): number {
+    // Filter out nulls
+    const ax = pointA[0] ?? 0
+    const ay = pointA[1] ?? 0
+    const az = pointA[2] ?? 0
+    const vx = vertex[0] ?? 0
+    const vy = vertex[1] ?? 0
+    const vz = vertex[2] ?? 0
+    const cx = pointC[0] ?? 0
+    const cy = pointC[1] ?? 0
+    const cz = pointC[2] ?? 0
+
+    const va = [ax - vx, ay - vy, az - vz]
+    const vc = [cx - vx, cy - vy, cz - vz]
 
     const dotProduct = va[0] * vc[0] + va[1] * vc[1] + va[2] * vc[2]
     const magA = Math.sqrt(va[0] * va[0] + va[1] * va[1] + va[2] * va[2])

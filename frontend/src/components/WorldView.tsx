@@ -2,16 +2,19 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowRight } from '@fortawesome/free-solid-svg-icons'
-import { WorldPoint, Line, Plane, Project, ConstraintStatus } from '../types/project'
+import type { EntityProject } from '../types/project-entities'
+import type { WorldPoint } from '../entities/world-point/WorldPoint'
+import type { Line } from '../entities/line/Line'
+import type { Plane } from '../entities/plane'
 
 interface WorldViewProps {
-  project: Project
+  project: EntityProject
   selectedPoints: string[]
   selectedLines: string[]
   selectedPlanes: string[]
   hoveredConstraintId?: string | null
-  onPointClick: (pointId: string, ctrlKey: boolean, shiftKey: boolean) => void
-  onLineClick?: (lineId: string, ctrlKey: boolean, shiftKey: boolean) => void
+  onPointClick: (worldPoint: WorldPoint, ctrlKey: boolean, shiftKey: boolean) => void
+  onLineClick?: (line: Line, ctrlKey: boolean, shiftKey: boolean) => void
   onPlaneClick?: (planeId: string, ctrlKey: boolean, shiftKey: boolean) => void
   onCreatePoint?: (x: number, y: number, z: number) => void
   onMovePoint?: (pointId: string, x: number, y: number, z: number) => void
@@ -93,8 +96,8 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
     return { x: screenX, y: screenY, depth: rotZ2 }
   }, [viewMatrix])
 
-  // Get constraint status color
-  const getConstraintStatusColor = (status: ConstraintStatus) => {
+  // Get constraint status color (not used in this component currently)
+  const getConstraintStatusColor = (status: 'satisfied' | 'warning' | 'violated') => {
     switch (status) {
       case 'satisfied': return '#4CAF50' // Green
       case 'warning': return '#FF9800'   // Amber
@@ -105,10 +108,13 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
 
   // Render world points
   const renderWorldPoints = useCallback((ctx: CanvasRenderingContext2D) => {
-    Object.entries(project.worldPoints).forEach(([pointId, point]) => {
-      if (!point.isVisible || !point.xyz) return
+    project.worldPoints.forEach((point, pointId) => {
+      if (!point.isVisible() || !point.xyz) return
 
-      const projected = project3DTo2D(point.xyz)
+      const coords = point.getDefinedCoordinates()
+      if (!coords) return
+
+      const projected = project3DTo2D(coords)
       const isSelected = selectedPoints.includes(pointId)
       const isHovered = hoverState.hoveredPointId === pointId
       const radius = isSelected ? 6 : (isHovered ? 5 : 4)
@@ -142,16 +148,17 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
 
   // Render lines
   const renderLines = useCallback((ctx: CanvasRenderingContext2D) => {
+    project.lines.forEach((line, lineId) => {
+      if (!line.isVisible()) return
 
-    Object.entries(project.lines || {}).forEach(([lineId, line]) => {
-      if (!line.isVisible) return
+      const pointA = line.pointA
+      const pointB = line.pointB
+      const coordsA = pointA.getDefinedCoordinates()
+      const coordsB = pointB.getDefinedCoordinates()
+      if (!coordsA || !coordsB) return
 
-      const pointA = project.worldPoints[line.pointA]
-      const pointB = project.worldPoints[line.pointB]
-      if (!pointA?.xyz || !pointB?.xyz) return
-
-      const projA = project3DTo2D(pointA.xyz)
-      const projB = project3DTo2D(pointB.xyz)
+      const projA = project3DTo2D(coordsA)
+      const projB = project3DTo2D(coordsB)
       const isSelected = selectedLines.includes(lineId)
       const isHovered = hoverState.hoveredLineId === lineId
 
@@ -187,26 +194,25 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
 
       // Show glyph with direction constraint if available
       let directionGlyph = '↔' // Default glyph
-      if (line.constraints) {
-        switch (line.constraints.direction) {
-          case 'horizontal': directionGlyph = '↔'; break
-          case 'vertical': directionGlyph = '↕'; break
-          case 'x-aligned': directionGlyph = 'X'; break
-          case 'z-aligned': directionGlyph = 'Z'; break
-          case 'free': directionGlyph = '↔'; break
-        }
+      const direction = line.direction
+      switch (direction) {
+        case 'horizontal': directionGlyph = '↔'; break
+        case 'vertical': directionGlyph = '↕'; break
+        case 'x-aligned': directionGlyph = 'X'; break
+        case 'z-aligned': directionGlyph = 'Z'; break
+        case 'free': directionGlyph = '↔'; break
       }
 
       // Show target length if set, otherwise show calculated length
       let displayText = `${line.name} ${directionGlyph}`
-      if (line.constraints?.targetLength) {
-        displayText = `${line.name} ${directionGlyph} ${line.constraints.targetLength.toFixed(1)}m`
-      } else if (pointA.xyz && pointB.xyz) {
-        const dx = pointB.xyz[0] - pointA.xyz[0]
-        const dy = pointB.xyz[1] - pointA.xyz[1]
-        const dz = pointB.xyz[2] - pointA.xyz[2]
-        const calculatedLength = Math.sqrt(dx*dx + dy*dy + dz*dz)
-        displayText = `${line.name} ${directionGlyph} ${calculatedLength.toFixed(1)}m`
+      const targetLength = line.targetLength
+      if (targetLength !== undefined) {
+        displayText = `${line.name} ${directionGlyph} ${targetLength.toFixed(1)}m`
+      } else {
+        const calculatedLength = line.length()
+        if (calculatedLength !== null) {
+          displayText = `${line.name} ${directionGlyph} ${calculatedLength.toFixed(1)}m`
+        }
       }
 
       // WorldView shows calculated 3D distance when coordinates are available
@@ -228,41 +234,8 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
 
   // Render planes
   const renderPlanes = useCallback((ctx: CanvasRenderingContext2D) => {
-    Object.entries(project.planes || {}).forEach(([planeId, plane]) => {
-      if (!plane.isVisible) return
-
-      // For now, render as a simple wireframe
-      // TODO: Implement proper plane rendering with transparency
-      const isSelected = selectedPlanes.includes(planeId)
-
-      if (plane.definition.type === 'three_points' && plane.definition.pointIds) {
-        const [p1Id, p2Id, p3Id] = plane.definition.pointIds
-        const p1 = project.worldPoints[p1Id]
-        const p2 = project.worldPoints[p2Id]
-        const p3 = project.worldPoints[p3Id]
-
-        if (p1?.xyz && p2?.xyz && p3?.xyz) {
-          const proj1 = project3DTo2D(p1.xyz)
-          const proj2 = project3DTo2D(p2.xyz)
-          const proj3 = project3DTo2D(p3.xyz)
-
-          ctx.beginPath()
-          ctx.moveTo(proj1.x, proj1.y)
-          ctx.lineTo(proj2.x, proj2.y)
-          ctx.lineTo(proj3.x, proj3.y)
-          ctx.closePath()
-
-          // Fill with transparency
-          ctx.fillStyle = isSelected ? 'rgba(255, 193, 7, 0.2)' : 'rgba(33, 150, 243, 0.1)'
-          ctx.fill()
-
-          // Stroke outline
-          ctx.strokeStyle = isSelected ? '#FFC107' : plane.color || '#2196F3'
-          ctx.lineWidth = isSelected ? 2 : 1
-          ctx.stroke()
-        }
-      }
-    })
+    // TODO: Planes not yet implemented in EntityProject
+    // Will be added when Plane entity is integrated into project structure
   }, [project, selectedPlanes, project3DTo2D])
 
   // Render coordinate axes
@@ -335,7 +308,7 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
         lastX: x,
         lastY: y,
         dragType: 'point',
-        draggedPointId: clickedPoint
+        draggedPointId: clickedPoint.getId()
       })
       return
     }
@@ -370,10 +343,13 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
       const hoveredLine = findLineAt(x, y)
 
       // Update hover state if changed
-      if (hoveredPoint !== hoverState.hoveredPointId || hoveredLine !== hoverState.hoveredLineId) {
+      const hoveredPointId = hoveredPoint?.getId() || null
+      const hoveredLineId = hoveredLine?.getId() || null
+
+      if (hoveredPointId !== hoverState.hoveredPointId || hoveredLineId !== hoverState.hoveredLineId) {
         setHoverState({
-          hoveredPointId: hoveredPoint,
-          hoveredLineId: hoveredLine
+          hoveredPointId,
+          hoveredLineId
         })
 
         // Update cursor style
@@ -384,11 +360,11 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
         }
 
         // Notify parent components of hover changes
-        if (onPointHover && hoveredPoint !== hoverState.hoveredPointId) {
-          onPointHover(hoveredPoint)
+        if (onPointHover && hoveredPointId !== hoverState.hoveredPointId) {
+          onPointHover(hoveredPointId)
         }
-        if (onLineHover && hoveredLine !== hoverState.hoveredLineId) {
-          onLineHover(hoveredLine)
+        if (onLineHover && hoveredLineId !== hoverState.hoveredLineId) {
+          onLineHover(hoveredLineId)
         }
       }
       return
@@ -454,31 +430,34 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
   // NO ZOOM HANDLING - REMOVED COMPLETELY
 
   // Find point at screen coordinates
-  const findPointAt = (x: number, y: number): string | null => {
-    for (const [pointId, point] of Object.entries(project.worldPoints)) {
-      if (!point.isVisible || !point.xyz) continue
+  const findPointAt = (x: number, y: number): WorldPoint | null => {
+    for (const [pointId, point] of project.worldPoints.entries()) {
+      if (!point.isVisible()) continue
 
-      const projected = project3DTo2D(point.xyz)
+      const coords = point.getDefinedCoordinates()
+      if (!coords) continue
+
+      const projected = project3DTo2D(coords)
       const distance = Math.sqrt(
         Math.pow(projected.x - x, 2) + Math.pow(projected.y - y, 2)
       )
 
-      if (distance <= 8) return pointId
+      if (distance <= 8) return point
     }
     return null
   }
 
   // Find line at screen coordinates
-  const findLineAt = (x: number, y: number): string | null => {
-    for (const [lineId, line] of Object.entries(project.lines || {})) {
-      if (!line.isVisible) continue
+  const findLineAt = (x: number, y: number): Line | null => {
+    for (const [lineId, line] of project.lines.entries()) {
+      if (!line.isVisible()) continue
 
-      const pointA = project.worldPoints[line.pointA]
-      const pointB = project.worldPoints[line.pointB]
-      if (!pointA?.xyz || !pointB?.xyz) continue
+      const coordsA = line.pointA.getDefinedCoordinates()
+      const coordsB = line.pointB.getDefinedCoordinates()
+      if (!coordsA || !coordsB) continue
 
-      const projA = project3DTo2D(pointA.xyz)
-      const projB = project3DTo2D(pointB.xyz)
+      const projA = project3DTo2D(coordsA)
+      const projB = project3DTo2D(coordsB)
 
       // Calculate distance from point to line segment
       const A = x - projA.x
@@ -492,7 +471,7 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
       if (lenSq === 0) {
         // Line is a point
         const distance = Math.sqrt(A * A + B * B)
-        if (distance <= 5) return lineId
+        if (distance <= 5) return line
         continue
       }
 
@@ -509,7 +488,7 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
       )
 
       // Increase hit tolerance for lines (larger buffer for easier clicking)
-      if (distance <= 8) return lineId
+      if (distance <= 8) return line
     }
     return null
   }

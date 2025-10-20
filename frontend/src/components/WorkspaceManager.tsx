@@ -4,7 +4,35 @@ import React, { useState, useCallback, useEffect } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCamera, faCheck, faCircleXmark } from '@fortawesome/free-solid-svg-icons'
 import { faCircle } from '@fortawesome/free-regular-svg-icons'
-import { WorkspaceState } from '../types/enhanced-project'
+
+// Workspace state type (moved from deleted enhanced-project.ts)
+export interface WorkspaceState {
+  currentWorkspace: 'image' | 'world' | 'split'
+  imageWorkspace: {
+    currentImageId: string | null
+    scale: number
+    pan: { x: number; y: number }
+    showImagePoints: boolean
+    showProjections: boolean
+  }
+  worldWorkspace: {
+    viewMatrix: {
+      scale: number
+      rotation: { x: number; y: number; z: number }
+      translation: { x: number; y: number; z: number }
+    }
+    renderMode: 'wireframe' | 'solid' | 'shaded'
+    showAxes: boolean
+    showGrid: boolean
+    showCameras: boolean
+  }
+  splitWorkspace: {
+    splitDirection: 'horizontal' | 'vertical'
+    splitRatio: number
+    syncSelection: boolean
+    syncNavigation: boolean
+  }
+}
 
 interface WorkspaceManagerProps {
   workspaceState: WorkspaceState

@@ -1,6 +1,20 @@
 // Visual language constants for the new UI paradigm
 
-import { EntityColor, ConstraintGlyph, ConstraintStatus } from '../types/project'
+// Type definitions (co-located with usage)
+export type EntityColor = {
+  satisfied: string     // Green
+  warning: string       // Amber
+  violated: string      // Red
+  worldGeometry: string // Blue
+  imageGuides: string   // Orange
+  construction: string  // Gray
+  selection: string     // Highlight color
+}
+
+export type ConstraintGlyph =
+  | '∥' | '⟂' | '⎓' | '⌖' | '🔒' | '≡' | '↔' | '∠' | '○' | '□' | '△'
+
+export type ConstraintStatus = 'satisfied' | 'warning' | 'violated'
 
 // Color scheme for entity states and constraint status
 export const ENTITY_COLORS: EntityColor = {

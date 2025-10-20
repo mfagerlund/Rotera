@@ -4,27 +4,30 @@ import React, { useState } from 'react'
 import EntityListPopup, { EntityListItem } from './EntityListPopup'
 import FloatingWindow from './FloatingWindow'
 import LineCreationTool from './tools/LineCreationTool'
-import { Line } from '../types/project'
+import { Line } from '../entities/line'
+import { WorldPoint } from '../entities/world-point'
 
 interface LinesManagerProps {
   isOpen: boolean
   onClose: () => void
   lines: Map<string, Line>
+  worldPoints: Map<string, WorldPoint>
   worldPointNames: Record<string, string>
   selectedLines?: string[]
-  onEditLine?: (lineId: string) => void
-  onDeleteLine?: (lineId: string) => void
+  onEditLine?: (line: Line) => void
+  onDeleteLine?: (line: Line) => void
   onDeleteAllLines?: () => void
   onUpdateLine?: (updatedLine: Line) => void
   onToggleLineVisibility?: (lineId: string) => void
-  onSelectLine?: (lineId: string) => void
-  onCreateLine?: (pointIds: [string, string], constraints?: any) => void
+  onSelectLine?: (line: Line) => void
+  onCreateLine?: (pointA: WorldPoint, pointB: WorldPoint, constraints?: any) => void
 }
 
 export const LinesManager: React.FC<LinesManagerProps> = ({
   isOpen,
   onClose,
   lines,
+  worldPoints,
   worldPointNames,
   selectedLines = [],
   onEditLine,
@@ -35,67 +38,84 @@ export const LinesManager: React.FC<LinesManagerProps> = ({
   onSelectLine,
   onCreateLine
 }) => {
-  const [editingLineId, setEditingLineId] = useState<string | null>(null)
+  const [editingLine, setEditingLine] = useState<Line | null>(null)
 
   const getPointName = (pointId: string) => worldPointNames[pointId] || pointId
 
   // Convert lines to EntityListItem format
-  const lineEntities: EntityListItem[] = Array.from(lines.values()).map(line => ({
-    id: line.id,
-    name: line.name,
-    displayInfo: `${getPointName(line.pointA)} ↔ ${getPointName(line.pointB)}`,
-    additionalInfo: [
-      line.isConstruction ? 'Construction line' : 'Driving line',
-      ...(line.constraints?.direction && line.constraints.direction !== 'free' ? [`Direction: ${line.constraints.direction}`] : []),
-      ...(line.constraints?.targetLength ? [`Length: ${line.constraints.targetLength}m`] : [])
-    ],
-    color: line.color,
-    isVisible: line.isVisible,
-    isActive: selectedLines.includes(line.id)
-  }))
+  const lineEntities: EntityListItem[] = Array.from(lines.values()).map(line => {
+    const dirVector = line.getDirection()
+    const dirLabel = dirVector ? 'constrained' : 'free'
+
+    return {
+      id: line.getId(),
+      name: line.getName(),
+      displayInfo: `${getPointName(line.pointA.getId())} ↔ ${getPointName(line.pointB.getId())}`,
+      additionalInfo: [
+        line.isConstruction ? 'Construction line' : 'Driving line',
+        ...(dirLabel !== 'free' ? [`Direction: ${dirLabel}`] : []),
+        ...(line.targetLength ? [`Length: ${line.targetLength}m`] : [])
+      ],
+      color: line.color,
+      isVisible: line.isVisible(),
+      isActive: selectedLines.includes(line.getId())
+    }
+  })
 
   const handleEdit = (lineId: string) => {
-    setEditingLineId(lineId)
+    const line = lines.get(lineId)
+    if (line) {
+      setEditingLine(line)
+    }
   }
 
   const handleCloseEdit = () => {
-    setEditingLineId(null)
+    setEditingLine(null)
   }
 
   const handleUpdateLine = (updatedLine: Line) => {
     onUpdateLine?.(updatedLine)
-    setEditingLineId(null)
+    setEditingLine(null)
   }
-
-  const editingLine = editingLineId ? lines.get(editingLineId) : null
 
   return (
     <>
       <EntityListPopup
         title="Lines"
-        isOpen={isOpen && !editingLineId}
+        isOpen={isOpen && !editingLine}
         onClose={onClose}
         entities={lineEntities}
         emptyMessage="No lines created yet"
         storageKey="lines-popup"
         onEdit={handleEdit}
-        onDelete={onDeleteLine}
+        onDelete={onDeleteLine ? (lineId) => {
+          const line = lines.get(lineId)
+          if (line) {
+            onDeleteLine(line)
+          }
+        } : undefined}
         onDeleteAll={onDeleteAllLines}
         onToggleVisibility={onToggleLineVisibility}
-        onSelect={onSelectLine}
+        onSelect={onSelectLine ? (lineId) => {
+          const line = lines.get(lineId)
+          if (line) {
+            onSelectLine(line)
+          }
+        } : undefined}
         renderEntityDetails={(entity) => {
           const line = lines.get(entity.id)
           if (!line) return null
+          const dirVector = line.getDirection()
           return (
             <div className="line-details">
-              {line.constraints?.targetLength && (
+              {line.targetLength && (
                 <div className="constraint-badge">
-                  Length: {line.constraints.targetLength}m
+                  Length: {line.targetLength}m
                 </div>
               )}
-              {line.constraints?.direction && line.constraints.direction !== 'free' && (
+              {dirVector && (
                 <div className="constraint-badge">
-                  {line.constraints.direction}
+                  Direction constrained
                 </div>
               )}
             </div>
@@ -104,9 +124,9 @@ export const LinesManager: React.FC<LinesManagerProps> = ({
       />
 
       {/* Line Edit Window */}
-      {editingLineId && editingLine && (
+      {editingLine && (
         <FloatingWindow
-          title={`Edit Line: ${editingLine.name}`}
+          title={`Edit Line: ${editingLine.getName()}`}
           isOpen={true}
           onClose={handleCloseEdit}
           width={350}
@@ -120,15 +140,15 @@ export const LinesManager: React.FC<LinesManagerProps> = ({
             window.dispatchEvent(event)
           }}
           onCancel={handleCloseEdit}
-          onDelete={onDeleteLine ? () => {
-            // Trigger delete through LineCreationTool's handler
-            const event = new CustomEvent('lineToolDelete')
-            window.dispatchEvent(event)
+          onDelete={onDeleteLine && editingLine ? () => {
+            onDeleteLine(editingLine)
+            handleCloseEdit()
           } : undefined}
         >
           <LineCreationTool
-            selectedPoints={[editingLine.pointA, editingLine.pointB]}
+            selectedPoints={[editingLine.pointA.getId(), editingLine.pointB.getId()]}
             worldPointNames={worldPointNames}
+            worldPoints={worldPoints}
             existingLines={lines}
             onCreateLine={() => {}} // Not used in edit mode
             onCancel={handleCloseEdit}
@@ -136,7 +156,7 @@ export const LinesManager: React.FC<LinesManagerProps> = ({
             showHeader={false}
             showActionButtons={false}
             editMode={true}
-            existingLine={editingLine}
+            existingLine={editingLine as any}
             onUpdateLine={handleUpdateLine}
             onDeleteLine={onDeleteLine}
           />

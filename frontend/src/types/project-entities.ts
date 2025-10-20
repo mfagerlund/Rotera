@@ -18,6 +18,9 @@ export interface EntityProject {
   // Constraints hold references to entities
   constraints: Constraint[]
 
+  // History for undo/redo
+  history: any[] // ProjectHistoryEntry[] - avoiding circular dependency for now
+
   // Metadata
   settings: ProjectSettings
   createdAt: string

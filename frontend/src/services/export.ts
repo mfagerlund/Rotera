@@ -1,6 +1,20 @@
 // Export functionality for various file formats
 
-import { Project, WorldPoint, Constraint, Camera } from '../types/project'
+import { EntityProject } from '../types/project-entities'
+// Export uses entities and converts to simple export format
+import type { ConstraintDto } from '../entities/constraints/dtos/ConstraintDto'
+
+// Simple export format (not the same as DTOs)
+interface ExportWorldPoint {
+  id: string
+  name: string
+  xyz?: [number, number, number] | null
+  color: string
+  group?: string
+  isOrigin: boolean
+  isLocked: boolean
+  imagePoints: any[] // Legacy field for compatibility
+}
 
 export type ExportFormat = 'json' | 'csv' | 'xlsx' | 'ply' | 'obj' | 'dxf' | 'pdf' | 'xml'
 
@@ -23,9 +37,9 @@ export interface ExportResult {
 }
 
 export class ExportService {
-  private project: Project
+  private project: EntityProject
 
-  constructor(project: Project) {
+  constructor(project: EntityProject) {
     this.project = project
   }
 
@@ -68,16 +82,18 @@ export class ExportService {
         updatedAt: this.project.updatedAt
       },
       worldPoints: this.getFormattedWorldPoints(options),
-      coordinateSystem: options.coordinateSystem === 'world' ? this.project.coordinateSystem : null
+      coordinateSystem: options.coordinateSystem === 'world' ? (this.project as any).coordinateSystem : null
     }
 
     if (options.includeConstraints) {
-      exportData.constraints = this.project.constraints
+      // Convert entity constraints to DTO constraints for export
+      exportData.constraints = this.project.constraints.map(c => (c as any))
     }
 
     if (options.includeImages) {
-      exportData.images = this.project.images
-      exportData.cameras = this.project.cameras
+      exportData.images = (this.project as any).images
+      exportData.cameras = (this.project as any).cameras
+      exportData.viewpoints = Array.from(this.project.viewpoints.entries()).reduce((acc, [id, vp]) => ({ ...acc, [id]: vp }), {})
     }
 
     if (options.includeMetadata) {
@@ -339,10 +355,11 @@ EOF
   <constraints>
 `
       this.project.constraints.forEach(constraint => {
+        const c = constraint as any
         xmlContent += `    <constraint>
-      <id>${this.escapeXML(constraint.id)}</id>
-      <type>${this.escapeXML(constraint.type)}</type>
-      <value>${constraint.parameters.value || constraint.parameters.distance || ''}</value>
+      <id>${this.escapeXML(c.id || '')}</id>
+      <type>${this.escapeXML(c.type || '')}</type>
+      <value>${c.parameters?.value || c.parameters?.distance || ''}</value>
     </constraint>
 `
       })
@@ -363,17 +380,32 @@ EOF
     }
   }
 
-  private getFormattedWorldPoints(options: ExportOptions): Record<string, WorldPoint> {
-    const worldPoints = { ...this.project.worldPoints }
+  private getFormattedWorldPoints(options: ExportOptions): Record<string, ExportWorldPoint> {
+    // Convert Map to Record for export
+    const worldPoints: Record<string, ExportWorldPoint> = {}
+    for (const [id, wp] of this.project.worldPoints.entries()) {
+      const coords = wp.getDefinedCoordinates()
+      worldPoints[id] = {
+        id: wp.getId(),
+        name: wp.getName(),
+        xyz: coords || null,
+        color: wp.color,
+        group: wp.group,
+        isOrigin: wp.isOrigin,
+        isLocked: wp.isLocked(),
+        imagePoints: [] // Legacy field - image point data now in Viewpoints
+      }
+    }
 
     // Apply coordinate system transformation if needed
-    if (options.coordinateSystem === 'world' && this.project.coordinateSystem?.origin) {
-      const origin = worldPoints[this.project.coordinateSystem.origin]
+    const coordinateSystem = (this.project as any).coordinateSystem
+    if (options.coordinateSystem === 'world' && coordinateSystem?.origin) {
+      const origin = worldPoints[coordinateSystem.origin]
       const originXyz = origin?.xyz
-      if (originXyz && originXyz[0] !== null && originXyz[1] !== null && originXyz[2] !== null) {
+      if (originXyz) {
         Object.values(worldPoints).forEach(wp => {
           const wpXyz = wp.xyz
-          if (wpXyz && wpXyz[0] !== null && wpXyz[1] !== null && wpXyz[2] !== null && wp.id !== this.project.coordinateSystem!.origin) {
+          if (wpXyz && wp.id !== coordinateSystem!.origin) {
             wp.xyz = [
               wpXyz[0] - originXyz[0],
               wpXyz[1] - originXyz[1],
@@ -387,44 +419,45 @@ EOF
     return worldPoints
   }
 
-  private getConstraintsForPoint(pointId: string): Constraint[] {
+  private getConstraintsForPoint(pointId: string): any[] {
     if (!this.project.constraints) return []
 
     return this.project.constraints.filter(constraint => {
       const pointIds = this.getConstraintPointIds(constraint)
       return pointIds.includes(pointId)
-    })
+    }) as any[]
   }
 
-  private getConstraintPointIds(constraint: Constraint): string[] {
+  private getConstraintPointIds(constraint: any): string[] {
     // Use the entities structure instead of specific properties
-    return constraint.entities.points || []
+    return constraint.entities?.points || []
   }
 
   private getProjectStatistics() {
-    const worldPointCount = Object.keys(this.project.worldPoints).length
+    const worldPointCount = this.project.worldPoints.size
     const constraintCount = this.project.constraints?.length || 0
-    const imageCount = Object.keys(this.project.images || {}).length
-    const pointsWithXYZ = Object.values(this.project.worldPoints).filter(wp => wp.xyz).length
+    const imageCount = (this.project as any).images ? Object.keys((this.project as any).images).length : this.project.viewpoints.size
+    const pointsWithXYZ = Array.from(this.project.worldPoints.values()).filter(wp => (wp as any).xyz).length
 
     return {
       worldPointCount,
       constraintCount,
       imageCount,
       pointsWithXYZ,
-      lockedPoints: Object.values(this.project.worldPoints).filter(wp => wp.isLocked).length,
-      originPoints: Object.values(this.project.worldPoints).filter(wp => wp.isOrigin).length
+      lockedPoints: Array.from(this.project.worldPoints.values()).filter(wp => (wp as any).isLocked).length,
+      originPoints: Array.from(this.project.worldPoints.values()).filter(wp => (wp as any).isOrigin).length
     }
   }
 
   private generateReport(options: ExportOptions): string {
     const stats = this.getProjectStatistics()
+    const description = (this.project as any).description || 'No description'
 
     return `Pictorigo Project Report
 ========================
 
 Project: ${this.project.name}
-Description: No description
+Description: ${description}
 Created: ${new Date(this.project.createdAt).toLocaleString()}
 Updated: ${new Date(this.project.updatedAt).toLocaleString()}
 

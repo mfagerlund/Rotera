@@ -6,7 +6,8 @@ import { faLocationDot, faRuler, faSquare } from '@fortawesome/free-solid-svg-ic
 import LineCreationTool from './LineCreationTool'
 import LoopTraceTool from './LoopTraceTool'
 import FloatingWindow from '../FloatingWindow'
-import { LineConstraintSettings } from '../../entities/line'
+import { Line, LineConstraintSettings } from '../../entities/line'
+import { WorldPoint } from '../../entities/world-point'
 import { ConstructionPreview } from '../image-viewer/types'
 import '../../styles/tools.css'
 
@@ -27,18 +28,19 @@ interface CreationToolsManagerProps {
   activeTool: ToolType
   onToolChange: (tool: ToolType) => void
   worldPointNames: Record<string, string>
+  worldPoints?: Map<string, WorldPoint>
   existingLines: Map<string, any> // Existing lines for duplicate checking
   onCreatePoint: (imageId: string, u: number, v: number) => void
-  onCreateLine: (pointIds: [string, string], constraints?: LineConstraints) => void
+  onCreateLine: (pointA: WorldPoint, pointB: WorldPoint, constraints?: LineConstraints) => void
   onCreateConstraint?: (constraint: any) => void
   onCreatePlane: (definition: any) => void
   onCreateCircle: (definition: any) => void
   onConstructionPreviewChange?: (preview: ConstructionPreview | null) => void
   onClearSelection?: () => void
   currentImageId?: string
-  editingLineId?: string | null
-  onUpdateLine?: (updatedLine: any) => void
-  onDeleteLine?: (lineId: string) => void
+  editingLine?: Line | null
+  onUpdateLine?: (lineEntity: Line, updatedLine: any) => void
+  onDeleteLine?: (line: Line) => void
   onClearEditingLine?: () => void
   projectConstraints?: Record<string, any>
 }
@@ -50,6 +52,7 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
   activeTool,
   onToolChange,
   worldPointNames,
+  worldPoints,
   existingLines,
   onCreatePoint,
   onCreateLine,
@@ -59,13 +62,41 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
   onConstructionPreviewChange,
   onClearSelection,
   currentImageId,
-  editingLineId = null,
+  editingLine = null,
   onUpdateLine,
   onDeleteLine,
   onClearEditingLine,
   projectConstraints = {}
 }) => {
   const [toolMessage, setToolMessage] = useState<string>('')
+
+  // Wrapper to convert between entity-based ConstructionPreview and string-based line preview
+  const handleLinePreviewChange = useCallback((linePreview: {
+    type: 'line'
+    pointA?: string
+    pointB?: string
+    showToCursor?: boolean
+  } | null) => {
+    if (!onConstructionPreviewChange) return
+
+    if (!linePreview) {
+      onConstructionPreviewChange(null)
+      return
+    }
+
+    // Convert string IDs to WorldPoint entities
+    const pointAEntity = linePreview.pointA ? worldPointNames[linePreview.pointA] : undefined
+    const pointBEntity = linePreview.pointB ? worldPointNames[linePreview.pointB] : undefined
+
+    // For now, we need to find the actual entities - this is a temporary bridge
+    // The proper fix is to make LineCreationTool use entities directly
+    onConstructionPreviewChange({
+      type: 'line',
+      pointA: undefined, // TODO: Get actual entity
+      pointB: undefined, // TODO: Get actual entity
+      showToCursor: linePreview.showToCursor
+    })
+  }, [onConstructionPreviewChange, worldPointNames])
 
   const handleToolActivation = useCallback((tool: ToolType) => {
     if (activeTool === tool) {
@@ -280,7 +311,7 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
 
       {/* Floating Line Tool - handles both creation and editing */}
       <FloatingWindow
-        title={editingLineId && existingLines.get(editingLineId) ? `Edit Line: ${existingLines.get(editingLineId)!.name}` : "Create Line"}
+        title={editingLine ? `Edit Line: ${editingLine.name}` : "Create Line"}
         isOpen={activeTool === 'line'}
         onClose={handleToolCancel}
         storageKey="line-tool"
@@ -290,36 +321,33 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
           window.dispatchEvent(new CustomEvent('lineToolSave'))
         }}
         onCancel={handleToolCancel}
-        onDelete={editingLineId && onDeleteLine ? () => {
-          if (editingLineId) {
-            onDeleteLine(editingLineId)
-            handleToolCancel()
-          }
+        onDelete={editingLine && onDeleteLine ? () => {
+          onDeleteLine(editingLine)
+          handleToolCancel()
         } : undefined}
-        okText={editingLineId ? "Save" : "Create"}
+        okText={editingLine ? "Save" : "Create"}
         cancelText="Cancel"
       >
         <LineCreationTool
-          selectedPoints={editingLineId ? [] : selectedPoints}
+          selectedPoints={editingLine ? [] : selectedPoints}
           worldPointNames={worldPointNames}
+          worldPoints={worldPoints || new Map()}
           existingLines={existingLines}
           onCreateLine={onCreateLine}
           onCancel={handleToolCancel}
-          onConstructionPreviewChange={onConstructionPreviewChange}
+          onConstructionPreviewChange={handleLinePreviewChange}
           isActive={activeTool === 'line'}
           showHeader={false}
           showActionButtons={false}
-          editMode={!!editingLineId}
-          existingLine={editingLineId ? existingLines.get(editingLineId) : undefined}
+          editMode={!!editingLine}
+          existingLine={editingLine || undefined}
           existingConstraints={
-            editingLineId && projectConstraints
+            editingLine && projectConstraints
               ? Object.values(projectConstraints).filter(c => {
-                  const line = existingLines.get(editingLineId)
-                  if (!line) return false
                   const constraintLineIds = c.entities?.lines || []
                   const constraintPointIds = c.entities?.points || []
-                  return constraintLineIds.includes(editingLineId) ||
-                         (constraintPointIds.includes(line.pointA) && constraintPointIds.includes(line.pointB))
+                  return constraintLineIds.includes(editingLine.getId()) ||
+                         (constraintPointIds.includes(editingLine.pointA.getId()) && constraintPointIds.includes(editingLine.pointB.getId()))
                 })
               : []
           }
@@ -346,6 +374,7 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
         <LoopTraceTool
           selectedPoints={selectedPoints}
           worldPointNames={worldPointNames}
+          worldPoints={worldPoints}
           existingLines={existingLines}
           onCreateLine={onCreateLine}
           onCreateConstraint={onCreateConstraint}

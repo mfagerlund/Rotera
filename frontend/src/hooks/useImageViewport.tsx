@@ -1,7 +1,11 @@
 // Image viewport management with zoom controls
 
 import React, { useState, useCallback, useRef } from 'react'
-import { WorldPoint, ProjectImage } from '../types/project'
+import { WorldPoint } from '../entities/world-point'
+import { Viewpoint } from '../entities/viewpoint'
+
+// Type alias for backward compatibility
+type ProjectImage = Viewpoint
 
 interface ViewportState {
   scale: number
@@ -69,11 +73,10 @@ export const useImageViewport = (
     const container = containerRef.current
     const containerRect = container.getBoundingClientRect()
 
-    // Get image points for selected world points
-    const imagePoints = selectedPointIds
-      .map(id => worldPoints[id])
-      .filter(Boolean)
-      .flatMap(wp => wp.imagePoints.filter(ip => ip.imageId === image.id))
+    // Get image points for selected world points from this image
+    const imagePoints = image.getImagePoints().filter(ip =>
+      selectedPointIds.includes(ip.worldPointId)
+    )
 
     if (imagePoints.length === 0) return
 
@@ -113,17 +116,14 @@ export const useImageViewport = (
   const zoomToFitAll = useCallback((worldPoints: Record<string, WorldPoint>) => {
     if (!image || !containerRef.current) return
 
-    const imagePoints = Object.values(worldPoints)
-      .flatMap(wp => wp.imagePoints.filter(ip => ip.imageId === image.id))
+    const imagePoints = image.getImagePoints()
 
     if (imagePoints.length === 0) {
       fitToContainer()
       return
     }
 
-    const allPointIds = Object.keys(worldPoints).filter(id =>
-      worldPoints[id].imagePoints.some(ip => ip.imageId === image.id)
-    )
+    const allPointIds = imagePoints.map(ip => ip.worldPointId)
 
     zoomToSelection(allPointIds, worldPoints)
   }, [image, containerRef, fitToContainer, zoomToSelection])
@@ -159,8 +159,10 @@ export const useImageViewport = (
     const imageX = (canvasX - viewport.offset.x) / viewport.scale
     const imageY = (canvasY - viewport.offset.y) / viewport.scale
 
+    const [width, height] = image.imageDimensions
+
     // Check if coordinates are within image bounds
-    if (imageX < 0 || imageX > image.width || imageY < 0 || imageY > image.height) {
+    if (imageX < 0 || imageX > width || imageY < 0 || imageY > height) {
       return null
     }
 

@@ -34,6 +34,7 @@ function createEmptyProject(): EntityProject {
     lines: new Map<string, Line>(),
     viewpoints: new Map<string, Viewpoint>(),
     constraints: [],
+    history: [],
     settings: { ...DEFAULT_SETTINGS },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()

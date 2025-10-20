@@ -79,6 +79,7 @@ export function dtoToProject(dto: ProjectDto): EntityProject {
     lines,
     viewpoints,
     constraints: [], // TODO: deserialize constraints
+    history: [],
     settings: dto.settings,
     createdAt: dto.createdAt,
     updatedAt: dto.updatedAt

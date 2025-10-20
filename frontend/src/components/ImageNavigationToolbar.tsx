@@ -4,41 +4,40 @@ import React, { useRef } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowsUpDown, faCheck, faPlus, faPencil, faTrash, faCopy } from '@fortawesome/free-solid-svg-icons'
 import { faCircle } from '@fortawesome/free-regular-svg-icons'
-// TODO: Remove legacy type imports - ProjectImage is part of Viewpoint (1:1 relationship)
-// Viewpoint = Camera + Image consolidated. ImagePoint is a collection within Viewpoint.
-import { ProjectImage, WorldPoint } from '../types/project'
+import { Viewpoint } from '../entities/viewpoint'
+import { WorldPoint } from '../entities/world-point'
 import { ImageUtils } from '../utils/imageUtils'
 import { useConfirm } from './ConfirmDialog'
 import ImageEditor from './ImageEditor'
 
 interface ImageNavigationToolbarProps {
-  images: Map<string, ProjectImage>
+  images: Map<string, Viewpoint>
   currentImageId: string | null
   worldPoints: Map<string, WorldPoint>
-  selectedWorldPointIds: string[]
-  hoveredWorldPointId?: string | null
+  selectedWorldPoints: WorldPoint[]
+  hoveredWorldPoint: WorldPoint | null
   isCreatingConstraint: boolean
   onImageSelect: (imageId: string) => void
-  onImageAdd: (image: ProjectImage) => void
-  onImageRename: (imageId: string, newName: string) => void
-  onImageDelete: (imageId: string) => void
-  getImagePointCount: (imageId: string) => number
-  getSelectedPointsInImage: (imageId: string) => number
+  onImageAdd: (image: Viewpoint) => void
+  onImageRename: (viewpoint: Viewpoint, newName: string) => void
+  onImageDelete: (viewpoint: Viewpoint) => void
+  getImagePointCount: (viewpoint: Viewpoint) => number
+  getSelectedPointsInImage: (viewpoint: Viewpoint) => number
   imageHeights: Record<string, number>
   onImageHeightChange: (imageId: string, height: number) => void
   imageSortOrder: string[]
   onImageReorder: (newOrder: string[]) => void
-  onWorldPointHover?: (pointId: string | null) => void
-  onWorldPointClick?: (pointId: string, ctrlKey: boolean, shiftKey: boolean) => void
-  onCopyPointsToCurrentImage?: (sourceImageId: string) => void
+  onWorldPointHover?: (worldPoint: WorldPoint | null) => void
+  onWorldPointClick?: (worldPoint: WorldPoint, ctrlKey: boolean, shiftKey: boolean) => void
+  onCopyPointsToCurrentImage?: (sourceViewpoint: Viewpoint) => void
 }
 
 export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
   images,
   currentImageId,
   worldPoints,
-  selectedWorldPointIds,
-  hoveredWorldPointId,
+  selectedWorldPoints,
+  hoveredWorldPoint,
   isCreatingConstraint,
   onImageSelect,
   onImageAdd,
@@ -58,7 +57,7 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [draggedImageId, setDraggedImageId] = React.useState<string | null>(null)
   const [dragOverImageId, setDragOverImageId] = React.useState<string | null>(null)
-  const [editingImageId, setEditingImageId] = React.useState<string | null>(null)
+  const [editingImage, setEditingImage] = React.useState<Viewpoint | null>(null)
 
   const handleAddImage = () => {
     fileInputRef.current?.click()
@@ -77,7 +76,7 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
         }
 
         const projectImage = await ImageUtils.loadImageFile(file)
-        onImageAdd(projectImage)
+        onImageAdd(projectImage as any) // ImageUtils returns legacy format, parent converts to Viewpoint
       } catch (error) {
         console.error('Failed to load image:', error)
         alert(`Failed to load ${file.name}`)
@@ -91,8 +90,8 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
   // Sort images according to sort order, with new images at the end
   const imageList = React.useMemo(() =>
     Array.from(images.values()).sort((a, b) => {
-      const indexA = imageSortOrder.indexOf(a.id)
-      const indexB = imageSortOrder.indexOf(b.id)
+      const indexA = imageSortOrder.indexOf(a.getId())
+      const indexB = imageSortOrder.indexOf(b.getId())
       // Images in sort order come first (by their index), unsorted images go to end (Infinity)
       const orderA = indexA >= 0 ? indexA : Infinity
       const orderB = indexB >= 0 ? indexB : Infinity
@@ -101,11 +100,9 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
   , [images, imageSortOrder])
 
   // Count selected world points in an image
-  const getSelectedWorldPointsInImage = (imageId: string): number => {
-    return selectedWorldPointIds.filter(wpId => {
-      const wp = worldPoints.get(wpId)
-      return wp?.imagePoints.some(ip => ip.imageId === imageId)
-    }).length
+  const getSelectedWorldPointsInImage = (viewpoint: Viewpoint): number => {
+    const selectedIds = new Set(selectedWorldPoints.map(wp => wp.getId()))
+    return viewpoint.getImagePoints().filter(ip => selectedIds.has(ip.worldPointId)).length
   }
 
   // Handle drag and drop reordering
@@ -138,18 +135,18 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
   return (
     <>
       {dialog}
-      {editingImageId && images.get(editingImageId) && (
+      {editingImage && (
         <ImageEditor
           isOpen={true}
-          image={images.get(editingImageId)!}
-          onClose={() => setEditingImageId(null)}
-          onUpdateImage={(updatedImage) => {
-            onImageRename(updatedImage.id, updatedImage.name)
-            setEditingImageId(null)
+          viewpoint={editingImage}
+          onClose={() => setEditingImage(null)}
+          onUpdateViewpoint={(updatedViewpoint: Viewpoint) => {
+            onImageRename(updatedViewpoint, updatedViewpoint.getName())
+            setEditingImage(null)
           }}
-          onDeleteImage={(imageId) => {
-            onImageDelete(imageId)
-            setEditingImageId(null)
+          onDeleteViewpoint={(viewpoint: Viewpoint) => {
+            onImageDelete(viewpoint)
+            setEditingImage(null)
           }}
         />
       )}
@@ -178,35 +175,35 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
         {imageList.length > 0 ? (
           imageList.map(image => (
             <ImageNavigationItem
-              key={image.id}
+              key={image.getId()}
               image={image}
               worldPoints={worldPoints}
-              selectedWorldPointIds={selectedWorldPointIds}
-              hoveredWorldPointId={hoveredWorldPointId}
-              isActive={currentImageId === image.id}
-              pointCount={getImagePointCount(image.id)}
-              selectedPointCount={getSelectedPointsInImage(image.id)}
-              selectedWorldPointCount={getSelectedWorldPointsInImage(image.id)}
-              onClick={() => onImageSelect(image.id)}
-              onEdit={() => setEditingImageId(image.id)}
-              onRename={(newName) => onImageRename(image.id, newName)}
+              selectedWorldPoints={selectedWorldPoints}
+              hoveredWorldPoint={hoveredWorldPoint}
+              isActive={currentImageId === image.getId()}
+              pointCount={getImagePointCount(image)}
+              selectedPointCount={getSelectedPointsInImage(image)}
+              selectedWorldPointCount={getSelectedWorldPointsInImage(image)}
+              onClick={() => onImageSelect(image.getId())}
+              onEdit={() => setEditingImage(image)}
+              onRename={(newName) => onImageRename(image, newName)}
               onDelete={async () => {
-                if (await confirm(`Delete image "${image.name}"?`)) {
-                  onImageDelete(image.id)
+                if (await confirm(`Delete image "${image.getName()}"?`)) {
+                  onImageDelete(image)
                 }
               }}
-              thumbnailHeight={imageHeights[image.id] || 100}
-              onThumbnailHeightChange={(height) => onImageHeightChange(image.id, height)}
-              isDragging={draggedImageId === image.id}
-              isDragOver={dragOverImageId === image.id}
-              onDragStart={() => setDraggedImageId(image.id)}
+              thumbnailHeight={imageHeights[image.getId()] || 100}
+              onThumbnailHeightChange={(height) => onImageHeightChange(image.getId(), height)}
+              isDragging={draggedImageId === image.getId()}
+              isDragOver={dragOverImageId === image.getId()}
+              onDragStart={() => setDraggedImageId(image.getId())}
               onDragEnd={() => {
                 setDraggedImageId(null)
                 setDragOverImageId(null)
               }}
-              onDragOver={() => setDragOverImageId(image.id)}
+              onDragOver={() => setDragOverImageId(image.getId())}
               onDragLeave={() => setDragOverImageId(null)}
-              onDrop={() => handleDrop(image.id)}
+              onDrop={() => handleDrop(image.getId())}
               onWorldPointHover={onWorldPointHover}
               onWorldPointClick={onWorldPointClick}
               onCopyPointsToCurrentImage={onCopyPointsToCurrentImage}
@@ -228,10 +225,10 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
 }
 
 interface ImageNavigationItemProps {
-  image: ProjectImage
+  image: Viewpoint
   worldPoints: Map<string, WorldPoint>
-  selectedWorldPointIds: string[]
-  hoveredWorldPointId?: string | null
+  selectedWorldPoints: WorldPoint[]
+  hoveredWorldPoint: WorldPoint | null
   isActive: boolean
   pointCount: number
   selectedPointCount: number
@@ -249,17 +246,17 @@ interface ImageNavigationItemProps {
   onDragOver: () => void
   onDragLeave: () => void
   onDrop: () => void
-  onWorldPointHover?: (pointId: string | null) => void
-  onWorldPointClick?: (pointId: string, ctrlKey: boolean, shiftKey: boolean) => void
-  onCopyPointsToCurrentImage?: (sourceImageId: string) => void
+  onWorldPointHover?: (worldPoint: WorldPoint | null) => void
+  onWorldPointClick?: (worldPoint: WorldPoint, ctrlKey: boolean, shiftKey: boolean) => void
+  onCopyPointsToCurrentImage?: (sourceViewpoint: Viewpoint) => void
   currentImageId: string | null
 }
 
 const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
   image,
   worldPoints,
-  selectedWorldPointIds,
-  hoveredWorldPointId,
+  selectedWorldPoints,
+  hoveredWorldPoint,
   isActive,
   pointCount,
   selectedPointCount,
@@ -300,8 +297,7 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
       const imgElement = imgRef.current
       const containerWidth = parentRect.width
       const containerHeight = parentRect.height
-      const imageNaturalWidth = image.width
-      const imageNaturalHeight = image.height
+      const [imageNaturalWidth, imageNaturalHeight] = image.imageDimensions
 
       // Calculate the scale factor for object-fit: contain
       const scaleX = containerWidth / imageNaturalWidth
@@ -332,7 +328,7 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
     }
 
     return () => observer.disconnect()
-  }, [thumbnailHeight, image.width, image.height])
+  }, [thumbnailHeight, image.imageDimensions])
 
   return (
     <div
@@ -352,8 +348,8 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
       {/* Top bar with name and controls */}
       <div className="image-top-bar">
         {/* Image name */}
-        <div className="image-name" title={image.name}>
-          {image.name}
+        <div className="image-name" title={image.getName()}>
+          {image.getName()}
         </div>
 
         {/* Right side controls */}
@@ -365,7 +361,7 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
             draggable
             onDragStart={(e) => {
               e.dataTransfer.effectAllowed = 'move'
-              e.dataTransfer.setData('text/plain', image.id)
+              e.dataTransfer.setData('text/plain', image.getId())
               onDragStart()
             }}
             onDragEnd={onDragEnd}
@@ -379,17 +375,17 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
             {/* Copy points button */}
             <button
               className="btn-image-top-action"
-              disabled={!currentImageId || image.id === currentImageId || pointCount === 0}
+              disabled={!currentImageId || image.getId() === currentImageId || pointCount === 0}
               onClick={(e) => {
                 e.stopPropagation()
                 if (onCopyPointsToCurrentImage) {
-                  onCopyPointsToCurrentImage(image.id)
+                  onCopyPointsToCurrentImage(image)
                 }
               }}
               title={
                 !currentImageId
                   ? 'Select a target image first'
-                  : image.id === currentImageId
+                  : image.getId() === currentImageId
                   ? "Can't copy to self"
                   : pointCount === 0
                   ? 'No points to copy'
@@ -445,7 +441,7 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
         className="image-thumbnail"
         style={{ height: `${thumbnailHeight}px` }}
       >
-        <img ref={imgRef} src={image.blob} alt={image.name} />
+        <img ref={imgRef} src={image.url} alt={image.getName()} />
 
         {/* Resize handle */}
         <div
@@ -474,47 +470,48 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
 
         {/* World point locations overlay */}
         <div className="wp-locations-overlay">
-            {Array.from(worldPoints.values()).map(wp => {
-              const imagePoint = wp.imagePoints.find(ip => ip.imageId === image.id)
-              if (!imagePoint) return null
+            {image.getImagePoints().map(imagePoint => {
+              const wp = worldPoints.get(imagePoint.worldPointId)
+              if (!wp) return null
 
               // Use actual rendered image bounds from the DOM
               // This accounts for centering and actual size
               if (imgBounds.width === 0 || imgBounds.height === 0) return null
 
+              const [imgWidth, imgHeight] = image.imageDimensions
               // Calculate position as percentage of rendered image size, plus offset for centering
-              const thumbnailX = imgBounds.offsetX + (imagePoint.u / image.width) * imgBounds.width
-              const thumbnailY = imgBounds.offsetY + (imagePoint.v / image.height) * imgBounds.height
+              const thumbnailX = imgBounds.offsetX + (imagePoint.u / imgWidth) * imgBounds.width
+              const thumbnailY = imgBounds.offsetY + (imagePoint.v / imgHeight) * imgBounds.height
 
-              const isSelected = selectedWorldPointIds.includes(wp.id)
-              const isGloballyHovered = hoveredWorldPointId === wp.id
+              const isSelected = selectedWorldPoints.some(swp => swp.getId() === wp.getId())
+              const isGloballyHovered = hoveredWorldPoint?.getId() === wp.getId()
 
               return (
                 <div
-                  key={wp.id}
+                  key={wp.getId()}
                   className={`wp-location-dot ${isSelected ? 'selected' : ''} ${isGloballyHovered ? 'globally-hovered' : ''}`}
                   style={{
                     left: `${thumbnailX}px`,
                     top: `${thumbnailY}px`,
                     backgroundColor: wp.color
                   }}
-                  title={wp.name}
+                  title={wp.getName()}
                   draggable={true}
                   onDragStart={(e) => {
                     e.stopPropagation()
                     // Set drag data
                     e.dataTransfer.setData('application/json', JSON.stringify({
                       type: 'world-point',
-                      worldPointId: wp.id,
-                      action: wp.imagePoints.length > 0 ? 'move' : 'place'
+                      worldPointId: wp.getId(),
+                      action: image.getImagePoints().length > 0 ? 'move' : 'place'
                     }))
                     e.dataTransfer.effectAllowed = 'copy'
                   }}
-                  onMouseEnter={() => onWorldPointHover?.(wp.id)}
+                  onMouseEnter={() => onWorldPointHover?.(wp)}
                   onMouseLeave={() => onWorldPointHover?.(null)}
                   onClick={(e) => {
                     e.stopPropagation()
-                    onWorldPointClick?.(wp.id, e.ctrlKey, e.shiftKey)
+                    onWorldPointClick?.(wp, e.ctrlKey, e.shiftKey)
                   }}
                 />
               )

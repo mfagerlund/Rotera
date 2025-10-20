@@ -4,7 +4,7 @@ import React from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faBullseye, faDraftingCompass, faWrench } from '@fortawesome/free-solid-svg-icons'
 import EntityListPopup, { EntityListItem } from './EntityListPopup'
-import { Constraint } from '../types/project'
+import type { Constraint } from '../entities/constraints'
 
 interface ConstraintsPopupProps {
   isOpen: boolean
@@ -40,13 +40,14 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
 
   const getConstraintEntities = (constraint: Constraint): string[] => {
     const entities: string[] = []
+    const dto = constraint.toConstraintDto()
 
-    if (constraint.entities?.points) {
-      entities.push(...constraint.entities.points.map(pointId => getPointName(pointId)))
+    if (dto.entities?.points) {
+      entities.push(...dto.entities.points.map((pointId: string) => getPointName(pointId)))
     }
 
-    if (constraint.entities?.lines) {
-      entities.push(...constraint.entities.lines.map(lineId => getLineName(lineId)))
+    if (dto.entities?.lines) {
+      entities.push(...dto.entities.lines.map((lineId: string) => getLineName(lineId)))
     }
 
     return entities
@@ -54,27 +55,30 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
 
   const getConstraintDetails = (constraint: Constraint): string[] => {
     const details: string[] = []
+    const dto = constraint.toConstraintDto()
 
     // Add constraint type info
-    details.push(`Type: ${getConstraintDisplayName(constraint.type)}`)
+    details.push(`Type: ${getConstraintDisplayName(dto.type)}`)
 
     // Add status
-    details.push(`Status: ${constraint.status}`)
+    details.push(`Status: ${dto.status}`)
 
     // Add driving/construction info
-    details.push(constraint.isDriving ? 'Driving constraint' : 'Construction constraint')
+    details.push(dto.isDriving ? 'Driving constraint' : 'Construction constraint')
 
-    // Add weight
-    details.push(`Weight: ${constraint.weight}`)
+    // Add priority
+    if (dto.parameters.priority !== undefined) {
+      details.push(`Priority: ${dto.parameters.priority}`)
+    }
 
-    // Add residual if available
-    if (constraint.residual !== undefined) {
-      details.push(`Residual: ${constraint.residual.toFixed(6)}`)
+    // Add error if available
+    if (dto.error !== undefined) {
+      details.push(`Error: ${dto.error.toFixed(6)}`)
     }
 
     // Add specific parameters
-    if (constraint.parameters) {
-      Object.entries(constraint.parameters).forEach(([key, value]) => {
+    if (dto.parameters) {
+      Object.entries(dto.parameters).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
           details.push(`${key}: ${value}`)
         }
@@ -96,14 +100,15 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
   // Convert constraints to EntityListItem format
   const constraintEntities: EntityListItem[] = constraints.map(constraint => {
     const entities = getConstraintEntities(constraint)
+    const dto = constraint.toConstraintDto()
     return {
-      id: constraint.id,
-      name: getConstraintDisplayName(constraint.type),
+      id: dto.id,
+      name: getConstraintDisplayName(dto.type),
       displayInfo: entities.length > 0 ? entities.join(', ') : 'No entities',
       additionalInfo: getConstraintDetails(constraint),
-      color: getStatusColor(constraint.status),
-      isVisible: constraint.enabled,
-      isActive: selectedConstraints.includes(constraint.id)
+      color: getStatusColor(dto.status),
+      isVisible: dto.isEnabled,
+      isActive: selectedConstraints.includes(dto.id)
     }
   })
 
@@ -120,28 +125,30 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
       onToggleVisibility={onToggleConstraint}
       onSelect={onSelectConstraint}
       renderEntityDetails={(entity) => {
-        const constraint = constraints.find(c => c.id === entity.id)
+        const constraint = constraints.find(c => c.getId() === entity.id)
         if (!constraint) return null
+
+        const dto = constraint.toConstraintDto()
 
         return (
           <div className="constraint-details">
             <div className="constraint-status">
               <span
-                className={`status-badge status-${constraint.status}`}
-                style={{ backgroundColor: getStatusColor(constraint.status) }}
+                className={`status-badge status-${dto.status}`}
+                style={{ backgroundColor: getStatusColor(dto.status) }}
               >
-                {constraint.status}
+                {dto.status}
               </span>
-              {constraint.residual !== undefined && (
+              {dto.error !== undefined && (
                 <span className="residual-value">
-                  Residual: {constraint.residual.toFixed(6)}
+                  Error: {dto.error.toFixed(6)}
                 </span>
               )}
             </div>
 
-            {constraint.parameters && Object.keys(constraint.parameters).length > 0 && (
+            {dto.parameters && Object.keys(dto.parameters).length > 0 && (
               <div className="constraint-parameters">
-                {Object.entries(constraint.parameters).map(([key, value]) => (
+                {Object.entries(dto.parameters).map(([key, value]) => (
                   <div key={key} className="parameter-item">
                     <span className="parameter-name">{key}:</span>
                     <span className="parameter-value">{String(value)}</span>
@@ -153,21 +160,23 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
         )
       }}
       renderCustomActions={(entity) => {
-        const constraint = constraints.find(c => c.id === entity.id)
+        const constraint = constraints.find(c => c.getId() === entity.id)
         if (!constraint) return null
+
+        const dto = constraint.toConstraintDto()
 
         return (
           <>
             <button
-              className={`btn-toggle-driving ${constraint.isDriving ? 'driving' : 'construction'}`}
+              className={`btn-toggle-driving ${dto.isDriving ? 'driving' : 'construction'}`}
               onClick={(e) => {
                 e.stopPropagation()
                 // TODO: Toggle driving/construction mode
                 console.log('Toggle driving mode for constraint:', entity.id)
               }}
-              title={constraint.isDriving ? 'Switch to construction' : 'Switch to driving'}
+              title={dto.isDriving ? 'Switch to construction' : 'Switch to driving'}
             >
-              {constraint.isDriving ? '<FontAwesomeIcon icon={faWrench} />' : '<FontAwesomeIcon icon={faDraftingCompass} />'}
+              {dto.isDriving ? '<FontAwesomeIcon icon={faWrench} />' : '<FontAwesomeIcon icon={faDraftingCompass} />'}
             </button>
             <button
               className="btn-focus"

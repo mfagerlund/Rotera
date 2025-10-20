@@ -4,6 +4,8 @@ import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowRight, faBullseye, faMagnifyingGlass, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
 import { useConfirm } from '../ConfirmDialog'
+import { WorldPoint } from '../../entities/world-point'
+import { Line } from '../../entities/line'
 
 const PRESET_COLORS = [
   { value: '#0696d7', name: 'Blue' },
@@ -22,8 +24,9 @@ const PRESET_COLORS = [
 interface LineCreationToolProps {
   selectedPoints: string[]
   worldPointNames: Record<string, string> // Map of pointId -> pointName
+  worldPoints: Map<string, WorldPoint> // Map of world point entities for lookup
   existingLines: Record<string, any> // Existing lines for duplicate checking
-  onCreateLine: (pointIds: [string, string], constraints?: LineConstraints) => void
+  onCreateLine: (pointA: WorldPoint, pointB: WorldPoint, constraints?: LineConstraints) => void
   onCancel: () => void
   onPointSlotClick?: (pointId: string) => void // For clicking points to fill slots
   onConstructionPreviewChange?: (preview: {
@@ -37,10 +40,10 @@ interface LineCreationToolProps {
   showActionButtons?: boolean // Whether to show internal action buttons (false when using FloatingWindow's buttons)
   // Edit mode props
   editMode?: boolean
-  existingLine?: any // Line being edited
+  existingLine?: Line // Line being edited
   existingConstraints?: any[] // Constraints applied to this line
-  onUpdateLine?: (updatedLine: any) => void
-  onDeleteLine?: (lineId: string) => void
+  onUpdateLine?: (lineEntity: Line, updatedLine: any) => void
+  onDeleteLine?: (line: Line) => void
 }
 
 import { LineDirection, LineConstraintSettings } from '../../entities/line'
@@ -57,6 +60,7 @@ interface LineConstraints {
 export const LineCreationTool: React.FC<LineCreationToolProps> = ({
   selectedPoints,
   worldPointNames,
+  worldPoints,
   existingLines,
   onCreateLine,
   onCancel,
@@ -74,8 +78,8 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
   const { confirm, dialog } = useConfirm()
 
   // Point slots state
-  const [pointSlot1, setPointSlot1] = useState<string>('')
-  const [pointSlot2, setPointSlot2] = useState<string>('')
+  const [pointSlot1, setPointSlot1] = useState<WorldPoint | null>(null)
+  const [pointSlot2, setPointSlot2] = useState<WorldPoint | null>(null)
 
   // Line constraint settings
   const [direction, setDirection] = useState<LineDirection>('free')
@@ -100,11 +104,11 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
   // IMPORTANT: Only run this on initial mount in edit mode to prevent reverting changes
   useEffect(() => {
     if (editMode && existingLine) {
-      setPointSlot1(existingLine.pointA || '')
-      setPointSlot2(existingLine.pointB || '')
+      setPointSlot1(existingLine.pointA)
+      setPointSlot2(existingLine.pointB)
       setLineName(existingLine.name || '')
       setLineColor(existingLine.color || '#0696d7')
-      setIsVisible(existingLine.isVisible !== false)
+      setIsVisible(existingLine.isVisible())
       setIsConstruction(existingLine.isConstruction || false)
 
       // Load constraint settings from line properties
@@ -160,8 +164,8 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
     if (!wasActive && isNowActive && !editMode) {
       if (selectedPoints.length > 0) {
         console.log('[LineCreationTool] ✓ Pre-populating slots:', selectedPoints)
-        setPointSlot1(selectedPoints[0] || '')
-        setPointSlot2(selectedPoints[1] || '')
+        setPointSlot1(worldPoints.get(selectedPoints[0]) || null)
+        setPointSlot2(worldPoints.get(selectedPoints[1]) || null)
       } else {
         console.log('[LineCreationTool] ✗ Not pre-populating - no points selected')
       }
@@ -170,8 +174,8 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
     // Tool just became inactive (closed) - reset slots and ref
     if (wasActive && !isNowActive) {
       console.log('[LineCreationTool] Clearing slots on deactivation')
-      setPointSlot1('')
-      setPointSlot2('')
+      setPointSlot1(null)
+      setPointSlot2(null)
     }
 
     // Always update ref to track current state
@@ -184,22 +188,24 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
 
     const handleGlobalPointClick = (event: CustomEvent<{ pointId: string }>) => {
       const pointId = event.detail.pointId
+      const point = worldPoints.get(pointId)
+      if (!point) return
 
       // Prevent selecting the same point twice
-      if (pointId === pointSlot1 || pointId === pointSlot2) {
+      if (point === pointSlot1 || point === pointSlot2) {
         return
       }
 
       if (!pointSlot1) {
-        setPointSlot1(pointId)
+        setPointSlot1(point)
         setActiveSlot(2) // Next slot becomes active
       } else if (!pointSlot2) {
-        setPointSlot2(pointId)
+        setPointSlot2(point)
         setActiveSlot(null) // No more slots to fill
       } else {
         // Both slots filled, replace first slot and clear second
-        setPointSlot1(pointId)
-        setPointSlot2('')
+        setPointSlot1(point)
+        setPointSlot2(null)
         setActiveSlot(2) // Second slot becomes active
       }
     }
@@ -249,15 +255,15 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
       // Both points selected - show complete line preview
       onConstructionPreviewChange({
         type: 'line',
-        pointA: pointSlot1,
-        pointB: pointSlot2,
+        pointA: pointSlot1.getId(),
+        pointB: pointSlot2.getId(),
         showToCursor: false
       })
     } else if (pointSlot1) {
       // Only first point selected - show line to cursor
       onConstructionPreviewChange({
         type: 'line',
-        pointA: pointSlot1,
+        pointA: pointSlot1.getId(),
         showToCursor: true
       })
     } else {
@@ -274,12 +280,12 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
   }, [isActive, onConstructionPreviewChange])
 
   const clearSlot1 = () => {
-    setPointSlot1('')
+    setPointSlot1(null)
     setActiveSlot(1) // First slot becomes active
   }
 
   const clearSlot2 = () => {
-    setPointSlot2('')
+    setPointSlot2(null)
     setActiveSlot(2) // Second slot becomes active
   }
 
@@ -293,9 +299,9 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
 
     const foundLine = Object.values(existingLines || {}).find(line =>
       // Exclude the current line being edited
-      line.id !== existingLine?.id &&
-      ((line.pointA === pointA && line.pointB === pointB) ||
-       (line.pointA === pointB && line.pointB === pointA))
+      line.getId() !== existingLine?.getId() &&
+      ((line.pointA.getId() === pointA && line.pointB.getId() === pointB) ||
+       (line.pointA.getId() === pointB && line.pointB.getId() === pointA))
     )
 
     return {
@@ -304,7 +310,7 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
     }
   }, [existingLines, existingLine])
 
-  const lineCheck = lineAlreadyExists(pointSlot1, pointSlot2)
+  const lineCheck = lineAlreadyExists(pointSlot1?.getId() || '', pointSlot2?.getId() || '')
   const canCreateLine = pointSlot1 && pointSlot2 && pointSlot1 !== pointSlot2 && !lineCheck.exists
 
   const handleCreateLine = () => {
@@ -331,7 +337,7 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
           constraints: lineConstraintSettings
         }
 
-        onUpdateLine(updatedLine)
+        onUpdateLine(existingLine, updatedLine)
         onCancel()
       }
     } else {
@@ -359,7 +365,9 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
         constraints: lineConstraintSettings
       }
 
-      onCreateLine([pointSlot1, pointSlot2], constraints)
+      if (!pointSlot1 || !pointSlot2) return
+
+      onCreateLine(pointSlot1, pointSlot2, constraints)
       onCancel() // Close the tool after creation
     }
   }
@@ -367,7 +375,7 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
   const handleDeleteLine = async () => {
     if (editMode && existingLine && onDeleteLine) {
       if (await confirm(`Are you sure you want to delete line "${existingLine.name}"?\n\nThis action cannot be undone.`)) {
-        onDeleteLine(existingLine.id)
+        onDeleteLine(existingLine)
         onCancel()
       }
     }
@@ -462,8 +470,8 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
             <label style={{minWidth: '50px', fontSize: '12px'}}>Point 1</label>
             <div style={{display: 'flex', alignItems: 'center', gap: '4px', flex: 1}}>
               <select
-                value={pointSlot1}
-                onChange={(e) => setPointSlot1(e.target.value)}
+                value={pointSlot1?.getId() || ''}
+                onChange={(e) => setPointSlot1(worldPoints.get(e.target.value) || null)}
                 onFocus={handleSlot1Focus}
                 style={{flex: 1, fontSize: '12px', padding: '2px'}}
               >
@@ -490,14 +498,14 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
             <label style={{minWidth: '50px', fontSize: '12px'}}>Point 2</label>
             <div style={{display: 'flex', alignItems: 'center', gap: '4px', flex: 1}}>
               <select
-                value={pointSlot2}
-                onChange={(e) => setPointSlot2(e.target.value)}
+                value={pointSlot2?.getId() || ''}
+                onChange={(e) => setPointSlot2(worldPoints.get(e.target.value) || null)}
                 onFocus={handleSlot2Focus}
                 style={{flex: 1, fontSize: '12px', padding: '2px'}}
               >
                 <option value="">Select point...</option>
                 {availablePoints.map(point => (
-                  <option key={point.id} value={point.id} disabled={point.id === pointSlot1}>
+                  <option key={point.id} value={point.id} disabled={point.id === pointSlot1?.getId()}>
                     {point.name}
                   </option>
                 ))}

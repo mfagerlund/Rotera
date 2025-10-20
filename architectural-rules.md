@@ -33,16 +33,67 @@
 ### 1.2 Circular References Are Expected and Welcome
 - Rich object model with bidirectional relationships
 - WorldPoint knows its Lines, Lines know their WorldPoints
-- Use Sets/Maps for collections to prevent duplicates
+- Use Sets for entity collections (not Maps - we don't reference by ID!)
 - **Example**:
   ```typescript
   class WorldPoint {
-    private lines = new Set<ILine>();
-    private constraints = new Set<IConstraint>();
+    lines = new Set<Line>();
+    constraints = new Set<Constraint>();
   }
   ```
 
-### 1.3 One Entity Class Per Concept
+### 1.3 Use Direct Field Access (Not Getters)
+- **ALWAYS**: Use direct field access for properties
+- **NEVER**: Create `getName()` methods or getters that just return a field
+- **Why**: TypeScript allows transparent refactoring from fields to computed properties without changing callers
+- **Use getters ONLY when**:
+  - Computing a value: `get length() { return this.pointA.position.distanceTo(this.pointB.position); }`
+  - Property needs side effects (rare)
+- **Example (CORRECT)**:
+  ```typescript
+  class Line {
+    name: string;  // Direct field access
+    pointA: WorldPoint;
+    pointB: WorldPoint;
+
+    // Computed property - still uses property syntax!
+    get length() {
+      return this.pointA.position.distanceTo(this.pointB.position);
+    }
+  }
+
+  // Usage (same syntax for both):
+  line.name = "Line 1";
+  console.log(line.length);
+  ```
+- **Example (WRONG)**:
+  ```typescript
+  class Line {
+    private _name: string;
+    getName() { return this._name; }  // ❌ Java-ism, no benefit
+
+    private _pointA: WorldPoint;
+    get pointA() { return this._pointA; }  // ❌ Pointless getter
+  }
+  ```
+
+### 1.4 IDs Exist ONLY for Serialization
+- Entities have `id` properties for serialization/deserialization
+- **CRITICAL**: IDs are an architectural hazard - never use them for references!
+- Every `id` property MUST have this comment:
+  ```typescript
+  class WorldPoint {
+    id: string;  // Do *not* use this id as a reference, use the full entity everywhere!
+    position: THREE.Vector3;
+    lines: Set<Line>;
+  }
+  ```
+- **IDs are used ONLY for**:
+  - Serialization to JSON (DTOs)
+  - Map keys during deserialization (temporary, local scope only)
+- **Future consideration**: Remove IDs entirely, generate them on-the-fly during serialization
+
+### 1.5 One Entity Class Per Concept
 - WorldPoint: ONE class definition
 - Line: ONE class definition
 - Viewpoint: ONE class definition
@@ -133,8 +184,9 @@
 ### 4.2 No Repository Pattern (Currently)
 - No complex repository abstraction layer
 - Simple functions for add/delete/query operations
-- Direct access to collections via Maps
+- Direct access to collections via Sets
 - **Rationale**: Single project, no multi-tenancy, no complex queries needed
+- **Note**: Maps may still exist for legacy reasons, but new code should use Sets
 
 ### 4.3 Future Consideration
 - When multi-project support is needed, pattern may evolve
@@ -247,14 +299,41 @@
 
 **Current pattern**: Mix of Map (for lookup by ID) and Set (for bidirectional refs)
 
-**Recommendation**: ✓ **Keep current pattern**:
-- `Map<EntityId, Entity>` for primary collections (project.worldPoints)
-- `Set<Entity>` for bidirectional references (point.lines)
-- `Array` only for ordered lists where duplicates or ordering matter
+**Recommendation**: ✓ **Use Sets for entity collections**:
+- `Set<Entity>` for all entity collections (project.worldPoints, point.lines, etc.)
+- `Array` only for ordered lists where order matters
+- **NOT** `Map<EntityId, Entity>` - we don't reference by ID!
 
-**✅ DECISION**: Accepted. Keep current pattern.
+**✅ DECISION**: Use Sets everywhere. Maps serve no purpose at runtime when using object references.
 
-**Note**: Maps are used for serialization (map keys become DTO IDs) and provide O(1) lookup when needed. While we prefer object references, Maps enable efficient serialization and deserialization.
+**Deserialization pattern**:
+```typescript
+function deserialize(dto: ProjectDTO): EntityProject {
+  // Temporary map for deserialization ONLY (local scope)
+  const tempIdMap = new Map<string, WorldPoint>();
+
+  // First pass: create objects
+  for (const pDto of dto.points) {
+    const point = new WorldPoint(...);
+    tempIdMap.set(pDto.id, point);
+  }
+
+  // Second pass: connect references
+  for (const lDto of dto.lines) {
+    const pointA = tempIdMap.get(lDto.pointAId)!;
+    const pointB = tempIdMap.get(lDto.pointBId)!;
+    new Line(pointA, pointB);
+  }
+
+  // Return Sets, not Maps!
+  return {
+    points: new Set(tempIdMap.values()),
+    lines: new Set(...)
+  };
+}
+```
+
+**Note**: Temporary Maps are acceptable during deserialization for ID→object lookup, but they must be scoped locally to the deserialization function. The rest of the application uses Sets and object references.
 
 ### Q7: Null vs Undefined
 **Question**: When a property might not exist, use `null`, `undefined`, or optional `?:`?
@@ -278,7 +357,10 @@ Before committing code, verify:
 - [ ] No legacy code remains
 - [ ] No TODO comments for "old way" compatibility
 - [ ] Each concept has exactly ONE representation
-- [ ] Circular references use Sets/Maps appropriately
+- [ ] Collections use Sets (not Maps) - no ID-based lookup
+- [ ] All `id` properties have the warning comment
+- [ ] No silly getters - use direct field access
+- [ ] Only computed properties use `get` keyword
 
 ---
 
@@ -356,11 +438,17 @@ All clarifying questions have been resolved:
 | **Q3: Entity IDs** | ✅ Keep IDs for serialization/map keys, use object refs everywhere else |
 | **Q4: Metadata location** | ✅ Keep metadata on entities |
 | **Q5: Validation location** | ✅ Validate at DTO boundaries only |
-| **Q6: Collection types** | ✅ Keep Map/Set/Array pattern |
+| **Q6: Collection types** | ✅ Use Sets (not Maps) - no ID-based lookup at runtime |
 | **Q7: Null vs Undefined** | ✅ Standardize on optional `?:` properties |
 
 ---
 
-**Version**: 1.0
-**Last Updated**: 2025-10-19
+**Version**: 1.1
+**Last Updated**: 2025-10-20
 **Status**: ✅ APPROVED - All decisions finalized
+
+**Recent Updates (v1.1)**:
+- Added rule 1.3: Use direct field access, not silly getters (TypeScript superpower!)
+- Added rule 1.4: IDs exist ONLY for serialization (with required warning comment)
+- Updated Q6: Use Sets everywhere, Maps serve no purpose at runtime
+- Maps only acceptable as temporary local variables during deserialization

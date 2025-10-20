@@ -1,18 +1,19 @@
 // Project history management for undo/redo functionality
 
 import { useState, useCallback } from 'react'
-import { Project, ProjectHistoryEntry } from '../types/project'
+import { EntityProject } from '../types/project-entities'
+import { ProjectHistoryEntry } from '../types/ui-types'
 
 export const useHistory = () => {
   const [historyIndex, setHistoryIndex] = useState(-1)
 
   const addHistoryEntry = useCallback((
-    project: Project,
+    project: EntityProject,
     action: string,
     description: string,
     before?: any,
     after?: any
-  ): Project => {
+  ): EntityProject => {
     const entry: ProjectHistoryEntry = {
       id: crypto.randomUUID(),
       timestamp: new Date().toISOString(),
@@ -41,15 +42,15 @@ export const useHistory = () => {
     return updatedProject
   }, [historyIndex])
 
-  const canUndo = useCallback((project: Project) => {
+  const canUndo = useCallback((project: EntityProject) => {
     return historyIndex > 0 && project.history.length > 0
   }, [historyIndex])
 
-  const canRedo = useCallback((project: Project) => {
+  const canRedo = useCallback((project: EntityProject) => {
     return historyIndex < project.history.length - 1
   }, [historyIndex])
 
-  const undo = useCallback((project: Project): Project | null => {
+  const undo = useCallback((project: EntityProject): EntityProject | null => {
     if (!canUndo(project)) return null
 
     const targetIndex = historyIndex - 1
@@ -67,7 +68,7 @@ export const useHistory = () => {
     }
   }, [historyIndex, canUndo])
 
-  const redo = useCallback((project: Project): Project | null => {
+  const redo = useCallback((project: EntityProject): EntityProject | null => {
     if (!canRedo(project)) return null
 
     const targetIndex = historyIndex + 1
@@ -85,12 +86,12 @@ export const useHistory = () => {
     }
   }, [historyIndex, canRedo])
 
-  const getCurrentEntry = useCallback((project: Project): ProjectHistoryEntry | null => {
+  const getCurrentEntry = useCallback((project: EntityProject): ProjectHistoryEntry | null => {
     if (historyIndex < 0 || historyIndex >= project.history.length) return null
     return project.history[historyIndex]
   }, [historyIndex])
 
-  const getHistoryStats = useCallback((project: Project) => {
+  const getHistoryStats = useCallback((project: EntityProject) => {
     return {
       currentIndex: historyIndex,
       totalEntries: project.history.length,
@@ -100,7 +101,7 @@ export const useHistory = () => {
     }
   }, [historyIndex, canUndo, canRedo, getCurrentEntry])
 
-  const resetHistory = useCallback((project: Project): Project => {
+  const resetHistory = useCallback((project: EntityProject): EntityProject => {
     setHistoryIndex(-1)
     return {
       ...project,

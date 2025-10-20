@@ -1,8 +1,22 @@
 // Constraint creation and management hook for context-sensitive toolbar
 
 import { useState, useCallback, useMemo } from 'react'
-import { Constraint, ConstraintType, AvailableConstraint, Line } from '../types/project'
+import { AvailableConstraint } from '../types/ui-types'
+import { Constraint } from '../entities/constraint'
+import { Line } from '../entities/line'
 import { getConstraintPointIds } from '../types/utils'
+
+// Legacy ConstraintType from types/project for backward compatibility
+type ConstraintType =
+  | 'point_fixed_coord' | 'point_locked' | 'point_on_line' | 'point_on_plane'
+  | 'line_axis_aligned' | 'line_length' | 'line_passes_through' | 'line_in_plane'
+  | 'plane_parallel_to_axis' | 'plane_offset'
+  | 'points_distance' | 'points_equal' | 'points_coincident'
+  | 'lines_parallel' | 'lines_perpendicular' | 'lines_colinear' | 'lines_intersect'
+  | 'line_plane_parallel' | 'line_plane_perpendicular' | 'line_plane_intersect'
+  | 'planes_parallel' | 'planes_perpendicular' | 'planes_coincident'
+  | 'points_colinear' | 'points_coplanar' | 'points_equal_distance'
+  | 'symmetry'
 
 export const useConstraints = (
   constraints: Constraint[],
@@ -224,7 +238,9 @@ export const useConstraints = (
   const applyConstraint = useCallback(() => {
     if (!activeConstraintType) return
 
-    const constraint: Constraint = {
+    // NOTE: This creates a plain object that matches the legacy Constraint interface
+    // The actual conversion to Constraint entity class happens in the project store
+    const constraint: any = {
       id: crypto.randomUUID(),
       type: activeConstraintType as ConstraintType,
       enabled: true,
@@ -284,15 +300,19 @@ export const useConstraints = (
 
   // Constraint display helpers
   const getConstraintDisplayName = useCallback((constraint: Constraint) => {
-    switch (constraint.type) {
+    const constraintType = constraint.constraintType || (constraint as any).type
+    const entities = constraint.entities
+    const parameters = constraint.parameters
+
+    switch (constraintType) {
       case 'points_distance': {
-        const pointIds = constraint.entities.points || []
+        const pointIds = entities.points || []
         return `Distance: ${pointIds[0]} ↔ ${pointIds[1]}`
       }
       case 'points_equal_distance':
         // Determine if it's angle or circle based on parameters
-        if (constraint.parameters.angle !== undefined || constraint.parameters.angle_degrees !== undefined) {
-          return `Angle: ${constraint.parameters.angle_degrees || constraint.parameters.angle || 0}°`
+        if (parameters.angle !== undefined || parameters.angle_degrees !== undefined) {
+          return `Angle: ${parameters.angle_degrees || parameters.angle || 0}°`
         } else {
           return `Circle constraint`
         }
@@ -307,14 +327,17 @@ export const useConstraints = (
       case 'point_fixed_coord':
         return `Fixed Point`
       default:
-        return `${constraint.type.charAt(0).toUpperCase()}${constraint.type.slice(1)} Constraint`
+        return `${constraintType.charAt(0).toUpperCase()}${constraintType.slice(1)} Constraint`
     }
   }, [])
 
   const getConstraintSummary = useCallback((constraint: Constraint) => {
-    switch (constraint.type) {
+    const constraintType = constraint.constraintType || (constraint as any).type
+    const parameters = constraint.parameters
+
+    switch (constraintType) {
       case 'points_distance':
-        return `${constraint.parameters.distance || 0}m between points`
+        return `${parameters.distance || 0}m between points`
       case 'lines_perpendicular':
         return `Perpendicular line relationship`
       case 'lines_parallel':
@@ -325,7 +348,7 @@ export const useConstraints = (
         return `4-corner rectangle shape`
       case 'points_equal_distance':
         // Determine summary based on parameters
-        if (constraint.parameters.angle !== undefined || constraint.parameters.angle_degrees !== undefined) {
+        if (parameters.angle !== undefined || parameters.angle_degrees !== undefined) {
           return `Angle constraint`
         } else {
           return `Points on circle boundary`
@@ -395,10 +418,10 @@ function getInitialConstraintParameters(
         params.line2_end = selectedPoints[2]
       } else if (selectedLines.length >= 2) {
         // Angle between two lines
-        params.line1_wp_a = selectedLines[0].pointA
-        params.line1_wp_b = selectedLines[0].pointB
-        params.line2_wp_a = selectedLines[1].pointA
-        params.line2_wp_b = selectedLines[1].pointB
+        params.line1_wp_a = selectedLines[0].pointA.getId()
+        params.line1_wp_b = selectedLines[0].pointB.getId()
+        params.line2_wp_a = selectedLines[1].pointA.getId()
+        params.line2_wp_b = selectedLines[1].pointB.getId()
       } else if (selectedPoints.length > 3) {
         // Circle constraint: multiple points
         params.point_ids = selectedPoints
@@ -408,10 +431,10 @@ function getInitialConstraintParameters(
     case 'lines_perpendicular':
     case 'lines_parallel':
       if (selectedLines.length >= 2) {
-        params.line1_wp_a = selectedLines[0].pointA
-        params.line1_wp_b = selectedLines[0].pointB
-        params.line2_wp_a = selectedLines[1].pointA
-        params.line2_wp_b = selectedLines[1].pointB
+        params.line1_wp_a = selectedLines[0].pointA.getId()
+        params.line1_wp_b = selectedLines[0].pointB.getId()
+        params.line2_wp_a = selectedLines[1].pointA.getId()
+        params.line2_wp_b = selectedLines[1].pointB.getId()
       }
       break
 

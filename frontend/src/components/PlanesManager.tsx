@@ -2,6 +2,7 @@
 
 import React from 'react'
 import EntityListPopup, { EntityListItem } from './EntityListPopup'
+// Plane is still in legacy types (not yet migrated to entity)
 import { Plane } from '../types/project'
 
 interface PlanesManagerProps {

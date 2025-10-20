@@ -1,4 +1,17 @@
-// Core project data types for CAD-inspired UI
+// ⚠️ DEPRECATED - DO NOT ADD NEW IMPORTS FROM THIS FILE
+// This file contains legacy DTO types that are being phased out
+//
+// For new code, use:
+// - Entity classes from entities/* (WorldPoint, Line, Viewpoint, Constraint)
+// - DTOs from entities/*/Dto.ts for serialization only
+// - EntityProject from types/project-entities
+//
+// Remaining imports (22 files) are for:
+// - AvailableConstraint (utility type - will be moved to types/ui-types.ts)
+// - Legacy Project type (backward compatibility during migration)
+// - Legacy Constraint type (validation service compatibility)
+//
+// Core project data types for CAD-inspired UI (LEGACY)
 
 export interface WorldPoint {
   id: string           // UUID for backend

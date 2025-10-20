@@ -1,7 +1,6 @@
 // Unified entity selection system with ISelectable interface
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { SelectionState } from '../types/project'
 import { EntitySelection, EntitySelectionImpl, ISelectable, SelectableType, getSelectionStats } from '../types/selectable'
 
 export const useSelection = () => {

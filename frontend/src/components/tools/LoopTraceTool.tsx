@@ -3,6 +3,7 @@
 
 import React, { useEffect, useState, useRef } from 'react'
 import { LineDirection } from '../../entities/line'
+import { WorldPoint } from '../../entities/world-point'
 import { useLoopTrace } from '../../hooks/useLoopTrace'
 
 interface LineConstraints {
@@ -22,8 +23,9 @@ import { ConstructionPreview } from '../image-viewer/types'
 interface LoopTraceToolProps {
   selectedPoints: string[]
   worldPointNames: Record<string, string>
+  worldPoints?: Map<string, WorldPoint>
   existingLines: Record<string, any>
-  onCreateLine: (pointIds: [string, string], constraints?: LineConstraints) => void
+  onCreateLine: (pointA: WorldPoint, pointB: WorldPoint, constraints?: LineConstraints) => void
   onCreateConstraint?: (constraint: any) => void
   onCancel: () => void
   onConstructionPreviewChange?: (preview: ConstructionPreview | null) => void
@@ -36,6 +38,7 @@ interface LoopTraceToolProps {
 export const LoopTraceTool: React.FC<LoopTraceToolProps> = ({
   selectedPoints,
   worldPointNames,
+  worldPoints,
   existingLines,
   onCreateLine,
   onCreateConstraint,
@@ -59,6 +62,7 @@ export const LoopTraceTool: React.FC<LoopTraceToolProps> = ({
     complete
   } = useLoopTrace({
     selectedPoints,
+    worldPoints,
     existingLines,
     onCreateLine,
     onCreateConstraint,
@@ -88,6 +92,7 @@ export const LoopTraceTool: React.FC<LoopTraceToolProps> = ({
     prevSegmentsRef.current = segments
 
     if (segments.length > 0) {
+      // Segments already contain entity references
       onConstructionPreviewChange({
         type: 'loop-chain',
         segments: segments
@@ -95,7 +100,7 @@ export const LoopTraceTool: React.FC<LoopTraceToolProps> = ({
     } else {
       onConstructionPreviewChange(null)
     }
-  }, [isActive, segments])
+  }, [isActive, segments, worldPoints])
 
   // Clear preview when tool is deactivated
   useEffect(() => {

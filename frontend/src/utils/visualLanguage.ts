@@ -1,8 +1,8 @@
 // Visual Language Utilities for consistent UI theming and color coding
 
 import React from 'react'
-import { ConstraintStatus } from '../types/geometry'
-import { EnhancedProjectSettings } from '../types/enhanced-project'
+import { ConstraintStatus } from '../entities/constraints/base-constraint'
+import { ProjectSettings } from '../types/project-entities'
 import {
   ENTITY_COLORS as CONSTRAINT_STATUS_COLORS,
   CONSTRAINT_GLYPHS as GLYPHS,
@@ -25,7 +25,7 @@ export interface ColorScheme {
     plane: Record<EntityState, string>
     circle: Record<EntityState, string>
   }
-  constraints: Record<ConstraintStatus, string>
+  constraints: Record<ConstraintStatus | 'conflicting' | 'redundant' | 'undefined' | 'disabled', string>
   workspaces: Record<WorkspaceType, string>
   states: {
     active: string
@@ -68,6 +68,7 @@ export const defaultColorScheme: ColorScheme = {
     satisfied: CONSTRAINT_STATUS_COLORS.satisfied,
     warning: CONSTRAINT_STATUS_COLORS.warning,
     violated: CONSTRAINT_STATUS_COLORS.violated,
+    disabled: CONSTRAINT_STATUS_COLORS.construction,
     conflicting: '#9C27B0',
     redundant: CONSTRAINT_STATUS_COLORS.construction,
     undefined: CONSTRAINT_STATUS_COLORS.worldGeometry
@@ -118,6 +119,7 @@ export const highContrastColorScheme: ColorScheme = {
     satisfied: '#008800',
     warning: '#FF8800',
     violated: '#CC0000',
+    disabled: '#666666',
     conflicting: '#AA00AA',
     redundant: '#666666',
     undefined: '#0066FF'
@@ -139,9 +141,9 @@ export const highContrastColorScheme: ColorScheme = {
 // Visual Language Manager
 export class VisualLanguageManager {
   private colorScheme: ColorScheme
-  private settings: EnhancedProjectSettings
+  private settings: ProjectSettings
 
-  constructor(settings: EnhancedProjectSettings, highContrast = false) {
+  constructor(settings: ProjectSettings, highContrast = false) {
     this.settings = settings
     this.colorScheme = highContrast ? highContrastColorScheme : defaultColorScheme
   }
@@ -296,7 +298,7 @@ export class VisualLanguageManager {
       color,
       borderColor: color,
       backgroundColor: `${color}20`, // 20% opacity
-      opacity: status === 'redundant' ? 0.6 : 1,
+      opacity: (status as string) === 'redundant' ? 0.6 : 1,
       transition: 'all 0.3s ease',
       ...(overrides as React.CSSProperties)
     }
@@ -311,7 +313,7 @@ export class VisualLanguageManager {
   }
 
   // Update settings
-  updateSettings(newSettings: Partial<EnhancedProjectSettings>): void {
+  updateSettings(newSettings: Partial<ProjectSettings>): void {
     this.settings = {
       ...this.settings,
       ...newSettings
@@ -386,7 +388,7 @@ export const setCSSColorVariables = (manager: VisualLanguageManager): void => {
 }
 
 // Hook for using visual language in React components
-export const useVisualLanguage = (settings: EnhancedProjectSettings) => {
+export const useVisualLanguage = (settings: ProjectSettings) => {
   const manager = new VisualLanguageManager(settings)
 
   // Set CSS variables on mount and when settings change

@@ -1,11 +1,12 @@
 // Coordinate system and origin management panel
 
 import React, { useState } from 'react'
-import { WorldPoint, Project } from '../types/project'
+import type { EntityProject } from '../types/project-entities'
+import type { WorldPoint } from '../entities/world-point'
 
 interface CoordinateSystemPanelProps {
-  project: Project
-  worldPoints: Record<string, WorldPoint>
+  project: EntityProject
+  worldPoints: Record<string, WorldPoint> | Map<string, WorldPoint>
   onSetOrigin: (pointId: string) => void
   onSetScale: (scale: number) => void
   onDefineGroundPlane: (pointA: string, pointB: string, pointC: string) => void
@@ -21,10 +22,11 @@ export const CoordinateSystemPanel: React.FC<CoordinateSystemPanelProps> = ({
   onRunOptimization
 }) => {
   const [selectedGroundPoints, setSelectedGroundPoints] = useState<string[]>([])
-  const [scaleValue, setScaleValue] = useState(project.coordinateSystem?.scale || 1.0)
+  const [scaleValue, setScaleValue] = useState(1.0)
 
-  const originPoint = project.coordinateSystem?.origin ? worldPoints[project.coordinateSystem.origin] : null
-  const groundPlane = project.coordinateSystem?.groundPlane
+  // TODO: coordinateSystem will need to be passed as prop or stored differently
+  const originPoint: WorldPoint | null = null
+  const groundPlane: { pointA: WorldPoint; pointB: WorldPoint; pointC: WorldPoint } | null = null
 
   const handleSetOrigin = (pointId: string) => {
     onSetOrigin(pointId)
@@ -49,20 +51,16 @@ export const CoordinateSystemPanel: React.FC<CoordinateSystemPanelProps> = ({
     }
   }
 
-  const worldPointsList = Object.values(worldPoints).sort((a, b) => a.name.localeCompare(b.name))
+  const worldPointsList = (worldPoints instanceof Map
+    ? Array.from(worldPoints.values())
+    : Object.values(worldPoints)
+  ).sort((a, b) => a.getName().localeCompare(b.getName()))
 
   return (
     <div className="coordinate-system-panel">
       <div className="panel-header">
         <h3>Coordinate System</h3>
-        {project.optimization?.status && (
-          <div className={`optimization-status ${project.optimization.status}`}>
-            {project.optimization.status === 'running' && '⏳ Optimizing...'}
-            {project.optimization.status === 'converged' && '✅ Solved'}
-            {project.optimization.status === 'failed' && '❌ Failed'}
-            {project.optimization.status === 'not_run' && '⚪ Not Run'}
-          </div>
-        )}
+        {/* TODO: optimization status will need to be passed as prop */}
       </div>
 
       <div className="panel-content">
@@ -85,13 +83,13 @@ export const CoordinateSystemPanel: React.FC<CoordinateSystemPanelProps> = ({
               <div className="point-selector">
                 {worldPointsList.map(wp => (
                   <button
-                    key={wp.id}
+                    key={wp.getId()}
                     className="point-option"
-                    onClick={() => handleSetOrigin(wp.id)}
+                    onClick={() => handleSetOrigin(wp.getId())}
                   >
                     <div className="point-color" style={{ backgroundColor: wp.color }} />
-                    <span>{wp.name}</span>
-                    <span className="point-images">{wp.imagePoints.length} img</span>
+                    <span>{wp.getName()}</span>
+                    <span className="point-images">0 img</span>
                   </button>
                 ))}
               </div>
@@ -101,13 +99,13 @@ export const CoordinateSystemPanel: React.FC<CoordinateSystemPanelProps> = ({
               <div className="origin-details">
                 <div className="detail-item">
                   <span className="label">Point:</span>
-                  <span className="value">{originPoint.name}</span>
+                  <span className="value">{originPoint.getName()}</span>
                 </div>
                 <div className="detail-item">
                   <span className="label">Images:</span>
-                  <span className="value">{originPoint.imagePoints.length}</span>
+                  <span className="value">0</span>
                 </div>
-                {originPoint.xyz && (
+                {originPoint && originPoint.xyz && (
                   <div className="detail-item">
                     <span className="label">Position:</span>
                     <span className="value">
@@ -169,30 +167,35 @@ export const CoordinateSystemPanel: React.FC<CoordinateSystemPanelProps> = ({
               </p>
               <div className="ground-point-selection">
                 <div className="selected-points">
-                  {[0, 1, 2].map(index => (
-                    <div key={index} className={`ground-point-slot ${selectedGroundPoints[index] ? 'filled' : 'empty'}`}>
-                      {selectedGroundPoints[index] ? (
-                        <span>{worldPoints[selectedGroundPoints[index]]?.name}</span>
-                      ) : (
-                        <span>Point {index + 1}</span>
-                      )}
-                    </div>
-                  ))}
+                  {[0, 1, 2].map(index => {
+                    const pointId = selectedGroundPoints[index]
+                    const point = pointId ? (worldPoints instanceof Map ? worldPoints.get(pointId) : worldPoints[pointId]) : null
+                    return (
+                      <div key={index} className={`ground-point-slot ${pointId ? 'filled' : 'empty'}`}>
+                        {point ? (
+                          <span>{point.getName()}</span>
+                        ) : (
+                          <span>Point {index + 1}</span>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
                 <div className="point-grid">
                   {worldPointsList.map(wp => {
-                    const isSelected = selectedGroundPoints.includes(wp.id)
-                    const isOrigin = wp.id === project.coordinateSystem?.origin
+                    const wpId = wp.getId()
+                    const isSelected = selectedGroundPoints.includes(wpId)
+                    const isOrigin = false // TODO: will need to check against coordinateSystem.origin
                     return (
                       <button
-                        key={wp.id}
+                        key={wpId}
                         className={`point-grid-item ${isSelected ? 'selected' : ''} ${isOrigin ? 'origin' : ''}`}
-                        onClick={() => handleGroundPointSelect(wp.id)}
+                        onClick={() => handleGroundPointSelect(wpId)}
                         disabled={isOrigin}
                         title={isOrigin ? 'Origin point (cannot be used for ground plane)' : ''}
                       >
                         <div className="point-color" style={{ backgroundColor: wp.color }} />
-                        <span>{wp.name}</span>
+                        <span>{wp.getName()}</span>
                       </button>
                     )
                   })}
@@ -211,15 +214,15 @@ export const CoordinateSystemPanel: React.FC<CoordinateSystemPanelProps> = ({
               <div className="ground-points">
                 <div className="ground-point">
                   <span className="label">Point A:</span>
-                  <span className="value">{worldPoints[groundPlane.pointA]?.name}</span>
+                  <span className="value">{(worldPoints instanceof Map ? worldPoints.get(groundPlane.pointA) : worldPoints[groundPlane.pointA])?.getName()}</span>
                 </div>
                 <div className="ground-point">
                   <span className="label">Point B:</span>
-                  <span className="value">{worldPoints[groundPlane.pointB]?.name}</span>
+                  <span className="value">{(worldPoints instanceof Map ? worldPoints.get(groundPlane.pointB) : worldPoints[groundPlane.pointB])?.getName()}</span>
                 </div>
                 <div className="ground-point">
                   <span className="label">Point C:</span>
-                  <span className="value">{worldPoints[groundPlane.pointC]?.name}</span>
+                  <span className="value">{(worldPoints instanceof Map ? worldPoints.get(groundPlane.pointC) : worldPoints[groundPlane.pointC])?.getName()}</span>
                 </div>
               </div>
               <button
@@ -241,25 +244,20 @@ export const CoordinateSystemPanel: React.FC<CoordinateSystemPanelProps> = ({
             <div className="optimization-info">
               <div className="info-item">
                 <span className="label">Constraints:</span>
-                <span className="value">{project.constraints.filter(c => c.enabled).length} active</span>
+                <span className="value">{project.constraints.filter(c => c.isEnabled).length} active</span>
               </div>
               <div className="info-item">
                 <span className="label">World Points:</span>
                 <span className="value">{Object.keys(worldPoints).length}</span>
               </div>
-              {project.optimization?.residuals && (
-                <div className="info-item">
-                  <span className="label">RMS Error:</span>
-                  <span className="value">{project.optimization.residuals.toFixed(4)}</span>
-                </div>
-              )}
+              {/* TODO: Add optimization residuals when available */}
             </div>
             <button
               className="btn-optimize"
               onClick={onRunOptimization}
-              disabled={!originPoint || project.constraints.filter(c => c.enabled).length === 0}
+              disabled={!originPoint || project.constraints.filter(c => c.isEnabled).length === 0}
             >
-              {project.optimization?.status === 'running' ? 'Optimizing...' : 'Run Optimization'}
+              Run Optimization
             </button>
           </div>
         </div>

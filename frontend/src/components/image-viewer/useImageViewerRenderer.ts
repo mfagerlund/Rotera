@@ -29,7 +29,7 @@ export const useImageViewerRenderer = ({
   onMovePoint
 }: UseImageViewerRendererParams) => {
   const {
-    imageId,
+    viewpoint,
     worldPoints,
     lines,
     scale,
@@ -68,18 +68,19 @@ export const useImageViewerRenderer = ({
 
     const renderWorldPoints = () => {
       Array.from(worldPoints.values()).forEach(wp => {
-        const imagePoint = wp.imagePoints.find(ip => ip.imageId === imageId)
-        if (!imagePoint || !wp.isVisible) {
+        const imagePoints = viewpoint.getImagePointsForWorldPoint(wp.getId())
+        const imagePoint = imagePoints.length > 0 ? imagePoints[0] : null
+        if (!imagePoint || !wp.isVisible()) {
           return
         }
 
         const x = imagePoint.u * scale + offset.x
         const y = imagePoint.v * scale + offset.y
 
-        const isSelected = selectedPoints.includes(wp.id)
-        const isBeingDragged = isDraggingPoint && draggedPointId === wp.id
-        const isHovered = hoveredPointId === wp.id
-        const isGloballyHovered = hoveredWorldPointId === wp.id
+        const isSelected = selectedPoints.includes(wp.getId())
+        const isBeingDragged = isDraggingPoint && draggedPointId === wp.getId()
+        const isHovered = hoveredPointId === wp.getId()
+        const isGloballyHovered = hoveredWorldPointId === wp.getId()
 
         if (isBeingDragged) {
           ctx.strokeStyle = 'rgba(255, 140, 0, 0.8)'
@@ -134,8 +135,10 @@ export const useImageViewerRenderer = ({
     const renderSelectionOverlay = () => {
       selectedPoints.forEach((pointId, index) => {
         const wp = worldPoints.get(pointId)
-        const imagePoint = wp?.imagePoints.find(ip => ip.imageId === imageId)
+        if (!wp) return
 
+        const imagePoints = viewpoint.getImagePointsForWorldPoint(wp.getId())
+        const imagePoint = imagePoints.length > 0 ? imagePoints[0] : null
         if (!imagePoint) {
           return
         }
@@ -372,15 +375,15 @@ export const useImageViewerRenderer = ({
           return
         }
 
-        const pointA = worldPoints.get(line.pointA)
-        const pointB = worldPoints.get(line.pointB)
+        const pointA = line.pointA
+        const pointB = line.pointB
 
         if (!pointA || !pointB) {
           return
         }
 
-        const ipA = pointA.imagePoints.find(ip => ip.imageId === imageId)
-        const ipB = pointB.imagePoints.find(ip => ip.imageId === imageId)
+        const ipA = viewpoint.getImagePointsForWorldPoint(pointA.getId())[0] || null
+        const ipB = viewpoint.getImagePointsForWorldPoint(pointB.getId())[0] || null
 
         if (!ipA || !ipB) {
           return
@@ -464,12 +467,12 @@ export const useImageViewerRenderer = ({
         const segments = constructionPreview.segments || []
 
         segments.forEach(segment => {
-          const wpA = worldPoints.get(segment.pointA)
-          const wpB = worldPoints.get(segment.pointB)
+          const wpA = segment.pointA
+          const wpB = segment.pointB
           if (!wpA || !wpB) return
 
-          const ipA = wpA.imagePoints.find(ip => ip.imageId === imageId)
-          const ipB = wpB.imagePoints.find(ip => ip.imageId === imageId)
+          const ipA = viewpoint.getImagePointsForWorldPoint(wpA.getId())[0] || null
+          const ipB = viewpoint.getImagePointsForWorldPoint(wpB.getId())[0] || null
           if (!ipA || !ipB) return
 
           const x1 = ipA.u * scale + offset.x
@@ -499,9 +502,9 @@ export const useImageViewerRenderer = ({
         // Show line to cursor from last point if there's a chain
         if (segments.length > 0 && currentMousePos) {
           const lastSegment = segments[segments.length - 1]
-          const lastPoint = worldPoints.get(lastSegment.pointB)
+          const lastPoint = lastSegment.pointB
           if (lastPoint) {
-            const ipLast = lastPoint.imagePoints.find(ip => ip.imageId === imageId)
+            const ipLast = viewpoint.getImagePointsForWorldPoint(lastPoint.getId())[0] || null
             if (ipLast) {
               const x1 = ipLast.u * scale + offset.x
               const y1 = ipLast.v * scale + offset.y
@@ -535,12 +538,12 @@ export const useImageViewerRenderer = ({
       const { pointA, pointB, showToCursor } = constructionPreview
 
       if (pointA && !pointB && showToCursor) {
-        const wpA = worldPoints.get(pointA)
+        const wpA = pointA
         if (!wpA) {
           return
         }
 
-        const ipA = wpA.imagePoints.find(ip => ip.imageId === imageId)
+        const ipA = viewpoint.getImagePointsForWorldPoint(wpA.getId())[0] || null
         if (!ipA) {
           return
         }
@@ -562,14 +565,14 @@ export const useImageViewerRenderer = ({
       }
 
       if (pointA && pointB) {
-        const wpA = worldPoints.get(pointA)
-        const wpB = worldPoints.get(pointB)
+        const wpA = pointA
+        const wpB = pointB
         if (!wpA || !wpB) {
           return
         }
 
-        const ipA = wpA.imagePoints.find(ip => ip.imageId === imageId)
-        const ipB = wpB.imagePoints.find(ip => ip.imageId === imageId)
+        const ipA = viewpoint.getImagePointsForWorldPoint(wpA.getId())[0] || null
+        const ipB = viewpoint.getImagePointsForWorldPoint(wpB.getId())[0] || null
         if (!ipA || !ipB) {
           return
         }
@@ -623,7 +626,7 @@ export const useImageViewerRenderer = ({
     canvasRef,
     imageRef,
     imageLoaded,
-    imageId,
+    viewpoint,
     worldPoints,
     lines,
     scale,

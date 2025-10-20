@@ -1,17 +1,19 @@
 import React from 'react'
 
 import WorldView, { WorldViewRef } from '../WorldView'
-import { Project } from '../../types/project'
+import { EntityProject } from '../../types/project-entities'
+import { WorldPoint } from '../../entities/world-point'
+import { Line } from '../../entities/line'
 
 interface WorldWorkspaceProps {
-  project: Project
+  project: EntityProject
   worldViewRef: React.RefObject<WorldViewRef>
   selectedPointIds: string[]
   selectedLineIds: string[]
   selectedPlaneIds: string[]
   hoveredConstraintId: string | null
-  onPointClick: (pointId: string, ctrlKey: boolean, shiftKey: boolean) => void
-  onLineClick: (lineId: string, ctrlKey: boolean, shiftKey: boolean) => void
+  onPointClick: (worldPoint: WorldPoint, ctrlKey: boolean, shiftKey: boolean) => void
+  onLineClick: (line: Line, ctrlKey: boolean, shiftKey: boolean) => void
   onPlaneClick: (planeId: string, ctrlKey: boolean, shiftKey: boolean) => void
 }
 

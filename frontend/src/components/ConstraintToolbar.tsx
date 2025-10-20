@@ -1,7 +1,15 @@
 // Context-sensitive constraint toolbar - CAD style
 
 import React from 'react'
-import { AvailableConstraint, Line } from '../types/project'
+import { Line } from '../entities/line/Line'
+
+// Legacy type until we migrate away from types/project
+interface AvailableConstraint {
+  type: string
+  icon: string
+  tooltip: string
+  enabled: boolean
+}
 
 interface ConstraintToolbarProps {
   selectedPoints: string[]

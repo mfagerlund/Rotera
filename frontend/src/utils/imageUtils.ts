@@ -1,9 +1,19 @@
 // Image processing utilities for project management
 
-import { ProjectImage } from '../types/project'
+// ViewpointDto is the DTO type used for serialization
+import type { ViewpointDto } from '../entities/viewpoint/ViewpointDto'
+import type { ViewpointId } from '../types/ids'
+
+export interface ImageLoadResult {
+  id: ViewpointId
+  name: string
+  url: string
+  imageWidth: number
+  imageHeight: number
+}
 
 export class ImageUtils {
-  static async loadImageFile(file: File): Promise<ProjectImage> {
+  static async loadImageFile(file: File): Promise<ImageLoadResult> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
       const img = new Image()
@@ -28,11 +38,11 @@ export class ImageUtils {
           ctx.drawImage(img, 0, 0, width, height)
 
           resolve({
-            id: crypto.randomUUID(),
+            id: crypto.randomUUID() as ViewpointId,
             name: file.name.replace(/\.[^/.]+$/, ''), // Remove file extension
-            blob: canvas.toDataURL('image/jpeg', 0.8),
-            width,
-            height
+            url: canvas.toDataURL('image/jpeg', 0.8),
+            imageWidth: width,
+            imageHeight: height
           })
         }
 
