@@ -1,7 +1,9 @@
 import { Project } from './project/Project'
 import { WorldPoint } from './world-point/WorldPoint'
 import { Line } from './line/Line'
-import { Viewpoint, type ImagePointDto } from './viewpoint/Viewpoint'
+import { Viewpoint } from './viewpoint/Viewpoint'
+import { ImagePoint } from './imagePoint/ImagePoint'
+import type { IImagePoint } from './interfaces'
 import { Plane } from './plane'
 import type { LineId, ViewpointId, PlaneId, PointId, ImagePointId } from '../types/ids'
 
@@ -54,6 +56,19 @@ interface LineDto {
   updatedAt: string
 }
 
+interface ImagePointDto {
+  id: string
+  worldPointId: string
+  viewpointId: string
+  u: number
+  v: number
+  isVisible: boolean
+  isManuallyPlaced: boolean
+  confidence: number
+  createdAt: string
+  updatedAt: string
+}
+
 interface ViewpointDto {
   id: string
   name: string
@@ -70,7 +85,6 @@ interface ViewpointDto {
   tangentialDistortion: [number, number]
   position: [number, number, number]
   rotation: [number, number, number, number]
-  imagePoints: Record<string, ImagePointDto>
   calibrationAccuracy: number
   calibrationDate?: string
   calibrationNotes?: string
@@ -125,6 +139,7 @@ interface ProjectDto {
   worldPoints: Record<string, WorldPointDto>
   lines: Record<string, LineDto>
   viewpoints: Record<string, ViewpointDto>
+  imagePoints: Record<string, ImagePointDto>
   planes?: Record<string, PlaneDto>
   constraints: any[]
   settings: ProjectSettingsDto
@@ -164,12 +179,18 @@ export class Serialization {
       viewpoints[viewpoint.id] = this.viewpointToDto(viewpoint)
     })
 
+    const imagePoints: Record<string, ImagePointDto> = {}
+    project.imagePoints.forEach(imagePoint => {
+      imagePoints[imagePoint.id] = this.imagePointToDto(imagePoint)
+    })
+
     return {
       id: project.id,
       name: project.name,
       worldPoints,
       lines,
       viewpoints,
+      imagePoints,
       constraints: [],
       settings: {
         showPointNames: project.showPointNames,
@@ -211,9 +232,23 @@ export class Serialization {
       }
     })
 
-    const viewpointsSet = new Set<Viewpoint>()
+    const tempViewpointMap = new Map<string, Viewpoint>()
     Object.entries(dto.viewpoints).forEach(([id, viewpointDto]) => {
-      viewpointsSet.add(this.dtoToViewpoint(viewpointDto))
+      const viewpoint = this.dtoToViewpoint(viewpointDto)
+      tempViewpointMap.set(id, viewpoint)
+    })
+    const viewpointsSet = new Set(tempViewpointMap.values())
+
+    const imagePointsSet = new Set<IImagePoint>()
+    Object.entries(dto.imagePoints || {}).forEach(([id, imagePointDto]) => {
+      const worldPoint = tempPointMap.get(imagePointDto.worldPointId)
+      const viewpoint = tempViewpointMap.get(imagePointDto.viewpointId)
+      if (worldPoint && viewpoint) {
+        const imagePoint = this.dtoToImagePoint(imagePointDto, worldPoint, viewpoint)
+        imagePointsSet.add(imagePoint)
+        worldPoint.addImagePoint(imagePoint)
+        viewpoint.addImagePoint(imagePoint)
+      }
     })
 
     return Project.createFull(
@@ -222,6 +257,7 @@ export class Serialization {
       worldPoints,
       linesSet,
       viewpointsSet,
+      imagePointsSet,
       dto.settings,
       dto.createdAt,
       dto.updatedAt
@@ -326,7 +362,6 @@ export class Serialization {
       tangentialDistortion: [...viewpoint.tangentialDistortion],
       position: [...viewpoint.position],
       rotation: [...viewpoint.rotation],
-      imagePoints: { ...viewpoint.imagePoints },
       calibrationAccuracy: viewpoint.calibrationAccuracy,
       calibrationDate: viewpoint.calibrationDate,
       calibrationNotes: viewpoint.calibrationNotes,
@@ -360,7 +395,6 @@ export class Serialization {
       dto.tangentialDistortion,
       dto.position,
       dto.rotation,
-      dto.imagePoints,
       dto.calibrationAccuracy,
       dto.calibrationDate,
       dto.calibrationNotes,
@@ -372,6 +406,36 @@ export class Serialization {
       dto.color,
       dto.group,
       dto.tags,
+      dto.createdAt,
+      dto.updatedAt
+    )
+  }
+
+  private static imagePointToDto(imagePoint: ImagePoint): ImagePointDto {
+    return {
+      id: imagePoint.id,
+      worldPointId: imagePoint.worldPoint.id,
+      viewpointId: imagePoint.viewpoint.id,
+      u: imagePoint.u,
+      v: imagePoint.v,
+      isVisible: imagePoint.isVisible,
+      isManuallyPlaced: imagePoint.isManuallyPlaced,
+      confidence: imagePoint.confidence,
+      createdAt: imagePoint.createdAt,
+      updatedAt: imagePoint.updatedAt
+    }
+  }
+
+  private static dtoToImagePoint(dto: ImagePointDto, worldPoint: WorldPoint, viewpoint: Viewpoint): ImagePoint {
+    return ImagePoint.createFromSerialized(
+      dto.id,
+      worldPoint,
+      viewpoint,
+      dto.u,
+      dto.v,
+      dto.isVisible,
+      dto.isManuallyPlaced,
+      dto.confidence,
       dto.createdAt,
       dto.updatedAt
     )

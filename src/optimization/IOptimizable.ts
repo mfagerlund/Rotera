@@ -7,8 +7,7 @@
  * 3. Applying optimization results back to their state
  */
 
-import type { Value, Vec3 } from 'scalar-autograd';
-import type { Vec4 } from './Vec4';
+import type { Value, Vec3, Vec4 } from 'scalar-autograd';
 import type { WorldPoint } from '../entities/world-point/WorldPoint';
 import type { Viewpoint } from '../entities/viewpoint/Viewpoint';
 

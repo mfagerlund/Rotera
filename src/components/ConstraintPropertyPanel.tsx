@@ -6,7 +6,7 @@ import { WorldPoint } from '../entities/world-point'
 
 interface ConstraintPropertyPanelProps {
   activeConstraintType: string | null
-  selectedPoints: string[]
+  selectedPoints: WorldPoint[]
   selectedLines: Line[]
   parameters: Record<string, any>
   isComplete: boolean
@@ -27,7 +27,8 @@ export const ConstraintPropertyPanel: React.FC<ConstraintPropertyPanelProps> = (
   onApply,
   onCancel
 }) => {
-  const getPointName = (pointId: string) => allWorldPoints.find(p => p.id === pointId)?.getName() || pointId
+  const pointMap = new Map(allWorldPoints.map(p => [p.id, p]))
+  const getPointName = (pointId: string) => pointMap.get(pointId)?.getName() || pointId
 
   // Handle ESC key to cancel constraint creation
   useEffect(() => {

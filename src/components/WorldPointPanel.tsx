@@ -49,8 +49,8 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
   const { confirm, dialog } = useConfirm()
   const [editingWorldPoint, setEditingWorldPoint] = useState<WorldPoint | null>(null)
   const [editingName, setEditingName] = useState('')
-  const [recentlyCreated, setRecentlyCreated] = useState<Set<string>>(new Set())
-  const [justPlaced, setJustPlaced] = useState<Set<string>>(new Set())
+  const [recentlyCreated, setRecentlyCreated] = useState<Set<WorldPoint>>(new Set())
+  const [justPlaced, setJustPlaced] = useState<Set<WorldPoint>>(new Set())
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -66,10 +66,10 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
   const prevWorldPointCount = React.useRef(worldPoints.size)
 
   // Helper: Get image point count for a world point
-  const getImagePointCount = (worldPointId: string): number => {
+  const getImagePointCount = (worldPoint: WorldPoint): number => {
     let count = 0
     for (const viewpoint of viewpoints.values()) {
-      if (Object.values(viewpoint.imagePoints).some(ip => ip.worldPointId === worldPointId)) {
+      if (Object.values(viewpoint.imagePoints).some(ip => ip.worldPointId === worldPoint.id)) {
         count++
       }
     }
@@ -77,30 +77,26 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
   }
 
   // Helper: Check if world point is in current image
-  const isWorldPointInImage = (worldPointId: string, imageId: string): boolean => {
-    const viewpoint = viewpoints.get(imageId)
-    if (!viewpoint) return false
-    return Object.values(viewpoint.imagePoints).some(ip => ip.worldPointId === worldPointId)
+  const isWorldPointInImage = (worldPoint: WorldPoint, viewpoint: Viewpoint): boolean => {
+    return Object.values(viewpoint.imagePoints).some(ip => ip.worldPointId === worldPoint.id)
   }
 
   useEffect(() => {
     const currentCount = worldPoints.size
     if (currentCount > prevWorldPointCount.current) {
-      // New world point created - mark as recently created
-      const newPoints = Array.from(worldPoints.keys()).filter(id =>
-        !Array.from(worldPoints.keys()).slice(0, prevWorldPointCount.current).includes(id)
-      )
+      const currentPoints = Array.from(worldPoints.values())
+      const prevCount = prevWorldPointCount.current
+      const newPoints = currentPoints.slice(prevCount)
 
-      newPoints.forEach(pointId => {
-        setRecentlyCreated(prev => new Set(prev).add(pointId))
+      newPoints.forEach(point => {
+        setRecentlyCreated(prev => new Set(prev).add(point))
       })
 
-      // Remove the flag after animation
       setTimeout(() => {
-        newPoints.forEach(pointId => {
+        newPoints.forEach(point => {
           setRecentlyCreated(prev => {
             const next = new Set(prev)
-            next.delete(pointId)
+            next.delete(point)
             return next
           })
         })
@@ -160,7 +156,8 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
 
   const getContextMenuItems = (worldPoint: WorldPoint): ContextMenuItem[] => {
     const items: ContextMenuItem[] = []
-    const isMissingFromImage = currentImageId && !isWorldPointInImage(worldPoint.id, currentImageId)
+    const currentViewpoint = currentImageId ? viewpoints.get(currentImageId) : null
+    const isMissingFromImage = currentViewpoint && !isWorldPointInImage(worldPoint, currentViewpoint)
 
     // Edit (full properties)
     if (onEditWorldPoint) {
@@ -228,14 +225,13 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
   }
 
   const handlePlacement = (wp: WorldPoint) => {
-    const wpId = wp.id
     onStartPlacement(wp)
-    setJustPlaced(prev => new Set(prev).add(wpId))
+    setJustPlaced(prev => new Set(prev).add(wp))
 
     setTimeout(() => {
       setJustPlaced(prev => {
         const next = new Set(prev)
-        next.delete(wpId)
+        next.delete(wp)
         return next
       })
     }, 1500)
@@ -243,8 +239,9 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
 
   // Check if world point is missing from current image
   const isWorldPointMissingFromImage = (wp: WorldPoint): boolean => {
-    if (!currentImageId) return false
-    return !isWorldPointInImage(wp.id, currentImageId)
+    const currentViewpoint = currentImageId ? viewpoints.get(currentImageId) : null
+    if (!currentViewpoint) return false
+    return !isWorldPointInImage(wp, currentViewpoint)
   }
 
   // Group world points by presence in current image
@@ -305,22 +302,21 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
       <div className="world-point-list">
         {worldPointsList.length > 0 ? (
           worldPointsList.map(wp => {
-            const wpId = wp.id
             const isSelected = selectedWorldPoints.some(swp => swp === wp)
             const involvedConstraints = getConstraintsForWorldPoint(wp)
             const hasBroken = hasBrokenConstraints(wp)
             const isEditing = false // Removed inline editing
             const isMissingFromImage = isWorldPointMissingFromImage(wp)
             const isInPlacementMode = placementMode.worldPoint === wp
-            const wasRecentlyCreated = recentlyCreated.has(wpId)
-            const wasJustPlaced = justPlaced.has(wpId)
+            const wasRecentlyCreated = recentlyCreated.has(wp)
+            const wasJustPlaced = justPlaced.has(wp)
             const isGloballyHovered = hoveredWorldPoint === wp
 
             return (
               <EnhancedWorldPointItem
-                key={wpId}
+                key={wp.id}
                 worldPoint={wp}
-                imagePointCount={getImagePointCount(wpId)}
+                imagePointCount={getImagePointCount(wp)}
                 isSelected={isSelected}
                 isEditing={isEditing}
                 editingName=""

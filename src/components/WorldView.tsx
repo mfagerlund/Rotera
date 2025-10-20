@@ -14,11 +14,11 @@ interface WorldViewProps {
   hoveredConstraintId?: string | null
   onPointClick: (worldPoint: WorldPoint, ctrlKey: boolean, shiftKey: boolean) => void
   onLineClick?: (line: Line, ctrlKey: boolean, shiftKey: boolean) => void
-  onPlaneClick?: (planeId: string, ctrlKey: boolean, shiftKey: boolean) => void
+  onPlaneClick?: (plane: Plane, ctrlKey: boolean, shiftKey: boolean) => void
   onCreatePoint?: (x: number, y: number, z: number) => void
-  onMovePoint?: (pointId: string, x: number, y: number, z: number) => void
-  onLineHover?: (lineId: string | null) => void
-  onPointHover?: (pointId: string | null) => void
+  onMovePoint?: (point: WorldPoint, x: number, y: number, z: number) => void
+  onLineHover?: (line: Line | null) => void
+  onPointHover?: (point: WorldPoint | null) => void
 }
 
 export interface WorldViewRef {
@@ -39,9 +39,7 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
   onLineHover,
   onPointHover
 }, ref) => {
-  // Create selection set for quick lookup
   const selectedSet = useMemo(() => new Set(selectedEntities), [selectedEntities])
-  const selectedIds = useMemo(() => new Set(selectedEntities.map(e => (e as any).id).filter(Boolean)), [selectedEntities])
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [viewMatrix, setViewMatrix] = useState({
     scale: 100,
@@ -53,7 +51,7 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
     lastX: number
     lastY: number
     dragType: 'rotate' | 'pan' | 'point'
-    draggedPointId?: string
+    draggedPoint?: WorldPoint
   }>({
     isDragging: false,
     lastX: 0,
@@ -62,11 +60,11 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
   })
 
   const [hoverState, setHoverState] = useState<{
-    hoveredPointId: string | null
-    hoveredLineId: string | null
+    hoveredPoint: WorldPoint | null
+    hoveredLine: Line | null
   }>({
-    hoveredPointId: null,
-    hoveredLineId: null
+    hoveredPoint: null,
+    hoveredLine: null
   })
 
   // 3D to 2D projection
@@ -115,8 +113,8 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
       if (!coords) return
 
       const projected = project3DTo2D(coords)
-      const isSelected = selectedIds.has(point.id)
-      const isHovered = hoverState.hoveredPointId === point.id
+      const isSelected = selectedSet.has(point)
+      const isHovered = hoverState.hoveredPoint === point
       const radius = isSelected ? 6 : (isHovered ? 5 : 4)
 
       // Point circle
@@ -144,7 +142,7 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
         ctx.fillText(point.name, projected.x, projected.y - 12)
       }
     })
-  }, [project, selectedIds, hoverState, project3DTo2D])
+  }, [project, selectedSet, hoverState, project3DTo2D])
 
   // Render lines
   const renderLines = useCallback((ctx: CanvasRenderingContext2D) => {
@@ -159,8 +157,8 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
 
       const projA = project3DTo2D(coordsA)
       const projB = project3DTo2D(coordsB)
-      const isSelected = selectedIds.has(line.id)
-      const isHovered = hoverState.hoveredLineId === line.id
+      const isSelected = selectedSet.has(line)
+      const isHovered = hoverState.hoveredLine === line
 
       ctx.beginPath()
       ctx.moveTo(projA.x, projA.y)
@@ -230,13 +228,13 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
       ctx.fillStyle = '#000'
       ctx.fillText(displayText, midX, midY + 2)
     })
-  }, [project, selectedIds, hoverState, project3DTo2D])
+  }, [project, selectedSet, hoverState, project3DTo2D])
 
   // Render planes
   const renderPlanes = useCallback((ctx: CanvasRenderingContext2D) => {
     // TODO: Planes not yet implemented in Project
     // Will be added when Plane entity is integrated into project structure
-  }, [project, selectedIds, project3DTo2D])
+  }, [project, selectedSet, project3DTo2D])
 
   // Render coordinate axes
   const renderAxes = useCallback((ctx: CanvasRenderingContext2D) => {
@@ -308,7 +306,7 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
         lastX: x,
         lastY: y,
         dragType: 'point',
-        draggedPointId: clickedPoint.id
+        draggedPoint: clickedPoint
       })
       return
     }
@@ -342,14 +340,10 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
       const hoveredPoint = findPointAt(x, y)
       const hoveredLine = findLineAt(x, y)
 
-      // Update hover state if changed
-      const hoveredPointId = hoveredPoint?.id || null
-      const hoveredLineId = hoveredLine?.id || null
-
-      if (hoveredPointId !== hoverState.hoveredPointId || hoveredLineId !== hoverState.hoveredLineId) {
+      if (hoveredPoint !== hoverState.hoveredPoint || hoveredLine !== hoverState.hoveredLine) {
         setHoverState({
-          hoveredPointId,
-          hoveredLineId
+          hoveredPoint,
+          hoveredLine
         })
 
         // Update cursor style
@@ -360,11 +354,11 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
         }
 
         // Notify parent components of hover changes
-        if (onPointHover && hoveredPointId !== hoverState.hoveredPointId) {
-          onPointHover(hoveredPointId)
+        if (onPointHover && hoveredPoint !== hoverState.hoveredPoint) {
+          onPointHover(hoveredPoint)
         }
-        if (onLineHover && hoveredLineId !== hoverState.hoveredLineId) {
-          onLineHover(hoveredLineId)
+        if (onLineHover && hoveredLine !== hoverState.hoveredLine) {
+          onLineHover(hoveredLine)
         }
       }
       return
@@ -405,15 +399,15 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
     setDragState(prev => ({
       ...prev,
       isDragging: false,
-      draggedPointId: undefined
+      draggedPoint: undefined
     }))
   }
 
   const handleMouseLeave = () => {
     // Clear hover states when mouse leaves canvas
     setHoverState({
-      hoveredPointId: null,
-      hoveredLineId: null
+      hoveredPoint: null,
+      hoveredLine: null
     })
 
     // Notify parent components

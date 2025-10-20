@@ -4,6 +4,7 @@ import type {ISelectable, SelectableType} from '../../types/selectable'
 import type {IValidatable, ValidationContext, ValidationResult, ValidationError} from '../../validation/validator'
 import type {IValueMapContributor, ValueMap} from '../../optimization/IOptimizable'
 import type {PointId, EntityId} from '../../types/ids'
+import type {IWorldPoint, ILine, IConstraint, IImagePoint} from '../interfaces'
 import {ValidationHelpers} from '../../validation/validator'
 import {V, Value, Vec3} from 'scalar-autograd'
 
@@ -18,32 +19,12 @@ export interface AxisLock {
     z?: boolean
 }
 
-// Forward declarations to avoid circular dependencies
-export interface IWorldPoint {
-    // NO ID HERE!! DON'T YOU DARE ADD ID HERE!!
-    getName(): string
-    hasCoordinates(): boolean
-    getDefinedCoordinates(): [number, number, number] | undefined
-    xyz?: [number | null, number | null, number | null]
-}
-
-export interface ILine {
-    // NO ID HERE!! DON'T YOU DARE ADD ID HERE!!
-    readonly id: string  // For serialization only
-    pointA: IWorldPoint
-    pointB: IWorldPoint
-}
-
-export interface IConstraint {
-    // NO ID HERE!! DON'T YOU DARE ADD ID HERE!!
-    readonly id: string  // For serialization only
-}
-
 export class WorldPoint implements ISelectable, IValidatable, IWorldPoint, IValueMapContributor {
     readonly id: string  // For serialization and React keys only - do NOT use for runtime references!
     selected = false
     connectedLines: Set<ILine> = new Set()
     referencingConstraints: Set<IConstraint> = new Set()
+    imagePoints: Set<IImagePoint> = new Set()
     lastResiduals: number[] = []
     name: string
     xyz: [number | null, number | null, number | null] | undefined
@@ -406,6 +387,14 @@ export class WorldPoint implements ISelectable, IValidatable, IWorldPoint, IValu
 
     removeReferencingConstraint(constraint: IConstraint): void {
         this.referencingConstraints.delete(constraint)
+    }
+
+    addImagePoint(imagePoint: IImagePoint): void {
+        this.imagePoints.add(imagePoint)
+    }
+
+    removeImagePoint(imagePoint: IImagePoint): void {
+        this.imagePoints.delete(imagePoint)
     }
 
     getConnectedLineIds(): EntityId[] {

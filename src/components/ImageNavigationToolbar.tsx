@@ -17,14 +17,14 @@ interface ImageNavigationToolbarProps {
   selectedWorldPoints: WorldPoint[]
   hoveredWorldPoint: WorldPoint | null
   isCreatingConstraint: boolean
-  onImageSelect: (imageId: string) => void
+  onImageSelect: (viewpoint: Viewpoint) => void
   onImageAdd: (file: File) => Promise<void>
   onImageRename: (viewpoint: Viewpoint, newName: string) => void
   onImageDelete: (viewpoint: Viewpoint) => void
   getImagePointCount: (viewpoint: Viewpoint) => number
   getSelectedPointsInImage: (viewpoint: Viewpoint) => number
   imageHeights: Record<string, number>
-  onImageHeightChange: (imageId: string, height: number) => void
+  onImageHeightChange: (viewpoint: Viewpoint, height: number) => void
   imageSortOrder: string[]
   onImageReorder: (newOrder: string[]) => void
   onWorldPointHover?: (worldPoint: WorldPoint | null) => void
@@ -55,8 +55,8 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
 }) => {
   const { confirm, dialog } = useConfirm()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [draggedImageId, setDraggedImageId] = React.useState<string | null>(null)
-  const [dragOverImageId, setDragOverImageId] = React.useState<string | null>(null)
+  const [draggedImage, setDraggedImage] = React.useState<Viewpoint | null>(null)
+  const [dragOverImage, setDragOverImage] = React.useState<Viewpoint | null>(null)
   const [editingImage, setEditingImage] = React.useState<Viewpoint | null>(null)
 
   const handleAddImage = () => {
@@ -109,30 +109,30 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
   }
 
   // Handle drag and drop reordering
-  const handleDrop = (droppedOnImageId: string) => {
-    if (!draggedImageId || draggedImageId === droppedOnImageId) return
+  const handleDrop = (droppedOnImage: Viewpoint) => {
+    if (!draggedImage || draggedImage === droppedOnImage) return
 
     const newOrder = [...imageSortOrder]
 
     // Ensure both images are in the order array
-    if (!newOrder.includes(draggedImageId)) {
-      newOrder.push(draggedImageId)
+    if (!newOrder.includes(draggedImage.id)) {
+      newOrder.push(draggedImage.id)
     }
-    if (!newOrder.includes(droppedOnImageId)) {
-      newOrder.push(droppedOnImageId)
+    if (!newOrder.includes(droppedOnImage.id)) {
+      newOrder.push(droppedOnImage.id)
     }
 
     // Remove dragged item and insert it before the drop target
-    const draggedIndex = newOrder.indexOf(draggedImageId)
-    const dropTargetIndex = newOrder.indexOf(droppedOnImageId)
+    const draggedIndex = newOrder.indexOf(draggedImage.id)
+    const dropTargetIndex = newOrder.indexOf(droppedOnImage.id)
 
     newOrder.splice(draggedIndex, 1)
     const newDropIndex = draggedIndex < dropTargetIndex ? dropTargetIndex - 1 : dropTargetIndex
-    newOrder.splice(newDropIndex, 0, draggedImageId)
+    newOrder.splice(newDropIndex, 0, draggedImage.id)
 
     onImageReorder(newOrder)
-    setDraggedImageId(null)
-    setDragOverImageId(null)
+    setDraggedImage(null)
+    setDragOverImage(null)
   }
 
   return (
@@ -187,7 +187,7 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
               pointCount={getImagePointCount(image)}
               selectedPointCount={getSelectedPointsInImage(image)}
               selectedWorldPointCount={getSelectedWorldPointsInImage(image)}
-              onClick={() => onImageSelect(image.id)}
+              onClick={() => onImageSelect(image)}
               onEdit={() => setEditingImage(image)}
               onRename={(newName) => onImageRename(image, newName)}
               onDelete={async () => {
@@ -196,17 +196,17 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
                 }
               }}
               thumbnailHeight={imageHeights[image.id] || 100}
-              onThumbnailHeightChange={(height) => onImageHeightChange(image.id, height)}
-              isDragging={draggedImageId === image.id}
-              isDragOver={dragOverImageId === image.id}
-              onDragStart={() => setDraggedImageId(image.id)}
+              onThumbnailHeightChange={(height) => onImageHeightChange(image, height)}
+              isDragging={draggedImage === image}
+              isDragOver={dragOverImage === image}
+              onDragStart={() => setDraggedImage(image)}
               onDragEnd={() => {
-                setDraggedImageId(null)
-                setDragOverImageId(null)
+                setDraggedImage(null)
+                setDragOverImage(null)
               }}
-              onDragOver={() => setDragOverImageId(image.id)}
-              onDragLeave={() => setDragOverImageId(null)}
-              onDrop={() => handleDrop(image.id)}
+              onDragOver={() => setDragOverImage(image)}
+              onDragLeave={() => setDragOverImage(null)}
+              onDrop={() => handleDrop(image)}
               onWorldPointHover={onWorldPointHover}
               onWorldPointClick={onWorldPointClick}
               onCopyPointsToCurrentImage={onCopyPointsToCurrentImage}

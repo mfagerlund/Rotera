@@ -14,7 +14,7 @@ interface ConstraintsPopupProps {
   constraints: Constraint[]
   allWorldPoints: WorldPoint[]
   allLines: Line[]
-  selectedConstraints?: string[]
+  selectedConstraints?: Constraint[]
   onEditConstraint?: (constraint: Constraint) => void
   onDeleteConstraint?: (constraint: Constraint) => void
   onToggleConstraint?: (constraint: Constraint) => void
@@ -33,8 +33,12 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
   onToggleConstraint,
   onSelectConstraint
 }) => {
-  const getPointName = (pointId: string) => allWorldPoints.find(p => p.id === pointId)?.getName() || pointId
-  const getLineName = (lineId: string) => allLines.find(l => l.id === lineId)?.getName() || lineId
+  const pointMap = new Map(allWorldPoints.map(p => [p.id, p]))
+  const lineMap = new Map(allLines.map(l => [l.id, l]))
+  const constraintMap = new Map(constraints.map(c => [c.id, c]))
+
+  const getPointName = (pointId: string) => pointMap.get(pointId)?.getName() || pointId
+  const getLineName = (lineId: string) => lineMap.get(lineId)?.getName() || lineId
 
   const getConstraintDisplayName = (type: string) => {
     return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
@@ -100,6 +104,7 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
   }
 
   // Convert constraints to EntityListItem format
+  const selectedSet = new Set(selectedConstraints)
   const constraintEntities: EntityListItem[] = constraints.map(constraint => {
     const entities = getConstraintEntities(constraint)
     const dto = constraint.toConstraintDto()
@@ -110,7 +115,7 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
       additionalInfo: getConstraintDetails(constraint),
       color: getStatusColor(dto.status),
       isVisible: dto.isEnabled,
-      isActive: selectedConstraints.includes(dto.id)
+      isActive: selectedSet.has(constraint)
     }
   })
 
@@ -122,24 +127,24 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
       entities={constraintEntities}
       emptyMessage="No constraints created yet"
       storageKey="constraints-popup"
-      onEdit={onEditConstraint ? (id) => {
-        const constraint = constraints.find(c => c.id === id)
+      onEdit={onEditConstraint ? (entityId) => {
+        const constraint = constraintMap.get(entityId)
         if (constraint) onEditConstraint(constraint)
       } : undefined}
-      onDelete={onDeleteConstraint ? (id) => {
-        const constraint = constraints.find(c => c.id === id)
+      onDelete={onDeleteConstraint ? (entityId) => {
+        const constraint = constraintMap.get(entityId)
         if (constraint) onDeleteConstraint(constraint)
       } : undefined}
-      onToggleVisibility={onToggleConstraint ? (id) => {
-        const constraint = constraints.find(c => c.id === id)
+      onToggleVisibility={onToggleConstraint ? (entityId) => {
+        const constraint = constraintMap.get(entityId)
         if (constraint) onToggleConstraint(constraint)
       } : undefined}
-      onSelect={onSelectConstraint ? (id) => {
-        const constraint = constraints.find(c => c.id === id)
+      onSelect={onSelectConstraint ? (entityId) => {
+        const constraint = constraintMap.get(entityId)
         if (constraint) onSelectConstraint(constraint)
       } : undefined}
       renderEntityDetails={(entity) => {
-        const constraint = constraints.find(c => c.id === entity.id)
+        const constraint = constraintMap.get(entity.id)
         if (!constraint) return null
 
         const dto = constraint.toConstraintDto()

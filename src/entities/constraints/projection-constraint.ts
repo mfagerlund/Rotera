@@ -37,10 +37,19 @@ export interface ProjectionConstraintData extends BaseConstraintDto {
 
 export class ProjectionConstraint extends Constraint {
   protected data: ProjectionConstraintData;
+  private _viewpoint: import('../viewpoint/Viewpoint').Viewpoint | null = null;
 
   private constructor(repo: ConstraintRepository, data: ProjectionConstraintData) {
     super(repo, data);
     this.data = data;
+  }
+
+  setViewpoint(viewpoint: import('../viewpoint/Viewpoint').Viewpoint): void {
+    this._viewpoint = viewpoint;
+  }
+
+  get viewpoint(): import('../viewpoint/Viewpoint').Viewpoint | null {
+    return this._viewpoint;
   }
 
   static create(
@@ -221,15 +230,13 @@ export class ProjectionConstraint extends Constraint {
       return [];
     }
 
-    // Find camera in valueMap
-    let cameraValues: ReturnType<typeof valueMap.cameras.get> | undefined;
-    for (const [camera, values] of valueMap.cameras) {
-      if (camera.id === this.data.parameters.cameraId) {
-        cameraValues = values;
-        break;
-      }
+    // Get camera values using viewpoint reference
+    if (!this._viewpoint) {
+      console.warn(`Projection constraint ${this.data.id}: viewpoint reference not set`);
+      return [];
     }
 
+    const cameraValues = valueMap.cameras.get(this._viewpoint);
     if (!cameraValues) {
       console.warn(`Projection constraint ${this.data.id}: camera not found in valueMap`);
       return [];

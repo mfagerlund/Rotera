@@ -1,6 +1,4 @@
-import { V, Vec3 } from 'scalar-autograd';
-import { Value } from 'scalar-autograd';
-import { Vec4 } from './Vec4';
+import { V, Vec3, Vec4, Value } from 'scalar-autograd';
 
 /**
  * Quaternion operations for 3D rotations.

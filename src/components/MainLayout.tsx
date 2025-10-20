@@ -217,8 +217,8 @@ export const MainLayout: React.FC = () => {
     return saved ? JSON.parse(saved) : {}
   })
 
-  const handleImageHeightChange = (imageId: string, height: number) => {
-    const newHeights = { ...imageHeights, [imageId]: height }
+  const handleImageHeightChange = (viewpoint: Viewpoint, height: number) => {
+    const newHeights = { ...imageHeights, [viewpoint.id]: height }
     setImageHeights(newHeights)
     localStorage.setItem('pictorigo-image-heights', JSON.stringify(newHeights))
   }
@@ -752,7 +752,7 @@ export const MainLayout: React.FC = () => {
                 selectedWorldPoints={selectedPointEntities}
                 hoveredWorldPoint={hoveredWorldPoint}
                 isCreatingConstraint={!!activeConstraintType}
-                onImageSelect={setCurrentImageId}
+                onImageSelect={(viewpoint) => setCurrentImageId(viewpoint.id)}
                 onImageAdd={addImage}
                 onImageRename={renameImage}
                 onImageDelete={deleteImage}
@@ -1066,16 +1066,16 @@ export const MainLayout: React.FC = () => {
       planes={{}}
       allWorldPoints={worldPointEntities}
       selectedPlanes={selectedPlaneEntities}
-      onEditPlane={(planeId) => {
+      onEditPlane={(plane) => {
         // TODO: Implement plane editing
       }}
-      onDeletePlane={(planeId) => {
+      onDeletePlane={(plane) => {
         // TODO: Implement plane deletion
       }}
-      onTogglePlaneVisibility={(planeId) => {
+      onTogglePlaneVisibility={(plane) => {
         // TODO: Implement plane visibility toggle
       }}
-      onSelectPlane={(planeId) => {
+      onSelectPlane={(plane) => {
         // TODO: Implement plane selection
       }}
     />

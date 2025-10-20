@@ -2,7 +2,7 @@
  * Tests for quaternion operations
  */
 
-import { Vec4 } from '../Vec4';
+import { Vec4 } from 'scalar-autograd';
 import { Quaternion } from '../Quaternion';
 import { Vec3, V } from 'scalar-autograd';
 

@@ -1,34 +1,18 @@
 // Viewpoint entity - a photograph with camera parameters and pose
-
 import type {ISelectable, SelectableType} from '../../types/selectable'
-import type {IValidatable, ValidationContext, ValidationResult, ValidationError} from '../../validation/validator'
 import type {IValueMapContributor, ValueMap, CameraValues} from '../../optimization/IOptimizable'
-import type {ViewpointId, ImagePointId, EntityId} from '../../types/ids'
+import type {IWorldPoint, IImagePoint, IViewpoint} from '../interfaces'
 import {ValidationHelpers} from '../../validation/validator'
 import {V, Value, Vec3} from 'scalar-autograd'
-import {Vec4} from '../../optimization/Vec4'
+import {Vec4} from 'scalar-autograd'
 import {Quaternion} from '../../optimization/Quaternion'
 import {quaternionNormalizationResidual} from '../../optimization/residuals/quaternion-normalization-residual'
 
-// ImagePoint DTO
-export interface ImagePointDto {
-    id: string
-    worldPointId: string
-    u: number // pixel coordinate x
-    v: number // pixel coordinate y
-    isVisible: boolean
-    isManuallyPlaced: boolean
-    confidence: number // 0-1
-    createdAt: string
-    updatedAt: string
-}
-
-export class Viewpoint implements ISelectable, IValidatable, IValueMapContributor {
-    readonly id: string  // For serialization and React keys only - do NOT use for runtime references!
+export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint {
     selected = false
     isPoseLocked = false
     lastResiduals: number[] = []
-    
+
     name: string
     filename: string
     url: string
@@ -52,15 +36,9 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
     isVisible: boolean
     opacity: number
     color: string
-    group?: string
-    tags?: string[]
-    createdAt: string
-    updatedAt: string
-    imagePoints: Record<ImagePointId, ImagePointDto>
-
+    imagePoints: Set<IImagePoint> = new Set()
 
     private constructor(
-        id: string,
         name: string,
         filename: string,
         url: string,
@@ -75,7 +53,6 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
         tangentialDistortion: [number, number],
         position: [number, number, number],
         rotation: [number, number, number, number],
-        imagePoints: Record<ImagePointId, ImagePointDto>,
         calibrationAccuracy: number,
         calibrationDate: string | undefined,
         calibrationNotes: string | undefined,
@@ -84,13 +61,8 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
         metadata: any | undefined,
         isVisible: boolean,
         opacity: number,
-        color: string,
-        group: string | undefined,
-        tags: string[] | undefined,
-        createdAt: string,
-        updatedAt: string
+        color: string
     ) {
-        this.id = id
         this.name = name
         this.filename = filename
         this.url = url
@@ -105,7 +77,6 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
         this.tangentialDistortion = tangentialDistortion
         this.position = position
         this.rotation = rotation
-        this.imagePoints = imagePoints
         this.calibrationAccuracy = calibrationAccuracy
         this.calibrationDate = calibrationDate
         this.calibrationNotes = calibrationNotes
@@ -115,10 +86,6 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
         this.isVisible = isVisible
         this.opacity = opacity
         this.color = color
-        this.group = group
-        this.tags = tags
-        this.createdAt = createdAt
-        this.updatedAt = updatedAt
     }
 
     // ============================================================================
@@ -129,7 +96,6 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
      * @internal Used only by Serialization class - do not use directly
      */
     static createFromSerialized(
-        id: string,
         name: string,
         filename: string,
         url: string,
@@ -144,7 +110,6 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
         tangentialDistortion: [number, number],
         position: [number, number, number],
         rotation: [number, number, number, number],
-        imagePoints: Record<ImagePointId, ImagePointDto>,
         calibrationAccuracy: number,
         calibrationDate: string | undefined,
         calibrationNotes: string | undefined,
@@ -153,14 +118,9 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
         metadata: any,
         isVisible: boolean,
         opacity: number,
-        color: string,
-        group: string | undefined,
-        tags: string[] | undefined,
-        createdAt: string,
-        updatedAt: string
+        color: string
     ): Viewpoint {
         return new Viewpoint(
-            id,
             name,
             filename,
             url,
@@ -175,7 +135,6 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
             tangentialDistortion,
             position,
             rotation,
-            imagePoints,
             calibrationAccuracy,
             calibrationDate,
             calibrationNotes,
@@ -184,11 +143,7 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
             metadata,
             isVisible,
             opacity,
-            color,
-            group,
-            tags,
-            createdAt,
-            updatedAt
+            color
         )
     }
 
@@ -248,7 +203,6 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
         }
 
         const dto: any = {
-            id: options.id || crypto.randomUUID(),
             name,
             filename,
             url,
@@ -280,7 +234,6 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
         }
 
         const viewpoint = new Viewpoint(
-            dto.id,
             dto.name,
             dto.filename,
             dto.url,
@@ -295,7 +248,6 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
             dto.tangentialDistortion,
             dto.position,
             dto.rotation,
-            dto.imagePoints,
             dto.calibrationAccuracy,
             dto.calibrationDate,
             dto.calibrationNotes,
@@ -304,11 +256,7 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
             dto.metadata,
             dto.isVisible,
             dto.opacity,
-            dto.color,
-            dto.group,
-            dto.tags,
-            dto.createdAt,
-            dto.updatedAt
+            dto.color
         )
         viewpoint.isPoseLocked = options.isPoseLocked ?? false
         return viewpoint
@@ -317,10 +265,6 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
     // ============================================================================
     // ISelectable implementation
     // ============================================================================
-
-    getId(): ViewpointId {
-        return this.id
-    }
 
     getType(): SelectableType {
         return 'viewpoint'
@@ -334,13 +278,6 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
         return this.isPoseLocked
     }
 
-    getDependencies(): EntityId[] {
-        return Object.values(this.imagePoints).map(ip => ip.worldPointId as EntityId)
-    }
-
-    getDependents(): EntityId[] {
-        return []
-    }
 
     isSelected(): boolean {
         return this.selected
@@ -355,85 +292,13 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
     }
 
     getDeleteWarning(): string | null {
-        const count = Object.keys(this.imagePoints).length
+        const count = this.imagePoints.size
         if (count > 0) {
             return `Deleting viewpoint "${this.name}" will remove ${count} image point${count === 1 ? '' : 's'}`
         }
         return null
     }
-
-    // ============================================================================
-    // IValidatable implementation
-    // ============================================================================
-
-    validate(context: ValidationContext): ValidationResult {
-        const errors: ValidationError[] = []
-        const warnings: ValidationError[] = []
-
-        const nameError = ValidationHelpers.validateRequiredField(this.name, 'name', this.id, 'viewpoint')
-        if (nameError) errors.push(nameError)
-
-        const idError = ValidationHelpers.validateIdFormat(this.id, 'viewpoint')
-        if (idError) errors.push(idError)
-
-        if (this.imageWidth <= 0) {
-            errors.push(ValidationHelpers.createError('INVALID_WIDTH', 'imageWidth must be > 0', this.id, 'viewpoint', 'imageWidth'))
-        }
-        if (this.imageHeight <= 0) {
-            errors.push(ValidationHelpers.createError('INVALID_HEIGHT', 'imageHeight must be > 0', this.id, 'viewpoint', 'imageHeight'))
-        }
-
-        if (this.focalLength <= 0) {
-            errors.push(ValidationHelpers.createError('INVALID_FOCAL_LENGTH', 'focalLength must be > 0', this.id, 'viewpoint', 'focalLength'))
-        }
-        if (this.aspectRatio <= 0) {
-            errors.push(ValidationHelpers.createError('INVALID_ASPECT_RATIO', 'aspectRatio must be > 0', this.id, 'viewpoint', 'aspectRatio'))
-        }
-
-        if (this.rotation.length === 4) {
-            const [w, x, y, z] = this.rotation
-            const magSq = w * w + x * x + y * y + z * z
-            if (Math.abs(magSq - 1.0) > 0.01) {
-                warnings.push(ValidationHelpers.createWarning('NON_UNIT_QUATERNION', `rotation quaternion not unit length (|q|² = ${magSq.toFixed(4)})`, this.id, 'viewpoint', 'rotation'))
-            }
-        }
-
-        Object.entries(this.imagePoints).forEach(([imagePointId, imagePoint]) => {
-            if (imagePoint.u < 0 || imagePoint.u > this.imageWidth) {
-                warnings.push(ValidationHelpers.createWarning('IMAGE_POINT_OUT_OF_BOUNDS', `Image point ${imagePointId} u-coordinate outside bounds`, this.id, 'viewpoint', 'imagePoints'))
-            }
-            if (imagePoint.v < 0 || imagePoint.v > this.imageHeight) {
-                warnings.push(ValidationHelpers.createWarning('IMAGE_POINT_OUT_OF_BOUNDS', `Image point ${imagePointId} v-coordinate outside bounds`, this.id, 'viewpoint', 'imagePoints'))
-            }
-            if (imagePoint.confidence < 0 || imagePoint.confidence > 1) {
-                errors.push(ValidationHelpers.createError('INVALID_CONFIDENCE', `Image point ${imagePointId} confidence must be 0-1`, this.id, 'viewpoint', 'imagePoints'))
-            }
-        })
-
-        return {
-            isValid: errors.length === 0,
-            errors,
-            warnings,
-            summary: errors.length === 0 ? 'Viewpoint validation passed' : `Viewpoint validation failed: ${errors.length} errors`
-        }
-    }
-
-    private static validateDto(dto: any): ValidationResult {
-        const errors: ValidationError[] = []
-
-        if (!dto.id) errors.push(ValidationHelpers.createError('MISSING_REQUIRED_FIELD', 'id required', dto.id, 'viewpoint', 'id'))
-        if (!dto.name) errors.push(ValidationHelpers.createError('MISSING_REQUIRED_FIELD', 'name required', dto.id, 'viewpoint', 'name'))
-        if (!dto.filename) errors.push(ValidationHelpers.createError('MISSING_REQUIRED_FIELD', 'filename required', dto.id, 'viewpoint', 'filename'))
-        if (!dto.url) errors.push(ValidationHelpers.createError('MISSING_REQUIRED_FIELD', 'url required', dto.id, 'viewpoint', 'url'))
-
-        return {
-            isValid: errors.length === 0,
-            errors,
-            warnings: [],
-            summary: errors.length === 0 ? 'DTO validation passed' : `DTO validation failed: ${errors.length} errors`
-        }
-    }
-
+    
     // ============================================================================
     // Computed properties
     // ============================================================================
@@ -448,40 +313,25 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
     setRotationEuler(roll: number, pitch: number, yaw: number): void {
         const quat = Quaternion.fromEuler(roll, pitch, yaw)
         this.rotation = quat.toArray()
-        this.updatedAt = new Date().toISOString()
     }
-    addImagePoint(imagePoint: ImagePointDto): void {
-        this.imagePoints[imagePoint.id] = imagePoint
-        this.updatedAt = new Date().toISOString()
+    addImagePoint(imagePoint: IImagePoint): void {
+        this.imagePoints.add(imagePoint)
     }
 
-    updateImagePoint(id: ImagePointId, updates: Partial<ImagePointDto>): void {
-        const existing = this.imagePoints[id]
-        if (existing) {
-            this.imagePoints[id] = {
-                ...existing,
-                ...updates,
-                updatedAt: new Date().toISOString()
-            }
-            this.updatedAt = new Date().toISOString()
-        }
-    }
-
-    removeImagePoint(id: ImagePointId): void {
-        delete this.imagePoints[id]
-        this.updatedAt = new Date().toISOString()
+    removeImagePoint(imagePoint: IImagePoint): void {
+        this.imagePoints.delete(imagePoint)
     }
 
     getImagePointCount(): number {
-        return Object.keys(this.imagePoints).length
+        return this.imagePoints.size
     }
 
-    getImagePointsForWorldPoint(worldPointId: string): ImagePointDto[] {
-        return Object.values(this.imagePoints).filter(ip => ip.worldPointId === worldPointId)
+    getImagePointsForWorldPoint(worldPoint: IWorldPoint): IImagePoint[] {
+        return Array.from(this.imagePoints).filter(ip => ip.worldPoint === worldPoint)
     }
 
-    getVisibleImagePoints(): ImagePointDto[] {
-        return Object.values(this.imagePoints).filter(ip => ip.isVisible)
+    getVisibleImagePoints(): IImagePoint[] {
+        return Array.from(this.imagePoints).filter(ip => ip.isVisible)
     }
 
     // ============================================================================
@@ -518,10 +368,9 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
         return [u * this.imageWidth, v * this.imageHeight]
     }
 
-    clone(newId: ViewpointId, newName?: string): Viewpoint {
+    clone(newName?: string): Viewpoint {
         const now = new Date().toISOString()
         return new Viewpoint(
-            newId,
             newName || `${this.name} (copy)`,
             this.filename,
             this.url,
@@ -536,7 +385,6 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
             [...this.tangentialDistortion],
             [...this.position],
             [...this.rotation],
-            {...this.imagePoints},
             this.calibrationAccuracy,
             this.calibrationDate,
             this.calibrationNotes,
@@ -545,17 +393,12 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
             this.metadata ? {...this.metadata} : undefined,
             this.isVisible,
             this.opacity,
-            this.color,
-            this.group,
-            this.tags,
-            now,
-            now
+            this.color
         )
     }
 
     setVisible(visible: boolean): void {
         this.isVisible = visible
-        this.updatedAt = new Date().toISOString()
     }
 
     setPoseLocked(locked: boolean): void {
@@ -646,6 +489,5 @@ export class Viewpoint implements ISelectable, IValidatable, IValueMapContributo
 
         const residuals = this.computeResiduals(valueMap)
         this.lastResiduals = residuals.map(r => r.data)
-        this.updatedAt = new Date().toISOString()
     }
 }

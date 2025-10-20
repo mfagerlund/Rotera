@@ -5,15 +5,20 @@ import EntityListPopup, { EntityListItem } from './EntityListPopup'
 import { WorldPoint } from '../entities/world-point'
 import { Viewpoint } from '../entities/viewpoint'
 
+export interface ImagePointReference {
+  worldPoint: WorldPoint
+  viewpoint: Viewpoint
+}
+
 interface ImagePointsManagerProps {
   isOpen: boolean
   onClose: () => void
   worldPoints: Map<string, WorldPoint>
   images: Map<string, Viewpoint>
-  selectedImagePoints?: string[]
-  onEditImagePoint?: (imagePointId: string) => void
-  onDeleteImagePoint?: (imagePointId: string) => void
-  onSelectImagePoint?: (imagePointId: string) => void
+  selectedImagePoints?: ImagePointReference[]
+  onEditImagePoint?: (ref: ImagePointReference) => void
+  onDeleteImagePoint?: (ref: ImagePointReference) => void
+  onSelectImagePoint?: (ref: ImagePointReference) => void
 }
 
 export const ImagePointsManager: React.FC<ImagePointsManagerProps> = ({
@@ -26,50 +31,55 @@ export const ImagePointsManager: React.FC<ImagePointsManagerProps> = ({
   onDeleteImagePoint,
   onSelectImagePoint
 }) => {
-  // Collect all image points from all viewpoints
-  const allImagePoints: Array<{ u: number, v: number, viewpointId: string, worldPointId: string, worldPointName: string }> = []
+  const allImagePointRefs: ImagePointReference[] = []
 
   Array.from(images.values()).forEach(viewpoint => {
     Object.values(viewpoint.imagePoints).forEach(imagePoint => {
       const worldPoint = worldPoints.get(imagePoint.worldPointId)
       if (worldPoint) {
-        allImagePoints.push({
-          u: imagePoint.u,
-          v: imagePoint.v,
-          viewpointId: viewpoint.id,
-          worldPointId: imagePoint.worldPointId,
-          worldPointName: worldPoint.getName()
-        })
+        allImagePointRefs.push({ worldPoint, viewpoint })
       }
     })
   })
 
-  const getImageName = (imageId: string) => images.get(imageId)?.getName() || imageId
+  const imagePointEntities: EntityListItem[] = allImagePointRefs.map(ref => {
+    const imagePoint = ref.viewpoint.imagePoints[ref.worldPoint.id]
+    const compositeKey = `${ref.worldPoint.id}-${ref.viewpoint.id}`
+    const isSelected = selectedImagePoints.some(sel =>
+      sel.worldPoint === ref.worldPoint && sel.viewpoint === ref.viewpoint
+    )
 
-  // Convert image points to EntityListItem format
-  const imagePointEntities: EntityListItem[] = allImagePoints.map(imagePoint => {
-    const imagePointId = `${imagePoint.worldPointId}-${imagePoint.viewpointId}`
     return {
-      id: imagePointId,
-      name: `${imagePoint.worldPointName} (${getImageName(imagePoint.viewpointId)})`,
-      displayInfo: `(${imagePoint.u.toFixed(1)}, ${imagePoint.v.toFixed(1)})`,
+      id: compositeKey,
+      name: `${ref.worldPoint.getName()} (${ref.viewpoint.getName()})`,
+      displayInfo: imagePoint ? `(${imagePoint.u.toFixed(1)}, ${imagePoint.v.toFixed(1)})` : '',
       additionalInfo: [
-        `World Point: ${imagePoint.worldPointName}`,
-        `Image: ${getImageName(imagePoint.viewpointId)}`,
-        `Pixel coordinates: (${imagePoint.u.toFixed(1)}, ${imagePoint.v.toFixed(1)})`
+        `World Point: ${ref.worldPoint.getName()}`,
+        `Image: ${ref.viewpoint.getName()}`,
+        imagePoint ? `Pixel coordinates: (${imagePoint.u.toFixed(1)}, ${imagePoint.v.toFixed(1)})` : ''
       ],
-      isActive: selectedImagePoints.includes(imagePointId)
+      isActive: isSelected
     }
   })
 
-  const handleEdit = (imagePointId: string) => {
-    // Extract world point ID and image ID from composite ID
-    const [worldPointId, imageId] = imagePointId.split('-')
-    onEditImagePoint?.(imagePointId)
+  const refMap = new Map<string, ImagePointReference>()
+  allImagePointRefs.forEach(ref => {
+    refMap.set(`${ref.worldPoint.id}-${ref.viewpoint.id}`, ref)
+  })
+
+  const handleEdit = (compositeKey: string) => {
+    const ref = refMap.get(compositeKey)
+    if (ref) onEditImagePoint?.(ref)
   }
 
-  const handleDelete = (imagePointId: string) => {
-    onDeleteImagePoint?.(imagePointId)
+  const handleDelete = (compositeKey: string) => {
+    const ref = refMap.get(compositeKey)
+    if (ref) onDeleteImagePoint?.(ref)
+  }
+
+  const handleSelect = (compositeKey: string) => {
+    const ref = refMap.get(compositeKey)
+    if (ref) onSelectImagePoint?.(ref)
   }
 
   return (
@@ -82,19 +92,17 @@ export const ImagePointsManager: React.FC<ImagePointsManagerProps> = ({
       storageKey="image-points-popup"
       onEdit={handleEdit}
       onDelete={handleDelete}
-      onSelect={onSelectImagePoint}
+      onSelect={handleSelect}
       renderEntityDetails={(entity) => {
-        const [worldPointId, imageId] = entity.id.split('-')
-        const viewpoint = images.get(imageId)
-        const imagePoint = Object.values(viewpoint?.imagePoints || {}).find(ip => ip.worldPointId === worldPointId)
+        const ref = refMap.get(entity.id)
+        if (!ref) return null
+        const imagePoint = ref.viewpoint.imagePoints[ref.worldPoint.id]
 
         return (
           <div className="image-point-details">
-            {viewpoint && (
-              <div className="image-info">
-                Image: {viewpoint.imageWidth}<FontAwesomeIcon icon={faXmark} />{viewpoint.imageHeight}px
-              </div>
-            )}
+            <div className="image-info">
+              Image: {ref.viewpoint.imageWidth}<FontAwesomeIcon icon={faXmark} />{ref.viewpoint.imageHeight}px
+            </div>
             {imagePoint && (
               <div className="coordinates">
                 Pixel: ({imagePoint.u.toFixed(1)}, {imagePoint.v.toFixed(1)})

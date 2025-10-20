@@ -13,10 +13,10 @@ interface PlanesManagerProps {
   planes: Record<string, Plane>
   allWorldPoints: WorldPoint[]
   selectedPlanes?: ISelectable[]
-  onEditPlane?: (planeId: string) => void
-  onDeletePlane?: (planeId: string) => void
-  onTogglePlaneVisibility?: (planeId: string) => void
-  onSelectPlane?: (planeId: string) => void
+  onEditPlane?: (plane: Plane) => void
+  onDeletePlane?: (plane: Plane) => void
+  onTogglePlaneVisibility?: (plane: Plane) => void
+  onSelectPlane?: (plane: Plane) => void
 }
 
 export const PlanesManager: React.FC<PlanesManagerProps> = ({
@@ -30,7 +30,10 @@ export const PlanesManager: React.FC<PlanesManagerProps> = ({
   onTogglePlaneVisibility,
   onSelectPlane
 }) => {
-  const getPointName = (pointId: string) => allWorldPoints.find(p => p.id === pointId)?.getName() || pointId
+  const pointMap = new Map(allWorldPoints.map(p => [p.id, p]))
+  const planeMap = new Map(Object.entries(planes).map(([id, plane]) => [id, plane]))
+
+  const getPointName = (pointId: string) => pointMap.get(pointId)?.getName() || pointId
 
   const getPlaneDefinitionInfo = (plane: Plane): string[] => {
     const info: string[] = []
@@ -85,12 +88,24 @@ export const PlanesManager: React.FC<PlanesManagerProps> = ({
       entities={planeEntities}
       emptyMessage="No planes created yet"
       storageKey="planes-popup"
-      onEdit={onEditPlane}
-      onDelete={onDeletePlane}
-      onToggleVisibility={onTogglePlaneVisibility}
-      onSelect={onSelectPlane}
+      onEdit={onEditPlane ? (entityId) => {
+        const plane = planeMap.get(entityId)
+        if (plane) onEditPlane(plane)
+      } : undefined}
+      onDelete={onDeletePlane ? (entityId) => {
+        const plane = planeMap.get(entityId)
+        if (plane) onDeletePlane(plane)
+      } : undefined}
+      onToggleVisibility={onTogglePlaneVisibility ? (entityId) => {
+        const plane = planeMap.get(entityId)
+        if (plane) onTogglePlaneVisibility(plane)
+      } : undefined}
+      onSelect={onSelectPlane ? (entityId) => {
+        const plane = planeMap.get(entityId)
+        if (plane) onSelectPlane(plane)
+      } : undefined}
       renderEntityDetails={(entity) => {
-        const plane = planes[entity.id]
+        const plane = planeMap.get(entity.id)
         return (
           <div className="plane-details">
             <div className="definition-type">

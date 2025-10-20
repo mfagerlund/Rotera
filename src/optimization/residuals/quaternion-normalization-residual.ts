@@ -1,5 +1,5 @@
 import { V, Value } from 'scalar-autograd';
-import type { Vec4 } from '../Vec4';
+import type { Vec4 } from 'scalar-autograd';
 
 /**
  * Quaternion normalization residual.

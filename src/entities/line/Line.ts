@@ -1,12 +1,9 @@
 // Consolidated Line domain class
-
-import type { LineId, EntityId } from '../../types/ids'
 import type { ISelectable, SelectableType } from '../../types/selectable'
-import type { IValidatable, ValidationContext, ValidationResult, ValidationError } from '../../validation/validator'
 import type { IResidualProvider, ValueMap } from '../../optimization/IOptimizable'
-import { ValidationHelpers } from '../../validation/validator'
 import { V, Value } from 'scalar-autograd'
-import type { WorldPoint, IConstraint, ILine } from '../world-point'
+import type { WorldPoint } from '../world-point'
+import type { IConstraint, ILine, IWorldPoint } from '../interfaces'
 
 // Direction constraint enum for lines
 export type LineDirection =
@@ -16,20 +13,12 @@ export type LineDirection =
   | 'x-aligned'      // Constrained to X-axis direction
   | 'z-aligned'      // Constrained to Z-axis direction
 
-// Line constraint settings
-export interface LineConstraintSettings {
-  direction: LineDirection
-  targetLength?: number  // Fixed length constraint (if undefined, length is free)
-  tolerance?: number     // Tolerance for constraint satisfaction
-}
-
 // Line implements ILine interface for WorldPoint compatibility
-export class Line implements ISelectable, IValidatable, ILine, IResidualProvider {
+export class Line implements ISelectable, ILine, IResidualProvider {
   lastResiduals: number[] = []
   selected = false
   referencingConstraints: Set<IConstraint> = new Set()
 
-  readonly id: LineId
   name: string
   pointA: WorldPoint
   pointB: WorldPoint
@@ -38,14 +27,11 @@ export class Line implements ISelectable, IValidatable, ILine, IResidualProvider
   isConstruction: boolean
   lineStyle: 'solid' | 'dashed' | 'dotted'
   thickness: number
-  constraints: LineConstraintSettings
-  group: string | undefined
-  tags: string[]
-  createdAt: string
-  updatedAt: string
+  direction: LineDirection
+  targetLength?: number
+  tolerance?: number   
 
-  private constructor(
-    id: LineId,
+  public constructor(
     name: string,
     pointA: WorldPoint,
     pointB: WorldPoint,
@@ -54,13 +40,10 @@ export class Line implements ISelectable, IValidatable, ILine, IResidualProvider
     isConstruction: boolean,
     lineStyle: 'solid' | 'dashed' | 'dotted',
     thickness: number,
-    constraints: LineConstraintSettings,
-    group: string | undefined,
-    tags: string[],
-    createdAt: string,
-    updatedAt: string
-  ) {
-    this.id = id
+    direction: LineDirection,
+    targetLength?: number,
+    tolerance?: number
+) {
     this.name = name
     this.pointA = pointA
     this.pointB = pointB
@@ -69,59 +52,15 @@ export class Line implements ISelectable, IValidatable, ILine, IResidualProvider
     this.isConstruction = isConstruction
     this.lineStyle = lineStyle
     this.thickness = thickness
-    this.constraints = constraints
-    this.group = group
-    this.tags = tags
-    this.createdAt = createdAt
-    this.updatedAt = updatedAt
+    this.direction = direction
+    this.targetLength = targetLength
+    this.tolerance = tolerance
 
     this.pointA.addConnectedLine(this)
     this.pointB.addConnectedLine(this)
   }
 
-  // ============================================================================
-  // Factory methods
-  // ============================================================================
-
-  /**
-   * @internal Used only by Serialization class - do not use directly
-   */
-  static createFromSerialized(
-    id: LineId,
-    name: string,
-    pointA: WorldPoint,
-    pointB: WorldPoint,
-    color: string,
-    isVisible: boolean,
-    isConstruction: boolean,
-    lineStyle: 'solid' | 'dashed' | 'dotted',
-    thickness: number,
-    constraints: LineConstraintSettings,
-    group: string | undefined,
-    tags: string[],
-    createdAt: string,
-    updatedAt: string
-  ): Line {
-    return new Line(
-      id,
-      name,
-      pointA,
-      pointB,
-      color,
-      isVisible,
-      isConstruction,
-      lineStyle,
-      thickness,
-      constraints,
-      group,
-      tags,
-      createdAt,
-      updatedAt
-    )
-  }
-
   static create(
-    id: LineId,
     name: string,
     pointA: WorldPoint,
     pointB: WorldPoint,
@@ -131,18 +70,12 @@ export class Line implements ISelectable, IValidatable, ILine, IResidualProvider
       isConstruction?: boolean
       lineStyle?: 'solid' | 'dashed' | 'dotted'
       thickness?: number
-      constraints?: LineConstraintSettings
-      group?: string
-      tags?: string[]
+      direction?: LineDirection
+      targetLength?: number
+      tolerance?: number
     } = {}
   ): Line {
-    const now = new Date().toISOString()
-    const defaultConstraints: LineConstraintSettings = {
-      direction: 'free',
-      tolerance: 0.001
-    }
     return new Line(
-      id,
       name,
       pointA,
       pointB,
@@ -151,22 +84,12 @@ export class Line implements ISelectable, IValidatable, ILine, IResidualProvider
       options.isConstruction ?? false,
       options.lineStyle || 'solid',
       options.thickness || 1,
-      options.constraints || defaultConstraints,
-      options.group,
-      options.tags || [],
-      now,
-      now
+      options.direction || 'free',
+      options.targetLength, 
+      options.tolerance
     )
   }
-
-  // ============================================================================
-  // ISelectable implementation
-  // ============================================================================
-
-  getId(): LineId {
-    return this.id
-  }
-
+  
   getType(): SelectableType {
     return 'line'
   }
@@ -197,240 +120,7 @@ export class Line implements ISelectable, IValidatable, ILine, IResidualProvider
     }
     return `Deleting this line will also delete ${this.referencingConstraints.size} constraint${this.referencingConstraints.size === 1 ? '' : 's'}`
   }
-
-  // ============================================================================
-  // IValidatable implementation
-  // ============================================================================
-
-  validate(context: ValidationContext): ValidationResult {
-    return Line.validateLine(
-      this.id,
-      this.name,
-      this.pointA,
-      this.pointB,
-      this.color,
-      this.thickness
-    )
-  }
-
-  // ============================================================================
-  // Validation methods (inlined from LineValidator)
-  // ============================================================================
-
-  static validateDto(dto: any): ValidationResult {
-    const errors: ValidationError[] = []
-
-    if (!dto.id) {
-      errors.push(ValidationHelpers.createError(
-        'MISSING_REQUIRED_FIELD',
-        'id is required',
-        dto.id,
-        'line',
-        'id'
-      ))
-    }
-
-    if (!dto.name) {
-      errors.push(ValidationHelpers.createError(
-        'MISSING_REQUIRED_FIELD',
-        'name is required',
-        dto.id,
-        'line',
-        'name'
-      ))
-    }
-
-    if (!dto.pointA) {
-      errors.push(ValidationHelpers.createError(
-        'MISSING_REQUIRED_FIELD',
-        'pointA is required',
-        dto.id,
-        'line',
-        'pointA'
-      ))
-    }
-
-    if (!dto.pointB) {
-      errors.push(ValidationHelpers.createError(
-        'MISSING_REQUIRED_FIELD',
-        'pointB is required',
-        dto.id,
-        'line',
-        'pointB'
-      ))
-    }
-
-    if (dto.pointA === dto.pointB) {
-      errors.push(ValidationHelpers.createError(
-        'SELF_REFERENCING_LINE',
-        'Line cannot reference the same point twice',
-        dto.id,
-        'line'
-      ))
-    }
-
-    if (dto.color && !/^#[0-9A-Fa-f]{6}$/.test(dto.color)) {
-      errors.push(ValidationHelpers.createError(
-        'INVALID_COLOR',
-        'color must be a valid hex color',
-        dto.id,
-        'line',
-        'color'
-      ))
-    }
-
-    if (dto.thickness <= 0) {
-      errors.push(ValidationHelpers.createError(
-        'INVALID_THICKNESS',
-        'thickness must be greater than 0',
-        dto.id,
-        'line',
-        'thickness'
-      ))
-    }
-
-    if (!dto.constraints) {
-      errors.push(ValidationHelpers.createError(
-        'MISSING_REQUIRED_FIELD',
-        'constraints is required',
-        dto.id,
-        'line',
-        'constraints'
-      ))
-    } else {
-      const constraintErrors = Line.validateConstraints(dto.constraints, dto.id)
-      errors.push(...constraintErrors)
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-      warnings: [],
-      summary: errors.length === 0 ? 'DTO validation passed' : `DTO validation failed: ${errors.length} errors`
-    }
-  }
-
-  static validateLine(
-    id: string,
-    name: string,
-    pointA: WorldPoint,
-    pointB: WorldPoint,
-    color: string,
-    thickness: number
-  ): ValidationResult {
-    const errors: ValidationError[] = []
-    const warnings: ValidationError[] = []
-
-    const nameError = ValidationHelpers.validateRequiredField(name, 'name', id, 'line')
-    if (nameError) errors.push(nameError)
-
-    const idError = ValidationHelpers.validateIdFormat(id, 'line')
-    if (idError) errors.push(idError)
-
-    if (!pointA) {
-      errors.push(ValidationHelpers.createError(
-        'MISSING_POINT',
-        'pointA is required',
-        id,
-        'line',
-        'pointA'
-      ))
-    }
-
-    if (!pointB) {
-      errors.push(ValidationHelpers.createError(
-        'MISSING_POINT',
-        'pointB is required',
-        id,
-        'line',
-        'pointB'
-      ))
-    }
-
-    if (pointA === pointB) {
-      errors.push(ValidationHelpers.createError(
-        'SELF_REFERENCING_LINE',
-        'Line cannot reference the same point twice',
-        id,
-        'line'
-      ))
-    }
-
-    if (color && !/^#[0-9A-Fa-f]{6}$/.test(color)) {
-      errors.push(ValidationHelpers.createError(
-        'INVALID_COLOR',
-        'color must be a valid hex color',
-        id,
-        'line',
-        'color'
-      ))
-    }
-
-    if (thickness <= 0) {
-      errors.push(ValidationHelpers.createError(
-        'INVALID_THICKNESS',
-        'thickness must be greater than 0',
-        id,
-        'line',
-        'thickness'
-      ))
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-      warnings,
-      summary: errors.length === 0 ? 'Line validation passed' : `Line validation failed: ${errors.length} errors`
-    }
-  }
-
-  private static validateConstraints(constraints: LineConstraintSettings, lineId: string): ValidationError[] {
-    const errors: ValidationError[] = []
-
-    if (!constraints.direction) {
-      errors.push(ValidationHelpers.createError(
-        'MISSING_REQUIRED_FIELD',
-        'constraints.direction is required',
-        lineId,
-        'line',
-        'constraints.direction'
-      ))
-    } else {
-      const validDirections: LineDirection[] = ['free', 'horizontal', 'vertical', 'x-aligned', 'z-aligned']
-      if (!validDirections.includes(constraints.direction)) {
-        errors.push(ValidationHelpers.createError(
-          'INVALID_DIRECTION',
-          `constraints.direction must be one of: ${validDirections.join(', ')}`,
-          lineId,
-          'line',
-          'constraints.direction'
-        ))
-      }
-    }
-
-    if (constraints.targetLength !== undefined && constraints.targetLength <= 0) {
-      errors.push(ValidationHelpers.createError(
-        'INVALID_TARGET_LENGTH',
-        'constraints.targetLength must be greater than 0',
-        lineId,
-        'line',
-        'constraints.targetLength'
-      ))
-    }
-
-    if (constraints.tolerance !== undefined && constraints.tolerance < 0) {
-      errors.push(ValidationHelpers.createError(
-        'INVALID_TOLERANCE',
-        'constraints.tolerance must be non-negative',
-        lineId,
-        'line',
-        'constraints.tolerance'
-      ))
-    }
-
-    return errors
-  }
-
+  
   // ============================================================================
   // Computed properties
   // ============================================================================
@@ -445,47 +135,47 @@ export class Line implements ISelectable, IValidatable, ILine, IResidualProvider
   // ============================================================================
 
   isDirectionConstrained(): boolean {
-    return this.constraints.direction !== 'free'
+    return this.direction !== 'free'
   }
 
   isDistanceConstrained(): boolean {
-    return this.constraints.targetLength !== undefined
+    return this.targetLength !== undefined
   }
 
   isHorizontal(): boolean {
-    return this.constraints.direction === 'horizontal'
+    return this.direction === 'horizontal'
   }
 
   isVertical(): boolean {
-    return this.constraints.direction === 'vertical'
+    return this.direction === 'vertical'
   }
 
   isXAligned(): boolean {
-    return this.constraints.direction === 'x-aligned'
+    return this.direction === 'x-aligned'
   }
 
   isZAligned(): boolean {
-    return this.constraints.direction === 'z-aligned'
+    return this.direction === 'z-aligned'
   }
 
   isAxisAligned(): boolean {
-    return this.constraints.direction !== 'free'
+    return this.direction !== 'free'
   }
 
   hasFixedLength(): boolean {
-    return this.constraints.targetLength !== undefined
+    return this.targetLength !== undefined
   }
 
   satisfiesConstraints(tolerance?: number): { satisfied: boolean; violations: string[] } {
     const violations: string[] = []
-    const tol = tolerance ?? this.constraints.tolerance ?? 0.01
+    const tol = tolerance ?? this.tolerance ?? 0.01
 
     if (this.isDirectionConstrained()) {
       const dir = this.getDirection()
       if (dir) {
         const [dx, dy, dz] = dir
 
-        switch (this.constraints.direction) {
+        switch (this.direction) {
           case 'horizontal':
             if (Math.abs(dy) > tol || Math.abs(dz) > tol) {
               violations.push('Line is not horizontal')
@@ -512,10 +202,10 @@ export class Line implements ISelectable, IValidatable, ILine, IResidualProvider
 
     if (this.hasFixedLength()) {
       const currentLength = this.length()
-      if (currentLength !== null && this.constraints.targetLength !== undefined) {
-        const lengthDiff = Math.abs(currentLength - this.constraints.targetLength)
+      if (currentLength !== null && this.targetLength !== undefined) {
+        const lengthDiff = Math.abs(currentLength - this.targetLength)
         if (lengthDiff > tol) {
-          violations.push(`Line length ${currentLength.toFixed(3)} does not match target ${this.constraints.targetLength.toFixed(3)}`)
+          violations.push(`Line length ${currentLength.toFixed(3)} does not match target ${this.targetLength.toFixed(3)}`)
         }
       }
     }
@@ -757,10 +447,9 @@ export class Line implements ISelectable, IValidatable, ILine, IResidualProvider
   // Utility methods
   // ============================================================================
 
-  clone(newId: LineId, newName?: string): Line {
+  clone(newName?: string): Line {
     const now = new Date().toISOString()
     return new Line(
-      newId,
       newName || `${this.name} (copy)`,
       this.pointA,
       this.pointB,
@@ -769,17 +458,14 @@ export class Line implements ISelectable, IValidatable, ILine, IResidualProvider
       this.isConstruction,
       this.lineStyle,
       this.thickness,
-      { ...this.constraints },
-      this.group,
-      [...this.tags],
-      now,
-      now
+      this.direction,
+      this.targetLength, 
+      this.tolerance
     )
   }
 
   setVisible(visible: boolean): void {
     this.isVisible = visible
-    this.updatedAt = new Date().toISOString()
   }
 
   cleanup(): void {
@@ -801,13 +487,13 @@ export class Line implements ISelectable, IValidatable, ILine, IResidualProvider
     const vecB = valueMap.points.get(this.pointB)
 
     if (!vecA || !vecB) {
-      console.warn(`Line ${this.id}: endpoints not found in valueMap`)
+      console.warn(`Line: endpoints not found in valueMap`)
       return residuals
     }
 
     const direction = vecB.sub(vecA)
 
-    switch (this.constraints.direction) {
+    switch (this.direction) {
       case 'horizontal':
         residuals.push(direction.y, direction.z)
         break
@@ -828,9 +514,9 @@ export class Line implements ISelectable, IValidatable, ILine, IResidualProvider
         break
     }
 
-    if (this.hasFixedLength() && this.constraints.targetLength !== undefined) {
+    if (this.hasFixedLength() && this.targetLength !== undefined) {
       const dist = direction.magnitude
-      const targetLength = this.constraints.targetLength
+      const targetLength = this.targetLength
       const lengthResidual = V.sub(dist, V.C(targetLength))
       residuals.push(lengthResidual)
     }
@@ -853,17 +539,17 @@ export class Line implements ISelectable, IValidatable, ILine, IResidualProvider
 
     return {
       length: currentLength,
-      targetLength: this.constraints.targetLength,
-      direction: this.constraints.direction,
+      targetLength: this.targetLength,
+      direction: this.direction,
 
       residuals: residuals,
       totalResidual: totalResidual,
       rmsResidual: residuals.length > 0 ? totalResidual / Math.sqrt(residuals.length) : 0,
 
       hasLengthConstraint: this.hasFixedLength(),
-      hasDirectionConstraint: this.constraints.direction !== undefined,
-      lengthError: currentLength !== null && this.constraints.targetLength !== undefined
-        ? Math.abs(currentLength - this.constraints.targetLength)
+      hasDirectionConstraint: this.direction !== undefined,
+      lengthError: currentLength !== null && this.targetLength !== undefined
+        ? Math.abs(currentLength - this.targetLength)
         : null,
     }
   }

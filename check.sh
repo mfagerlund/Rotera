@@ -14,6 +14,8 @@ npm run lint > "$TEMP_DIR/frontend_lint.log" 2>&1 &
 FRONTEND_LINT_PID=$!
 npm run type-check > "$TEMP_DIR/frontend_type.log" 2>&1 &
 FRONTEND_TYPE_PID=$!
+npx tsx check-no-runtime-ids.ts > "$TEMP_DIR/no_runtime_ids.log" 2>&1 &
+NO_RUNTIME_IDS_PID=$!
 
 # Wait for all processes and collect results
 failed_checks=()
@@ -34,6 +36,11 @@ if ! wait $FRONTEND_TYPE_PID; then
     all_passed=false
 fi
 
+if ! wait $NO_RUNTIME_IDS_PID; then
+    failed_checks+=("no-runtime-ids")
+    all_passed=false
+fi
+
 # Output results
 if $all_passed; then
     echo "✓ All checks passed"
@@ -46,6 +53,7 @@ else
             "frontend-tests") echo "  npm test -- --maxWorkers=1" ;;
             "frontend-lint") echo "  npm run lint" ;;
             "frontend-types") echo "  npm run type-check" ;;
+            "no-runtime-ids") echo "  npx tsx check-no-runtime-ids.ts" ;;
         esac
     done
     exit 1
