@@ -1,7 +1,7 @@
 // Loop Trace Tool Logic Hook
 
 import { useCallback, useMemo } from 'react'
-import { LineDirection, LineConstraintSettings } from '../entities/line'
+import { LineDirection } from '../entities/line'
 import { WorldPoint } from '../entities/world-point'
 
 interface LineConstraints {
@@ -9,7 +9,9 @@ interface LineConstraints {
   color?: string
   isVisible?: boolean
   isConstruction?: boolean
-  constraints?: LineConstraintSettings
+  direction?: LineDirection
+  targetLength?: number
+  tolerance?: number
 }
 
 interface UseLoopTraceProps {

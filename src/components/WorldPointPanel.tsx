@@ -146,7 +146,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
     e.preventDefault()
     setContextMenu({
       isOpen: true,
-      lockedXyz: { x: e.clientX, y: e.clientY },
+      position: { x: e.clientX, y: e.clientY },
       worldPoint
     })
   }

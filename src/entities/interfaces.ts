@@ -2,6 +2,7 @@ export interface IWorldPoint {
     getName(): string
     hasCoordinates(): boolean
     lockedXyz?: [number | null, number | null, number | null]
+    color: string
 }
 
 export interface ILine {
@@ -25,4 +26,5 @@ export interface IViewpoint {
     getName(): string
     imageWidth: number
     imageHeight: number
+    imagePoints: Set<IImagePoint>
 }

@@ -4,11 +4,12 @@ import { faBullseye, faXmark } from '@fortawesome/free-solid-svg-icons'
 import EntityListPopup, { EntityListItem } from './EntityListPopup'
 import { WorldPoint } from '../entities/world-point'
 import { Viewpoint } from '../entities/viewpoint'
+import { IWorldPoint, IViewpoint } from '../entities/interfaces'
 import { getEntityKey } from '../utils/entityKeys'
 
 export interface ImagePointReference {
-  worldPoint: WorldPoint
-  viewpoint: Viewpoint
+  worldPoint: IWorldPoint
+  viewpoint: IViewpoint
 }
 
 interface ImagePointsManagerProps {

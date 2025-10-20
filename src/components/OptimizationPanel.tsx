@@ -79,7 +79,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
         pointEntities,
         lineEntities,
         viewpointEntities,
-        project.constraints,
+        Array.from(project.constraints),
         {
           maxIterations: settings.maxIterations,
           tolerance: settings.tolerance,
@@ -233,7 +233,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                 <h5>World Points ({Array.from(project.worldPoints.values()).length})</h5>
                 <div className="entity-list">
                   {Array.from(project.worldPoints.values())
-                    .filter(p => p.getOptimizationInfo().isOptimized)
+                    .filter(p => p.getOptimizationInfo().optimizedXyz !== undefined)
                     .map(point => {
                       const info = point.getOptimizationInfo()
                       return (

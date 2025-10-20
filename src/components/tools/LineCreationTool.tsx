@@ -6,6 +6,7 @@ import { faArrowRight, faBullseye, faMagnifyingGlass, faTriangleExclamation } fr
 import { useConfirm } from '../ConfirmDialog'
 import { WorldPoint } from '../../entities/world-point'
 import { Line } from '../../entities/line'
+import { getEntityKey } from '../../utils/entityKeys'
 
 const PRESET_COLORS = [
   { value: '#0696d7', name: 'Blue' },
@@ -43,14 +44,16 @@ interface LineCreationToolProps {
   onDeleteLine?: (line: Line) => void
 }
 
-import { LineDirection, LineConstraintSettings } from '../../entities/line'
+import { LineDirection } from '../../entities/line'
 
 interface LineConstraints {
   name?: string
   color?: string
   isVisible?: boolean
   isConstruction?: boolean
-  constraints?: LineConstraintSettings
+  direction?: LineDirection
+  targetLength?: number
+  tolerance?: number
 }
 
 // RENAME_TO: LineEditor
@@ -106,34 +109,12 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
       setIsVisible(existingLine.isVisible)
       setIsConstruction(existingLine.isConstruction || false)
 
-      // Load constraint settings from line properties
-      if (existingLine.constraints) {
-        const loadedDirection = existingLine.constraints.direction || 'free'
-        setDirection(loadedDirection)
+      // Load direction and targetLength from line properties
+      setDirection(existingLine.direction || 'free')
 
-        if (existingLine.constraints.targetLength !== undefined) {
-          setLengthValue(existingLine.constraints.targetLength.toString())
-        } else {
-          setLengthValue('')
-        }
+      if (existingLine.targetLength !== undefined) {
+        setLengthValue(existingLine.targetLength.toString())
       } else {
-        // Fallback to legacy behavior - load from separate constraints
-        const directionConstraint = existingConstraints.find(c => c.type === 'line_axis_aligned')
-
-        if (directionConstraint) {
-          const constraintDirection = directionConstraint.parameters?.direction
-
-          if (constraintDirection === 'vertical') {
-            setDirection('vertical')
-          } else if (constraintDirection === 'horizontal') {
-            setDirection('horizontal')
-          } else {
-            setDirection('horizontal')
-          }
-        } else {
-          setDirection('free')
-        }
-
         setLengthValue('')
       }
     }
@@ -245,15 +226,15 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
       // Both points selected - show complete line preview
       onConstructionPreviewChange({
         type: 'line',
-        pointA: pointSlot1.id,
-        pointB: pointSlot2.id,
+        pointA: getEntityKey(pointSlot1),
+        pointB: getEntityKey(pointSlot2),
         showToCursor: false
       })
     } else if (pointSlot1) {
       // Only first point selected - show line to cursor
       onConstructionPreviewChange({
         type: 'line',
-        pointA: pointSlot1.id,
+        pointA: getEntityKey(pointSlot1),
         showToCursor: true
       })
     } else {
@@ -306,16 +287,8 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
     if (editMode) {
       // Edit mode
       if (onUpdateLine && existingLine) {
-        // Build constraint settings
-        const lineConstraintSettings: LineConstraintSettings = {
-          direction,
-          tolerance: 0.001
-        }
-
         const length = parseFloat(lengthValue)
-        if (lengthValue.trim() !== '' && !isNaN(length) && length > 0) {
-          lineConstraintSettings.targetLength = length
-        }
+        const targetLength = lengthValue.trim() !== '' && !isNaN(length) && length > 0 ? length : undefined
 
         const updatedLine = {
           ...existingLine,
@@ -323,7 +296,9 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
           color: lineColor,
           isVisible: isVisible,
           isConstruction: isConstruction,
-          constraints: lineConstraintSettings
+          direction: direction,
+          targetLength: targetLength,
+          tolerance: 0.001
         }
 
         onUpdateLine(existingLine, updatedLine)
@@ -335,23 +310,17 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
         return
       }
 
-      // Build constraint settings
-      const lineConstraintSettings: LineConstraintSettings = {
-        direction,
-        tolerance: 0.001
-      }
-
       const length = parseFloat(lengthValue)
-      if (lengthValue.trim() !== '' && !isNaN(length) && length > 0) {
-        lineConstraintSettings.targetLength = length
-      }
+      const targetLength = lengthValue.trim() !== '' && !isNaN(length) && length > 0 ? length : undefined
 
       const constraints: LineConstraints = {
         name: lineName,
         color: lineColor,
         isVisible: isVisible,
         isConstruction: isConstruction,
-        constraints: lineConstraintSettings
+        direction: direction,
+        targetLength: targetLength,
+        tolerance: 0.001
       }
 
       if (!pointSlot1 || !pointSlot2) return
@@ -463,7 +432,7 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
               >
                 <option value={-1}>Select point...</option>
                 {allWorldPoints.map((point, index) => (
-                  <option key={point.id} value={index}>
+                  <option key={getEntityKey(point)} value={index}>
                     {point.getName()}
                   </option>
                 ))}
@@ -494,7 +463,7 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
               >
                 <option value={-1}>Select point...</option>
                 {allWorldPoints.map((point, index) => (
-                  <option key={point.id} value={index} disabled={point === pointSlot1}>
+                  <option key={getEntityKey(point)} value={index} disabled={point === pointSlot1}>
                     {point.getName()}
                   </option>
                 ))}

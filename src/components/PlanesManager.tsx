@@ -6,6 +6,7 @@ import EntityListPopup, { EntityListItem } from './EntityListPopup'
 import { Plane } from '../types/project'
 import { WorldPoint } from '../entities/world-point'
 import type { ISelectable } from '../types/selectable'
+import { getEntityKey } from '../utils/entityKeys'
 
 interface PlanesManagerProps {
   isOpen: boolean
@@ -30,10 +31,26 @@ export const PlanesManager: React.FC<PlanesManagerProps> = ({
   onTogglePlaneVisibility,
   onSelectPlane
 }) => {
-  const pointMap = new Map(allWorldPoints.map(p => [p.id, p]))
+  // NOTE: Planes are still in legacy format and use string IDs to reference points.
+  // We'll try to match by name as a workaround until Planes are refactored.
+  // This assumes the legacy ID format was based on point names.
+  const pointMap = new Map(allWorldPoints.map(p => [p.getName(), p]))
   const planeMap = new Map(Object.entries(planes).map(([id, plane]) => [id, plane]))
 
-  const getPointName = (pointId: string) => pointMap.get(pointId)?.getName() || pointId
+  // Try to look up by name, fall back to showing the ID
+  const getPointName = (pointId: string) => {
+    // First try direct lookup by name
+    const point = pointMap.get(pointId)
+    if (point) return point.getName()
+
+    // Try without prefix (in case ID was "point-Name" and name is "Name")
+    const withoutPrefix = pointId.replace(/^point-/, '')
+    const pointByStripped = pointMap.get(withoutPrefix)
+    if (pointByStripped) return pointByStripped.getName()
+
+    // Fall back to showing the ID
+    return pointId
+  }
 
   const getPlaneDefinitionInfo = (plane: Plane): string[] => {
     const info: string[] = []
@@ -106,6 +123,7 @@ export const PlanesManager: React.FC<PlanesManagerProps> = ({
       } : undefined}
       renderEntityDetails={(entity) => {
         const plane = planeMap.get(entity.id)
+        if (!plane) return null
         return (
           <div className="plane-details">
             <div className="definition-type">

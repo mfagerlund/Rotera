@@ -6,10 +6,11 @@ import { faLocationDot, faRuler, faSquare } from '@fortawesome/free-solid-svg-ic
 import LineCreationTool from './LineCreationTool'
 import LoopTraceTool from './LoopTraceTool'
 import FloatingWindow from '../FloatingWindow'
-import { Line, LineConstraintSettings } from '../../entities/line'
+import { Line, LineDirection } from '../../entities/line'
 import { WorldPoint } from '../../entities/world-point'
 import { ConstructionPreview } from '../image-viewer/types'
 import type { ISelectable } from '../../types/selectable'
+import { getEntityKey } from '../../utils/entityKeys'
 import '../../styles/tools.css'
 
 type ToolType = 'select' | 'point' | 'line' | 'plane' | 'circle' | 'loop'
@@ -19,7 +20,9 @@ interface LineConstraints {
   color?: string
   isVisible?: boolean
   isConstruction?: boolean
-  constraints?: LineConstraintSettings
+  direction?: LineDirection
+  targetLength?: number
+  tolerance?: number
 }
 
 interface CreationToolsManagerProps {
@@ -345,8 +348,8 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
               ? Object.values(projectConstraints).filter(c => {
                   const constraintLineIds = c.entities?.lines || []
                   const constraintPointIds = c.entities?.points || []
-                  return constraintLineIds.includes(editingLine.id) ||
-                         (constraintPointIds.includes(editingLine.pointA.id) && constraintPointIds.includes(editingLine.pointB.id))
+                  return constraintLineIds.includes(getEntityKey(editingLine)) ||
+                         (constraintPointIds.includes(getEntityKey(editingLine.pointA)) && constraintPointIds.includes(getEntityKey(editingLine.pointB)))
                 })
               : []
           }

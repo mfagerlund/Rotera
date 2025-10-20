@@ -4,12 +4,13 @@ import React, { useState, useCallback, useEffect } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCamera, faCheck, faCircleXmark } from '@fortawesome/free-solid-svg-icons'
 import { faCircle } from '@fortawesome/free-regular-svg-icons'
+import type { Viewpoint } from '../entities/viewpoint'
 
 // Workspace state type (moved from deleted enhanced-project.ts)
 export interface WorkspaceState {
   currentWorkspace: 'image' | 'world' | 'split'
   imageWorkspace: {
-    currentImageId: string | null
+    currentViewpoint: Viewpoint | null
     scale: number
     pan: { x: number; y: number }
     showImagePoints: boolean
@@ -293,7 +294,7 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
       if (workspace === 'image') {
         onWorkspaceStateChange({
           imageWorkspace: {
-            currentImageId: null,
+            currentViewpoint: null,
             scale: 1.0,
             pan: { x: 0, y: 0 },
             showImagePoints: true,
