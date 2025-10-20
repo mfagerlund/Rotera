@@ -62,20 +62,22 @@ export interface ImageViewerPropsBase {
   constructionPreview?: ConstructionPreview | null
 }
 
+import type { Line } from '../../entities/line'
+
 export interface ImageViewerRenderState {
   viewpoint: Viewpoint
   worldPoints: Map<string, WorldPoint>
   lines: Map<string, LineData>
   scale: number
   offset: CanvasOffset
-  selectedPoints: string[]
-  selectedLines: string[]
+  selectedPoints: WorldPoint[]
+  selectedLines: Line[]
   hoveredConstraintId: string | null
-  hoveredWorldPointId: string | null
-  hoveredPointId: string | null
-  hoveredLineId: string | null
+  hoveredWorldPoint: WorldPoint | null
+  hoveredPoint: WorldPoint | null
+  hoveredLine: Line | null
   isDraggingPoint: boolean
-  draggedPointId: string | null
+  draggedPoint: WorldPoint | null
   isDragging: boolean
   panVelocity: PanVelocity
   constructionPreview: ConstructionPreview | null

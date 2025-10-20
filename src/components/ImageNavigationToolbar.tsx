@@ -11,9 +11,9 @@ import { useConfirm } from './ConfirmDialog'
 import ImageEditor from './ImageEditor'
 
 interface ImageNavigationToolbarProps {
-  images: Map<string, Viewpoint>
-  currentImageId: string | null
-  worldPoints: Map<string, WorldPoint>
+  images: Viewpoint[]
+  currentViewpoint: Viewpoint | null
+  worldPoints: WorldPoint[]
   selectedWorldPoints: WorldPoint[]
   hoveredWorldPoint: WorldPoint | null
   isCreatingConstraint: boolean
@@ -34,7 +34,7 @@ interface ImageNavigationToolbarProps {
 
 export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
   images,
-  currentImageId,
+  currentViewpoint,
   worldPoints,
   selectedWorldPoints,
   hoveredWorldPoint,
@@ -88,10 +88,10 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
 
   // Sort images according to sort order, with new images at the end
   const imageList = React.useMemo(() => {
-    const imageToId = new Map(Array.from(images.values()).map(img => [img, img.id]))
-    return Array.from(images.values()).sort((a, b) => {
-      const indexA = imageSortOrder.indexOf(imageToId.get(a)!)
-      const indexB = imageSortOrder.indexOf(imageToId.get(b)!)
+    const imageToName = new Map(images.map(img => [img, img.getName()]))
+    return images.slice().sort((a, b) => {
+      const indexA = imageSortOrder.indexOf(imageToName.get(a)!)
+      const indexB = imageSortOrder.indexOf(imageToName.get(b)!)
       // Images in sort order come first (by their index), unsorted images go to end (Infinity)
       const orderA = indexA >= 0 ? indexA : Infinity
       const orderB = indexB >= 0 ? indexB : Infinity
@@ -102,9 +102,8 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
   // Count selected world points in an image
   const getSelectedWorldPointsInImage = (viewpoint: Viewpoint): number => {
     const selectedSet = new Set(selectedWorldPoints)
-    return Object.values(viewpoint.imagePoints).filter(ip => {
-      const wp = worldPoints.get(ip.worldPointId)
-      return wp && selectedSet.has(wp)
+    return Array.from(viewpoint.imagePoints).filter(ip => {
+      return selectedSet.has(ip.worldPoint)
     }).length
   }
 
@@ -115,20 +114,20 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
     const newOrder = [...imageSortOrder]
 
     // Ensure both images are in the order array
-    if (!newOrder.includes(draggedImage.id)) {
-      newOrder.push(draggedImage.id)
+    if (!newOrder.includes(draggedImage.getName())) {
+      newOrder.push(draggedImage.getName())
     }
-    if (!newOrder.includes(droppedOnImage.id)) {
-      newOrder.push(droppedOnImage.id)
+    if (!newOrder.includes(droppedOnImage.getName())) {
+      newOrder.push(droppedOnImage.getName())
     }
 
     // Remove dragged item and insert it before the drop target
-    const draggedIndex = newOrder.indexOf(draggedImage.id)
-    const dropTargetIndex = newOrder.indexOf(droppedOnImage.id)
+    const draggedIndex = newOrder.indexOf(draggedImage.getName())
+    const dropTargetIndex = newOrder.indexOf(droppedOnImage.getName())
 
     newOrder.splice(draggedIndex, 1)
     const newDropIndex = draggedIndex < dropTargetIndex ? dropTargetIndex - 1 : dropTargetIndex
-    newOrder.splice(newDropIndex, 0, draggedImage.id)
+    newOrder.splice(newDropIndex, 0, draggedImage.getName())
 
     onImageReorder(newOrder)
     setDraggedImage(null)
@@ -178,12 +177,12 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
         {imageList.length > 0 ? (
           imageList.map(image => (
             <ImageNavigationItem
-              key={image.id}
+              key={image.getName()}
               image={image}
               worldPoints={worldPoints}
               selectedWorldPoints={selectedWorldPoints}
               hoveredWorldPoint={hoveredWorldPoint}
-              isActive={currentImageId === image.id}
+              isActive={currentViewpoint === image}
               pointCount={getImagePointCount(image)}
               selectedPointCount={getSelectedPointsInImage(image)}
               selectedWorldPointCount={getSelectedWorldPointsInImage(image)}
@@ -195,7 +194,7 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
                   onImageDelete(image)
                 }
               }}
-              thumbnailHeight={imageHeights[image.id] || 100}
+              thumbnailHeight={imageHeights[image.getName()] || 100}
               onThumbnailHeightChange={(height) => onImageHeightChange(image, height)}
               isDragging={draggedImage === image}
               isDragOver={dragOverImage === image}
@@ -210,7 +209,7 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
               onWorldPointHover={onWorldPointHover}
               onWorldPointClick={onWorldPointClick}
               onCopyPointsToCurrentImage={onCopyPointsToCurrentImage}
-              currentImageId={currentImageId}
+              currentViewpoint={currentViewpoint}
             />
           ))
         ) : (
@@ -229,7 +228,7 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
 
 interface ImageNavigationItemProps {
   image: Viewpoint
-  worldPoints: Map<string, WorldPoint>
+  worldPoints: WorldPoint[]
   selectedWorldPoints: WorldPoint[]
   hoveredWorldPoint: WorldPoint | null
   isActive: boolean
@@ -252,7 +251,7 @@ interface ImageNavigationItemProps {
   onWorldPointHover?: (worldPoint: WorldPoint | null) => void
   onWorldPointClick?: (worldPoint: WorldPoint, ctrlKey: boolean, shiftKey: boolean) => void
   onCopyPointsToCurrentImage?: (sourceViewpoint: Viewpoint) => void
-  currentImageId: string | null
+  currentViewpoint: Viewpoint | null
 }
 
 const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
@@ -280,7 +279,7 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
   onWorldPointHover,
   onWorldPointClick,
   onCopyPointsToCurrentImage,
-  currentImageId
+  currentViewpoint
 }) => {
   const imgRef = React.useRef<HTMLImageElement>(null)
   const [imgBounds, setImgBounds] = React.useState({ width: 0, height: 0, offsetX: 0, offsetY: 0 })
@@ -364,7 +363,7 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
             draggable
             onDragStart={(e) => {
               e.dataTransfer.effectAllowed = 'move'
-              e.dataTransfer.setData('text/plain', image.id)
+              e.dataTransfer.setData('text/plain', image.getName())
               onDragStart()
             }}
             onDragEnd={onDragEnd}
@@ -378,7 +377,7 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
             {/* Copy points button */}
             <button
               className="btn-image-top-action"
-              disabled={!currentImageId || image.id === currentImageId || pointCount === 0}
+              disabled={!currentViewpoint || image === currentViewpoint || pointCount === 0}
               onClick={(e) => {
                 e.stopPropagation()
                 if (onCopyPointsToCurrentImage) {
@@ -386,9 +385,9 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
                 }
               }}
               title={
-                !currentImageId
+                !currentViewpoint
                   ? 'Select a target image first'
-                  : image.id === currentImageId
+                  : image === currentViewpoint
                   ? "Can't copy to self"
                   : pointCount === 0
                   ? 'No points to copy'
@@ -473,9 +472,8 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
 
         {/* World point locations overlay */}
         <div className="wp-locations-overlay">
-            {Object.values(image.imagePoints).map(imagePoint => {
-              const wp = worldPoints.get(imagePoint.worldPointId)
-              if (!wp) return null
+            {Array.from(image.imagePoints).map(imagePoint => {
+              const wp = imagePoint.worldPoint
 
               // Use actual rendered image bounds from the DOM
               // This accounts for centering and actual size
@@ -491,7 +489,7 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
 
               return (
                 <div
-                  key={imagePoint.id}
+                  key={wp.getName()}
                   className={`wp-location-dot ${isSelected ? 'selected' : ''} ${isGloballyHovered ? 'globally-hovered' : ''}`}
                   style={{
                     left: `${thumbnailX}px`,
@@ -505,8 +503,8 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
                     // Set drag data
                     e.dataTransfer.setData('application/json', JSON.stringify({
                       type: 'world-point',
-                      worldPointId: wp.id,
-                      action: Object.keys(image.imagePoints).length > 0 ? 'move' : 'place'
+                      worldPointName: wp.getName(),
+                      action: image.imagePoints.size > 0 ? 'move' : 'place'
                     }))
                     e.dataTransfer.effectAllowed = 'copy'
                   }}

@@ -2,9 +2,52 @@
 
 ## Context: Object-Reference Architecture Migration
 
-**Status**: All hooks are fixed. Now fixing component layer.
+**Status**: Phase 1 COMPLETE! Core components fixed. ~381 errors remaining.
 
-**Total TypeScript Errors**: 427
+**Total TypeScript Errors**: 427 → **~381 remaining** (46 eliminated)
+
+---
+
+## ✅ Session Progress (2025-01-20)
+
+**Completed:**
+1. ✅ **MainLayout.tsx (19 errors fixed)**
+   - Changed `currentImageId` → `currentViewpoint` (entity object)
+   - Removed all ID-based Maps → converted to entity arrays
+   - Fixed `.id` property accesses (changed to `.getName()`)
+   - Fixed Set.length → Set.size
+   - Eliminated `any` type for `updatedLine` parameter
+
+2. ✅ **ImageNavigationToolbar.tsx (15 errors fixed)**
+   - Changed interface from `Map<string, Viewpoint>` → `Viewpoint[]`
+   - Changed `currentImageId` → `currentViewpoint`
+   - Fixed all `viewpoint.id` → `viewpoint.getName()`
+   - Fixed drag-and-drop to use entity names instead of IDs
+   - Fixed imagePoints iteration: `Object.values()` → `Array.from(Set)`
+
+3. ✅ **ImageViewer.tsx (12 errors fixed)**
+   - Fixed all `worldPoint.id` → `worldPoint` (pass object directly)
+   - Fixed `line.isVisible()` → `line.isVisible` (property not method)
+   - Updated `ImageViewerRenderState` to use entity objects instead of ID arrays
+   - Eliminated ALL `any` types in render state interface
+
+4. ✅ **image-viewer/types.ts (Type safety improvements)**
+   - Changed `selectedPoints: string[]` → `selectedPoints: WorldPoint[]`
+   - Changed `selectedLines: any[]` → `selectedLines: Line[]`
+   - Changed `hoveredLine: any | null` → `hoveredLine: Line | null`
+   - Added proper Line import
+
+**Key Patterns Applied:**
+- ✅ Entity objects passed directly (no `.id` lookups)
+- ✅ Collections as Arrays/Sets (no ID-based Maps)
+- ✅ `getName()` used for React keys and comparisons
+- ✅ Circular references maintained (WorldPoint.imagePoints properly populated)
+- ✅ Zero tolerance for naked `any` types
+
+**Next Priority:**
+- useImageViewerRenderer.ts (14 errors)
+- OptimizationPanel.tsx (9 errors)
+- ImagePointsManager.tsx (8 errors)
 
 ---
 
@@ -73,9 +116,16 @@ const dto = {
 - Changed `useConstraints` to accept `ISelectable[]` instead of ID arrays
 - Changed `useEntityProject` from `currentImageId` to `currentViewpoint` object
 
-**Phase 2: Components Layer (👉 Current)**
-- Need to fix 427 TypeScript errors in component files
-- All errors are from trying to access `.id` on entities or using wrong types
+**Phase 2: Components Layer (👉 Current - In Progress)**
+- **COMPLETED**: Fixed 3 core components (46 errors eliminated)
+  - ✅ MainLayout.tsx (19 errors) - Removed all `.id` accesses, changed to `currentViewpoint`, fixed Set.size usage
+  - ✅ ImageNavigationToolbar.tsx (15 errors) - Converted Maps to arrays, fixed all Viewpoint.id references
+  - ✅ ImageViewer.tsx (12 errors) - Fixed WorldPoint.id accesses, updated render state to use entity objects
+- **Type Safety Improvements**:
+  - Eliminated ALL naked `any` types (replaced with proper Line, WorldPoint types)
+  - Fixed `ImageViewerRenderState` interface to use entity objects instead of ID strings
+  - Properly typed all function parameters (e.g., `LineUpdates` instead of `any`)
+- Remaining: ~381 errors in other components and tests
 
 ---
 
@@ -96,20 +146,15 @@ These are test files - lower priority since they don't affect runtime:
 
 ---
 
-### High Priority - Main Components (19 errors)
+### ✅ High Priority - Main Components (19 errors) - COMPLETE
 
-#### **src/components/MainLayout.tsx** (19 errors)
-- Line 64-65: `currentImageId`, `setCurrentImageId` don't exist (changed to `currentViewpoint`)
-- Lines 103, 114, 124, 134, 221, 755: Accessing `.id` on entities
-- Lines 322, 329, 334, 470: Accessing `.id` on Line
-- Lines 508, 953, 984: Using `.length` on `Set<Constraint>` (should be `.size`)
-- Line 414: Wrong number of arguments (expected 3, got 4)
-- Line 880: Accessing `.id` on WorldPoint
-
-**Common issues**:
-- Using `.id` on entities (WorldPoint, Line, Viewpoint)
-- Using `currentImageId` instead of `currentViewpoint`
-- Using `.length` on Sets (should be `.size`)
+#### ✅ **src/components/MainLayout.tsx** (19 errors) - FIXED
+All issues resolved:
+- Changed `currentImageId` → `currentViewpoint` throughout
+- Removed all ID-based Maps, converted to entity arrays
+- Fixed all `.id` accesses to use `getName()` or object equality
+- Fixed `.length` → `.size` for Set collections
+- Properly typed `updatedLine` parameter (removed `any`)
 
 ---
 
@@ -242,11 +287,12 @@ line.targetLength
 
 ## Execution Strategy
 
-### Phase 1: Fix Core Components (Day 1)
+### Phase 1: Fix Core Components (Day 1) ✅ COMPLETE
 1. ✅ All hooks fixed
-2. Fix MainLayout.tsx (central hub - 19 errors)
-3. Fix ImageViewer.tsx (12 errors)
-4. Fix ImageNavigationToolbar.tsx (15 errors)
+2. ✅ MainLayout.tsx (central hub - 19 errors)
+3. ✅ ImageViewer.tsx (12 errors)
+4. ✅ ImageNavigationToolbar.tsx (15 errors)
+5. ✅ Fixed all naked `any` types in these components
 
 ### Phase 2: Fix Supporting Components (Day 1-2)
 5. Fix OptimizationPanel.tsx (9 errors)
