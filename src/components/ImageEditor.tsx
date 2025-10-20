@@ -36,8 +36,8 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
   }
 
   const handleSave = () => {
-    const updatedViewpoint = viewpoint.clone(viewpoint.id, editedName)
-    onUpdateViewpoint(updatedViewpoint)
+    viewpoint.name = editedName
+    onUpdateViewpoint(viewpoint)
     setHasChanges(false)
     onClose()
   }

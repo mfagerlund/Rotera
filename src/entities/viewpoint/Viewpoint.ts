@@ -367,35 +367,6 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint 
         return [u * this.imageWidth, v * this.imageHeight]
     }
 
-    clone(newName?: string): Viewpoint {
-        const now = new Date().toISOString()
-        return new Viewpoint(
-            newName || `${this.name} (copy)`,
-            this.filename,
-            this.url,
-            this.imageWidth,
-            this.imageHeight,
-            this.focalLength,
-            this.principalPointX,
-            this.principalPointY,
-            this.skewCoefficient,
-            this.aspectRatio,
-            [...this.radialDistortion],
-            [...this.tangentialDistortion],
-            [...this.position],
-            [...this.rotation],
-            this.calibrationAccuracy,
-            this.calibrationDate,
-            this.calibrationNotes,
-            this.isProcessed,
-            this.processingNotes,
-            this.metadata ? {...this.metadata} : undefined,
-            this.isVisible,
-            this.opacity,
-            this.color
-        )
-    }
-
     setVisible(visible: boolean): void {
         this.isVisible = visible
     }

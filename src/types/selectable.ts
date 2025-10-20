@@ -1,7 +1,5 @@
 // Unified selection interface for co-selecting entities like points, lines, planes
 
-import type { EntityId } from './ids'
-
 export type SelectableType = 'point' | 'line' | 'plane' | 'viewpoint' | 'camera' | 'image' | 'constraint'
 
 export interface ISelectable {
@@ -196,7 +194,6 @@ export class EntitySelectionImpl implements EntitySelection {
 // Helper types for selection operations
 export interface SelectionContext {
   getAllItems(): ISelectable[]
-  getItemById(id: EntityId): ISelectable | undefined
   getItemsByType(type: SelectableType): ISelectable[]
 }
 

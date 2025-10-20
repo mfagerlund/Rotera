@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react'
 import { loadFromLocalStorage, saveToLocalStorage, loadProjectFromJson } from '../store/project-serialization'
 import { Project } from '../entities/project'
+import { Viewpoint } from '../entities/viewpoint'
 import { newProject } from '../store/project-store'
 
 const STORAGE_KEY = 'pictorigo-project'
@@ -16,7 +17,7 @@ const STORAGE_KEY = 'pictorigo-project'
  */
 export const useEntityProject = () => {
   const [entityProject, setEntityProject] = useState<Project | null>(null)
-  const [currentImageId, setCurrentImageId] = useState<string | null>(null)
+  const [currentViewpoint, setCurrentViewpoint] = useState<Viewpoint | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -30,7 +31,7 @@ export const useEntityProject = () => {
         // Set current image to first viewpoint if available
         const firstViewpoint = Array.from(loaded.viewpoints)[0]
         if (firstViewpoint) {
-          setCurrentImageId(firstViewpoint.id)
+          setCurrentViewpoint(firstViewpoint)
         }
       } else {
         console.log('Creating new empty project')
@@ -62,8 +63,8 @@ export const useEntityProject = () => {
     project: entityProject,
     setProject: setEntityProject,
     saveProject,
-    currentImageId,
-    setCurrentImageId,
+    currentViewpoint,
+    setCurrentViewpoint,
     isLoading,
     error
   }

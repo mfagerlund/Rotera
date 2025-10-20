@@ -411,18 +411,6 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
     // ============================================================================
     // Utility methods
     // ============================================================================
-    clone(newName?: string): WorldPoint {
-        const now = new Date().toISOString()
-        return new WorldPoint(
-            newName || `${this.name} (copy)`,
-            this.lockedXyz,
-            this.color,
-            this.isVisible,
-            this.isOrigin,
-            this.optimizedXyz
-        )
-    }
-
     setVisible(visible: boolean): void {
         this.isVisible = visible
     }

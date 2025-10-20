@@ -447,23 +447,6 @@ export class Line implements ISelectable, ILine, IResidualProvider {
   // Utility methods
   // ============================================================================
 
-  clone(newName?: string): Line {
-    const now = new Date().toISOString()
-    return new Line(
-      newName || `${this.name} (copy)`,
-      this.pointA,
-      this.pointB,
-      this.color,
-      this.isVisible,
-      this.isConstruction,
-      this.lineStyle,
-      this.thickness,
-      this.direction,
-      this.targetLength, 
-      this.tolerance
-    )
-  }
-
   setVisible(visible: boolean): void {
     this.isVisible = visible
   }

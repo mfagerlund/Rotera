@@ -160,31 +160,6 @@ export class Project {
         )
     }
 
-    clone(): Project {
-        return new Project(
-            this.name,
-            this.worldPoints,
-            this.lines,
-            this.viewpoints,
-            this.imagePoints,
-            this.constraints,
-            this.showPointNames,
-            this.autoSave,
-            this.theme,
-            this.measurementUnits,
-            this.precisionDigits,
-            this.showConstraintGlyphs,
-            this.showMeasurements,
-            this.autoOptimize,
-            this.gridVisible,
-            this.snapToGrid,
-            this.defaultWorkspace,
-            this.showConstructionGeometry,
-            this.enableSmartSnapping,
-            this.constraintPreview,
-            this.visualFeedbackLevel,
-            this.imageSortOrder)
-    }
 
     addWorldPoint(point: WorldPoint): void {
         this.worldPoints.add(point)

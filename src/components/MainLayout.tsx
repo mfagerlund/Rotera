@@ -1133,7 +1133,7 @@ export const MainLayout: React.FC = () => {
               // Entities are modified in-place during optimization
               // Trigger re-render to show updated values
               saveProject()
-              setProject(project.clone()) // Force re-render
+              setProject({ ...project } as Project) // Force re-render
             }}
           />
         )}

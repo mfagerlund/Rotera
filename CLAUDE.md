@@ -4,6 +4,43 @@
 - Don't run the dev server. I run the dev server.
 - gogo means "Start executing and don't stop until finished. Beep when done."s
 
+## ENTITY LAYER IS LOCKED - DO NOT MODIFY
+
+**The entity layer (`src/entities/`) has been completely refactored and is now STABLE.**
+
+- DO NOT add fields, methods, or IDs to entities
+- DO NOT modify entity class structures
+- DO NOT change entity constructors or factory methods
+- If UI code needs changes to work with entities, FIX THE UI CODE, not the entities
+- See `src/entities/README.md` for details
+
+**Current focus: Update UI components to work with the new entity architecture.**
+
+## React Re-render Pattern (NOT Angular!)
+
+React uses **reference equality** for change detection, NOT dirty checking like Angular.
+
+**CORRECT pattern for mutations:**
+```typescript
+// Mutate entities/Sets directly (like Angular)
+worldPoint.name = "New Name"
+project.addWorldPoint(point)
+
+// Force React re-render with object spread
+setProject({ ...project })  // Creates new Project reference, keeps same Sets
+```
+
+**WRONG patterns:**
+```typescript
+setProject(project.clone())  // ❌ Shallow clone - doesn't work properly
+setProject(project)          // ❌ Same reference - React won't detect change
+```
+
+**Why this works:**
+- `{ ...project }` creates a NEW Project object → React detects change ✓
+- Same Set references inside → your mutations are preserved ✓
+- Entities are the same objects → all references stay valid ✓
+
 ## CRITICAL: Object References, NOT IDs
 
 **ALWAYS use full object references. NEVER use IDs at runtime.**

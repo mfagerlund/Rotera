@@ -1,18 +1,16 @@
 import { Project } from '../entities/project'
-import { WorldPoint, AxisLock } from '../entities/world-point'
-import { Line, LineConstraintSettings } from '../entities/line'
+import { WorldPoint } from '../entities/world-point'
+import { Line, LineDirection } from '../entities/line'
 import { Viewpoint } from '../entities/viewpoint'
+import { ImagePoint } from '../entities/imagePoint'
 import { Constraint } from '../entities/constraints'
 import type { OptimizationExportDto } from '../types/optimization-export'
 
 export interface WorldPointOptions {
-  xyz?: [number | null, number | null, number | null]
+  lockedXyz?: [number | null, number | null, number | null]
   color?: string
   isVisible?: boolean
   isOrigin?: boolean
-  lockedAxes?: AxisLock
-  group?: string
-  tags?: string[]
 }
 
 export interface LineOptions {
@@ -22,9 +20,9 @@ export interface LineOptions {
   isConstruction?: boolean
   lineStyle?: 'solid' | 'dashed' | 'dotted'
   thickness?: number
-  constraints?: LineConstraintSettings
-  group?: string
-  tags?: string[]
+  direction?: LineDirection
+  targetLength?: number
+  tolerance?: number
 }
 
 export interface LineUpdates {
@@ -58,7 +56,7 @@ export interface DomainOperations {
 
   // Image Points
   addImagePointToWorldPoint: (worldPoint: WorldPoint, viewpoint: Viewpoint, u: number, v: number) => void
-  moveImagePoint: (worldPoint: WorldPoint, viewpoint: Viewpoint, u: number, v: number) => void
+  moveImagePoint: (imagePoint: ImagePoint, u: number, v: number) => void
   getSelectedPointsInImage: (viewpoint: Viewpoint) => WorldPoint[]
   copyPointsFromImageToImage: (fromViewpoint: Viewpoint, toViewpoint: Viewpoint) => void
 
@@ -81,59 +79,57 @@ export function useDomainOperations(
   const createWorldPoint = (name: string, xyz: [number, number, number], options?: WorldPointOptions): WorldPoint => {
     if (!project) throw new Error('No project')
 
-    const id = `wp-${crypto.randomUUID()}`
     const point = WorldPoint.create(name, {
-      id,
-      xyz,
+      lockedXyz: xyz,
+      optimizedXyz: xyz,
       ...options
     })
 
     project.addWorldPoint(point)
-    setProject(project)
+    setProject({ ...project } as Project)
     return point
   }
 
   const renameWorldPoint = (worldPoint: WorldPoint, name: string) => {
     if (!project) return
-    // Mutation via private field access (entity doesn't expose setters)
-    (worldPoint as any)._name = name
-    ;(worldPoint as any)._updatedAt = new Date().toISOString()
-    setProject(project)
+    worldPoint.name = name
+    setProject({ ...project } as Project)
   }
 
   const deleteWorldPoint = (worldPoint: WorldPoint) => {
     if (!project) return
     project.removeWorldPoint(worldPoint)
-    setProject(project)
+    setProject({ ...project } as Project)
   }
 
   const createLine = (pointA: WorldPoint, pointB: WorldPoint, options?: LineOptions): Line => {
     if (!project) throw new Error('No project')
 
-    const id = `line-${crypto.randomUUID()}`
-    const line = Line.create(id, options?.name || 'Line', pointA, pointB, {
-      ...options
-    })
+    const line = Line.create(
+      options?.name || 'Line',
+      pointA,
+      pointB,
+      options
+    )
 
     project.addLine(line)
-    setProject(project)
+    setProject({ ...project } as Project)
     return line
   }
 
   const updateLine = (line: Line, updates: LineUpdates) => {
     if (!project) return
-    // Mutation via private field access (entity doesn't expose setters)
-    if (updates.name) (line as any)._name = updates.name
-    if (updates.color) (line as any)._color = updates.color
-    if (updates.isVisible !== undefined) (line as any)._isVisible = updates.isVisible
-    ;(line as any)._updatedAt = new Date().toISOString()
-    setProject(project)
+    if (updates.name) line.name = updates.name
+    if (updates.color) line.color = updates.color
+    if (updates.isVisible !== undefined) line.isVisible = updates.isVisible
+    setProject({ ...project } as Project)
   }
 
   const deleteLine = (line: Line) => {
     if (!project) return
+    line.cleanup()
     project.removeLine(line)
-    setProject(project)
+    setProject({ ...project } as Project)
   }
 
   const addImage = async (file: File) => {
@@ -149,70 +145,62 @@ export function useDomainOperations(
 
     console.log('addImage: File loaded, dataUrl length:', dataUrl.length)
 
-    const id = `vp-${crypto.randomUUID()}`
     const viewpoint = Viewpoint.create(
       file.name,
       file.name,
       dataUrl,
       1920,
-      1080,
-      { id }
+      1080
     )
 
-    console.log('addImage: Created viewpoint:', viewpoint.id, viewpoint.getName())
+    console.log('addImage: Created viewpoint:', viewpoint.getName())
 
     project.addViewpoint(viewpoint)
     console.log('addImage: Added to project, viewpoint count:', project.viewpoints.size)
-    setProject(project.clone())
+    setProject({ ...project } as Project)
     console.log('addImage: Project updated')
   }
 
   const renameImage = (viewpoint: Viewpoint, name: string) => {
     if (!project) return
-    // Mutation via private field access (entity doesn't expose setters)
-    (viewpoint as any)._data.name = name
-    ;(viewpoint as any)._data.updatedAt = new Date().toISOString()
-    setProject(project)
+    viewpoint.name = name
+    setProject({ ...project } as Project)
   }
 
   const deleteImage = (viewpoint: Viewpoint) => {
     if (!project) return
     project.removeViewpoint(viewpoint)
-    setProject(project)
+    setProject({ ...project } as Project)
   }
 
   const getImagePointCount = (viewpoint: Viewpoint): number => {
-    return Object.keys(viewpoint.imagePoints).length
+    return viewpoint.imagePoints.size
   }
 
   const addImagePointToWorldPoint = (worldPoint: WorldPoint, viewpoint: Viewpoint, u: number, v: number) => {
     if (!project) return
 
-    const imagePoint = {
-      id: `ip-${crypto.randomUUID()}`,
-      worldPointId: worldPoint.id,
+    const imagePoint = ImagePoint.create(
+      worldPoint,
+      viewpoint,
       u,
       v,
-      isVisible: true,
-      isManuallyPlaced: true,
-      confidence: 1.0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
+      {
+        isVisible: true,
+        confidence: 1.0
+      }
+    )
 
     viewpoint.addImagePoint(imagePoint)
-    setProject(project.clone())
+    worldPoint.addImagePoint(imagePoint)
+    project.addImagePoint(imagePoint)
+    setProject({ ...project } as Project)
   }
 
-  const moveImagePoint = (worldPoint: WorldPoint, viewpoint: Viewpoint, u: number, v: number) => {
+  const moveImagePoint = (imagePoint: ImagePoint, u: number, v: number) => {
     if (!project) return
-
-    const existingImagePoints = viewpoint.getImagePointsForWorldPoint(worldPoint.id)
-    if (existingImagePoints.length > 0) {
-      const imagePoint = existingImagePoints[0]
-      viewpoint.updateImagePoint(imagePoint.id, { u, v })
-      setProject(project.clone())
-    }
+    imagePoint.setPosition(u, v)
+    setProject({ ...project } as Project)
   }
 
   const getSelectedPointsInImage = (viewpoint: Viewpoint): WorldPoint[] => {
@@ -227,31 +215,31 @@ export function useDomainOperations(
   const addConstraint = (constraint: Constraint) => {
     if (!project) return
     project.addConstraint(constraint)
-    setProject(project)
+    setProject({ ...project } as Project)
   }
 
   const updateConstraint = (constraint: Constraint, updates: ConstraintUpdates) => {
     if (!project) return
     // TODO: Implement constraint updates
-    setProject(project)
+    setProject({ ...project } as Project)
   }
 
   const deleteConstraint = (constraint: Constraint) => {
     if (!project) return
     project.removeConstraint(constraint)
-    setProject(project)
+    setProject({ ...project } as Project)
   }
 
   const toggleConstraint = (constraint: Constraint) => {
     if (!project) return
     constraint.isEnabled = !constraint.isEnabled
-    setProject(project)
+    setProject({ ...project } as Project)
   }
 
   const clearProject = () => {
     if (!project) return
     project.clear()
-    setProject(project)
+    setProject({ ...project } as Project)
   }
 
   const exportOptimizationDto = (): OptimizationExportDto | null => {

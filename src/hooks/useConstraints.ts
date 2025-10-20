@@ -4,6 +4,8 @@ import { useState, useCallback, useMemo } from 'react'
 import { AvailableConstraint } from '../types/ui-types'
 import { Constraint } from '../entities/constraint'
 import { Line } from '../entities/line'
+import { WorldPoint } from '../entities/world-point'
+import { ISelectable } from '../types/selectable'
 import { getConstraintPointIds } from '../types/utils'
 
 // Legacy ConstraintType from types/project for backward compatibility
@@ -30,7 +32,10 @@ export const useConstraints = (
   const [hoveredConstraintId, setHoveredConstraintId] = useState<string | null>(null)
 
   // Get all constraints with enabled/disabled status
-  const getAllConstraints = useCallback((selectedPoints: string[], selectedLines: Line[]): AvailableConstraint[] => {
+  const getAllConstraints = useCallback((selected: ISelectable[]): AvailableConstraint[] => {
+    const selectedPoints = selected.filter(s => s.getType() === 'point') as WorldPoint[]
+    const selectedLines = selected.filter(s => s.getType() === 'line') as Line[]
+
     const pointCount = selectedPoints.length
     const lineCount = selectedLines.length
 
@@ -94,7 +99,10 @@ export const useConstraints = (
   }, [])
 
   // Get available constraints based on current selection
-  const getAvailableConstraints = useCallback((selectedPoints: string[], selectedLines: Line[]): AvailableConstraint[] => {
+  const getAvailableConstraints = useCallback((selected: ISelectable[]): AvailableConstraint[] => {
+    const selectedPoints = selected.filter(s => s.getType() === 'point') as WorldPoint[]
+    const selectedLines = selected.filter(s => s.getType() === 'line') as Line[]
+
     const constraints: AvailableConstraint[] = []
     const pointCount = selectedPoints.length
     const lineCount = selectedLines.length
@@ -216,13 +224,12 @@ export const useConstraints = (
   // Start creating a constraint of the given type
   const startConstraintCreation = useCallback((
     type: string,
-    selectedPoints: string[],
-    selectedLines: Line[]
+    selected: ISelectable[]
   ) => {
     setActiveConstraintType(type)
 
     // Initialize parameters based on constraint type and selection
-    const initialParams = getInitialConstraintParameters(type, selectedPoints, selectedLines)
+    const initialParams = getInitialConstraintParameters(type, selected)
     setConstraintParameters(initialParams)
   }, [])
 
@@ -393,13 +400,15 @@ export const useConstraints = (
 }
 
 // Helper function to get initial parameters for a constraint type
-type ConstraintParameters = Record<string, string | number | string[] | boolean | undefined>
+type ConstraintParameters = Record<string, any>
 
 function getInitialConstraintParameters(
   type: string,
-  selectedPoints: string[],
-  selectedLines: Line[]
+  selected: ISelectable[]
 ): ConstraintParameters {
+  const selectedPoints = selected.filter(s => s.getType() === 'point') as WorldPoint[]
+  const selectedLines = selected.filter(s => s.getType() === 'line') as Line[]
+
   const params: ConstraintParameters = {}
 
   switch (type) {
@@ -417,29 +426,26 @@ function getInitialConstraintParameters(
         params.line1_end = selectedPoints[0]
         params.line2_end = selectedPoints[2]
       } else if (selectedLines.length >= 2) {
-        // Angle between two lines
-        params.line1_wp_a = selectedLines[0].pointA.id
-        params.line1_wp_b = selectedLines[0].pointB.id
-        params.line2_wp_a = selectedLines[1].pointA.id
-        params.line2_wp_b = selectedLines[1].pointB.id
+        // Angle between two lines - pass the Line objects directly
+        params.line1 = selectedLines[0]
+        params.line2 = selectedLines[1]
       } else if (selectedPoints.length > 3) {
         // Circle constraint: multiple points
-        params.point_ids = selectedPoints
+        params.points = selectedPoints
       }
       break
 
     case 'lines_perpendicular':
     case 'lines_parallel':
       if (selectedLines.length >= 2) {
-        params.line1_wp_a = selectedLines[0].pointA.id
-        params.line1_wp_b = selectedLines[0].pointB.id
-        params.line2_wp_a = selectedLines[1].pointA.id
-        params.line2_wp_b = selectedLines[1].pointB.id
+        // Pass Line objects directly
+        params.line1 = selectedLines[0]
+        params.line2 = selectedLines[1]
       }
       break
 
     case 'points_colinear':
-      params.wp_ids = selectedPoints
+      params.points = selectedPoints
       break
 
     case 'points_coplanar':
@@ -453,7 +459,7 @@ function getInitialConstraintParameters(
 
     case 'point_fixed_coord':
       if (selectedPoints.length >= 1) {
-        params.point_id = selectedPoints[0]
+        params.point = selectedPoints[0]
       }
       break
   }
