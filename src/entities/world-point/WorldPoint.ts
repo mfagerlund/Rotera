@@ -5,7 +5,7 @@ import {V, Value, Vec3} from 'scalar-autograd'
 import type { ISerializable } from '../serialization/ISerializable'
 import type { SerializationContext } from '../serialization/SerializationContext'
 import type { WorldPointDto } from './WorldPointDto'
-import {makeObservable, observable, action} from 'mobx'
+import {makeAutoObservable} from 'mobx'
 
 
 export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributor, IWorldPoint, ISerializable<WorldPointDto> {
@@ -33,28 +33,7 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
         this.isVisible = isVisible
         this.optimizedXyz = optimizedXyz
 
-        makeObservable(this, {
-            selected: observable,
-            connectedLines: observable,
-            referencingConstraints: observable,
-            imagePoints: observable,
-            lastResiduals: observable,
-            name: observable,
-            lockedXyz: observable,
-            optimizedXyz: observable,
-            color: observable,
-            isVisible: observable,
-            setSelected: action,
-            addConnectedLine: action,
-            removeConnectedLine: action,
-            addReferencingConstraint: action,
-            removeReferencingConstraint: action,
-            addImagePoint: action,
-            removeImagePoint: action,
-            setVisible: action,
-            applyOptimizationResult: action,
-            applyOptimizationResultFromValueMap: action,
-        })
+        makeAutoObservable(this, {}, { autoBind: true })
     }
 
     // ============================================================================

@@ -6,7 +6,7 @@ import type { IConstraint, ILine, IWorldPoint } from '../interfaces'
 import type { ISerializable } from '../serialization/ISerializable'
 import type { SerializationContext } from '../serialization/SerializationContext'
 import type { LineDto } from './LineDto'
-import {makeObservable, observable, action} from 'mobx'
+import {makeAutoObservable} from 'mobx'
 
 // Direction constraint enum for lines
 export type LineDirection =
@@ -31,7 +31,7 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
   thickness: number
   direction: LineDirection
   targetLength?: number
-  tolerance?: number   
+  tolerance?: number
 
   public constructor(
     name: string,
@@ -58,28 +58,7 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
     this.targetLength = targetLength
     this.tolerance = tolerance
 
-    makeObservable(this, {
-      lastResiduals: observable,
-      selected: observable,
-      referencingConstraints: observable,
-      name: observable,
-      pointA: observable,
-      pointB: observable,
-      color: observable,
-      isVisible: observable,
-      isConstruction: observable,
-      lineStyle: observable,
-      thickness: observable,
-      direction: observable,
-      targetLength: observable,
-      tolerance: observable,
-      setSelected: action,
-      addReferencingConstraint: action,
-      removeReferencingConstraint: action,
-      setVisible: action,
-      cleanup: action,
-      evaluateAndStoreResiduals: action,
-    })
+    makeAutoObservable(this, {}, { autoBind: true })
 
     this.pointA.addConnectedLine(this)
     this.pointB.addConnectedLine(this)
@@ -471,10 +450,6 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
   // ============================================================================
   // Utility methods
   // ============================================================================
-
-  setVisible(visible: boolean): void {
-    this.isVisible = visible
-  }
 
   cleanup(): void {
     this.pointA.removeConnectedLine(this)

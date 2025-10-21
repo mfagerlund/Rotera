@@ -8,7 +8,7 @@ import {quaternionNormalizationResidual} from '../../optimization/residuals/quat
 import type { ISerializable } from '../serialization/ISerializable'
 import type { SerializationContext } from '../serialization/SerializationContext'
 import type { ViewpointDto } from './ViewpointDto'
-import {makeObservable, observable, action} from 'mobx'
+import {makeAutoObservable} from 'mobx'
 
 export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint, ISerializable<ViewpointDto> {
     selected = false
@@ -89,42 +89,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
         this.opacity = opacity
         this.color = color
 
-        makeObservable(this, {
-            selected: observable,
-            isPoseLocked: observable,
-            lastResiduals: observable,
-            name: observable,
-            filename: observable,
-            url: observable,
-            imageWidth: observable,
-            imageHeight: observable,
-            focalLength: observable,
-            principalPointX: observable,
-            principalPointY: observable,
-            skewCoefficient: observable,
-            aspectRatio: observable,
-            radialDistortion: observable,
-            tangentialDistortion: observable,
-            position: observable,
-            rotation: observable,
-            calibrationAccuracy: observable,
-            calibrationDate: observable,
-            calibrationNotes: observable,
-            isProcessed: observable,
-            processingNotes: observable,
-            metadata: observable,
-            isVisible: observable,
-            opacity: observable,
-            color: observable,
-            imagePoints: observable,
-            setSelected: action,
-            setRotationEuler: action,
-            addImagePoint: action,
-            removeImagePoint: action,
-            setVisible: action,
-            setPoseLocked: action,
-            applyOptimizationResultFromValueMap: action,
-        })
+        makeAutoObservable(this, {}, { autoBind: true })
     }
 
     // ============================================================================

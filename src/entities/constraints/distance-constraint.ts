@@ -10,6 +10,7 @@ import {
 } from './base-constraint'
 import type { SerializationContext } from '../serialization/SerializationContext'
 import type { DistanceConstraintDto } from './ConstraintDto'
+import {makeObservable, observable, override} from 'mobx'
 
 export class DistanceConstraint extends Constraint {
   readonly pointA: WorldPoint
@@ -29,6 +30,11 @@ export class DistanceConstraint extends Constraint {
     this.pointB = pointB
     this.targetDistance = targetDistance
     this.tolerance = tolerance
+
+    makeObservable(this, {
+      targetDistance: observable,
+      tolerance: observable,
+    })
 
     // Register with points
     pointA.addReferencingConstraint(this)

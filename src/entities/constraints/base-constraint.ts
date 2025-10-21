@@ -8,7 +8,7 @@ import type { Line } from '../line'
 import type { ISerializable } from '../serialization/ISerializable'
 import type { SerializationContext } from '../serialization/SerializationContext'
 import type { ConstraintDto } from './ConstraintDto'
-import {makeObservable, observable, action} from 'mobx'
+import {makeObservable, observable} from 'mobx'
 
 // Helper function to get coordinates from WorldPoint
 // Returns optimizedXyz if available, otherwise undefined
@@ -49,7 +49,6 @@ export abstract class Constraint implements ISelectable, IValidatable, IResidual
       isVisible: observable,
       isEnabled: observable,
       name: observable,
-      setSelected: action,
     })
   }
 

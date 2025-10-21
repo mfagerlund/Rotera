@@ -3,7 +3,7 @@ import type {IWorldPoint, IImagePoint, IViewpoint} from '../interfaces'
 import type { ISerializable } from '../serialization/ISerializable'
 import type { SerializationContext } from '../serialization/SerializationContext'
 import type { ImagePointDto } from './ImagePointDto'
-import {makeObservable, observable, action} from 'mobx'
+import {makeAutoObservable} from 'mobx'
 
 export class ImagePoint implements ISelectable, IImagePoint, ISerializable<ImagePointDto> {
     selected = false
@@ -30,19 +30,7 @@ export class ImagePoint implements ISelectable, IImagePoint, ISerializable<Image
         this.isVisible = isVisible
         this.confidence = confidence
 
-        makeObservable(this, {
-            selected: observable,
-            worldPoint: observable,
-            viewpoint: observable,
-            u: observable,
-            v: observable,
-            isVisible: observable,
-            confidence: observable,
-            setSelected: action,
-            setPosition: action,
-            setVisible: action,
-            setConfidence: action,
-        })
+        makeAutoObservable(this, {}, { autoBind: true })
     }
 
     static create(

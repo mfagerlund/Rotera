@@ -143,8 +143,8 @@ export function useDomainOperations(
 
   const updateLine = (line: Line, updates: LineUpdates) => {
     if (!project) return
-    if (updates.name) line.name = updates.name
-    if (updates.color) line.color = updates.color
+    if (updates.name !== undefined) line.name = updates.name
+    if (updates.color !== undefined) line.color = updates.color
     if (updates.isVisible !== undefined) line.isVisible = updates.isVisible
   }
 

@@ -3,7 +3,7 @@ import type {Line} from '../line'
 import type {Viewpoint} from '../viewpoint'
 import type {IImagePoint} from '../interfaces'
 import type {Constraint} from '../constraints'
-import {makeObservable, observable, action} from 'mobx'
+import {makeAutoObservable} from 'mobx'
 
 export type MeasurementUnits = 'meters' | 'feet' | 'inches'
 export type Theme = 'dark' | 'light'
@@ -102,41 +102,7 @@ export class Project {
         this.visualFeedbackLevel = visualFeedbackLevel
         this.imageSortOrder = imageSortOrder
 
-        makeObservable(this, {
-            name: observable,
-            worldPoints: observable,
-            lines: observable,
-            viewpoints: observable,
-            imagePoints: observable,
-            constraints: observable,
-            showPointNames: observable,
-            autoSave: observable,
-            theme: observable,
-            measurementUnits: observable,
-            precisionDigits: observable,
-            showConstraintGlyphs: observable,
-            showMeasurements: observable,
-            autoOptimize: observable,
-            gridVisible: observable,
-            snapToGrid: observable,
-            defaultWorkspace: observable,
-            showConstructionGeometry: observable,
-            enableSmartSnapping: observable,
-            constraintPreview: observable,
-            visualFeedbackLevel: observable,
-            imageSortOrder: observable,
-            addWorldPoint: action,
-            removeWorldPoint: action,
-            addLine: action,
-            removeLine: action,
-            addViewpoint: action,
-            removeViewpoint: action,
-            addImagePoint: action,
-            removeImagePoint: action,
-            addConstraint: action,
-            removeConstraint: action,
-            clear: action,
-        })
+        makeAutoObservable(this, {}, { autoBind: true })
     }
 
     static create(name: string): Project {

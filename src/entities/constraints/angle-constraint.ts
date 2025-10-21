@@ -11,6 +11,7 @@ import {
 } from './base-constraint'
 import type { SerializationContext } from '../serialization/SerializationContext'
 import type { AngleConstraintDto } from './ConstraintDto'
+import {makeObservable, observable} from 'mobx'
 
 export class AngleConstraint extends Constraint {
   readonly pointA: WorldPoint
@@ -33,6 +34,11 @@ export class AngleConstraint extends Constraint {
     this.pointC = pointC
     this.targetAngle = targetAngle
     this.tolerance = tolerance
+
+    makeObservable(this, {
+      targetAngle: observable,
+      tolerance: observable,
+    })
 
     // Register with points
     pointA.addReferencingConstraint(this)

@@ -296,11 +296,16 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
       const parentRect = parent.getBoundingClientRect()
 
       // For object-fit: contain, we need to calculate the actual rendered image size
-      // The image element itself has the container dimensions, but the visible image is scaled
       const imgElement = imgRef.current
       const containerWidth = parentRect.width
       const containerHeight = parentRect.height
-      const [imageNaturalWidth, imageNaturalHeight] = [image.imageWidth, image.imageHeight]
+
+      // Use naturalWidth/naturalHeight if available, otherwise fall back to entity dimensions
+      const imageNaturalWidth = imgElement.naturalWidth || image.imageWidth
+      const imageNaturalHeight = imgElement.naturalHeight || image.imageHeight
+
+      // Skip if image hasn't loaded yet
+      if (imageNaturalWidth === 0 || imageNaturalHeight === 0) return
 
       // Calculate the scale factor for object-fit: contain
       const scaleX = containerWidth / imageNaturalWidth
@@ -323,11 +328,16 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
       })
     }
 
-    updateBounds()
+    // Initial update
+    const timer = setTimeout(updateBounds, 0)
 
     const imgElement = imgRef.current
     if (imgElement) {
       imgElement.addEventListener('load', updateBounds)
+      // If image is already complete, update immediately
+      if (imgElement.complete) {
+        updateBounds()
+      }
     }
 
     const observer = new ResizeObserver(updateBounds)
@@ -336,12 +346,13 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
     }
 
     return () => {
+      clearTimeout(timer)
       observer.disconnect()
       if (imgElement) {
         imgElement.removeEventListener('load', updateBounds)
       }
     }
-  }, [thumbnailHeight, image, image.imageWidth, image.imageHeight])
+  }, [thumbnailHeight, image, image.imageWidth, image.imageHeight, image.imagePoints.size])
 
   return (
     <div
@@ -490,8 +501,13 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
               // This accounts for centering and actual size
               if (imgBounds.width === 0 || imgBounds.height === 0) return null
 
-              const [imgWidth, imgHeight] = [image.imageWidth, image.imageHeight]
-              // Calculate position as percentage of rendered image size, plus offset for centering
+              // Use naturalWidth from DOM if available
+              const imgElement = imgRef.current
+              const imgWidth = imgElement?.naturalWidth || image.imageWidth
+              const imgHeight = imgElement?.naturalHeight || image.imageHeight
+
+              // imagePoint.u and imagePoint.v are in pixel coordinates (0 to imgWidth, 0 to imgHeight)
+              // We need to normalize to 0-1, then scale to rendered size, then add centering offset
               const thumbnailX = imgBounds.offsetX + (imagePoint.u / imgWidth) * imgBounds.width
               const thumbnailY = imgBounds.offsetY + (imagePoint.v / imgHeight) * imgBounds.height
 
