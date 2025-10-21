@@ -238,4 +238,12 @@ export class Project {
             constraints: this.constraints.size
         }
     }
+
+    get version(): number {
+        return this.worldPoints.version +
+               this.lines.version +
+               this.viewpoints.version +
+               this.imagePoints.version +
+               this.constraints.version
+    }
 }

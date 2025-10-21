@@ -102,36 +102,29 @@ export const MainLayout: React.FC = () => {
   const [constructionPreview, setConstructionPreview] = useState<ConstructionPreview | null>(null)
 
   // Derived data from project (convert Sets to Maps for lookup)
+  // No useMemo - just rebuild on every render (fast enough for typical dataset sizes)
   const currentImage = currentViewpoint
-  const worldPointsMap = useMemo(() => {
-    const map = new Map<string, WorldPoint>()
-    if (project?.worldPoints) {
-      for (const wp of project.worldPoints) {
-        map.set(getEntityKey(wp), wp)
-      }
+  const worldPointsMap = new Map<string, WorldPoint>()
+  if (project?.worldPoints) {
+    for (const wp of project.worldPoints) {
+      worldPointsMap.set(getEntityKey(wp), wp)
     }
-    return map
-  }, [project?.worldPoints.version])
+  }
 
-  const linesMap = useMemo(() => {
-    const map = new Map<string, LineEntity>()
-    if (project?.lines) {
-      for (const line of project.lines) {
-        map.set(getEntityKey(line), line)
-      }
+  const linesMap = new Map<string, LineEntity>()
+  if (project?.lines) {
+    for (const line of project.lines) {
+      linesMap.set(getEntityKey(line), line)
     }
-    return map
-  }, [project?.lines.version])
+  }
 
-  const viewpointsMap = useMemo(() => {
-    const map = new Map<string, Viewpoint>()
-    if (project?.viewpoints) {
-      for (const vp of project.viewpoints) {
-        map.set(getEntityKey(vp), vp)
-      }
+  console.log('viewpointsMap recalculating, count:', project?.viewpoints.size)
+  const viewpointsMap = new Map<string, Viewpoint>()
+  if (project?.viewpoints) {
+    for (const vp of project.viewpoints) {
+      viewpointsMap.set(getEntityKey(vp), vp)
     }
-    return map
-  }, [project?.viewpoints.version])
+  }
 
   const constraints = Array.from(project?.constraints || [])
 

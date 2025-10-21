@@ -17,6 +17,7 @@ const STORAGE_KEY = 'pictorigo-project'
  */
 export const useEntityProject = () => {
   const [entityProject, setEntityProject] = useState<Project | null>(null)
+  const [trigger, setTrigger] = useState(0)
   const [currentViewpoint, setCurrentViewpoint] = useState<Viewpoint | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -51,7 +52,7 @@ export const useEntityProject = () => {
     if (entityProject && !isLoading) {
       saveToLocalStorage(entityProject, STORAGE_KEY)
     }
-  }, [entityProject, isLoading])
+  }, [entityProject?.version, isLoading])
 
   const saveProject = () => {
     if (entityProject) {
@@ -61,7 +62,10 @@ export const useEntityProject = () => {
 
   return {
     project: entityProject,
-    setProject: setEntityProject,
+    setProject: (p: Project) => {
+      setEntityProject(p)
+      setTrigger(prev => prev + 1)
+    },
     saveProject,
     currentViewpoint,
     setCurrentViewpoint,

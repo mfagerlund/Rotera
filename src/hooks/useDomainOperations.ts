@@ -85,20 +85,20 @@ export function useDomainOperations(
     })
 
     project.addWorldPoint(point)
-    setProject({ ...project } as Project)
+    setProject(project)
     return point
   }
 
   const renameWorldPoint = (worldPoint: WorldPoint, name: string) => {
     if (!project) return
     worldPoint.name = name
-    setProject({ ...project } as Project)
+    setProject(project)
   }
 
   const deleteWorldPoint = (worldPoint: WorldPoint) => {
     if (!project) return
     project.removeWorldPoint(worldPoint)
-    setProject({ ...project } as Project)
+    setProject(project)
   }
 
   const createLine = (pointA: WorldPoint, pointB: WorldPoint, options?: LineOptions): Line => {
@@ -112,7 +112,7 @@ export function useDomainOperations(
     )
 
     project.addLine(line)
-    setProject({ ...project } as Project)
+    setProject(project)
     return line
   }
 
@@ -121,14 +121,14 @@ export function useDomainOperations(
     if (updates.name) line.name = updates.name
     if (updates.color) line.color = updates.color
     if (updates.isVisible !== undefined) line.isVisible = updates.isVisible
-    setProject({ ...project } as Project)
+    setProject(project)
   }
 
   const deleteLine = (line: Line) => {
     if (!project) return
     line.cleanup()
     project.removeLine(line)
-    setProject({ ...project } as Project)
+    setProject(project)
   }
 
   const addImage = async (file: File) => {
@@ -156,20 +156,23 @@ export function useDomainOperations(
 
     project.addViewpoint(viewpoint)
     console.log('addImage: Added to project, viewpoint count:', project.viewpoints.size)
-    setProject({ ...project } as Project)
+    setProject(project)
     console.log('addImage: Project updated')
   }
 
   const renameImage = (viewpoint: Viewpoint, name: string) => {
     if (!project) return
     viewpoint.name = name
-    setProject({ ...project } as Project)
+    setProject(project)
   }
 
   const deleteImage = (viewpoint: Viewpoint) => {
     if (!project) return
+    console.log('deleteImage: Before delete, count:', project.viewpoints.size, 'version:', project.version)
     project.removeViewpoint(viewpoint)
-    setProject({ ...project } as Project)
+    console.log('deleteImage: After delete, count:', project.viewpoints.size, 'version:', project.version)
+    setProject(project)
+    console.log('deleteImage: Called setProject')
   }
 
   const getImagePointCount = (viewpoint: Viewpoint): number => {
@@ -193,13 +196,13 @@ export function useDomainOperations(
     viewpoint.addImagePoint(imagePoint)
     worldPoint.addImagePoint(imagePoint)
     project.addImagePoint(imagePoint)
-    setProject({ ...project } as Project)
+    setProject(project)
   }
 
   const moveImagePoint = (imagePoint: ImagePoint, u: number, v: number) => {
     if (!project) return
     imagePoint.setPosition(u, v)
-    setProject({ ...project } as Project)
+    setProject(project)
   }
 
   const getSelectedPointsInImage = (viewpoint: Viewpoint): WorldPoint[] => {
@@ -214,31 +217,31 @@ export function useDomainOperations(
   const addConstraint = (constraint: Constraint) => {
     if (!project) return
     project.addConstraint(constraint)
-    setProject({ ...project } as Project)
+    setProject(project)
   }
 
   const updateConstraint = (constraint: Constraint, updates: ConstraintUpdates) => {
     if (!project) return
     // TODO: Implement constraint updates
-    setProject({ ...project } as Project)
+    setProject(project)
   }
 
   const deleteConstraint = (constraint: Constraint) => {
     if (!project) return
     project.removeConstraint(constraint)
-    setProject({ ...project } as Project)
+    setProject(project)
   }
 
   const toggleConstraint = (constraint: Constraint) => {
     if (!project) return
     constraint.isEnabled = !constraint.isEnabled
-    setProject({ ...project } as Project)
+    setProject(project)
   }
 
   const clearProject = () => {
     if (!project) return
     project.clear()
-    setProject({ ...project } as Project)
+    setProject(project)
   }
 
   const exportOptimizationDto = (): OptimizationExportDto | null => {
