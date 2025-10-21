@@ -9,6 +9,8 @@ import {
   Constraint,
   type ConstraintEvaluation
 } from './base-constraint'
+import type { SerializationContext } from '../serialization/SerializationContext'
+import type { EqualAnglesConstraintDto } from './ConstraintDto'
 
 export class EqualAnglesConstraint extends Constraint {
   readonly angleTriplets: [WorldPoint, WorldPoint, WorldPoint][]
@@ -183,5 +185,73 @@ export class EqualAnglesConstraint extends Constraint {
     }
 
     return residuals
+  }
+
+  serialize(context: SerializationContext): EqualAnglesConstraintDto {
+    const id = context.getEntityId(this) || context.registerEntity(this)
+
+    if (this.angleTriplets.length !== 2) {
+      throw new Error(
+        `EqualAnglesConstraint "${this.name}": Cannot serialize - DTO only supports exactly 2 angle triplets, but constraint has ${this.angleTriplets.length}`
+      )
+    }
+
+    const angle1 = this.angleTriplets[0]
+    const angle2 = this.angleTriplets[1]
+
+    const angle1PointAId = context.getEntityId(angle1[0])
+    const angle1VertexId = context.getEntityId(angle1[1])
+    const angle1PointCId = context.getEntityId(angle1[2])
+    const angle2PointAId = context.getEntityId(angle2[0])
+    const angle2VertexId = context.getEntityId(angle2[1])
+    const angle2PointCId = context.getEntityId(angle2[2])
+
+    if (!angle1PointAId || !angle1VertexId || !angle1PointCId ||
+        !angle2PointAId || !angle2VertexId || !angle2PointCId) {
+      throw new Error(
+        `EqualAnglesConstraint "${this.name}": Cannot serialize - all points must be serialized first`
+      )
+    }
+
+    return {
+      id,
+      type: 'equal_angles',
+      name: this.name,
+      angle1PointAId,
+      angle1VertexId,
+      angle1PointCId,
+      angle2PointAId,
+      angle2VertexId,
+      angle2PointCId,
+      tolerance: this.tolerance
+    }
+  }
+
+  static deserialize(dto: EqualAnglesConstraintDto, context: SerializationContext): EqualAnglesConstraint {
+    const angle1PointA = context.getEntity<WorldPoint>(dto.angle1PointAId)
+    const angle1Vertex = context.getEntity<WorldPoint>(dto.angle1VertexId)
+    const angle1PointC = context.getEntity<WorldPoint>(dto.angle1PointCId)
+    const angle2PointA = context.getEntity<WorldPoint>(dto.angle2PointAId)
+    const angle2Vertex = context.getEntity<WorldPoint>(dto.angle2VertexId)
+    const angle2PointC = context.getEntity<WorldPoint>(dto.angle2PointCId)
+
+    if (!angle1PointA || !angle1Vertex || !angle1PointC ||
+        !angle2PointA || !angle2Vertex || !angle2PointC) {
+      throw new Error(
+        `EqualAnglesConstraint "${dto.name}": Cannot deserialize - points not found in context`
+      )
+    }
+
+    const constraint = EqualAnglesConstraint.create(
+      dto.name,
+      [
+        [angle1PointA, angle1Vertex, angle1PointC],
+        [angle2PointA, angle2Vertex, angle2PointC]
+      ],
+      { tolerance: dto.tolerance }
+    )
+
+    context.registerEntity(constraint, dto.id)
+    return constraint
   }
 }

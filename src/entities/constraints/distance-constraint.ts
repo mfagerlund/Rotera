@@ -1,5 +1,3 @@
-// Distance constraint between two points
-
 import type { ValidationResult } from '../../validation/validator'
 import type { ValueMap } from '../../optimization/IOptimizable'
 import { V, type Value } from 'scalar-autograd'
@@ -10,6 +8,8 @@ import {
   type ConstraintRepository,
   type ConstraintEvaluation
 } from './base-constraint'
+import type { SerializationContext } from '../serialization/SerializationContext'
+import type { DistanceConstraintDto } from './ConstraintDto'
 
 export class DistanceConstraint extends Constraint {
   readonly pointA: WorldPoint
@@ -111,5 +111,50 @@ export class DistanceConstraint extends Constraint {
     const residual = V.sub(dist, V.C(this.targetDistance))
 
     return [residual]
+  }
+
+  serialize(context: SerializationContext): DistanceConstraintDto {
+    const id = context.getEntityId(this) || context.registerEntity(this)
+
+    const pointAId = context.getEntityId(this.pointA)
+    const pointBId = context.getEntityId(this.pointB)
+
+    if (!pointAId || !pointBId) {
+      throw new Error(
+        `DistanceConstraint "${this.name}": Cannot serialize - points must be serialized first`
+      )
+    }
+
+    return {
+      id,
+      type: 'distance_point_point',
+      name: this.name,
+      pointAId,
+      pointBId,
+      targetDistance: this.targetDistance,
+      tolerance: this.tolerance
+    }
+  }
+
+  static deserialize(dto: DistanceConstraintDto, context: SerializationContext): DistanceConstraint {
+    const pointA = context.getEntity<WorldPoint>(dto.pointAId)
+    const pointB = context.getEntity<WorldPoint>(dto.pointBId)
+
+    if (!pointA || !pointB) {
+      throw new Error(
+        `DistanceConstraint "${dto.name}": Cannot deserialize - points not found in context`
+      )
+    }
+
+    const constraint = DistanceConstraint.create(
+      dto.name,
+      pointA,
+      pointB,
+      dto.targetDistance,
+      { tolerance: dto.tolerance }
+    )
+
+    context.registerEntity(constraint, dto.id)
+    return constraint
   }
 }

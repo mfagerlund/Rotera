@@ -9,6 +9,8 @@ import {
   Constraint,
   type ConstraintEvaluation
 } from './base-constraint'
+import type { SerializationContext } from '../serialization/SerializationContext'
+import type { AngleConstraintDto } from './ConstraintDto'
 
 export class AngleConstraint extends Constraint {
   readonly pointA: WorldPoint
@@ -123,5 +125,54 @@ export class AngleConstraint extends Constraint {
     const residual = V.sub(actualAngle, V.C(targetAngleRadians))
 
     return [residual]
+  }
+
+  serialize(context: SerializationContext): AngleConstraintDto {
+    const id = context.getEntityId(this) || context.registerEntity(this)
+
+    const pointAId = context.getEntityId(this.pointA)
+    const vertexId = context.getEntityId(this.vertex)
+    const pointCId = context.getEntityId(this.pointC)
+
+    if (!pointAId || !vertexId || !pointCId) {
+      throw new Error(
+        `AngleConstraint "${this.name}": Cannot serialize - points must be serialized first`
+      )
+    }
+
+    return {
+      id,
+      type: 'angle_point_point_point',
+      name: this.name,
+      pointAId,
+      vertexId,
+      pointCId,
+      targetAngle: this.targetAngle,
+      tolerance: this.tolerance
+    }
+  }
+
+  static deserialize(dto: AngleConstraintDto, context: SerializationContext): AngleConstraint {
+    const pointA = context.getEntity<WorldPoint>(dto.pointAId)
+    const vertex = context.getEntity<WorldPoint>(dto.vertexId)
+    const pointC = context.getEntity<WorldPoint>(dto.pointCId)
+
+    if (!pointA || !vertex || !pointC) {
+      throw new Error(
+        `AngleConstraint "${dto.name}": Cannot deserialize - points not found in context`
+      )
+    }
+
+    const constraint = AngleConstraint.create(
+      dto.name,
+      pointA,
+      vertex,
+      pointC,
+      dto.targetAngle,
+      { tolerance: dto.tolerance }
+    )
+
+    context.registerEntity(constraint, dto.id)
+    return constraint
   }
 }

@@ -1,9 +1,11 @@
-// Consolidated Line domain class
 import type { ISelectable, SelectableType } from '../../types/selectable'
 import type { IResidualProvider, ValueMap } from '../../optimization/IOptimizable'
 import { V, Value } from 'scalar-autograd'
 import type { WorldPoint } from '../world-point'
 import type { IConstraint, ILine, IWorldPoint } from '../interfaces'
+import type { ISerializable } from '../serialization/ISerializable'
+import type { SerializationContext } from '../serialization/SerializationContext'
+import type { LineDto } from './LineDto'
 
 // Direction constraint enum for lines
 export type LineDirection =
@@ -13,8 +15,7 @@ export type LineDirection =
   | 'x-aligned'      // Constrained to X-axis direction
   | 'z-aligned'      // Constrained to Z-axis direction
 
-// Line implements ILine interface for WorldPoint compatibility
-export class Line implements ISelectable, ILine, IResidualProvider {
+export class Line implements ISelectable, ILine, IResidualProvider, ISerializable<LineDto> {
   lastResiduals: number[] = []
   selected = false
   referencingConstraints: Set<IConstraint> = new Set()
@@ -535,5 +536,57 @@ export class Line implements ISelectable, ILine, IResidualProvider {
         ? Math.abs(currentLength - this.targetLength)
         : null,
     }
+  }
+
+  serialize(context: SerializationContext): LineDto {
+    const id = context.getEntityId(this) || context.registerEntity(this)
+
+    const pointAId = context.getEntityId(this.pointA)
+    const pointBId = context.getEntityId(this.pointB)
+
+    if (!pointAId || !pointBId) {
+      throw new Error(
+        `Line "${this.name}": Cannot serialize - endpoints must be serialized first. ` +
+        `Missing: ${!pointAId ? this.pointA.name : ''}${!pointAId && !pointBId ? ', ' : ''}${!pointBId ? this.pointB.name : ''}`
+      )
+    }
+
+    return {
+      id,
+      name: this.name,
+      pointAId,
+      pointBId,
+      color: this.color,
+      isVisible: this.isVisible,
+      isConstruction: this.isConstruction,
+      lineStyle: this.lineStyle,
+      thickness: this.thickness,
+      direction: this.direction,
+      targetLength: this.targetLength,
+      tolerance: this.tolerance
+    }
+  }
+
+  static deserialize(dto: LineDto, context: SerializationContext): Line {
+    const pointA = context.getEntity<WorldPoint>(dto.pointAId)
+    const pointB = context.getEntity<WorldPoint>(dto.pointBId)
+
+    if (!pointA || !pointB) {
+      throw new Error(`Line "${dto.name}": endpoints not found in context (${dto.pointAId}, ${dto.pointBId})`)
+    }
+
+    const line = Line.create(dto.name, pointA, pointB, {
+      color: dto.color,
+      isVisible: dto.isVisible,
+      isConstruction: dto.isConstruction,
+      lineStyle: dto.lineStyle,
+      thickness: dto.thickness,
+      direction: dto.direction,
+      targetLength: dto.targetLength,
+      tolerance: dto.tolerance
+    })
+
+    context.registerEntity(line, dto.id)
+    return line
   }
 }

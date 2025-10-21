@@ -111,7 +111,7 @@ export const MainLayout: React.FC = () => {
       }
     }
     return map
-  }, [project?.worldPoints])
+  }, [project?.worldPoints.version])
 
   const linesMap = useMemo(() => {
     const map = new Map<string, LineEntity>()
@@ -121,7 +121,7 @@ export const MainLayout: React.FC = () => {
       }
     }
     return map
-  }, [project?.lines])
+  }, [project?.lines.version])
 
   const viewpointsMap = useMemo(() => {
     const map = new Map<string, Viewpoint>()
@@ -131,7 +131,7 @@ export const MainLayout: React.FC = () => {
       }
     }
     return map
-  }, [project?.viewpoints])
+  }, [project?.viewpoints.version])
 
   const constraints = Array.from(project?.constraints || [])
 

@@ -3,6 +3,7 @@ import type {Line} from '../line'
 import type {Viewpoint} from '../viewpoint'
 import type {IImagePoint} from '../interfaces'
 import type {Constraint} from '../constraints'
+import {ObservableSet} from '../../utils/ObservableSet'
 
 export type MeasurementUnits = 'meters' | 'feet' | 'inches'
 export type Theme = 'dark' | 'light'
@@ -31,11 +32,11 @@ export type ProjectSettings = Pick<Project,
 
 export class Project {
     name: string
-    worldPoints: Set<WorldPoint>
-    lines: Set<Line>
-    viewpoints: Set<Viewpoint>
-    imagePoints: Set<IImagePoint>
-    constraints: Set<Constraint>
+    worldPoints: ObservableSet<WorldPoint>
+    lines: ObservableSet<Line>
+    viewpoints: ObservableSet<Viewpoint>
+    imagePoints: ObservableSet<IImagePoint>
+    constraints: ObservableSet<Constraint>
     
     showPointNames: boolean
     autoSave: boolean
@@ -56,11 +57,11 @@ export class Project {
 
     private constructor(
         name: string,
-        worldPoints: Set<WorldPoint>,
-        lines: Set<Line>,
-        viewpoints: Set<Viewpoint>,
-        imagePoints: Set<IImagePoint>,
-        constraints: Set<Constraint>,
+        worldPoints: ObservableSet<WorldPoint>,
+        lines: ObservableSet<Line>,
+        viewpoints: ObservableSet<Viewpoint>,
+        imagePoints: ObservableSet<IImagePoint>,
+        constraints: ObservableSet<Constraint>,
         showPointNames: boolean,
         autoSave: boolean,
         theme: Theme,
@@ -106,11 +107,11 @@ export class Project {
         const now = new Date().toISOString()
         return new Project(
             name,
-            new Set<WorldPoint>(),
-            new Set<Line>(),
-            new Set<Viewpoint>(),
-            new Set<IImagePoint>(),
-            new Set<Constraint>(),
+            new ObservableSet<WorldPoint>(),
+            new ObservableSet<Line>(),
+            new ObservableSet<Viewpoint>(),
+            new ObservableSet<IImagePoint>(),
+            new ObservableSet<Constraint>(),
             true,
             true,
             'dark',
@@ -131,11 +132,11 @@ export class Project {
 
     static createFull(
         name: string,
-        worldPoints: Set<WorldPoint>,
-        lines: Set<Line>,
-        viewpoints: Set<Viewpoint>,
-        imagePoints: Set<IImagePoint>,
-        constraints: Set<Constraint>,
+        worldPoints: ObservableSet<WorldPoint>,
+        lines: ObservableSet<Line>,
+        viewpoints: ObservableSet<Viewpoint>,
+        imagePoints: ObservableSet<IImagePoint>,
+        constraints: ObservableSet<Constraint>,
         showPointNames: boolean,
         autoSave: boolean,
         theme: Theme,

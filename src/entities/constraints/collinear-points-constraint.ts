@@ -10,6 +10,8 @@ import {
   type ConstraintEvaluation,
   getPointCoordinates
 } from './base-constraint'
+import type { SerializationContext } from '../serialization/SerializationContext'
+import type { CollinearPointsConstraintDto } from './ConstraintDto'
 
 export class CollinearPointsConstraint extends Constraint {
   readonly points: WorldPoint[]
@@ -154,5 +156,48 @@ export class CollinearPointsConstraint extends Constraint {
     const cross = Vec3.cross(v1, v2)
 
     return [cross.x, cross.y, cross.z]
+  }
+
+  serialize(context: SerializationContext): CollinearPointsConstraintDto {
+    const id = context.getEntityId(this) || context.registerEntity(this)
+
+    const pointIds = this.points.map(point => {
+      const pointId = context.getEntityId(point)
+      if (!pointId) {
+        throw new Error(
+          `CollinearPointsConstraint "${this.name}": Cannot serialize - all points must be serialized first`
+        )
+      }
+      return pointId
+    })
+
+    return {
+      id,
+      type: 'collinear_points',
+      name: this.name,
+      pointIds,
+      tolerance: this.tolerance
+    }
+  }
+
+  static deserialize(dto: CollinearPointsConstraintDto, context: SerializationContext): CollinearPointsConstraint {
+    const points = dto.pointIds.map(pointId => {
+      const point = context.getEntity<WorldPoint>(pointId)
+      if (!point) {
+        throw new Error(
+          `CollinearPointsConstraint "${dto.name}": Cannot deserialize - point ${pointId} not found in context`
+        )
+      }
+      return point
+    })
+
+    const constraint = CollinearPointsConstraint.create(
+      dto.name,
+      points,
+      { tolerance: dto.tolerance }
+    )
+
+    context.registerEntity(constraint, dto.id)
+    return constraint
   }
 }

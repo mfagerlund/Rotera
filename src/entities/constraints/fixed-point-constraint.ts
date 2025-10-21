@@ -11,6 +11,8 @@ import {
   type ConstraintEvaluation,
   getPointCoordinates
 } from './base-constraint'
+import type { SerializationContext } from '../serialization/SerializationContext'
+import type { FixedPointConstraintDto } from './ConstraintDto'
 
 export class FixedPointConstraint extends Constraint {
   readonly point: WorldPoint
@@ -127,5 +129,46 @@ export class FixedPointConstraint extends Constraint {
     const dz = V.sub(pointVec.z, V.C(targetXyz[2]))
 
     return [dx, dy, dz]
+  }
+
+  serialize(context: SerializationContext): FixedPointConstraintDto {
+    const id = context.getEntityId(this) || context.registerEntity(this)
+
+    const pointId = context.getEntityId(this.point)
+
+    if (!pointId) {
+      throw new Error(
+        `FixedPointConstraint "${this.name}": Cannot serialize - point must be serialized first`
+      )
+    }
+
+    return {
+      id,
+      type: 'fixed_point',
+      name: this.name,
+      pointId,
+      targetPosition: this.targetXyz,
+      tolerance: this.tolerance
+    }
+  }
+
+  static deserialize(dto: FixedPointConstraintDto, context: SerializationContext): FixedPointConstraint {
+    const point = context.getEntity<WorldPoint>(dto.pointId)
+
+    if (!point) {
+      throw new Error(
+        `FixedPointConstraint "${dto.name}": Cannot deserialize - point not found in context`
+      )
+    }
+
+    const constraint = FixedPointConstraint.create(
+      dto.name,
+      point,
+      dto.targetPosition,
+      { tolerance: dto.tolerance }
+    )
+
+    context.registerEntity(constraint, dto.id)
+    return constraint
   }
 }

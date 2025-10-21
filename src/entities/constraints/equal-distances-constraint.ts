@@ -5,10 +5,13 @@ import type { ValueMap } from '../../optimization/IOptimizable'
 import { V, type Value } from 'scalar-autograd'
 import { ValidationHelpers } from '../../validation/validator'
 import type { WorldPoint } from '../world-point/WorldPoint'
+import type { Line } from '../line/Line'
 import {
   Constraint,
   type ConstraintEvaluation
 } from './base-constraint'
+import type { SerializationContext } from '../serialization/SerializationContext'
+import type { EqualDistancesConstraintDto } from './ConstraintDto'
 
 export class EqualDistancesConstraint extends Constraint {
   readonly distancePairs: [WorldPoint, WorldPoint][]
@@ -175,5 +178,67 @@ export class EqualDistancesConstraint extends Constraint {
     }
 
     return residuals
+  }
+
+  serialize(context: SerializationContext): EqualDistancesConstraintDto {
+    const id = context.getEntityId(this) || context.registerEntity(this)
+
+    if (this.distancePairs.length !== 2) {
+      throw new Error(
+        `EqualDistancesConstraint "${this.name}": Cannot serialize - DTO only supports exactly 2 distance pairs, but constraint has ${this.distancePairs.length}`
+      )
+    }
+
+    const findLineForPair = (pointA: WorldPoint, pointB: WorldPoint): string | null => {
+      for (const line of pointA.connectedLines) {
+        if ((line.pointA === pointA && line.pointB === pointB) ||
+            (line.pointA === pointB && line.pointB === pointA)) {
+          const lineId = context.getEntityId(line as Line)
+          if (lineId) return lineId
+        }
+      }
+      return null
+    }
+
+    const line1Id = findLineForPair(this.distancePairs[0][0], this.distancePairs[0][1])
+    const line2Id = findLineForPair(this.distancePairs[1][0], this.distancePairs[1][1])
+
+    if (!line1Id || !line2Id) {
+      throw new Error(
+        `EqualDistancesConstraint "${this.name}": Cannot serialize - distance pairs must correspond to Line entities that have been serialized`
+      )
+    }
+
+    return {
+      id,
+      type: 'equal_distances',
+      name: this.name,
+      line1Id,
+      line2Id,
+      tolerance: this.tolerance
+    }
+  }
+
+  static deserialize(dto: EqualDistancesConstraintDto, context: SerializationContext): EqualDistancesConstraint {
+    const line1 = context.getEntity<Line>(dto.line1Id)
+    const line2 = context.getEntity<Line>(dto.line2Id)
+
+    if (!line1 || !line2) {
+      throw new Error(
+        `EqualDistancesConstraint "${dto.name}": Cannot deserialize - lines not found in context`
+      )
+    }
+
+    const constraint = EqualDistancesConstraint.create(
+      dto.name,
+      [
+        [line1.pointA, line1.pointB],
+        [line2.pointA, line2.pointB]
+      ],
+      { tolerance: dto.tolerance }
+    )
+
+    context.registerEntity(constraint, dto.id)
+    return constraint
   }
 }

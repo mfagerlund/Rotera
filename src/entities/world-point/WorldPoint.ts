@@ -2,9 +2,12 @@ import type {ISelectable, SelectableType} from '../../types/selectable'
 import type {IValueMapContributor, ValueMap} from '../../optimization/IOptimizable'
 import type {IWorldPoint, ILine, IConstraint, IImagePoint} from '../interfaces'
 import {V, Value, Vec3} from 'scalar-autograd'
+import type { ISerializable } from '../serialization/ISerializable'
+import type { SerializationContext } from '../serialization/SerializationContext'
+import type { WorldPointDto } from './WorldPointDto'
 
 
-export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributor, IWorldPoint {
+export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributor, IWorldPoint, ISerializable<WorldPointDto> {
     selected = false
     connectedLines: Set<ILine> = new Set()
     referencingConstraints: Set<IConstraint> = new Set()
@@ -476,5 +479,31 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
             rmsResidual: residuals.length > 0 ? totalResidual / Math.sqrt(residuals.length) : 0,
             optimizedXyz: this.optimizedXyz
         }
+    }
+
+    serialize(context: SerializationContext): WorldPointDto {
+        const id = context.getEntityId(this) || context.registerEntity(this)
+
+        return {
+            id,
+            name: this.name,
+            lockedXyz: [...this.lockedXyz] as [number | null, number | null, number | null],
+            optimizedXyz: this.optimizedXyz ? [...this.optimizedXyz] as [number, number, number] : undefined,
+            color: this.color,
+            isVisible: this.isVisible
+        }
+    }
+
+    static deserialize(dto: WorldPointDto, context: SerializationContext): WorldPoint {
+        const point = WorldPoint.createFromSerialized(
+            dto.name,
+            dto.lockedXyz,
+            dto.color,
+            dto.isVisible,
+            dto.optimizedXyz
+        )
+
+        context.registerEntity(point, dto.id)
+        return point
     }
 }

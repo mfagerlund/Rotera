@@ -8,11 +8,14 @@ import { projectWorldPointToPixel } from '../../optimization/camera-projection'
 import { ValidationHelpers } from '../../validation/validator'
 import type { WorldPoint } from '../world-point'
 import type { Viewpoint } from '../viewpoint/Viewpoint'
+import type { ImagePoint } from '../imagePoint/ImagePoint'
 import {
   Constraint,
   type ConstraintRepository,
   type ConstraintEvaluation
 } from './base-constraint'
+import type { SerializationContext } from '../serialization/SerializationContext'
+import type { ProjectionConstraintDto } from './ConstraintDto'
 
 export class ProjectionConstraint extends Constraint {
   readonly worldPoint: WorldPoint
@@ -157,5 +160,68 @@ export class ProjectionConstraint extends Constraint {
     const residual_v = V.sub(projected_v, V.C(this.observedV))
 
     return [residual_u, residual_v]
+  }
+
+  serialize(context: SerializationContext): ProjectionConstraintDto {
+    const id = context.getEntityId(this) || context.registerEntity(this)
+
+    const pointId = context.getEntityId(this.worldPoint)
+    const viewpointId = context.getEntityId(this.viewpoint)
+
+    if (!pointId || !viewpointId) {
+      throw new Error(
+        `ProjectionConstraint "${this.name}": Cannot serialize - worldPoint and viewpoint must be serialized first`
+      )
+    }
+
+    let imagePointId: string | undefined
+    for (const imagePoint of this.worldPoint.imagePoints) {
+      if (imagePoint.viewpoint === this.viewpoint &&
+          Math.abs(imagePoint.u - this.observedU) < 0.001 &&
+          Math.abs(imagePoint.v - this.observedV) < 0.001) {
+        imagePointId = context.getEntityId(imagePoint as ImagePoint)
+        if (imagePointId) break
+      }
+    }
+
+    if (!imagePointId) {
+      throw new Error(
+        `ProjectionConstraint "${this.name}": Cannot serialize - no matching ImagePoint found for worldPoint "${this.worldPoint.name}" in viewpoint "${this.viewpoint.name}" at (${this.observedU}, ${this.observedV})`
+      )
+    }
+
+    return {
+      id,
+      type: 'projection',
+      name: this.name,
+      pointId,
+      imagePointId,
+      viewpointId,
+      tolerance: this.tolerance
+    }
+  }
+
+  static deserialize(dto: ProjectionConstraintDto, context: SerializationContext): ProjectionConstraint {
+    const worldPoint = context.getEntity<WorldPoint>(dto.pointId)
+    const imagePoint = context.getEntity<ImagePoint>(dto.imagePointId)
+    const viewpoint = context.getEntity<Viewpoint>(dto.viewpointId)
+
+    if (!worldPoint || !imagePoint || !viewpoint) {
+      throw new Error(
+        `ProjectionConstraint "${dto.name}": Cannot deserialize - worldPoint, imagePoint, or viewpoint not found in context`
+      )
+    }
+
+    const constraint = ProjectionConstraint.create(
+      dto.name,
+      worldPoint,
+      viewpoint,
+      imagePoint.u,
+      imagePoint.v,
+      { tolerance: dto.tolerance }
+    )
+
+    context.registerEntity(constraint, dto.id)
+    return constraint
   }
 }

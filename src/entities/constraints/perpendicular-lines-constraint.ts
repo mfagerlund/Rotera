@@ -9,6 +9,8 @@ import {
   type ConstraintRepository,
   type ConstraintEvaluation
 } from './base-constraint'
+import type { SerializationContext } from '../serialization/SerializationContext'
+import type { PerpendicularLinesConstraintDto } from './ConstraintDto'
 
 export class PerpendicularLinesConstraint extends Constraint {
   readonly lineA: Line
@@ -83,5 +85,48 @@ export class PerpendicularLinesConstraint extends Constraint {
   computeResiduals(valueMap: ValueMap): Value[] {
     console.warn(`Perpendicular lines constraint ${this.getName()}: not yet implemented - requires line support in valueMap`)
     return []
+  }
+
+  serialize(context: SerializationContext): PerpendicularLinesConstraintDto {
+    const id = context.getEntityId(this) || context.registerEntity(this)
+
+    const line1Id = context.getEntityId(this.lineA)
+    const line2Id = context.getEntityId(this.lineB)
+
+    if (!line1Id || !line2Id) {
+      throw new Error(
+        `PerpendicularLinesConstraint "${this.name}": Cannot serialize - lines must be serialized first`
+      )
+    }
+
+    return {
+      id,
+      type: 'perpendicular_lines',
+      name: this.name,
+      line1Id,
+      line2Id,
+      tolerance: this.tolerance
+    }
+  }
+
+  static deserialize(dto: PerpendicularLinesConstraintDto, context: SerializationContext): PerpendicularLinesConstraint {
+    const line1 = context.getEntity<Line>(dto.line1Id)
+    const line2 = context.getEntity<Line>(dto.line2Id)
+
+    if (!line1 || !line2) {
+      throw new Error(
+        `PerpendicularLinesConstraint "${dto.name}": Cannot deserialize - lines not found in context`
+      )
+    }
+
+    const constraint = PerpendicularLinesConstraint.create(
+      dto.name,
+      line1,
+      line2,
+      { tolerance: dto.tolerance }
+    )
+
+    context.registerEntity(constraint, dto.id)
+    return constraint
   }
 }

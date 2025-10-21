@@ -10,6 +10,8 @@ import {
   type ConstraintEvaluation,
   getPointCoordinates
 } from './base-constraint'
+import type { SerializationContext } from '../serialization/SerializationContext'
+import type { CoplanarPointsConstraintDto } from './ConstraintDto'
 
 export class CoplanarPointsConstraint extends Constraint {
   readonly points: WorldPoint[]
@@ -173,5 +175,48 @@ export class CoplanarPointsConstraint extends Constraint {
 
     // Should be 0 for coplanar points
     return [scalarTripleProduct]
+  }
+
+  serialize(context: SerializationContext): CoplanarPointsConstraintDto {
+    const id = context.getEntityId(this) || context.registerEntity(this)
+
+    const pointIds = this.points.map(point => {
+      const pointId = context.getEntityId(point)
+      if (!pointId) {
+        throw new Error(
+          `CoplanarPointsConstraint "${this.name}": Cannot serialize - all points must be serialized first`
+        )
+      }
+      return pointId
+    })
+
+    return {
+      id,
+      type: 'coplanar_points',
+      name: this.name,
+      pointIds,
+      tolerance: this.tolerance
+    }
+  }
+
+  static deserialize(dto: CoplanarPointsConstraintDto, context: SerializationContext): CoplanarPointsConstraint {
+    const points = dto.pointIds.map(pointId => {
+      const point = context.getEntity<WorldPoint>(pointId)
+      if (!point) {
+        throw new Error(
+          `CoplanarPointsConstraint "${dto.name}": Cannot deserialize - point ${pointId} not found in context`
+        )
+      }
+      return point
+    })
+
+    const constraint = CoplanarPointsConstraint.create(
+      dto.name,
+      points,
+      { tolerance: dto.tolerance }
+    )
+
+    context.registerEntity(constraint, dto.id)
+    return constraint
   }
 }

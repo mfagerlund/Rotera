@@ -1,3 +1,2 @@
-// Public exports for WorldPoint module
-
 export { WorldPoint } from './WorldPoint'
+export type { WorldPointDto } from './WorldPointDto'

@@ -1,7 +1,10 @@
 import type {ISelectable, SelectableType} from '../../types/selectable'
 import type {IWorldPoint, IImagePoint, IViewpoint} from '../interfaces'
+import type { ISerializable } from '../serialization/ISerializable'
+import type { SerializationContext } from '../serialization/SerializationContext'
+import type { ImagePointDto } from './ImagePointDto'
 
-export class ImagePoint implements ISelectable, IImagePoint {
+export class ImagePoint implements ISelectable, IImagePoint, ISerializable<ImagePointDto> {
     selected = false
 
     worldPoint: IWorldPoint
@@ -91,5 +94,57 @@ export class ImagePoint implements ISelectable, IImagePoint {
             throw new Error('Confidence must be between 0 and 1')
         }
         this.confidence = confidence
+    }
+
+    serialize(context: SerializationContext): ImagePointDto {
+        const id = context.getEntityId(this) || context.registerEntity(this)
+
+        const worldPointId = context.getEntityId(this.worldPoint)
+        const viewpointId = context.getEntityId(this.viewpoint)
+
+        if (!worldPointId || !viewpointId) {
+            throw new Error(
+                `ImagePoint: Cannot serialize - dependencies must be serialized first. ` +
+                `Missing: ${!worldPointId ? 'WorldPoint' : ''}${!worldPointId && !viewpointId ? ', ' : ''}${!viewpointId ? 'Viewpoint' : ''}`
+            )
+        }
+
+        return {
+            id,
+            worldPointId,
+            viewpointId,
+            u: this.u,
+            v: this.v,
+            isVisible: this.isVisible,
+            confidence: this.confidence
+        }
+    }
+
+    static deserialize(dto: ImagePointDto, context: SerializationContext): ImagePoint {
+        const worldPoint = context.getEntity<IWorldPoint>(dto.worldPointId)
+        const viewpoint = context.getEntity<IViewpoint>(dto.viewpointId)
+
+        if (!worldPoint || !viewpoint) {
+            throw new Error(
+                `ImagePoint: Cannot deserialize - dependencies not found in context. ` +
+                `Missing: ${!worldPoint ? dto.worldPointId : ''}${!worldPoint && !viewpoint ? ', ' : ''}${!viewpoint ? dto.viewpointId : ''}`
+            )
+        }
+
+        const imagePoint = ImagePoint.create(worldPoint, viewpoint, dto.u, dto.v, {
+            isVisible: dto.isVisible,
+            confidence: dto.confidence
+        })
+
+        context.registerEntity(imagePoint, dto.id)
+
+        if ('addImagePoint' in worldPoint && typeof worldPoint.addImagePoint === 'function') {
+            worldPoint.addImagePoint(imagePoint)
+        }
+        if ('addImagePoint' in viewpoint && typeof viewpoint.addImagePoint === 'function') {
+            viewpoint.addImagePoint(imagePoint)
+        }
+
+        return imagePoint
     }
 }

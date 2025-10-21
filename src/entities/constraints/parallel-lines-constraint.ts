@@ -9,6 +9,8 @@ import {
   type ConstraintRepository,
   type ConstraintEvaluation
 } from './base-constraint'
+import type { SerializationContext } from '../serialization/SerializationContext'
+import type { ParallelLinesConstraintDto } from './ConstraintDto'
 
 export class ParallelLinesConstraint extends Constraint {
   readonly lineA: Line
@@ -84,5 +86,48 @@ export class ParallelLinesConstraint extends Constraint {
   computeResiduals(valueMap: ValueMap): Value[] {
     console.warn(`Parallel lines constraint ${this.getName()}: not yet implemented - requires line support in valueMap`)
     return []
+  }
+
+  serialize(context: SerializationContext): ParallelLinesConstraintDto {
+    const id = context.getEntityId(this) || context.registerEntity(this)
+
+    const line1Id = context.getEntityId(this.lineA)
+    const line2Id = context.getEntityId(this.lineB)
+
+    if (!line1Id || !line2Id) {
+      throw new Error(
+        `ParallelLinesConstraint "${this.name}": Cannot serialize - lines must be serialized first`
+      )
+    }
+
+    return {
+      id,
+      type: 'parallel_lines',
+      name: this.name,
+      line1Id,
+      line2Id,
+      tolerance: this.tolerance
+    }
+  }
+
+  static deserialize(dto: ParallelLinesConstraintDto, context: SerializationContext): ParallelLinesConstraint {
+    const line1 = context.getEntity<Line>(dto.line1Id)
+    const line2 = context.getEntity<Line>(dto.line2Id)
+
+    if (!line1 || !line2) {
+      throw new Error(
+        `ParallelLinesConstraint "${dto.name}": Cannot deserialize - lines not found in context`
+      )
+    }
+
+    const constraint = ParallelLinesConstraint.create(
+      dto.name,
+      line1,
+      line2,
+      { tolerance: dto.tolerance }
+    )
+
+    context.registerEntity(constraint, dto.id)
+    return constraint
   }
 }

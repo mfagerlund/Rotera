@@ -1,4 +1,3 @@
-// Viewpoint entity - a photograph with camera parameters and pose
 import type {ISelectable, SelectableType} from '../../types/selectable'
 import type {IValueMapContributor, ValueMap, CameraValues} from '../../optimization/IOptimizable'
 import type {IWorldPoint, IImagePoint, IViewpoint} from '../interfaces'
@@ -6,8 +5,11 @@ import {V, Value, Vec3} from 'scalar-autograd'
 import {Vec4} from 'scalar-autograd'
 import {Quaternion} from '../../optimization/Quaternion'
 import {quaternionNormalizationResidual} from '../../optimization/residuals/quaternion-normalization-residual'
+import type { ISerializable } from '../serialization/ISerializable'
+import type { SerializationContext } from '../serialization/SerializationContext'
+import type { ViewpointDto } from './ViewpointDto'
 
-export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint {
+export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint, ISerializable<ViewpointDto> {
     selected = false
     isPoseLocked = false
     lastResiduals: number[] = []
@@ -459,5 +461,67 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint 
 
         const residuals = this.computeResiduals(valueMap)
         this.lastResiduals = residuals.map(r => r.data)
+    }
+
+    serialize(context: SerializationContext): ViewpointDto {
+        const id = context.getEntityId(this) || context.registerEntity(this)
+
+        return {
+            id,
+            name: this.name,
+            filename: this.filename,
+            url: this.url,
+            imageWidth: this.imageWidth,
+            imageHeight: this.imageHeight,
+            focalLength: this.focalLength,
+            principalPointX: this.principalPointX,
+            principalPointY: this.principalPointY,
+            skewCoefficient: this.skewCoefficient,
+            aspectRatio: this.aspectRatio,
+            radialDistortion: [...this.radialDistortion] as [number, number, number],
+            tangentialDistortion: [...this.tangentialDistortion] as [number, number],
+            position: [...this.position] as [number, number, number],
+            rotation: [...this.rotation] as [number, number, number, number],
+            calibrationAccuracy: this.calibrationAccuracy,
+            calibrationDate: this.calibrationDate,
+            calibrationNotes: this.calibrationNotes,
+            isProcessed: this.isProcessed,
+            processingNotes: this.processingNotes,
+            metadata: this.metadata ? { ...this.metadata } : undefined,
+            isVisible: this.isVisible,
+            opacity: this.opacity,
+            color: this.color
+        }
+    }
+
+    static deserialize(dto: ViewpointDto, context: SerializationContext): Viewpoint {
+        const viewpoint = Viewpoint.createFromSerialized(
+            dto.name,
+            dto.filename,
+            dto.url,
+            dto.imageWidth,
+            dto.imageHeight,
+            dto.focalLength,
+            dto.principalPointX,
+            dto.principalPointY,
+            dto.skewCoefficient,
+            dto.aspectRatio,
+            dto.radialDistortion,
+            dto.tangentialDistortion,
+            dto.position,
+            dto.rotation,
+            dto.calibrationAccuracy,
+            dto.calibrationDate,
+            dto.calibrationNotes,
+            dto.isProcessed,
+            dto.processingNotes,
+            dto.metadata,
+            dto.isVisible,
+            dto.opacity,
+            dto.color
+        )
+
+        context.registerEntity(viewpoint, dto.id)
+        return viewpoint
     }
 }

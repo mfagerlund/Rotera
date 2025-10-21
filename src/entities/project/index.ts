@@ -7,3 +7,4 @@ export type {
   ImageSortOrder,
   ProjectSettings
 } from './Project'
+export type { ProjectDto } from './ProjectDto'
