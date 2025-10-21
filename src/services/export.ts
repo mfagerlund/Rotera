@@ -1,5 +1,5 @@
 import { Project } from '../entities/project'
-import type { ConstraintDto } from '../entities/constraints/dtos/ConstraintDto'
+// Note: Constraint export format is defined inline below
 
 // Simple export format (not the same as DTOs)
 interface ExportWorldPoint {

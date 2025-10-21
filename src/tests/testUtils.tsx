@@ -4,53 +4,13 @@ import { render, RenderOptions } from '@testing-library/react'
 import { Project, ProjectSettings } from '../entities/project'
 import { WorldPoint } from '../entities/world-point/WorldPoint'
 import { Viewpoint } from '../entities/viewpoint/Viewpoint'
+import { ImagePoint } from '../entities/imagePoint/ImagePoint'
 import { DistanceConstraint } from '../entities/constraints/distance-constraint'
 import { ParallelLinesConstraint } from '../entities/constraints/parallel-lines-constraint'
-import type { ConstraintRepository } from '../entities/constraints/base-constraint'
-import type { PointId, LineId, PlaneId, EntityId } from '../types/ids'
-
-// Mock ConstraintRepository for testing
-class MockConstraintRepository implements ConstraintRepository {
-  private points = new Map<string, WorldPoint>()
-  private lines = new Map<string, any>()
-  private planes = new Map<string, any>()
-
-  addPoint(id: string, point: WorldPoint) {
-    this.points.set(id, point)
-  }
-
-  getPoint(pointId: PointId): EntityId | undefined {
-    return this.points.get(pointId) as any
-  }
-
-  getLine(lineId: LineId): EntityId | undefined {
-    return this.lines.get(lineId) as any
-  }
-
-  getPlane(planeId: PlaneId): EntityId | undefined {
-    return this.planes.get(planeId) as any
-  }
-
-  entityExists(id: EntityId): boolean {
-    return this.points.has(id) || this.lines.has(id) || this.planes.has(id)
-  }
-
-  pointExists(pointId: PointId): boolean {
-    return this.points.has(pointId)
-  }
-
-  lineExists(lineId: LineId): boolean {
-    return this.lines.has(lineId)
-  }
-
-  planeExists(planeId: PlaneId): boolean {
-    return this.planes.has(planeId)
-  }
-}
-
+// Mock ConstraintRepository no longer needed - constraints use object references
+// Kept for backwards compatibility with existing tests
+class MockConstraintRepository {}
 const mockRepo = new MockConstraintRepository()
-
-// Export mock repository for tests that need it
 export { mockRepo }
 
 // Mock project settings for testing
@@ -73,32 +33,26 @@ const mockSettings: ProjectSettings = {
 }
 
 // Mock world points for testing
-const mockPoint1 = WorldPoint.create('point-1', 'Test Point 1', {
-  xyz: [0, 0, 0],
+const mockPoint1 = WorldPoint.create('Test Point 1', {
+  lockedXyz: [0, 0, 0],
   color: '#2196F3',
   isVisible: true
 })
 
-const mockPoint2 = WorldPoint.create('point-2', 'Test Point 2', {
-  xyz: [1, 0, 0],
+const mockPoint2 = WorldPoint.create('Test Point 2', {
+  lockedXyz: [1, 0, 0],
   color: '#2196F3',
   isVisible: true
 })
 
-const mockPoint3 = WorldPoint.create('point-3', 'Test Point 3', {
-  xyz: [0, 1, 0],
+const mockPoint3 = WorldPoint.create('Test Point 3', {
+  lockedXyz: [0, 1, 0],
   color: '#2196F3',
   isVisible: true
 })
-
-// Add points to mock repository
-mockRepo.addPoint('point-1', mockPoint1)
-mockRepo.addPoint('point-2', mockPoint2)
-mockRepo.addPoint('point-3', mockPoint3)
 
 // Mock viewpoint for testing
 const mockViewpoint1 = Viewpoint.create(
-  'viewpoint-1',
   'Test Image',
   'test-image.jpg',
   'data:image/jpeg;base64,mock-test-data',
@@ -113,67 +67,45 @@ const mockViewpoint1 = Viewpoint.create(
 )
 
 // Add image points to viewpoint
-const now = new Date().toISOString()
-mockViewpoint1.addImagePoint({
-  id: 'ip-1',
-  worldPointId: 'point-1',
-  u: 100,
-  v: 100,
+const ip1 = ImagePoint.create(mockPoint1, mockViewpoint1, 100, 100, {
   isVisible: true,
-  isManuallyPlaced: true,
-  confidence: 1.0,
-  createdAt: now,
-  updatedAt: now
+  confidence: 1.0
 })
-mockViewpoint1.addImagePoint({
-  id: 'ip-2',
-  worldPointId: 'point-2',
-  u: 150,
-  v: 100,
+mockViewpoint1.addImagePoint(ip1)
+mockPoint1.addImagePoint(ip1)
+
+const ip2 = ImagePoint.create(mockPoint2, mockViewpoint1, 150, 100, {
   isVisible: true,
-  isManuallyPlaced: true,
-  confidence: 1.0,
-  createdAt: now,
-  updatedAt: now
+  confidence: 1.0
 })
-mockViewpoint1.addImagePoint({
-  id: 'ip-3',
-  worldPointId: 'point-3',
-  u: 100,
-  v: 150,
+mockViewpoint1.addImagePoint(ip2)
+mockPoint2.addImagePoint(ip2)
+
+const ip3 = ImagePoint.create(mockPoint3, mockViewpoint1, 100, 150, {
   isVisible: true,
-  isManuallyPlaced: true,
-  confidence: 1.0,
-  createdAt: now,
-  updatedAt: now
+  confidence: 1.0
 })
+mockViewpoint1.addImagePoint(ip3)
+mockPoint3.addImagePoint(ip3)
 
 // Mock constraints for testing
 const mockConstraint1 = DistanceConstraint.create(
-  'constraint-1',
   'Distance P1-P2',
-  'point-1' as PointId,
-  'point-2' as PointId,
+  mockPoint1,
+  mockPoint2,
   1.0,
-  mockRepo,
   {
-    tolerance: 0.01,
-    isEnabled: true,
-    isDriving: false
+    tolerance: 0.01
   }
 )
 
 const mockConstraint2 = DistanceConstraint.create(
-  'constraint-2',
   'Distance P2-P3',
-  'point-2' as PointId,
-  'point-3' as PointId,
+  mockPoint2,
+  mockPoint3,
   1.0,
-  mockRepo,
   {
-    tolerance: 0.01,
-    isEnabled: true,
-    isDriving: false
+    tolerance: 0.01
   }
 )
 
@@ -202,28 +134,23 @@ export const mockProject = {
   clone: jest.fn()
 } as unknown as Project
 
-export const mockWorldPoint = WorldPoint.create('test-point', 'Test Point', {
-  xyz: [1, 2, 3],
+export const mockWorldPoint = WorldPoint.create('Test Point', {
+  lockedXyz: [1, 2, 3],
   color: '#2196F3',
   isVisible: true
 })
 
 export const mockConstraint = DistanceConstraint.create(
-  'test-constraint',
   'Test Distance Constraint',
-  'point-1' as PointId,
-  'point-2' as PointId,
+  mockPoint1,
+  mockPoint2,
   5.0,
-  mockRepo,
   {
-    tolerance: 0.1,
-    isEnabled: true,
-    isDriving: false
+    tolerance: 0.1
   }
 )
 
 export const mockViewpoint = Viewpoint.create(
-  'test-viewpoint',
   'Test Image',
   'test.jpg',
   'data:image/jpeg;base64,mock-data',

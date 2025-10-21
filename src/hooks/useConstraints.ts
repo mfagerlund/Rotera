@@ -307,61 +307,58 @@ export const useConstraints = (
 
   // Constraint display helpers
   const getConstraintDisplayName = useCallback((constraint: Constraint) => {
-    const constraintType = constraint.constraintType || (constraint as any).type
-    const entities = constraint.entities
-    const parameters = constraint.parameters
+    const constraintType = constraint.getConstraintType()
 
     switch (constraintType) {
-      case 'points_distance': {
-        const pointIds = entities.points || []
-        return `Distance: ${pointIds[0]} ↔ ${pointIds[1]}`
-      }
-      case 'points_equal_distance':
-        // Determine if it's angle or circle based on parameters
-        if (parameters.angle !== undefined || parameters.angle_degrees !== undefined) {
-          return `Angle: ${parameters.angle_degrees || parameters.angle || 0}°`
-        } else {
-          return `Circle constraint`
-        }
-      case 'lines_perpendicular':
+      case 'distance_point_point':
+        return `Distance Constraint`
+      case 'angle_point_point_point':
+        return `Angle Constraint`
+      case 'perpendicular_lines':
         return `Perpendicular Lines`
-      case 'lines_parallel':
+      case 'parallel_lines':
         return `Parallel Lines`
-      case 'points_colinear':
+      case 'collinear_points':
         return `Collinear Points`
-      case 'points_coplanar':
-        return `Rectangle Shape`
-      case 'point_fixed_coord':
+      case 'coplanar_points':
+        return `Coplanar Points`
+      case 'fixed_point':
         return `Fixed Point`
+      case 'equal_distances':
+        return `Equal Distances`
+      case 'equal_angles':
+        return `Equal Angles`
+      case 'projection':
+        return `Projection Constraint`
       default:
-        return `${constraintType.charAt(0).toUpperCase()}${constraintType.slice(1)} Constraint`
+        return `${constraintType} Constraint`
     }
   }, [])
 
   const getConstraintSummary = useCallback((constraint: Constraint) => {
-    const constraintType = constraint.constraintType || (constraint as any).type
-    const parameters = constraint.parameters
+    const constraintType = constraint.getConstraintType()
 
     switch (constraintType) {
-      case 'points_distance':
-        return `${parameters.distance || 0}m between points`
-      case 'lines_perpendicular':
+      case 'distance_point_point':
+        return `Distance constraint between points`
+      case 'angle_point_point_point':
+        return `Angle constraint`
+      case 'perpendicular_lines':
         return `Perpendicular line relationship`
-      case 'lines_parallel':
+      case 'parallel_lines':
         return `Parallel line relationship`
-      case 'points_colinear':
+      case 'collinear_points':
         return `Points on same line`
-      case 'points_coplanar':
+      case 'coplanar_points':
         return `4-corner rectangle shape`
-      case 'points_equal_distance':
-        // Determine summary based on parameters
-        if (parameters.angle !== undefined || parameters.angle_degrees !== undefined) {
-          return `Angle constraint`
-        } else {
-          return `Points on circle boundary`
-        }
-      case 'point_fixed_coord':
+      case 'fixed_point':
         return `Fixed position constraint`
+      case 'equal_distances':
+        return `Equal distance pairs`
+      case 'equal_angles':
+        return `Equal angle triplets`
+      case 'projection':
+        return `Projection constraint`
       default:
         return 'Geometric constraint'
     }

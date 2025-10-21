@@ -329,10 +329,10 @@ export const MainLayout: React.FC = () => {
           color: line.color,
           isVisible: line.isVisible,
           isConstruction: line.isConstruction,
-          length: line.length(),
+          length: line.length() ?? undefined,
           constraints: {
             direction: line.direction,
-            targetLength: line.targetLength,
+            targetLength: line.targetLength ?? undefined,
             tolerance: line.tolerance
           }
         }
@@ -418,7 +418,7 @@ export const MainLayout: React.FC = () => {
     if (currentImage) {
       const imagePoint = currentImage.getImagePointsForWorldPoint(worldPoint)[0]
       if (imagePoint) {
-        moveImagePoint(imagePoint, u, v)
+        moveImagePoint(imagePoint as any, u, v)
       }
     }
   }
@@ -901,7 +901,7 @@ export const MainLayout: React.FC = () => {
                 constraints={constraints as any}
                 selectedWorldPoints={selectedPointEntities}
                 hoveredWorldPoint={hoveredWorldPoint}
-                currentViewpoint={currentViewpoint}
+                currentImageId={currentViewpoint ? getEntityKey(currentViewpoint) : null}
                 placementMode={placementMode}
                 onSelectWorldPoint={(worldPoint: WorldPoint, ctrlKey: boolean, shiftKey: boolean) => {
                   handleEntityClick(worldPoint, ctrlKey, shiftKey)

@@ -106,10 +106,64 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
     prevWorldPointCount.current = currentCount
   }, [worldPoints])
 
+  // Helper: Get all points from a constraint
+  const getConstraintPoints = (constraint: Constraint): WorldPoint[] => {
+    const type = constraint.getConstraintType()
+
+    // Type guard for constraints with different point properties
+    if (type === 'distance_point_point') {
+      const c = constraint as any
+      return [c.pointA, c.pointB]
+    } else if (type === 'angle_point_point_point') {
+      const c = constraint as any
+      return [c.pointA, c.vertex, c.pointC]
+    } else if (type === 'collinear_points' || type === 'coplanar_points') {
+      const c = constraint as any
+      return c.points || []
+    } else if (type === 'parallel_lines' || type === 'perpendicular_lines') {
+      const c = constraint as any
+      // Lines have pointA and pointB
+      const points: WorldPoint[] = []
+      if (c.lineA) {
+        points.push(c.lineA.pointA, c.lineA.pointB)
+      }
+      if (c.lineB) {
+        points.push(c.lineB.pointA, c.lineB.pointB)
+      }
+      return points
+    } else if (type === 'fixed_point') {
+      const c = constraint as any
+      return [c.point]
+    } else if (type === 'equal_distances') {
+      const c = constraint as any
+      const points: WorldPoint[] = []
+      if (c.distancePairs) {
+        c.distancePairs.forEach((pair: [WorldPoint, WorldPoint]) => {
+          points.push(pair[0], pair[1])
+        })
+      }
+      return points
+    } else if (type === 'equal_angles') {
+      const c = constraint as any
+      const points: WorldPoint[] = []
+      if (c.angleTriplets) {
+        c.angleTriplets.forEach((triplet: [WorldPoint, WorldPoint, WorldPoint]) => {
+          points.push(triplet[0], triplet[1], triplet[2])
+        })
+      }
+      return points
+    } else if (type === 'projection_point_camera') {
+      const c = constraint as any
+      return [c.worldPoint]
+    }
+
+    return []
+  }
+
   // Find constraints involving a world point
   const getConstraintsForWorldPoint = (wp: WorldPoint): Constraint[] => {
     return constraints.filter(constraint => {
-      const constraintPoints = constraint.points
+      const constraintPoints = getConstraintPoints(constraint)
       return constraintPoints.some(p => p === wp)
     })
   }
@@ -118,7 +172,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
   const hasBrokenConstraints = (wp: WorldPoint): boolean => {
     const wpConstraints = getConstraintsForWorldPoint(wp)
     return wpConstraints.some(constraint => {
-      const constraintPoints = constraint.points
+      const constraintPoints = getConstraintPoints(constraint)
       return constraintPoints.some(p => !Array.from(worldPoints.values()).includes(p))
     })
   }

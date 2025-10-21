@@ -9,7 +9,8 @@ import { WorldPoint } from '../entities/world-point/WorldPoint';
 import { Line } from '../entities/line/Line';
 import { Viewpoint } from '../entities/viewpoint/Viewpoint';
 import { Constraint } from '../entities/constraints/base-constraint';
-import type { ConstraintId } from '../types/ids';
+
+type ConstraintId = string;
 
 export interface OptimizationOptions {
   maxIterations?: number;
@@ -88,9 +89,9 @@ export const useOptimization = () => {
         );
 
         residuals.push({
-          constraintId: constraint.id,
+          constraintId: constraint.getName(),
           residual: residualMagnitude,
-          satisfied: residualMagnitude < (constraint.tolerance || 1e-6),
+          satisfied: residualMagnitude < 1e-6,
         });
       }
 

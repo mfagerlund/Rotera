@@ -1,6 +1,6 @@
 # Component Fixes Task List
 
-**Status**: 427 → **~230 errors** (~197 fixed, 28+ components migrated)
+**Status**: 427 → 318 → **279 errors** (~148 fixed total, 39 this session)
 
 **Architecture**: Object references, NOT IDs at runtime. See `CLAUDE.md` for details.
 
@@ -33,34 +33,44 @@
 - MainLayout.tsx - Sets → Maps with `getEntityKey()`, mostly fixed
 - entities/interfaces.ts - add `color` to `IWorldPoint`, `imagePoints` to `IViewpoint`
 
+**Session 5 (39 errors fixed):**
+- useImageViewerRenderer.ts (11) - hover/drag object refs, LineData constraints access
+- ImageNavigationToolbar.tsx (3) - WorldPoint type casts for interface compatibility
+- MainToolbar.tsx (1) - onConstraintClick signature uses object refs
+- MainLayout.tsx (6) - LineData mapping, movePoint signature, Plane imports, prop names
+- CreationToolsManager.tsx - currentViewpoint (not currentImageId)
+- Services: export.ts, fileManager.ts, storage.ts - removed createdAt/updatedAt, fixed Set methods
+- Utilities: imageUtils.ts, visualLanguage.ts, constraint-entity-converter.ts - removed ID imports
+- Optimization: equal-angles-residual.ts, equal-distances-residual.ts - use getName()
+- Created ProjectSettings type export
+
 **Infrastructure:**
 - Fixed ScalarAutograd `Vec4` export (reinstalled local package)
 - Created Maps from Sets using `getEntityKey()` for component lookups
 
 ---
 
-## ⚠️ Remaining Work (~230 errors)
-
-**Component Errors (~21):**
-- MainLayout.tsx (6) - plane callbacks need object refs, prop mismatches
-- useImageViewerRenderer.ts (11) - hovered/dragged properties, LineData vs Line
-- ImageNavigationToolbar.tsx (3) - callbacks need IWorldPoint signatures
-- MainToolbar.tsx (1) - callback signature mismatch
+## ⚠️ Remaining Work (~279 errors)
 
 **Constraint Entities (~100+ errors):**
-- All constraint files still use `.id` and import missing `../../types/ids`
-- Need to remove ID usage from constraint implementations
-- Fix `getDefinedCoordinates` calls (method doesn't exist)
+- All constraint files still use `.id` property access and import `../../types/ids`
+- DTOs use IDs (which is correct for serialization)
+- Runtime code accessing `.id` on WorldPoint (doesn't exist)
+- Fix `getDefinedCoordinates` calls (method doesn't exist on WorldPoint)
+- NOTE: Entity layer locked - may need architectural decision
 
-**Tests (~109 errors):**
+**Tests (~109+ errors):**
 - all-constraints.test.ts (84)
 - fixed-point-constraint.test.ts, intrinsic-constraints.test.ts
+- polymorphic-constraints.test.ts
+- testUtils.tsx - MockConstraintRepository, WorldPoint constructor calls
+- real-data-optimization.test.ts
 - Fix LAST per original plan
 
 **Known Issues:**
-- 7 runtime ID violations (check-no-runtime-ids.ts)
+- Runtime ID violations remain (check-no-runtime-ids.ts)
 - Planes still in legacy format (use string IDs)
-- Some components expect concrete types but get interfaces
+- Tests reference old APIs (WorldPoint constructor, ConstraintRepository)
 
 ---
 
@@ -148,4 +158,56 @@ for (const entity of set) {
 - Object references at runtime, IDs only for serialization
 - Sets not Arrays for entity collections
 - Zero tolerance for `any` types
-- Use `getEntityKey()` for React keys and Map lookups
+- Use `getEntityKey()` for React keys (NEVER getName() - not unique!)
+- NO legacy code - delete it, don't fix it
+
+## Constraint Serialization Pattern
+
+**Reference file:** `src/entities/Serialization.ts`
+
+All constraint serialization happens in the Serialization class, following the same pattern as Lines and ImagePoints:
+
+1. **Define DTO interface** with IDs for references:
+```typescript
+interface DistanceConstraintDto {
+  id: string
+  type: 'distance_point_point'
+  pointAId: string  // ID references to other entities
+  pointBId: string
+  targetDistance: number
+  // ... other properties
+}
+```
+
+2. **In `dtoToProject()`**, resolve IDs to objects using the maps:
+```typescript
+const constraints = new Set<Constraint>()
+dto.constraints.forEach(constraintDto => {
+  const constraint = this.dtoToConstraint(constraintDto, idToWorldPoint, lines)
+  if (constraint) constraints.add(constraint)
+})
+```
+
+3. **In `dtoToConstraint()`**, dispatch by type and resolve references:
+```typescript
+private static dtoToDistanceConstraint(
+  dto: DistanceConstraintDto,
+  idToWorldPoint: Map<string, WorldPoint>
+): Constraint | null {
+  // Resolve ID references to actual objects
+  const pointA = idToWorldPoint.get(dto.pointAId)
+  const pointB = idToWorldPoint.get(dto.pointBId)
+
+  if (!pointA || !pointB) return null
+
+  // Call constraint factory with OBJECT REFERENCES
+  return DistanceConstraint.create(pointA, pointB, ...)
+}
+```
+
+**Key points:**
+- DTOs store IDs (strings) for relationships
+- During deserialization, build ID→Object maps ONCE upfront
+- Use maps to resolve all references
+- Pass resolved objects to entity constructors
+- Constraints store objects at runtime, not IDs

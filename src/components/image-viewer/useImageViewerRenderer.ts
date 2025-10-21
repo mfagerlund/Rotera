@@ -78,9 +78,9 @@ export const useImageViewerRenderer = ({
         const y = imagePoint.v * scale + offset.y
 
         const isSelected = selectedPoints.includes(wp)
-        const isBeingDragged = isDraggingPoint && draggedPointId === wp
-        const isHovered = hoveredPointId === wp
-        const isGloballyHovered = hoveredWorldPointId === wp
+        const isBeingDragged = isDraggingPoint && draggedPoint === wp
+        const isHovered = hoveredPoint === wp
+        const isGloballyHovered = hoveredWorldPoint === wp
 
         if (isBeingDragged) {
           ctx.strokeStyle = 'rgba(255, 140, 0, 0.8)'
@@ -633,11 +633,11 @@ export const useImageViewerRenderer = ({
     selectedPoints,
     selectedLines,
     hoveredConstraintIdForEffect,
-    hoveredWorldPointId,
-    hoveredPointId,
-    hoveredLineId,
+    hoveredWorldPoint,
+    hoveredPoint,
+    hoveredLine,
     isDraggingPoint,
-    draggedPointId,
+    draggedPoint,
     isDragging,
     panVelocity,
     constructionPreview,

@@ -1,6 +1,5 @@
 // Distance constraint between two points
 
-import type { ConstraintId, PointId } from '../../types/ids'
 import type { ValidationResult } from '../../validation/validator'
 import type { ValueMap } from '../../optimization/IOptimizable'
 import { V, type Value } from 'scalar-autograd'
@@ -9,98 +8,49 @@ import type { WorldPoint } from '../world-point'
 import {
   Constraint,
   type ConstraintRepository,
-  type BaseConstraintDto,
-  type ConstraintDto,
-  type DistanceConstraintDto,
   type ConstraintEvaluation
 } from './base-constraint'
 
-export interface DistanceConstraintData extends BaseConstraintDto {
-  entities: {
-    points: [PointId, PointId]
-    lines?: undefined
-    planes?: undefined
-  }
-  parameters: BaseConstraintDto['parameters'] & {
-    targetDistance: number
-  }
-}
-
 export class DistanceConstraint extends Constraint {
-  protected data: DistanceConstraintData
+  readonly pointA: WorldPoint
+  readonly pointB: WorldPoint
+  targetDistance: number
+  tolerance: number
 
-  private constructor(repo: ConstraintRepository, data: DistanceConstraintData) {
-    super(repo, data)
-    this.data = data
-  }
-
-  static create(
-    id: ConstraintId,
+  private constructor(
     name: string,
     pointA: WorldPoint,
     pointB: WorldPoint,
     targetDistance: number,
-    repo: ConstraintRepository,
-    options: {
-      tolerance?: number
-      priority?: number
-      isEnabled?: boolean
-      isDriving?: boolean
-      group?: string
-      tags?: string[]
-      notes?: string
-    } = {}
-  ): DistanceConstraint {
-    const now = new Date().toISOString()
-    const data: DistanceConstraintData = {
-      id,
-      name,
-      type: 'distance_point_point',
-      status: 'satisfied',
-      entities: {
-        points: [pointA.id as PointId, pointB.id as PointId]
-      },
-      parameters: {
-        targetDistance,
-        tolerance: options.tolerance ?? 0.001,
-        priority: options.priority ?? 5
-      },
-      isEnabled: options.isEnabled ?? true,
-      isDriving: options.isDriving ?? false,
-      group: options.group,
-      tags: options.tags,
-      notes: options.notes,
-      createdAt: now,
-      updatedAt: now
-    }
-    const constraint = new DistanceConstraint(repo, data)
-    constraint._points.add(pointA)
-    constraint._points.add(pointB)
-    constraint._entitiesPreloaded = true
-    return constraint
+    tolerance: number
+  ) {
+    super(name)
+    this.pointA = pointA
+    this.pointB = pointB
+    this.targetDistance = targetDistance
+    this.tolerance = tolerance
+
+    // Register with points
+    pointA.addReferencingConstraint(this)
+    pointB.addReferencingConstraint(this)
   }
 
-  static fromDto(dto: ConstraintDto, repo: ConstraintRepository): DistanceConstraint {
-    if (!dto.distanceConstraint) {
-      throw new Error('Invalid DistanceConstraint DTO: missing distanceConstraint data')
-    }
-
-    if (!dto.entities.points || dto.entities.points.length !== 2) {
-      throw new Error('DistanceConstraint requires exactly 2 points')
-    }
-
-    const data: DistanceConstraintData = {
-      ...dto,
-      entities: {
-        points: [dto.entities.points[0], dto.entities.points[1]]
-      },
-      parameters: {
-        ...dto.parameters,
-        targetDistance: dto.distanceConstraint.targetDistance
-      }
-    }
-
-    return new DistanceConstraint(repo, data)
+  static create(
+    name: string,
+    pointA: WorldPoint,
+    pointB: WorldPoint,
+    targetDistance: number,
+    options: {
+      tolerance?: number
+    } = {}
+  ): DistanceConstraint {
+    return new DistanceConstraint(
+      name,
+      pointA,
+      pointB,
+      targetDistance,
+      options.tolerance ?? 0.001
+    )
   }
 
   getConstraintType(): string {
@@ -108,12 +58,11 @@ export class DistanceConstraint extends Constraint {
   }
 
   evaluate(): ConstraintEvaluation {
-    const points = this.points
-    if (points.length >= 2 && points[0].hasCoordinates() && points[1].hasCoordinates()) {
-      const value = points[0].distanceTo(points[1]) ?? 0
+    if (this.pointA.hasCoordinates() && this.pointB.hasCoordinates()) {
+      const value = this.pointA.distanceTo(this.pointB) ?? 0
       return {
         value,
-        satisfied: this.checkSatisfaction(value, this.targetDistance)
+        satisfied: Math.abs(value - this.targetDistance) <= this.tolerance
       }
     }
     return { value: 0, satisfied: false }
@@ -122,13 +71,13 @@ export class DistanceConstraint extends Constraint {
   validateConstraintSpecific(): ValidationResult {
     const errors = []
 
-    if (this.data.parameters.targetDistance < 0) {
+    if (this.targetDistance < 0) {
       errors.push(ValidationHelpers.createError(
         'INVALID_TARGET_DISTANCE',
         'targetDistance must be non-negative',
-        this.data.id,
+        this.getName(),
         'constraint',
-        'parameters.targetDistance'
+        'targetDistance'
       ))
     }
 
@@ -138,72 +87,6 @@ export class DistanceConstraint extends Constraint {
       warnings: [],
       summary: errors.length === 0 ? 'Distance constraint validation passed' : `Distance constraint validation failed: ${errors.length} errors`
     }
-  }
-
-  getRequiredEntityCounts(): { points: number } {
-    return { points: 2 }
-  }
-
-  toConstraintDto(): ConstraintDto {
-    const baseDto: ConstraintDto = {
-      ...this.data,
-      entities: {
-        points: [...this.data.entities.points]
-      },
-      parameters: { ...this.data.parameters },
-      distanceConstraint: {
-        targetDistance: this.data.parameters.targetDistance
-      },
-      angleConstraint: undefined,
-      parallelLinesConstraint: undefined,
-      perpendicularLinesConstraint: undefined,
-      fixedPointConstraint: undefined,
-      collinearPointsConstraint: undefined,
-      coplanarPointsConstraint: undefined,
-      equalDistancesConstraint: undefined,
-      equalAnglesConstraint: undefined
-    }
-    return baseDto
-  }
-
-  clone(newId: ConstraintId, newName?: string): DistanceConstraint {
-    const clonedData: DistanceConstraintData = {
-      ...this.data,
-      id: newId,
-      name: newName || `${this.data.name} (copy)`,
-      entities: {
-        points: [...this.data.entities.points]
-      },
-      parameters: { ...this.data.parameters },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-    return new DistanceConstraint(this.repo, clonedData)
-  }
-
-  // Specific getters/setters
-  get targetDistance(): number {
-    return this.data.parameters.targetDistance
-  }
-
-  set targetDistance(value: number) {
-    if (value < 0) {
-      throw new Error('Target distance must be non-negative')
-    }
-    this.data.parameters.targetDistance = value
-    this.updateTimestamp()
-  }
-
-  get pointA(): WorldPoint {
-    return this.points[0]
-  }
-
-  get pointB(): WorldPoint {
-    return this.points[1]
-  }
-
-  protected getTargetValue(): number {
-    return this.targetDistance
   }
 
   /**
@@ -216,7 +99,7 @@ export class DistanceConstraint extends Constraint {
     const pointBVec = valueMap.points.get(this.pointB)
 
     if (!pointAVec || !pointBVec) {
-      console.warn(`Distance constraint ${this.data.id}: points not found in valueMap`)
+      console.warn(`Distance constraint ${this.getName()}: points not found in valueMap`)
       return []
     }
 

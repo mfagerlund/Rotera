@@ -34,7 +34,7 @@ export class ImageUtils {
           ctx.drawImage(img, 0, 0, width, height)
 
           resolve({
-            id: crypto.randomUUID() as ViewpointId,
+            id: crypto.randomUUID(),
             name: file.name.replace(/\.[^/.]+$/, ''), // Remove file extension
             url: canvas.toDataURL('image/jpeg', 0.8),
             imageWidth: width,

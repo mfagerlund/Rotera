@@ -1,115 +1,54 @@
 // Equal angles constraint
 
-import type { ConstraintId, PointId } from '../../types/ids'
-import type { ValidationResult } from '../../validation/validator'
+import type { ValidationResult, ValidationError } from '../../validation/validator'
 import type { ValueMap } from '../../optimization/IOptimizable'
 import { V, Vec3, type Value } from 'scalar-autograd'
 import { ValidationHelpers } from '../../validation/validator'
 import type { WorldPoint } from '../world-point/WorldPoint'
 import {
   Constraint,
-  type ConstraintRepository,
-  type BaseConstraintDto,
-  type ConstraintDto,
-  type EqualAnglesConstraintDto,
   type ConstraintEvaluation
 } from './base-constraint'
 
-export interface EqualAnglesConstraintData extends BaseConstraintDto {
-  entities: {
-    points: PointId[]
-    lines?: undefined
-    planes?: undefined
-  }
-  parameters: BaseConstraintDto['parameters'] & {
-    angleTriplets: [PointId, PointId, PointId][] // [pointA, vertex, pointC] for each angle
-  }
-}
-
 export class EqualAnglesConstraint extends Constraint {
-  protected data: EqualAnglesConstraintData
+  readonly angleTriplets: [WorldPoint, WorldPoint, WorldPoint][]
+  tolerance: number
 
-  private constructor(repo: ConstraintRepository, data: EqualAnglesConstraintData) {
-    super(repo, data)
-    this.data = data
-  }
-
-  static create(
-    id: ConstraintId,
+  private constructor(
     name: string,
-    angleTriplets: [WorldPoint, WorldPoint, WorldPoint][], // At least 2 triplets
-    repo: ConstraintRepository,
-    options: {
-      tolerance?: number
-      priority?: number
-      isEnabled?: boolean
-      isDriving?: boolean
-      group?: string
-      tags?: string[]
-      notes?: string
-    } = {}
-  ): EqualAnglesConstraint {
-    if (angleTriplets.length < 2) {
-      throw new Error('EqualAnglesConstraint requires at least 2 angle triplets')
-    }
+    angleTriplets: [WorldPoint, WorldPoint, WorldPoint][],
+    tolerance: number
+  ) {
+    super(name)
+    this.angleTriplets = angleTriplets
+    this.tolerance = tolerance
 
-    // Extract all unique points
+    // Register with all points
     const allPoints = new Set<WorldPoint>()
     angleTriplets.forEach(triplet => {
       allPoints.add(triplet[0])
       allPoints.add(triplet[1])
       allPoints.add(triplet[2])
     })
-
-    const now = new Date().toISOString()
-    const data: EqualAnglesConstraintData = {
-      id,
-      name,
-      type: 'equal_angles',
-      status: 'satisfied',
-      entities: {
-        points: Array.from(allPoints).map(p => p.id as PointId)
-      },
-      parameters: {
-        angleTriplets: angleTriplets.map(triplet => [
-          triplet[0].id as PointId,
-          triplet[1].id as PointId,
-          triplet[2].id as PointId
-        ]),
-        tolerance: options.tolerance ?? 0.001,
-        priority: options.priority ?? 5
-      },
-      isEnabled: options.isEnabled ?? true,
-      isDriving: options.isDriving ?? false,
-      group: options.group,
-      tags: options.tags,
-      notes: options.notes,
-      createdAt: now,
-      updatedAt: now
-    }
-    const constraint = new EqualAnglesConstraint(repo, data)
-    allPoints.forEach(p => constraint._points.add(p))
-    constraint._entitiesPreloaded = true
-    return constraint
+    allPoints.forEach(point => point.addReferencingConstraint(this))
   }
 
-  static fromDto(dto: ConstraintDto, repo: ConstraintRepository): EqualAnglesConstraint {
-    if (!dto.equalAnglesConstraint) {
-      throw new Error('Invalid EqualAnglesConstraint DTO: missing equalAnglesConstraint data')
+  static create(
+    name: string,
+    angleTriplets: [WorldPoint, WorldPoint, WorldPoint][],
+    options: {
+      tolerance?: number
+    } = {}
+  ): EqualAnglesConstraint {
+    if (angleTriplets.length < 2) {
+      throw new Error('EqualAnglesConstraint requires at least 2 angle triplets')
     }
 
-    const data: EqualAnglesConstraintData = {
-      ...dto,
-      entities: {
-        points: dto.entities.points ? [...dto.entities.points] : []
-      },
-      parameters: {
-        ...dto.parameters,
-        angleTriplets: dto.equalAnglesConstraint.angleTriplets
-      }
-    }
-
-    return new EqualAnglesConstraint(repo, data)
+    return new EqualAnglesConstraint(
+      name,
+      angleTriplets,
+      options.tolerance ?? 0.001
+    )
   }
 
   getConstraintType(): string {
@@ -117,24 +56,12 @@ export class EqualAnglesConstraint extends Constraint {
   }
 
   evaluate(): ConstraintEvaluation {
-    const points = this.points
-    const pointMap = new Map<PointId, typeof points[0]>()
-
-    // Create a map for quick point lookup
-    points.forEach(point => {
-      pointMap.set(point.id as PointId, point)
-    })
-
     const angles: number[] = []
 
     // Calculate all angles
-    for (const triplet of this.data.parameters.angleTriplets) {
-      const pointA = pointMap.get(triplet[0])
-      const vertex = pointMap.get(triplet[1])
-      const pointC = pointMap.get(triplet[2])
-
-      if (pointA && vertex && pointC &&
-          pointA.hasCoordinates() && vertex.hasCoordinates() && pointC.hasCoordinates()) {
+    for (const triplet of this.angleTriplets) {
+      const [pointA, vertex, pointC] = triplet
+      if (pointA.hasCoordinates() && vertex.hasCoordinates() && pointC.hasCoordinates()) {
         const angle = this.calculateAngleBetweenPoints(pointA, vertex, pointC)
         angles.push(angle)
       }
@@ -151,33 +78,34 @@ export class EqualAnglesConstraint extends Constraint {
 
     return {
       value: standardDeviation,
-      satisfied: this.checkSatisfaction(standardDeviation, 0) // Target is 0 for equal angles
+      satisfied: Math.abs(standardDeviation - 0) <= this.tolerance
     }
   }
 
   validateConstraintSpecific(): ValidationResult {
-    const errors = []
+    const errors: ValidationError[] = []
+    const warnings: ValidationError[] = []
 
-    if (this.data.parameters.angleTriplets.length < 2) {
+    if (this.angleTriplets.length < 2) {
       errors.push(ValidationHelpers.createError(
         'INSUFFICIENT_ANGLE_TRIPLETS',
         'Equal angles constraint requires at least 2 angle triplets',
-        this.data.id,
+        this.getName(),
         'constraint',
-        'parameters.angleTriplets'
+        'angleTriplets'
       ))
     }
 
     // Validate each angle triplet
-    for (let i = 0; i < this.data.parameters.angleTriplets.length; i++) {
-      const triplet = this.data.parameters.angleTriplets[i]
+    for (let i = 0; i < this.angleTriplets.length; i++) {
+      const triplet = this.angleTriplets[i]
       if (!triplet || triplet.length !== 3) {
         errors.push(ValidationHelpers.createError(
           'INVALID_ANGLE_TRIPLET',
-          `Angle triplet ${i} must contain exactly 3 point IDs`,
-          this.data.id,
+          `Angle triplet ${i} must contain exactly 3 points`,
+          this.getName(),
           'constraint',
-          `parameters.angleTriplets[${i}]`
+          `angleTriplets[${i}]`
         ))
       } else {
         // Check for duplicate points within the triplet
@@ -186,9 +114,9 @@ export class EqualAnglesConstraint extends Constraint {
           errors.push(ValidationHelpers.createError(
             'DUPLICATE_POINTS_IN_TRIPLET',
             `Angle triplet ${i} cannot have duplicate points`,
-            this.data.id,
+            this.getName(),
             'constraint',
-            `parameters.angleTriplets[${i}]`
+            `angleTriplets[${i}]`
           ))
         }
       }
@@ -197,103 +125,9 @@ export class EqualAnglesConstraint extends Constraint {
     return {
       isValid: errors.length === 0,
       errors,
-      warnings: [],
+      warnings,
       summary: errors.length === 0 ? 'Equal angles constraint validation passed' : `Equal angles constraint validation failed: ${errors.length} errors`
     }
-  }
-
-  getRequiredEntityCounts(): { points?: number } {
-    return {} // Variable number of points
-  }
-
-  toConstraintDto(): ConstraintDto {
-    const baseDto: ConstraintDto = {
-      ...this.data,
-      entities: {
-        points: [...this.data.entities.points]
-      },
-      parameters: { ...this.data.parameters },
-      distanceConstraint: undefined,
-      angleConstraint: undefined,
-      parallelLinesConstraint: undefined,
-      perpendicularLinesConstraint: undefined,
-      fixedPointConstraint: undefined,
-      collinearPointsConstraint: undefined,
-      coplanarPointsConstraint: undefined,
-      equalDistancesConstraint: undefined,
-      equalAnglesConstraint: {
-        angleTriplets: this.data.parameters.angleTriplets.map(triplet => [...triplet] as [PointId, PointId, PointId])
-      }
-    }
-    return baseDto
-  }
-
-  clone(newId: ConstraintId, newName?: string): EqualAnglesConstraint {
-    const clonedData: EqualAnglesConstraintData = {
-      ...this.data,
-      id: newId,
-      name: newName || `${this.data.name} (copy)`,
-      entities: {
-        points: [...this.data.entities.points]
-      },
-      parameters: {
-        ...this.data.parameters,
-        angleTriplets: this.data.parameters.angleTriplets.map(triplet => [...triplet] as [PointId, PointId, PointId])
-      },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-    return new EqualAnglesConstraint(this.repo, clonedData)
-  }
-
-  // Specific methods
-  addAngleTriplet(pointA: WorldPoint, vertex: WorldPoint, pointC: WorldPoint): void {
-    const uniquePoints = new Set([pointA, vertex, pointC])
-    if (uniquePoints.size !== 3) {
-      throw new Error('Cannot add angle triplet with duplicate points')
-    }
-
-    const pointAId = pointA.id as PointId
-    const vertexId = vertex.id as PointId
-    const pointCId = pointC.id as PointId
-
-    this.data.parameters.angleTriplets.push([pointAId, vertexId, pointCId])
-
-    // Update points list and set
-    for (const point of [pointA, vertex, pointC]) {
-      const pointId = point.id as PointId
-      if (!this.data.entities.points.includes(pointId)) {
-        this.data.entities.points.push(pointId)
-        this._points.add(point)
-      }
-    }
-
-    this.updateTimestamp()
-  }
-
-  removeAngleTriplet(index: number): void {
-    if (index >= 0 && index < this.data.parameters.angleTriplets.length) {
-      this.data.parameters.angleTriplets.splice(index, 1)
-
-      // Rebuild points list from remaining triplets
-      const allPointIds = new Set<PointId>()
-      this.data.parameters.angleTriplets.forEach(triplet => {
-        allPointIds.add(triplet[0])
-        allPointIds.add(triplet[1])
-        allPointIds.add(triplet[2])
-      })
-      this.data.entities.points = Array.from(allPointIds)
-
-      // Clear and rebuild point set
-      this._points.clear()
-      this._entitiesPreloaded = false
-
-      this.updateTimestamp()
-    }
-  }
-
-  protected getTargetValue(): number {
-    return 0 // Equal angles should have 0 standard deviation
   }
 
   /**
@@ -303,24 +137,14 @@ export class EqualAnglesConstraint extends Constraint {
    * each residual = angle_i - angle_0 in radians.
    */
   computeResiduals(valueMap: ValueMap): Value[] {
-    const angleTriplets = this.data.parameters.angleTriplets
-
-    if (angleTriplets.length < 2) {
+    if (this.angleTriplets.length < 2) {
       console.warn('Equal angles constraint requires at least 2 triplets')
       return []
     }
 
-    const points = this.points
-    const pointMap = new Map<PointId, WorldPoint>()
-    points.forEach(p => pointMap.set(p.id as PointId, p))
-
     // Calculate angle for a triplet [pointA, vertex, pointC] using Vec3 API
-    const calculateAngle = (triplet: [PointId, PointId, PointId]): Value | undefined => {
-      const pointA = pointMap.get(triplet[0])
-      const vertex = pointMap.get(triplet[1])
-      const pointC = pointMap.get(triplet[2])
-
-      if (!pointA || !vertex || !pointC) return undefined
+    const calculateAngle = (triplet: [WorldPoint, WorldPoint, WorldPoint]): Value | undefined => {
+      const [pointA, vertex, pointC] = triplet
 
       const pointAVec = valueMap.points.get(pointA)
       const vertexVec = valueMap.points.get(vertex)
@@ -338,7 +162,7 @@ export class EqualAnglesConstraint extends Constraint {
 
     // Calculate all angles
     const angles: Value[] = []
-    for (const triplet of angleTriplets) {
+    for (const triplet of this.angleTriplets) {
       const angle = calculateAngle(triplet)
       if (angle) {
         angles.push(angle)
@@ -346,7 +170,7 @@ export class EqualAnglesConstraint extends Constraint {
     }
 
     if (angles.length < 2) {
-      console.warn(`Equal angles constraint ${this.data.id}: not enough valid triplets found`)
+      console.warn(`Equal angles constraint ${this.getName()}: not enough valid triplets found`)
       return []
     }
 

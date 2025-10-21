@@ -1,12 +1,11 @@
 // Optimization Export DTOs for Python testing
 // This file defines the export format for sending project data to the optimization backend
 
-import type { ConstraintDto } from '../entities/constraints/base-constraint'
-
 // DTO types for optimization export (serialized format)
 type WorldPointDto = any
 type LineDto = any
 type ViewpointDto = any
+type ConstraintDto = any  // Constraint DTOs defined in Serialization.ts
 
 // Lightweight viewpoint DTO without base64 image blob
 export interface ViewpointDtoLight {

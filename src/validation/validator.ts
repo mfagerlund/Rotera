@@ -1,6 +1,7 @@
 // Validation framework for strict data integrity and fail-fast serialization
 
-import type { EntityId } from '../types/ids'
+// EntityId is just a string (entity names are used as unique IDs)
+export type EntityId = string
 
 export interface ValidationError {
   code: string

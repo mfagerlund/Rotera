@@ -72,6 +72,22 @@ interface ViewpointDto {
   color: string
 }
 
+interface DistanceConstraintDto {
+  id: string
+  name: string
+  type: 'distance_point_point'
+  pointAId: string
+  pointBId: string
+  targetDistance: number
+  tolerance?: number
+  priority?: number
+  isEnabled?: boolean
+  isDriving?: boolean
+  group?: string
+  tags?: string[]
+  notes?: string
+}
+
 interface ConstraintDto {
   id: string
   type: string
@@ -222,6 +238,12 @@ export class Serialization {
     })
 
     const constraints = new Set<Constraint>()
+    dto.constraints.forEach(constraintDto => {
+      const constraint = this.dtoToConstraint(constraintDto, idToWorldPoint, lines)
+      if (constraint) {
+        constraints.add(constraint)
+      }
+    })
 
     return Project.createFull(
       dto.name,
@@ -410,5 +432,40 @@ export class Serialization {
       console.error('Failed to load project from localStorage:', e)
       return null
     }
+  }
+
+  // ============================================================================
+  // Constraint serialization (EXAMPLE: DistanceConstraint)
+  // ============================================================================
+
+  private static dtoToConstraint(
+    dto: ConstraintDto,
+    idToWorldPoint: Map<string, WorldPoint>,
+    lines: Set<Line>
+  ): Constraint | null {
+    if (dto.type === 'distance_point_point') {
+      return this.dtoToDistanceConstraint(dto as any, idToWorldPoint)
+    }
+    // TODO: Add other constraint types (angle, collinear, etc.)
+    console.warn(`Unknown constraint type: ${dto.type}`)
+    return null
+  }
+
+  private static dtoToDistanceConstraint(
+    dto: DistanceConstraintDto,
+    idToWorldPoint: Map<string, WorldPoint>
+  ): Constraint | null {
+    const pointA = idToWorldPoint.get(dto.pointAId)
+    const pointB = idToWorldPoint.get(dto.pointBId)
+
+    if (!pointA || !pointB) {
+      console.warn(`DistanceConstraint ${dto.id}: Could not resolve points ${dto.pointAId}, ${dto.pointBId}`)
+      return null
+    }
+
+    // TODO: DistanceConstraint.create() requires ConstraintRepository
+    // Need architectural decision on how to handle this
+    // For now, constraints are not serialized
+    return null
   }
 }

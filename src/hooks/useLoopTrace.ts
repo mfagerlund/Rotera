@@ -136,10 +136,9 @@ export function useLoopTrace({
         color: '#0696d7',
         isVisible: true,
         isConstruction: false,
-        constraints: {
-          direction: orientation,
-          tolerance: 0.001
-        }
+        direction: orientation,
+        targetLength: undefined,
+        tolerance: 0.001
       }
 
       onCreateLine(pointA, pointB, constraints)

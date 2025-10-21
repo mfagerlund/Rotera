@@ -1,6 +1,5 @@
 // Coplanar points constraint
 
-import type { ConstraintId, PointId } from '../../types/ids'
 import type { ValidationResult } from '../../validation/validator'
 import type { ValueMap } from '../../optimization/IOptimizable'
 import { Vec3, type Value } from 'scalar-autograd'
@@ -8,92 +7,43 @@ import { ValidationHelpers } from '../../validation/validator'
 import type { WorldPoint } from '../world-point/WorldPoint'
 import {
   Constraint,
-  type ConstraintRepository,
-  type BaseConstraintDto,
-  type ConstraintDto,
-  type CoplanarPointsConstraintDto,
-  type ConstraintEvaluation
+  type ConstraintEvaluation,
+  getPointCoordinates
 } from './base-constraint'
 
-export interface CoplanarPointsConstraintData extends BaseConstraintDto {
-  entities: {
-    points: PointId[] // At least 4 points
-    lines?: undefined
-    planes?: undefined
-  }
-}
-
 export class CoplanarPointsConstraint extends Constraint {
-  protected data: CoplanarPointsConstraintData
+  readonly points: WorldPoint[]
+  tolerance: number
 
-  private constructor(repo: ConstraintRepository, data: CoplanarPointsConstraintData) {
-    super(repo, data)
-    this.data = data
+  private constructor(
+    name: string,
+    points: WorldPoint[],
+    tolerance: number
+  ) {
+    super(name)
+    this.points = points
+    this.tolerance = tolerance
+
+    // Register with all points
+    points.forEach(p => p.addReferencingConstraint(this))
   }
 
   static create(
-    id: ConstraintId,
     name: string,
     points: WorldPoint[], // At least 4 points
-    repo: ConstraintRepository,
     options: {
       tolerance?: number
-      priority?: number
-      isEnabled?: boolean
-      isDriving?: boolean
-      group?: string
-      tags?: string[]
-      notes?: string
     } = {}
   ): CoplanarPointsConstraint {
     if (points.length < 4) {
       throw new Error('CoplanarPointsConstraint requires at least 4 points')
     }
 
-    const now = new Date().toISOString()
-    const data: CoplanarPointsConstraintData = {
-      id,
+    return new CoplanarPointsConstraint(
       name,
-      type: 'coplanar_points',
-      status: 'satisfied',
-      entities: {
-        points: points.map(p => p.id as PointId)
-      },
-      parameters: {
-        tolerance: options.tolerance ?? 0.001,
-        priority: options.priority ?? 5
-      },
-      isEnabled: options.isEnabled ?? true,
-      isDriving: options.isDriving ?? false,
-      group: options.group,
-      tags: options.tags,
-      notes: options.notes,
-      createdAt: now,
-      updatedAt: now
-    }
-    const constraint = new CoplanarPointsConstraint(repo, data)
-    points.forEach(p => constraint._points.add(p))
-    constraint._entitiesPreloaded = true
-    return constraint
-  }
-
-  static fromDto(dto: ConstraintDto, repo: ConstraintRepository): CoplanarPointsConstraint {
-    if (!dto.coplanarPointsConstraint) {
-      throw new Error('Invalid CoplanarPointsConstraint DTO: missing coplanarPointsConstraint data')
-    }
-
-    if (!dto.entities.points || dto.entities.points.length < 4) {
-      throw new Error('CoplanarPointsConstraint requires at least 4 points')
-    }
-
-    const data: CoplanarPointsConstraintData = {
-      ...dto,
-      entities: {
-        points: [...dto.entities.points]
-      }
-    }
-
-    return new CoplanarPointsConstraint(repo, data)
+      points,
+      options.tolerance ?? 0.001
+    )
   }
 
   getConstraintType(): string {
@@ -101,10 +51,9 @@ export class CoplanarPointsConstraint extends Constraint {
   }
 
   evaluate(): ConstraintEvaluation {
-    const points = this.points
-    const coordsList = points.map(p => p.getDefinedCoordinates()).filter((c): c is [number, number, number] => c !== undefined)
+    const coordsList = this.points.map(p => getPointCoordinates(p)).filter((c): c is [number, number, number] => c !== undefined)
 
-    if (coordsList.length >= 4 && coordsList.length === points.length) {
+    if (coordsList.length >= 4 && coordsList.length === this.points.length) {
       // Use first three points to define the plane
       const p1 = coordsList[0]
       const p2 = coordsList[1]
@@ -150,7 +99,7 @@ export class CoplanarPointsConstraint extends Constraint {
 
       return {
         value: maxDeviation,
-        satisfied: this.checkSatisfaction(maxDeviation, 0) // Target is 0 for perfect coplanarity
+        satisfied: Math.abs(maxDeviation - 0) <= this.tolerance // Target is 0 for perfect coplanarity
       }
     }
     return { value: 1, satisfied: false }
@@ -159,25 +108,25 @@ export class CoplanarPointsConstraint extends Constraint {
   validateConstraintSpecific(): ValidationResult {
     const errors = []
 
-    if (this.data.entities.points.length < 4) {
+    if (this.points.length < 4) {
       errors.push(ValidationHelpers.createError(
         'INSUFFICIENT_POINTS',
         'Coplanar points constraint requires at least 4 points',
-        this.data.id,
+        this.getName(),
         'constraint',
-        'entities.points'
+        'points'
       ))
     }
 
     // Check for duplicate points
-    const uniquePoints = new Set(this.data.entities.points)
-    if (uniquePoints.size !== this.data.entities.points.length) {
+    const uniquePoints = new Set(this.points)
+    if (uniquePoints.size !== this.points.length) {
       errors.push(ValidationHelpers.createError(
         'DUPLICATE_POINTS',
         'Coplanar points constraint cannot have duplicate points',
-        this.data.id,
+        this.getName(),
         'constraint',
-        'entities.points'
+        'points'
       ))
     }
 
@@ -189,69 +138,6 @@ export class CoplanarPointsConstraint extends Constraint {
     }
   }
 
-  getRequiredEntityCounts(): { points?: number } {
-    return {} // Variable number of points (at least 4)
-  }
-
-  toConstraintDto(): ConstraintDto {
-    const baseDto: ConstraintDto = {
-      ...this.data,
-      entities: {
-        points: [...this.data.entities.points]
-      },
-      parameters: { ...this.data.parameters },
-      distanceConstraint: undefined,
-      angleConstraint: undefined,
-      parallelLinesConstraint: undefined,
-      perpendicularLinesConstraint: undefined,
-      fixedPointConstraint: undefined,
-      collinearPointsConstraint: undefined,
-      coplanarPointsConstraint: {}, // No additional data
-      equalDistancesConstraint: undefined,
-      equalAnglesConstraint: undefined
-    }
-    return baseDto
-  }
-
-  clone(newId: ConstraintId, newName?: string): CoplanarPointsConstraint {
-    const clonedData: CoplanarPointsConstraintData = {
-      ...this.data,
-      id: newId,
-      name: newName || `${this.data.name} (copy)`,
-      entities: {
-        points: [...this.data.entities.points]
-      },
-      parameters: { ...this.data.parameters },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-    return new CoplanarPointsConstraint(this.repo, clonedData)
-  }
-
-  // Specific methods
-  addPoint(point: WorldPoint): void {
-    const pointId = point.id as PointId
-    if (!this.data.entities.points.includes(pointId)) {
-      this.data.entities.points.push(pointId)
-      this._points.add(point)
-      this.updateTimestamp()
-    }
-  }
-
-  removePoint(point: WorldPoint): void {
-    const pointId = point.id as PointId
-    const index = this.data.entities.points.indexOf(pointId)
-    if (index !== -1) {
-      this.data.entities.points.splice(index, 1)
-      this._points.delete(point)
-      this.updateTimestamp()
-    }
-  }
-
-  protected getTargetValue(): number {
-    return 0 // Coplanar points should have 0 deviation from the plane
-  }
-
   /**
    * Compute residuals for coplanar points constraint.
    * Residual: For 4+ points to be coplanar, the scalar triple product
@@ -259,20 +145,18 @@ export class CoplanarPointsConstraint extends Constraint {
    * Returns 1 residual (the scalar triple product).
    */
   computeResiduals(valueMap: ValueMap): Value[] {
-    const points = this.points
-
-    if (points.length < 4) {
+    if (this.points.length < 4) {
       console.warn('Coplanar constraint requires at least 4 points')
       return []
     }
 
-    const p0 = valueMap.points.get(points[0])
-    const p1 = valueMap.points.get(points[1])
-    const p2 = valueMap.points.get(points[2])
-    const p3 = valueMap.points.get(points[3])
+    const p0 = valueMap.points.get(this.points[0])
+    const p1 = valueMap.points.get(this.points[1])
+    const p2 = valueMap.points.get(this.points[2])
+    const p3 = valueMap.points.get(this.points[3])
 
     if (!p0 || !p1 || !p2 || !p3) {
-      console.warn(`Coplanar constraint ${this.data.id}: not enough points found in valueMap`)
+      console.warn(`Coplanar constraint ${this.getName()}: not enough points found in valueMap`)
       return []
     }
 
