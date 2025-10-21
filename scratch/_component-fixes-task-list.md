@@ -335,3 +335,10 @@ const entity = LineEntity.create(
 - After: `27 variables, 0 constraints` but `23 residuals` → Converges in ~10 iterations
 
 The system is now fully functional with all entity API migrations complete and optimization working correctly!
+
+**Skipped Tests (2):**
+Both are intentionally skipped pending new fixture files:
+1. `bundle-adjustment-fixture.test.ts` - Loads fixture from `C:\Users\matti\Downloads\New Project-optimization-2025-10-18(4).json` (old Camera/Image format)
+2. `real-camera-data.test.ts` - Uses `test-data/test-project-3-cameras.json` (old Camera/Image format)
+
+These will be re-enabled once new fixture files are created in Viewpoint format. Not blocking - core optimization fully functional.
