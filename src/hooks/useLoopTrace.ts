@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from 'react'
 import { LineDirection } from '../entities/line'
 import { WorldPoint } from '../entities/world-point'
+import { CoplanarPointsConstraint } from '../entities/constraints/coplanar-points-constraint'
 
 interface LineConstraints {
   name?: string
@@ -151,22 +152,13 @@ export function useLoopTrace({
         ? `${namePrefix}_coplanar`
         : 'Loop_coplanar'
 
-      const coplanarConstraint = {
-        id: `constraint_${Date.now()}`,
-        type: 'points_coplanar',
-        enabled: true,
-        isDriving: true,
-        weight: 1.0,
-        status: 'satisfied',
-        entities: {
-          points: [...selectedPoints]
-        },
-        parameters: {
-          tolerance: 0.001,
-          name: constraintName
-        },
-        createdAt: new Date().toISOString()
-      }
+      const coplanarConstraint = CoplanarPointsConstraint.create(
+        constraintName,
+        selectedPoints,
+        {
+          tolerance: 0.001
+        }
+      )
 
       onCreateConstraint(coplanarConstraint)
     }

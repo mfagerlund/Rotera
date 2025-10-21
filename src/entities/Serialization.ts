@@ -3,7 +3,7 @@ import { WorldPoint } from './world-point/WorldPoint'
 import { Line } from './line/Line'
 import { Viewpoint } from './viewpoint/Viewpoint'
 import { ImagePoint } from './imagePoint/ImagePoint'
-import { Constraint } from './constraints'
+import { deserializeConstraint } from './constraints/constraint-factory'
 import { SerializationContext } from './serialization/SerializationContext'
 import type { ProjectDto } from './project/ProjectDto'
 import type { IImagePoint } from './interfaces'
@@ -63,7 +63,7 @@ export class Serialization {
     )
 
     const constraints = new Set(
-      dto.constraints.map(cDto => Constraint.deserialize(cDto, context))
+      dto.constraints.map(cDto => deserializeConstraint(cDto, context))
     )
 
     return Project.createFull(

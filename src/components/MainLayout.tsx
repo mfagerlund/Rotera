@@ -13,7 +13,7 @@ import { useMainLayoutState } from '../hooks/useMainLayoutState'
 import { useMainLayoutHandlers } from '../hooks/useMainLayoutHandlers'
 import { useMainLayoutKeyboard } from '../hooks/useMainLayoutKeyboard'
 import { AvailableConstraint } from '../types/ui-types'
-import { ConstructionPreview, LineData } from './image-viewer/types'
+import { ConstructionPreview } from './image-viewer/types'
 import { Line as LineEntity } from '../entities/line'
 import { WorldPoint } from '../entities/world-point'
 import { Viewpoint } from '../entities/viewpoint'
@@ -260,27 +260,6 @@ export const MainLayout: React.FC = observer(() => {
   // Combined selected entities for components that accept ISelectable[]
   const selectedEntities = [...selectedPointEntities, ...selectedLineEntities, ...selectedPlaneEntities] as ISelectable[]
 
-  const viewerLines = new Map<string, LineData>()
-  if (project?.lines) {
-    for (const line of project.lines) {
-      const viewerLine: LineData = {
-        id: line.getName(),
-        name: line.name,
-        pointA: line.pointA,
-        pointB: line.pointB,
-        color: line.color,
-        isVisible: line.isVisible,
-        isConstruction: line.isConstruction,
-        length: line.length() ?? undefined,
-        constraints: {
-          direction: line.direction,
-          targetLength: line.targetLength ?? undefined,
-          tolerance: line.tolerance
-        }
-      }
-      viewerLines.set(line.getName(), viewerLine)
-    }
-  }
 
 
   // Constraint system uses entity objects directly (intrinsic + extrinsic)
@@ -412,8 +391,7 @@ export const MainLayout: React.FC = observer(() => {
       image={currentImage || null}
       imageViewerRef={imageViewerRef}
       worldPoints={worldPointsMap}
-      lines={viewerLines}
-      lineEntities={linesMap}
+      lines={linesMap}
       selectedPoints={selectedPointEntities}
       selectedLines={selectedLineEntities}
       hoveredConstraintId={hoveredConstraintId}
@@ -451,7 +429,7 @@ export const MainLayout: React.FC = observer(() => {
     setHoveredWorldPoint,
     hoveredConstraintId,
     hoveredWorldPoint,
-    viewerLines,
+    linesMap,
     worldPointsArray,
     linesArray,
     handleRequestAddImage
@@ -617,7 +595,10 @@ export const MainLayout: React.FC = observer(() => {
                       {
                         name: lineConstraints?.name,
                         color: lineConstraints?.color,
-                        isConstruction: lineConstraints?.isConstruction
+                        isConstruction: lineConstraints?.isConstruction,
+                        direction: lineConstraints?.direction,
+                        targetLength: lineConstraints?.targetLength,
+                        tolerance: lineConstraints?.tolerance
                       }
                     )
 

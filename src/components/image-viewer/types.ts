@@ -28,32 +28,14 @@ export interface ConstructionPreview {
   }>
 }
 
-import { Line as LineEntity } from '../../entities/line'
-
-export interface LineData {
-  id: string
-  name: string
-  pointA: WorldPoint
-  pointB: WorldPoint
-  length?: number
-  color: string
-  isVisible: boolean
-  isConstruction: boolean
-  createdAt?: string
-  updatedAt?: string
-  constraints?: {
-    direction: 'free' | 'horizontal' | 'vertical' | 'x-aligned' | 'z-aligned'
-    targetLength?: number
-    tolerance?: number
-  }
-}
+import { Line } from '../../entities/line'
 
 export interface ImageViewerPropsBase {
   image: Viewpoint
   worldPoints: Map<string, WorldPoint>
-  lineEntities?: Map<string, LineEntity>
+  lineEntities?: Map<string, Line>
   selectedPoints: WorldPoint[]
-  selectedLines?: LineEntity[]
+  selectedLines?: Line[]
   hoveredConstraintId: string | null
   hoveredWorldPoint?: WorldPoint | null
   placementMode?: { active: boolean; worldPoint: WorldPoint | null }
@@ -62,12 +44,10 @@ export interface ImageViewerPropsBase {
   constructionPreview?: ConstructionPreview | null
 }
 
-import type { Line } from '../../entities/line'
-
 export interface ImageViewerRenderState {
   viewpoint: Viewpoint
   worldPoints: Map<string, WorldPoint>
-  lines: Map<string, LineData>
+  lines: Map<string, Line>
   scale: number
   offset: CanvasOffset
   selectedPoints: WorldPoint[]

@@ -427,8 +427,8 @@ export const useImageViewerRenderer = ({
         const midY = (y1 + y2) / 2
 
         let directionGlyph = ''
-        if (line.constraints?.direction && line.constraints.direction !== 'free') {
-          switch (line.constraints.direction) {
+        if (line.direction && line.direction !== 'free') {
+          switch (line.direction) {
             case 'horizontal': directionGlyph = '↔'; break
             case 'vertical': directionGlyph = '↕'; break
             case 'x-aligned': directionGlyph = 'X'; break
@@ -436,13 +436,21 @@ export const useImageViewerRenderer = ({
           }
         }
 
-        const displayText = line.constraints?.targetLength
-          ? directionGlyph
-            ? `${line.name} ${directionGlyph} ${line.constraints.targetLength.toFixed(1)}m`
-            : `${line.name} ${line.constraints.targetLength.toFixed(1)}m`
-          : directionGlyph
-            ? `${line.name} ${directionGlyph}`
-            : `${line.name}`
+        // Prioritize showing glyph and distance over name
+        let displayText = ''
+        if (directionGlyph && line.targetLength) {
+          // Both glyph and target length
+          displayText = `${directionGlyph} ${line.targetLength.toFixed(1)}m`
+        } else if (line.targetLength) {
+          // Only target length
+          displayText = `${line.targetLength.toFixed(1)}m`
+        } else if (directionGlyph) {
+          // Only direction glyph
+          displayText = directionGlyph
+        } else {
+          // Fallback to name only if no constraints
+          displayText = line.name
+        }
 
         ctx.font = '12px Arial'
         ctx.textAlign = 'center'

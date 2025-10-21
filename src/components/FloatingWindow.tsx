@@ -19,6 +19,7 @@ interface FloatingWindowProps {
   initialPosition?: FloatingWindowPosition
   width?: number
   height?: number
+  maxHeight?: number
   minWidth?: number
   minHeight?: number
   storageKey?: string // For position persistence
@@ -44,6 +45,7 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
   initialPosition,
   width,
   height,
+  maxHeight,
   minWidth = 300,
   minHeight = 200,
   storageKey,
@@ -262,6 +264,7 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
         top: `${position.y}px`,
         width: width ? `${width}px` : undefined,
         height: height ? `${height}px` : 'auto',
+        maxHeight: maxHeight ? `${maxHeight}px` : undefined,
         minWidth: minWidth ? `${minWidth}px` : undefined,
         minHeight: minHeight ? `${minHeight}px` : undefined,
         zIndex,

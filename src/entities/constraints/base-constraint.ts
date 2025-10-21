@@ -147,31 +147,4 @@ export abstract class Constraint implements ISelectable, IValidatable, IResidual
     const angleRadians = Math.acos(Math.max(-1, Math.min(1, dotProduct / (mag1 * mag2))))
     return (angleRadians * 180) / Math.PI
   }
-
-  static deserialize(dto: ConstraintDto, context: SerializationContext): Constraint {
-    switch (dto.type) {
-      case 'distance_point_point':
-        return require('./distance-constraint').DistanceConstraint.deserialize(dto, context)
-      case 'angle_point_point_point':
-        return require('./angle-constraint').AngleConstraint.deserialize(dto, context)
-      case 'parallel_lines':
-        return require('./parallel-lines-constraint').ParallelLinesConstraint.deserialize(dto, context)
-      case 'perpendicular_lines':
-        return require('./perpendicular-lines-constraint').PerpendicularLinesConstraint.deserialize(dto, context)
-      case 'fixed_point':
-        return require('./fixed-point-constraint').FixedPointConstraint.deserialize(dto, context)
-      case 'collinear_points':
-        return require('./collinear-points-constraint').CollinearPointsConstraint.deserialize(dto, context)
-      case 'coplanar_points':
-        return require('./coplanar-points-constraint').CoplanarPointsConstraint.deserialize(dto, context)
-      case 'equal_distances':
-        return require('./equal-distances-constraint').EqualDistancesConstraint.deserialize(dto, context)
-      case 'equal_angles':
-        return require('./equal-angles-constraint').EqualAnglesConstraint.deserialize(dto, context)
-      case 'projection':
-        return require('./projection-constraint').ProjectionConstraint.deserialize(dto, context)
-      default:
-        throw new Error(`Unknown constraint type: ${dto.type}`)
-    }
-  }
 }

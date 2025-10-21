@@ -1,7 +1,7 @@
 import React from 'react'
 
 import ImageViewer, { ImageViewerRef } from '../ImageViewer'
-import { LineData, ConstructionPreview } from '../image-viewer/types'
+import { ConstructionPreview } from '../image-viewer/types'
 import { Viewpoint } from '../../entities/viewpoint'
 import { WorldPoint } from '../../entities/world-point'
 import { Line as LineEntity } from '../../entities/line'
@@ -12,8 +12,7 @@ interface ImageWorkspaceProps {
   image: Viewpoint | null
   imageViewerRef: React.RefObject<ImageViewerRef>
   worldPoints: Map<string, WorldPoint>
-  lines: Map<string, LineData>
-  lineEntities: Map<string, LineEntity>
+  lines: Map<string, LineEntity>
   selectedPoints: WorldPoint[]
   selectedLines: LineEntity[]
   hoveredConstraintId: string | null
@@ -37,7 +36,6 @@ const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({
   imageViewerRef,
   worldPoints,
   lines,
-  lineEntities,
   selectedPoints,
   selectedLines,
   hoveredConstraintId,
@@ -83,7 +81,7 @@ const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({
           ref={imageViewerRef}
           image={image}
           worldPoints={worldPoints}
-          lineEntities={lineEntities}
+          lineEntities={lines}
           selectedPoints={selectedPoints}
           selectedLines={selectedLines}
           hoveredConstraintId={hoveredConstraintId}

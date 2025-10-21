@@ -299,29 +299,12 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
   const creationContextActive = placementModeActive || isPointCreationActive || isLoopTraceActive
   const isPlacementInteractionActive = isDraggingPoint || isDragDropActive || creationContextActive
 
-  // Convert lineEntities to LineData format for renderer
-  const lines = useMemo(() => {
-    const lineDataMap = new Map()
-    for (const [id, lineEntity] of lineEntities.entries()) {
-      lineDataMap.set(id, {
-        id: lineEntity.getName(),
-        name: lineEntity.name,
-        pointA: lineEntity.pointA,
-        pointB: lineEntity.pointB,
-        color: lineEntity.color,
-        isVisible: lineEntity.isVisible,
-        isConstruction: lineEntity.isConstruction,
-        createdAt: undefined,
-        constraints: undefined
-      })
-    }
-    return lineDataMap
-  }, [lineEntities])
+  // Use lineEntities directly - no need to convert!
 
   const renderState = useMemo<ImageViewerRenderState>(() => ({
     viewpoint: image,
     worldPoints,
-    lines,
+    lines: lineEntities,
     scale,
     offset,
     selectedPoints,
@@ -357,7 +340,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     placementModeActive,
     isPointCreationActive,
     isLoopTraceActive,
-    lines,
+    lineEntities,
     offset,
     panVelocity,
     scale,
