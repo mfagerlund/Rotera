@@ -30,6 +30,12 @@ export interface LineUpdates {
   name?: string
   color?: string
   isVisible?: boolean
+  isConstruction?: boolean
+  direction?: 'free' | 'horizontal' | 'vertical' | 'x-aligned' | 'z-aligned'
+  targetLength?: number
+  tolerance?: number
+  lineStyle?: 'solid' | 'dashed' | 'dotted'
+  thickness?: number
 }
 
 export interface ConstraintUpdates {
@@ -146,6 +152,12 @@ export function useDomainOperations(
     if (updates.name !== undefined) line.name = updates.name
     if (updates.color !== undefined) line.color = updates.color
     if (updates.isVisible !== undefined) line.isVisible = updates.isVisible
+    if (updates.isConstruction !== undefined) line.isConstruction = updates.isConstruction
+    if (updates.direction !== undefined) line.direction = updates.direction
+    if (updates.targetLength !== undefined) line.targetLength = updates.targetLength
+    if (updates.tolerance !== undefined) line.tolerance = updates.tolerance
+    if (updates.lineStyle !== undefined) line.lineStyle = updates.lineStyle
+    if (updates.thickness !== undefined) line.thickness = updates.thickness
   }
 
   const deleteLine = (line: Line) => {
@@ -235,7 +247,28 @@ export function useDomainOperations(
   }
 
   const copyPointsFromImageToImage = (fromViewpoint: Viewpoint, toViewpoint: Viewpoint) => {
-    // TODO: Implement point copying
+    if (!project) return
+
+    // Get all image points from source viewpoint
+    const sourceImagePoints = Array.from(fromViewpoint.imagePoints)
+
+    // For each image point in source, create corresponding point in target
+    sourceImagePoints.forEach((sourceImagePoint) => {
+      const worldPoint = sourceImagePoint.worldPoint as WorldPoint
+
+      // Check if this world point already has an image point in the target viewpoint
+      const existingImagePointInTarget = toViewpoint.getImagePointsForWorldPoint(worldPoint)[0]
+
+      if (!existingImagePointInTarget) {
+        // Create new image point in target viewpoint with same UV coordinates
+        addImagePointToWorldPoint(
+          worldPoint,
+          toViewpoint,
+          sourceImagePoint.u,
+          sourceImagePoint.v
+        )
+      }
+    })
   }
 
   const addConstraint = (constraint: Constraint) => {

@@ -604,8 +604,8 @@ export const useImageViewerRenderer = ({
         img.height * scale
       )
 
-      renderWorldPoints()
       renderLines()
+      renderWorldPoints()
       renderConstructionPreview()
       renderSelectionOverlay()
       renderPanFeedback()

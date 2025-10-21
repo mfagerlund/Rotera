@@ -290,8 +290,7 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
         const length = parseFloat(lengthValue)
         const targetLength = lengthValue.trim() !== '' && !isNaN(length) && length > 0 ? length : undefined
 
-        const updatedLine = {
-          ...existingLine,
+        const updates = {
           name: lineName,
           color: lineColor,
           isVisible: isVisible,
@@ -301,7 +300,7 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
           tolerance: 0.001
         }
 
-        onUpdateLine(existingLine, updatedLine)
+        onUpdateLine(existingLine, updates)
         onCancel()
       }
     } else {

@@ -97,8 +97,6 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
   const [isPrecisionDrag, setIsPrecisionDrag] = useState(false)
   const [isPrecisionToggleActive, setIsPrecisionToggleActive] = useState(false)
   const [isDragDropActive, setIsDragDropActive] = useState(false)
-  const lastClickTimeRef = useRef<number>(0)
-  const lastClickedPointRef = useRef<WorldPoint | null>(null)
 
   // Load image
   useEffect(() => {
@@ -471,13 +469,12 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
         // In placement mode, always create/place point regardless of nearby points
         let imageCoords = canvasToImageCoords(x, y)
 
+        // Save precision coords in case they're needed
+        const savedPrecisionCoords = isPrecisionToggleActive ? draggedPointImageCoordsRef.current : null
+
         // Apply precision adjustment if precision toggle is active
-        if (isPrecisionToggleActive && precisionCanvasPosRef.current) {
-          const precisionPos: CanvasPoint = precisionCanvasPosRef.current
-          const precisionImageCoords = canvasToImageCoords(precisionPos.x, precisionPos.y)
-          if (precisionImageCoords) {
-            imageCoords = precisionImageCoords
-          }
+        if (isPrecisionToggleActive && savedPrecisionCoords) {
+          imageCoords = savedPrecisionCoords
         }
 
         if (imageCoords) {
@@ -506,27 +503,8 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
           setDraggedPoint(nearbyPoint)
           // Don't start dragging immediately - wait for mouse movement
 
-          // Check for double-click to open edit properties
-          const now = Date.now()
-          const isDoubleClick =
-            lastClickedPointRef.current === nearbyPoint &&
-            now - lastClickTimeRef.current < 300
-
-          if (isDoubleClick) {
-            // Double-click opens edit properties
-            if (onPointRightClick) {
-              onPointRightClick(nearbyPoint)
-            }
-            lastClickTimeRef.current = 0
-            lastClickedPointRef.current = null
-            // Don't start dragging on double-click
-            return
-          } else {
-            // Single click for selection
-            lastClickTimeRef.current = now
-            lastClickedPointRef.current = nearbyPoint
-            onPointClick(nearbyPoint, event.ctrlKey, event.shiftKey)
-          }
+          // Single click for selection and properties
+          onPointClick(nearbyPoint, event.ctrlKey, event.shiftKey)
         } else if (nearbyLine && onLineClick) {
           // Handle line click
           dragStartImageCoordsRef.current = null
@@ -535,6 +513,10 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
           onLineClick(nearbyLine, event.ctrlKey, event.shiftKey)
         } else {
           // Click on empty space
+
+          // Save precision coords BEFORE clearing refs
+          const savedPrecisionCoords = isPrecisionToggleActive ? draggedPointImageCoordsRef.current : null
+
           dragStartImageCoordsRef.current = null
           draggedPointImageCoordsRef.current = null
           precisionPointerRef.current = null
@@ -549,12 +531,8 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
             let imageCoords = canvasToImageCoords(x, y)
 
             // Apply precision adjustment if precision toggle is active
-            if (isPrecisionToggleActive && precisionCanvasPosRef.current) {
-              const precisionPos: CanvasPoint = precisionCanvasPosRef.current
-              const precisionImageCoords = canvasToImageCoords(precisionPos.x, precisionPos.y)
-              if (precisionImageCoords) {
-                imageCoords = precisionImageCoords
-              }
+            if (isPrecisionToggleActive && savedPrecisionCoords) {
+              imageCoords = savedPrecisionCoords
             }
 
             if (imageCoords) {
@@ -685,16 +663,19 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
           precisionCanvasPosRef.current = imageToCanvasCoords(targetCoords.u, targetCoords.v)
         }
       } else {
-        if (precisionCanvasPosRef.current) {
-          precisionCanvasPosRef.current = null
+        // Only clear if precision is NOT supposed to be active
+        if (!isPrecisionToggleActive) {
+          if (precisionCanvasPosRef.current) {
+            precisionCanvasPosRef.current = null
+          }
+          if (precisionPointerRef.current) {
+            precisionPointerRef.current = null
+          }
+          if (draggedPointImageCoordsRef.current) {
+            draggedPointImageCoordsRef.current = null
+          }
+          setIsPrecisionDrag(false)
         }
-        if (precisionPointerRef.current) {
-          precisionPointerRef.current = null
-        }
-        if (draggedPointImageCoordsRef.current) {
-          draggedPointImageCoordsRef.current = null
-        }
-        setIsPrecisionDrag(false)
       }
 
       // Check for nearby entities to show hover cursor

@@ -4,6 +4,8 @@ import { WorldPoint } from '../entities/world-point'
 import { Viewpoint } from '../entities/viewpoint'
 import FloatingWindow from './FloatingWindow'
 import { useConfirm } from './ConfirmDialog'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCircleDot } from '@fortawesome/free-solid-svg-icons'
 
 type ProjectImage = Viewpoint
 
@@ -161,7 +163,7 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
 
             <div className="form-row">
               <label>Locked</label>
-              <div style={{ display: 'flex', gap: '4px', flex: 1, maxWidth: '300px' }}>
+              <div style={{ display: 'flex', gap: '4px', flex: 1, maxWidth: '300px', alignItems: 'flex-end' }}>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                   <span style={{ fontSize: '11px', color: '#999', marginBottom: '2px' }}>X</span>
                   <input
@@ -198,6 +200,40 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
                     style={{ fontSize: '12px', padding: '4px', width: '100%' }}
                   />
                 </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLockedX('0')
+                    setLockedY('0')
+                    setLockedZ('0')
+                    handleChange()
+                  }}
+                  title="Set to origin (0, 0, 0)"
+                  style={{
+                    padding: '4px 8px',
+                    fontSize: '10px',
+                    border: '1px solid #555',
+                    borderRadius: '3px',
+                    background: '#2a2a2a',
+                    color: '#999',
+                    cursor: 'pointer',
+                    height: '26px',
+                    minWidth: '26px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#3a3a3a'
+                    e.currentTarget.style.color = '#fff'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = '#2a2a2a'
+                    e.currentTarget.style.color = '#999'
+                  }}
+                >
+                  <FontAwesomeIcon icon={faCircleDot} />
+                </button>
               </div>
             </div>
 
