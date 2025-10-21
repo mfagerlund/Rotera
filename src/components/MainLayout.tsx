@@ -750,7 +750,22 @@ export const MainLayout: React.FC = observer(() => {
                 onImageSelect={(viewpoint) => setCurrentViewpoint(viewpoint)}
                 onImageAdd={addImage}
                 onImageRename={renameImage}
-                onImageDelete={deleteImage}
+                onImageDelete={(viewpoint) => {
+                  const wasCurrentViewpoint = viewpoint === currentViewpoint
+                  deleteImage(viewpoint)
+
+                  // If we deleted the current viewpoint, select another one
+                  if (wasCurrentViewpoint && project) {
+                    const remainingViewpoints = Array.from(project.viewpoints)
+                    if (remainingViewpoints.length > 0) {
+                      // Select the first remaining viewpoint
+                      setCurrentViewpoint(remainingViewpoints[0])
+                    } else {
+                      // No viewpoints left, clear selection
+                      setCurrentViewpoint(null)
+                    }
+                  }
+                }}
                 getImagePointCount={getImagePointCount}
                 getSelectedPointsInImage={(viewpoint) => getSelectedPointsInImage(viewpoint).length}
                 imageHeights={imageHeights}

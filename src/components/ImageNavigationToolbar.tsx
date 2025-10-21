@@ -19,7 +19,7 @@ interface ImageNavigationToolbarProps {
   hoveredWorldPoint: WorldPoint | null
   isCreatingConstraint: boolean
   onImageSelect: (viewpoint: Viewpoint) => void
-  onImageAdd: (file: File) => Promise<void>
+  onImageAdd: (file: File) => Promise<Viewpoint | undefined>
   onImageRename: (viewpoint: Viewpoint, newName: string) => void
   onImageDelete: (viewpoint: Viewpoint) => void
   getImagePointCount: (viewpoint: Viewpoint) => number
@@ -68,6 +68,8 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
     const files = event.target.files
     if (!files) return
 
+    let lastAddedViewpoint: Viewpoint | undefined
+
     for (const file of Array.from(files)) {
       try {
         const validation = ImageUtils.validateImageFile(file)
@@ -76,11 +78,19 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
           continue
         }
 
-        await onImageAdd(file)
+        const newViewpoint = await onImageAdd(file)
+        if (newViewpoint) {
+          lastAddedViewpoint = newViewpoint
+        }
       } catch (error) {
         console.error('Failed to load image:', error)
         alert(`Failed to load ${file.name}`)
       }
+    }
+
+    // Auto-select the last added viewpoint
+    if (lastAddedViewpoint) {
+      onImageSelect(lastAddedViewpoint)
     }
 
     // Reset file input

@@ -50,7 +50,7 @@ export interface DomainOperations {
   deleteLine: (line: Line) => void
 
   // Viewpoints (Images)
-  addImage: (file: File) => Promise<void>
+  addImage: (file: File) => Promise<Viewpoint | undefined>
   renameImage: (viewpoint: Viewpoint, name: string) => void
   deleteImage: (viewpoint: Viewpoint) => void
   getImagePointCount: (viewpoint: Viewpoint) => number
@@ -154,7 +154,7 @@ export function useDomainOperations(
     project.removeLine(line)
   }
 
-  const addImage = async (file: File) => {
+  const addImage = async (file: File): Promise<Viewpoint | undefined> => {
     if (!project) return
 
     const reader = new FileReader()
@@ -172,6 +172,7 @@ export function useDomainOperations(
     )
 
     project.addViewpoint(viewpoint)
+    return viewpoint
   }
 
   const renameImage = (viewpoint: Viewpoint, name: string) => {

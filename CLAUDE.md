@@ -4,14 +4,14 @@
 - Don't run the dev server. I run the dev server.
 - gogo means "Start executing and don't stop until finished. Beep when done."s
 
-## ENTITY LAYER IS LOCKED - DO NOT MODIFY
+## ENTITY LAYER - BE VERY CAREFUL
 
 **The entity layer (`src/entities/`) has been completely refactored and is now STABLE.**
 
-- DO NOT add fields, methods, or IDs to entities
-- DO NOT modify entity class structures
-- DO NOT change entity constructors or factory methods
-- If UI code needs changes to work with entities, FIX THE UI CODE, not the entities
+- Be very careful when adding fields, methods, or IDs to entities
+- Be very careful when modifying entity class structures
+- Be very careful when changing entity constructors or factory methods
+- If UI code needs changes to work with entities, prefer to FIX THE UI CODE rather than the entities
 - See `src/entities/README.md` for details
 
 **Current focus: Update UI components to work with the new entity architecture.**

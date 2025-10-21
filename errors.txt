@@ -1,15 +1,8 @@
 We're working through the ui after a very large change (we've rewritted 95% of the code and introduced mobx). Here are a number of issues we need to address, get back to me after each task is completed and I'll verify:
 
-* when I double/click on an image point I should see the edit properties for the world point. that's not shown and there is no error. the menu to edit doesn't work either
-
-* image points show be shown on thumbnails in *almost* the right place, but they seem to not be centered properly. and they're not totally offcenter either. they're too high and too far to the left, is all I can tell. also, the imagepoints are larger on the thumbnails than on the image viewer, which si odd because the image viewer is larger.
-
-
 ***********
 
-* the edit wp popup pops to the right (outside the window), it should always pop to the left. also, there are just two buttons in it so I'm wondering if we need it? just the edit and delete icons would be enough.
-
-* adding a new viewpoint/image doesn't make it selected (for imageviewer) which is very confusing. Also the "add
+* adding a new viewpoint/image doesn't make it selected (for imageviewer) which is very confusing.
 
 * deleting an image/viewpoint doesn't unselect it in imageviewer. another viewpoint should be selected if there is one, otherwise no viewpoint should be selected.
 
