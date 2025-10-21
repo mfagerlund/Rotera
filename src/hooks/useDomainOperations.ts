@@ -5,6 +5,8 @@ import { Viewpoint } from '../entities/viewpoint'
 import { ImagePoint } from '../entities/imagePoint'
 import { Constraint } from '../entities/constraints'
 import type { OptimizationExportDto } from '../types/optimization-export'
+import { DistanceConstraint } from '../entities/constraints/distance-constraint'
+import { AngleConstraint } from '../entities/constraints/angle-constraint'
 
 export interface WorldPointOptions {
   lockedXyz?: [number | null, number | null, number | null]
@@ -70,6 +72,17 @@ export interface DomainOperations {
   exportOptimizationDto: () => OptimizationExportDto | null
 }
 
+function cleanupConstraintReferences(constraint: Constraint): void {
+  if (constraint instanceof DistanceConstraint) {
+    constraint.pointA.removeReferencingConstraint(constraint)
+    constraint.pointB.removeReferencingConstraint(constraint)
+  } else if (constraint instanceof AngleConstraint) {
+    constraint.pointA.removeReferencingConstraint(constraint)
+    constraint.vertex.removeReferencingConstraint(constraint)
+    constraint.pointC.removeReferencingConstraint(constraint)
+  }
+}
+
 export function useDomainOperations(
   project: Project | null,
   setProject: (project: Project) => void
@@ -95,6 +108,22 @@ export function useDomainOperations(
 
   const deleteWorldPoint = (worldPoint: WorldPoint) => {
     if (!project) return
+
+    Array.from(worldPoint.connectedLines).forEach(line => {
+      (line as Line).cleanup()
+      project.removeLine(line as Line)
+    })
+
+    Array.from(worldPoint.imagePoints).forEach(imagePoint => {
+      (imagePoint.viewpoint as Viewpoint).removeImagePoint(imagePoint)
+      project.removeImagePoint(imagePoint)
+    })
+
+    Array.from(worldPoint.referencingConstraints).forEach(constraint => {
+      cleanupConstraintReferences(constraint as Constraint)
+      project.removeConstraint(constraint as Constraint)
+    })
+
     project.removeWorldPoint(worldPoint)
   }
 
@@ -152,6 +181,12 @@ export function useDomainOperations(
 
   const deleteImage = (viewpoint: Viewpoint) => {
     if (!project) return
+
+    Array.from(viewpoint.imagePoints).forEach(imagePoint => {
+      (imagePoint.worldPoint as WorldPoint).removeImagePoint(imagePoint)
+      project.removeImagePoint(imagePoint)
+    })
+
     project.removeViewpoint(viewpoint)
   }
 
@@ -204,6 +239,7 @@ export function useDomainOperations(
 
   const deleteConstraint = (constraint: Constraint) => {
     if (!project) return
+    cleanupConstraintReferences(constraint)
     project.removeConstraint(constraint)
   }
 
