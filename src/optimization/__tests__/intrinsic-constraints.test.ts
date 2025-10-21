@@ -21,21 +21,19 @@ describe('Intrinsic Constraints', () => {
 
   describe('Point - Locked (Fixed Position)', () => {
     it('should not move locked points when constrained to another point', () => {
-      const lockedPoint = WorldPoint.create('p1', 'Locked', {
-        xyz: [10, 20, 30],
-        isLocked: true, // INTRINSIC constraint - point is fixed
+      const lockedPoint = WorldPoint.create('Locked', {
+        lockedXyz: [10, 20, 30], // INTRINSIC constraint - point is fixed
       });
 
-      const freePoint = WorldPoint.create('p2', 'Free', {
-        xyz: [5, 5, 5],
+      const freePoint = WorldPoint.create('Free', {
+        lockedXyz: [null, null, null],
+        optimizedXyz: [5, 5, 5],
       });
 
       // Create a line with fixed length between them
-      const line = Line.create('l1', 'L1', lockedPoint, freePoint, {
-        constraints: {
-          direction: 'free',
-          targetLength: 50,
-        },
+      const line = Line.create('Line1', lockedPoint, freePoint, {
+        direction: 'free',
+        targetLength: 50,
       });
 
       system.addPoint(lockedPoint);
@@ -59,15 +57,13 @@ describe('Intrinsic Constraints', () => {
 
   describe('Line - Fixed Length', () => {
     it('should enforce fixed length intrinsic constraint', () => {
-      const p1 = WorldPoint.create('p1', 'P1', { xyz: [0, 0, 0], isLocked: true });
-      const p2 = WorldPoint.create('p2', 'P2', { xyz: [5, 0, 0] }); // Currently 5 units
+      const p1 = WorldPoint.create('P1', { lockedXyz: [0, 0, 0] });
+      const p2 = WorldPoint.create('P2', { lockedXyz: [null, null, null], optimizedXyz: [5, 0, 0] }); // Currently 5 units
 
-      const line = Line.create('l1', 'L1', p1, p2, {
-        constraints: {
-          direction: 'free',
-          targetLength: 100, // INTRINSIC constraint - line must be 100 units
-          tolerance: 1e-4,
-        },
+      const line = Line.create('L1', p1, p2, {
+        direction: 'free',
+        targetLength: 100, // INTRINSIC constraint - line must be 100 units
+        tolerance: 1e-4,
       });
 
       system.addPoint(p1);
@@ -86,14 +82,12 @@ describe('Intrinsic Constraints', () => {
 
   describe('Line - Horizontal', () => {
     it('should enforce horizontal direction intrinsic constraint', () => {
-      const p1 = WorldPoint.create('p1', 'P1', { xyz: [0, 0, 0], isLocked: true });
-      const p2 = WorldPoint.create('p2', 'P2', { xyz: [10, 5, 3] }); // Not horizontal
+      const p1 = WorldPoint.create('P1', { lockedXyz: [0, 0, 0] });
+      const p2 = WorldPoint.create('P2', { lockedXyz: [null, null, null], optimizedXyz: [10, 5, 3] }); // Not horizontal
 
-      const line = Line.create('l1', 'L1', p1, p2, {
-        constraints: {
-          direction: 'horizontal', // INTRINSIC constraint - line must be horizontal
-          tolerance: 1e-4,
-        },
+      const line = Line.create('Horizontal', p1, p2, {
+        direction: 'horizontal', // INTRINSIC constraint - line must be horizontal
+        tolerance: 1e-4,
       });
 
       system.addPoint(p1);
@@ -113,14 +107,12 @@ describe('Intrinsic Constraints', () => {
 
   describe('Line - Vertical', () => {
     it('should enforce vertical direction intrinsic constraint', () => {
-      const p1 = WorldPoint.create('p1', 'P1', { xyz: [0, 0, 0], isLocked: true });
-      const p2 = WorldPoint.create('p2', 'P2', { xyz: [5, 10, 3] }); // Not vertical
+      const p1 = WorldPoint.create('P1', { lockedXyz: [0, 0, 0] });
+      const p2 = WorldPoint.create('P2', { lockedXyz: [null, null, null], optimizedXyz: [5, 10, 3] }); // Not vertical
 
-      const line = Line.create('l1', 'L1', p1, p2, {
-        constraints: {
-          direction: 'vertical', // INTRINSIC constraint - line along Y-axis
-          tolerance: 1e-4,
-        },
+      const line = Line.create('Vertical', p1, p2, {
+        direction: 'vertical', // INTRINSIC constraint - line along Y-axis
+        tolerance: 1e-4,
       });
 
       system.addPoint(p1);
@@ -140,14 +132,12 @@ describe('Intrinsic Constraints', () => {
 
   describe('Line - X-Aligned', () => {
     it('should enforce x-aligned direction intrinsic constraint', () => {
-      const p1 = WorldPoint.create('p1', 'P1', { xyz: [0, 0, 0], isLocked: true });
-      const p2 = WorldPoint.create('p2', 'P2', { xyz: [10, 5, 3] }); // Not x-aligned
+      const p1 = WorldPoint.create('P1', { lockedXyz: [0, 0, 0] });
+      const p2 = WorldPoint.create('P2', { lockedXyz: [null, null, null], optimizedXyz: [10, 5, 3] }); // Not x-aligned
 
-      const line = Line.create('l1', 'L1', p1, p2, {
-        constraints: {
-          direction: 'x-aligned', // INTRINSIC constraint
-          tolerance: 1e-4,
-        },
+      const line = Line.create('X-Aligned', p1, p2, {
+        direction: 'x-aligned', // INTRINSIC constraint
+        tolerance: 1e-4,
       });
 
       system.addPoint(p1);
@@ -167,14 +157,12 @@ describe('Intrinsic Constraints', () => {
 
   describe('Line - Z-Aligned', () => {
     it('should enforce z-aligned direction intrinsic constraint', () => {
-      const p1 = WorldPoint.create('p1', 'P1', { xyz: [0, 0, 0], isLocked: true });
-      const p2 = WorldPoint.create('p2', 'P2', { xyz: [5, 3, 10] }); // Not z-aligned
+      const p1 = WorldPoint.create('P1', { lockedXyz: [0, 0, 0] });
+      const p2 = WorldPoint.create('P2', { lockedXyz: [null, null, null], optimizedXyz: [5, 3, 10] }); // Not z-aligned
 
-      const line = Line.create('l1', 'L1', p1, p2, {
-        constraints: {
-          direction: 'z-aligned', // INTRINSIC constraint
-          tolerance: 1e-4,
-        },
+      const line = Line.create('Z-Aligned', p1, p2, {
+        direction: 'z-aligned', // INTRINSIC constraint
+        tolerance: 1e-4,
       });
 
       system.addPoint(p1);
@@ -194,15 +182,13 @@ describe('Intrinsic Constraints', () => {
 
   describe('Line - Combined Constraints', () => {
     it('should enforce both direction and length intrinsic constraints', () => {
-      const p1 = WorldPoint.create('p1', 'P1', { xyz: [0, 0, 0], isLocked: true });
-      const p2 = WorldPoint.create('p2', 'P2', { xyz: [5, 3, 2] }); // Wrong direction and length
+      const p1 = WorldPoint.create('P1', { lockedXyz: [0, 0, 0] });
+      const p2 = WorldPoint.create('P2', { lockedXyz: [null, null, null], optimizedXyz: [5, 3, 2] }); // Wrong direction and length
 
-      const line = Line.create('l1', 'L1', p1, p2, {
-        constraints: {
-          direction: 'horizontal', // Must be horizontal
-          targetLength: 50,        // Must be 50 units long
-          tolerance: 1e-4,
-        },
+      const line = Line.create('Combined', p1, p2, {
+        direction: 'horizontal', // Must be horizontal
+        targetLength: 50,        // Must be 50 units long
+        tolerance: 1e-4,
       });
 
       system.addPoint(p1);
@@ -226,22 +212,22 @@ describe('Intrinsic Constraints', () => {
 
   describe('Multiple Lines with Intrinsic Constraints', () => {
     it('should solve multiple lines each with their own intrinsic constraints', () => {
-      const origin = WorldPoint.create('origin', 'Origin', { xyz: [0, 0, 0], isLocked: true });
-      const px = WorldPoint.create('px', 'X-Point', { xyz: [5, 1, 1] });
-      const py = WorldPoint.create('py', 'Y-Point', { xyz: [1, 5, 1] });
-      const pz = WorldPoint.create('pz', 'Z-Point', { xyz: [1, 1, 5] });
+      const origin = WorldPoint.create('Origin', { lockedXyz: [0, 0, 0] });
+      const px = WorldPoint.create('X-Point', { lockedXyz: [null, null, null], optimizedXyz: [5, 1, 1] });
+      const py = WorldPoint.create('Y-Point', { lockedXyz: [null, null, null], optimizedXyz: [1, 5, 1] });
+      const pz = WorldPoint.create('Z-Point', { lockedXyz: [null, null, null], optimizedXyz: [1, 1, 5] });
 
       // Create 3 perpendicular axes from origin
-      const lineX = Line.create('lx', 'X-Axis', origin, px, {
-        constraints: { direction: 'x-aligned', targetLength: 10 },
+      const lineX = Line.create('X-Axis', origin, px, {
+        direction: 'x-aligned', targetLength: 10,
       });
 
-      const lineY = Line.create('ly', 'Y-Axis', origin, py, {
-        constraints: { direction: 'vertical', targetLength: 10 },
+      const lineY = Line.create('Y-Axis', origin, py, {
+        direction: 'vertical', targetLength: 10,
       });
 
-      const lineZ = Line.create('lz', 'Z-Axis', origin, pz, {
-        constraints: { direction: 'z-aligned', targetLength: 10 },
+      const lineZ = Line.create('Z-Axis', origin, pz, {
+        direction: 'z-aligned', targetLength: 10,
       });
 
       system.addPoint(origin);

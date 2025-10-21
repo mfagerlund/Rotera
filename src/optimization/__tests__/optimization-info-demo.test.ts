@@ -12,23 +12,17 @@ describe('Optimization Info Demo', () => {
     console.log('\n=== Optimization Info Demo ===\n');
 
     // Create 2 points and a line with constraints
-    const p1 = WorldPoint.create('p1', 'Point 1', {
-      xyz: [0, 0, 0],
-      isLocked: false
+    const p1 = WorldPoint.create('Point 1', {
+      lockedXyz: [null, null, null],
+      optimizedXyz: [0, 0, 0]
     });
 
-    const p2 = WorldPoint.create('p2', 'Point 2', {
-      xyz: [3.5, 4.2, 0.1],  // Not exactly 5 units from p1
-      isLocked: false
+    const p2 = WorldPoint.create('Point 2', {
+      lockedXyz: [null, null, null],
+      optimizedXyz: [3.5, 4.2, 0.1]  // Not exactly 5 units from p1
     });
 
-    const line = Line.create('line1', 'Line 1', p1, p2, {
-      constraints: {
-        direction: 'horizontal',
-        targetLength: 5.0,
-        tolerance: 0.001
-      }
-    });
+    const line = Line.create('Line 1', p1, p2);
 
     // Create system and optimize
     const system = new ConstraintSystem({

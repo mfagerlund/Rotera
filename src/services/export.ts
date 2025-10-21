@@ -9,7 +9,6 @@ interface ExportWorldPoint {
   xyz?: [number, number, number] | null
   color: string
   group?: string
-  isOrigin: boolean
   isLocked: boolean
   imagePoints: any[] // Legacy field for compatibility
 }
@@ -114,7 +113,7 @@ export class ExportService {
 
   private exportCSV(options: ExportOptions): ExportResult {
     const worldPoints = this.getFormattedWorldPoints(options)
-    const headers = ['Name', 'ID', 'X', 'Y', 'Z', 'Color', 'Group', 'IsOrigin', 'IsLocked', 'ImageCount']
+    const headers = ['Name', 'ID', 'X', 'Y', 'Z', 'Color', 'Group', 'IsLocked', 'ImageCount']
 
     if (options.includeConstraints) {
       headers.push('ConstraintCount', 'ConstraintTypes')
@@ -131,7 +130,6 @@ export class ExportService {
         wp.xyz ? wp.xyz[2].toFixed(options.precision) : '',
         wp.color || '',
         wp.group || '',
-        wp.isOrigin ? 'true' : 'false',
         wp.isLocked ? 'true' : 'false',
         wp.imagePoints.length.toString()
       ]
@@ -337,7 +335,6 @@ EOF
       </coordinates>` : ''}
       <color>${this.escapeXML(wp.color || '')}</color>
       <group>${this.escapeXML(wp.group || '')}</group>
-      <is-origin>${wp.isOrigin}</is-origin>
       <is-locked>${wp.isLocked}</is-locked>
       <image-count>${wp.imagePoints.length}</image-count>
     </point>
@@ -385,7 +382,6 @@ EOF
         name: wp.getName(),
         xyz: coords || null,
         color: wp.color,
-        isOrigin: wp.isOrigin,
         isLocked: wp.isLocked(),
         imagePoints: [] // Legacy field - image point data now in Viewpoints
       }
@@ -444,8 +440,7 @@ EOF
       constraintCount,
       imageCount,
       pointsWithXYZ,
-      lockedPoints: Array.from(this.project.worldPoints.values()).filter(wp => (wp as any).isLocked).length,
-      originPoints: Array.from(this.project.worldPoints.values()).filter(wp => (wp as any).isOrigin).length
+      lockedPoints: Array.from(this.project.worldPoints.values()).filter(wp => wp.isLocked()).length
     }
   }
 
@@ -462,7 +457,6 @@ Statistics:
 - World Points: ${stats.worldPointCount}
 - Points with 3D coordinates: ${stats.pointsWithXYZ}
 - Locked Points: ${stats.lockedPoints}
-- Origin Points: ${stats.originPoints}
 - Constraints: ${stats.constraintCount}
 - Images: ${stats.imageCount}
 

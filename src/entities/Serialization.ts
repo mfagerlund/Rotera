@@ -17,7 +17,6 @@ interface WorldPointDto {
   optimizedXyz?: [number, number, number]
   color: string
   isVisible: boolean
-  isOrigin: boolean
 }
 
 interface LineDto {
@@ -278,8 +277,7 @@ export class Serialization {
       lockedXyz: point.lockedXyz,
       optimizedXyz: point.optimizedXyz,
       color: point.color,
-      isVisible: point.isVisible,
-      isOrigin: point.isOrigin
+      isVisible: point.isVisible
     }
   }
 
@@ -289,7 +287,6 @@ export class Serialization {
       dto.lockedXyz,
       dto.color,
       dto.isVisible,
-      dto.isOrigin,
       dto.optimizedXyz
     )
   }

@@ -21,7 +21,7 @@ describe('Bundle Adjustment with Real Fixture', () => {
 
     console.log(`Points: ${project.worldPoints.size}`);
     console.log(`Viewpoints: ${project.viewpoints.size}`);
-    console.log(`Constraints: ${project.constraints.length}`);
+    console.log(`Constraints: ${project.constraints.size}`);
 
     // Create constraint system
     const system = new ConstraintSystem({

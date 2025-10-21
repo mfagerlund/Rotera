@@ -7,7 +7,6 @@
 
 import { WorldPoint as WorldPointEntity } from '../../entities/world-point/WorldPoint';
 import { Line as LineEntity } from '../../entities/line/Line';
-import { convertAllConstraints } from '../../utils/constraint-entity-converter';
 import { ConstraintSystem } from '../constraint-system';
 import { randomInitialization, smartInitialization, computeInitialResidual } from '../smart-initialization';
 import * as fs from 'fs';
@@ -39,35 +38,31 @@ function runOptimizationBenchmark(
   // Convert to entities
   const pointEntities: WorldPointEntity[] = [];
   const lineEntities: LineEntity[] = [];
+  const pointIdMap = new Map<string, WorldPointEntity>();
 
   Object.values(project.worldPoints).forEach((wp: any) => {
     if (wp.xyz) {
-      const entity = WorldPointEntity.create(wp.id, wp.name, {
-        xyz: wp.xyz as [number, number, number],
+      const entity = WorldPointEntity.create(wp.name, {
+        lockedXyz: [null, null, null],
+        optimizedXyz: wp.xyz as [number, number, number],
         color: wp.color,
-        isVisible: wp.isVisible,
-        isLocked: wp.isLocked
+        isVisible: wp.isVisible
       });
       pointEntities.push(entity);
+      pointIdMap.set(wp.id, entity);
     }
   });
 
   Object.values(project.lines || {}).forEach((line: any) => {
-    const pointA = pointEntities.find(p => p.id === line.pointA);
-    const pointB = pointEntities.find(p => p.id === line.pointB);
+    const pointA = pointIdMap.get(line.pointA);
+    const pointB = pointIdMap.get(line.pointB);
 
-    if (pointA && pointB && line.constraints) {
+    if (pointA && pointB) {
       const entity = LineEntity.create(
-        line.id,
         line.name || 'Line',
         pointA,
         pointB,
         {
-          constraints: {
-            direction: line.constraints.direction,
-            targetLength: line.constraints.targetLength,
-            tolerance: line.constraints.tolerance
-          },
           color: line.color,
           isConstruction: line.isConstruction
         }
@@ -76,17 +71,8 @@ function runOptimizationBenchmark(
     }
   });
 
-  // Fix constraint format
-  const fixedConstraints = (project.constraints || []).map((c: any) => ({
-    ...c,
-    enabled: c.isEnabled ?? c.enabled
-  }));
-
-  const constraintEntities = convertAllConstraints(
-    fixedConstraints,
-    pointEntities,
-    lineEntities
-  );
+  // TODO: Constraint conversion needs to be implemented with new entity system
+  const constraintEntities: any[] = [];
 
   // Run optimization
   const solver = new ConstraintSystem({

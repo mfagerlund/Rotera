@@ -79,7 +79,7 @@ export const ImagePointsManager: React.FC<ImagePointsManagerProps> = ({
       renderEntityDetails={(entityItem) => {
         const ref = entityItem.entity
         if (!ref) return null
-        const imagePoint: IImagePoint | undefined = Array.from(ref.viewpoint.imagePoints).find(ip => ip.worldPoint === ref.worldPoint)
+        const imagePoint = (Array.from(ref.viewpoint.imagePoints) as IImagePoint[]).find(ip => ip.worldPoint === ref.worldPoint)
 
         return (
           <div className="image-point-details">

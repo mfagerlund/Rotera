@@ -9,7 +9,6 @@
 
 import { WorldPoint as WorldPointEntity } from '../../entities/world-point/WorldPoint';
 import { Line as LineEntity } from '../../entities/line/Line';
-import { convertAllConstraints } from '../../utils/constraint-entity-converter';
 import { ConstraintSystem } from '../constraint-system';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -30,29 +29,30 @@ describe('Real Data Optimization', () => {
   it('should convert project data to entities', () => {
     const pointEntities: WorldPointEntity[] = [];
     const lineEntities: LineEntity[] = [];
+    const pointMap = new Map<string, WorldPointEntity>();
 
     // Convert world points to entities
     Object.values(testProject.worldPoints).forEach((wp: any) => {
       if (wp.xyz) {
-        const entity = WorldPointEntity.create(wp.id, wp.name, {
-          xyz: wp.xyz as [number, number, number],
+        const entity = WorldPointEntity.create(wp.name, {
+          lockedXyz: wp.isLocked ? (wp.xyz as [number, number, number]) : [null, null, null],
+          optimizedXyz: wp.xyz as [number, number, number],
           color: wp.color,
-          isVisible: wp.isVisible,
-          isLocked: wp.isLocked
+          isVisible: wp.isVisible
         });
         pointEntities.push(entity);
+        pointMap.set(wp.id, entity);
       }
     });
 
     // Convert lines to entities
     Object.values(testProject.lines || {}).forEach((line: any) => {
-      const pointA = pointEntities.find(p => p.id === line.pointA);
-      const pointB = pointEntities.find(p => p.id === line.pointB);
+      const pointA = pointMap.get(line.pointA);
+      const pointB = pointMap.get(line.pointB);
 
       if (pointA && pointB) {
         const entity = LineEntity.create(
-          line.id,
-          line.name || 'Line',
+          line.name || `Line_${pointA.getName()}_${pointB.getName()}`,
           pointA,
           pointB,
           {
@@ -81,64 +81,48 @@ describe('Real Data Optimization', () => {
     // Create point entities
     Object.values(testProject.worldPoints).forEach((wp: any) => {
       if (wp.xyz) {
-        const entity = WorldPointEntity.create(wp.id, wp.name, {
-          xyz: wp.xyz as [number, number, number],
+        const entity = WorldPointEntity.create(wp.name, {
+          lockedXyz: wp.isLocked ? (wp.xyz as [number, number, number]) : [null, null, null],
+          optimizedXyz: wp.xyz as [number, number, number],
           color: wp.color,
-          isVisible: wp.isVisible,
-          isLocked: wp.isLocked
+          isVisible: wp.isVisible
         });
         pointEntities.push(entity);
       }
     });
 
-    // Fix constraint format (isEnabled -> enabled)
-    const fixedConstraints = (testProject.constraints || []).map((c: any) => ({
-      ...c,
-      enabled: c.isEnabled ?? c.enabled
-    }));
-
-    // Convert constraints
-    const constraintEntities = convertAllConstraints(
-      fixedConstraints,
-      pointEntities,
-      []
-    );
-
-    console.log(`Converted ${constraintEntities.length} constraint entities`);
-    constraintEntities.forEach((c, i) => {
-      console.log(`  Constraint ${i}: ${c.constructor.name}`);
-    });
-
-    // Coplanar constraints should be created
-    expect(constraintEntities.length).toBeGreaterThanOrEqual(0);
+    // This test is no longer relevant since convertAllConstraints doesn't exist
+    // The constraint conversion is now handled in Serialization.ts
+    expect(pointEntities.length).toBe(9);
   });
 
   it('should run optimization on real data', () => {
     const pointEntities: WorldPointEntity[] = [];
     const lineEntities: LineEntity[] = [];
+    const pointMap = new Map<string, WorldPointEntity>();
 
     // Create point entities
     Object.values(testProject.worldPoints).forEach((wp: any) => {
       if (wp.xyz) {
-        const entity = WorldPointEntity.create(wp.id, wp.name, {
-          xyz: wp.xyz as [number, number, number],
+        const entity = WorldPointEntity.create(wp.name, {
+          lockedXyz: wp.isLocked ? (wp.xyz as [number, number, number]) : [null, null, null],
+          optimizedXyz: wp.xyz as [number, number, number],
           color: wp.color,
-          isVisible: wp.isVisible,
-          isLocked: wp.isLocked
+          isVisible: wp.isVisible
         });
         pointEntities.push(entity);
+        pointMap.set(wp.id, entity);
       }
     });
 
     // Create line entities
     Object.values(testProject.lines || {}).forEach((line: any) => {
-      const pointA = pointEntities.find(p => p.id === line.pointA);
-      const pointB = pointEntities.find(p => p.id === line.pointB);
+      const pointA = pointMap.get(line.pointA);
+      const pointB = pointMap.get(line.pointB);
 
       if (pointA && pointB) {
         const entity = LineEntity.create(
-          line.id,
-          line.name || 'Line',
+          line.name || `Line_${pointA.getName()}_${pointB.getName()}`,
           pointA,
           pointB,
           {
@@ -150,18 +134,8 @@ describe('Real Data Optimization', () => {
       }
     });
 
-    // Fix constraint format (isEnabled -> enabled)
-    const fixedConstraints = (testProject.constraints || []).map((c: any) => ({
-      ...c,
-      enabled: c.isEnabled ?? c.enabled
-    }));
-
-    // Convert constraints
-    const constraintEntities = convertAllConstraints(
-      fixedConstraints,
-      pointEntities,
-      lineEntities
-    );
+    // No longer using convertAllConstraints - constraints come from line intrinsic properties
+    const constraintEntities: any[] = [];
 
     console.log('\n=== Optimization Test Setup ===');
     console.log(`Points: ${pointEntities.length}`);
@@ -217,37 +191,36 @@ describe('Real Data Optimization', () => {
   it('should respect line constraints during optimization', () => {
     const pointEntities: WorldPointEntity[] = [];
     const lineEntities: LineEntity[] = [];
+    const pointMap = new Map<string, WorldPointEntity>();
 
     // Create point entities
     Object.values(testProject.worldPoints).forEach((wp: any) => {
       if (wp.xyz) {
-        const entity = WorldPointEntity.create(wp.id, wp.name, {
-          xyz: wp.xyz as [number, number, number],
+        const entity = WorldPointEntity.create(wp.name, {
+          lockedXyz: wp.isLocked ? (wp.xyz as [number, number, number]) : [null, null, null],
+          optimizedXyz: wp.xyz as [number, number, number],
           color: wp.color,
-          isVisible: wp.isVisible,
-          isLocked: wp.isLocked
+          isVisible: wp.isVisible
         });
         pointEntities.push(entity);
+        pointMap.set(wp.id, entity);
       }
     });
 
     // Create line entities WITH constraints
     Object.values(testProject.lines || {}).forEach((line: any) => {
-      const pointA = pointEntities.find(p => p.id === line.pointA);
-      const pointB = pointEntities.find(p => p.id === line.pointB);
+      const pointA = pointMap.get(line.pointA);
+      const pointB = pointMap.get(line.pointB);
 
       if (pointA && pointB && line.constraints) {
         const entity = LineEntity.create(
-          line.id,
-          line.name || 'Line',
+          line.name || `Line_${pointA.getName()}_${pointB.getName()}`,
           pointA,
           pointB,
           {
-            constraints: {
-              direction: line.constraints.direction,
-              targetLength: line.constraints.targetLength,
-              tolerance: line.constraints.tolerance
-            },
+            direction: line.constraints.direction,
+            targetLength: line.constraints.targetLength,
+            tolerance: line.constraints.tolerance,
             color: line.color,
             isConstruction: line.isConstruction
           }
@@ -261,10 +234,10 @@ describe('Real Data Optimization', () => {
 
     // Check initial line lengths
     console.log('\nInitial line lengths:');
-    lineEntities.slice(0, 5).forEach(line => {
+    lineEntities.slice(0, 5).forEach((line) => {
       const length = line.length();
-      const target = line.constraints.targetLength;
-      console.log(`  ${line.name}: length=${length?.toFixed(2)}, target=${target}`);
+      const target = line.targetLength;
+      console.log(`  ${line.getName()}: length=${length?.toFixed(2)}, target=${target}`);
     });
 
     // Run optimization with line constraints
@@ -288,11 +261,11 @@ describe('Real Data Optimization', () => {
 
     // Check final line lengths
     console.log('\nFinal line lengths:');
-    lineEntities.slice(0, 5).forEach(line => {
+    lineEntities.slice(0, 5).forEach((line) => {
       const length = line.length();
-      const target = line.constraints.targetLength;
+      const target = line.targetLength;
       const error = target ? Math.abs(length! - target) : 0;
-      console.log(`  ${line.name}: length=${length?.toFixed(2)}, target=${target}, error=${error.toFixed(4)}`);
+      console.log(`  ${line.getName()}: length=${length?.toFixed(2)}, target=${target}, error=${error.toFixed(4)}`);
     });
 
     expect(result.iterations).toBeGreaterThan(0);

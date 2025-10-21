@@ -12,72 +12,9 @@ import { CoplanarPointsConstraint } from '../../entities/constraints/coplanar-po
 import { EqualDistancesConstraint } from '../../entities/constraints/equal-distances-constraint';
 import { EqualAnglesConstraint } from '../../entities/constraints/equal-angles-constraint';
 import { ConstraintSystem } from '../constraint-system';
-import type { ConstraintRepository } from '../../entities/constraints/base-constraint';
-import type { EntityId, PointId, LineId, PlaneId } from '../../types/ids';
-
-// Test repository implementation
-class TestRepository implements ConstraintRepository {
-  private points: Map<PointId, WorldPoint> = new Map();
-
-  addPoint(point: WorldPoint): void {
-    this.points.set(point.id, point);
-  }
-
-  getPoint(pointId: PointId): EntityId | undefined {
-    return this.points.has(pointId) ? (pointId as EntityId) : undefined;
-  }
-
-  getLine(lineId: LineId): EntityId | undefined {
-    return undefined;
-  }
-
-  getPlane(planeId: PlaneId): EntityId | undefined {
-    return undefined;
-  }
-
-  entityExists(id: EntityId): boolean {
-    return this.points.has(id as PointId);
-  }
-
-  pointExists(pointId: PointId): boolean {
-    return this.points.has(pointId);
-  }
-
-  lineExists(lineId: LineId): boolean {
-    return false;
-  }
-
-  planeExists(planeId: PlaneId): boolean {
-    return false;
-  }
-
-  getReferenceManager() {
-    const points = this.points;
-    return {
-      resolve<T>(id: EntityId, type: string): T | undefined {
-        if (type === 'point') {
-          return points.get(id as PointId) as T | undefined;
-        }
-        return undefined;
-      },
-      batchResolve<T>(ids: EntityId[], type: string): T[] {
-        if (type === 'point') {
-          return ids
-            .map(id => points.get(id as PointId))
-            .filter((p): p is WorldPoint => p !== undefined) as T[];
-        }
-        return [];
-      },
-      preloadReferences(rootIds: EntityId[], options?: { depth?: number }): void {
-        // No-op for test repository
-      }
-    };
-  }
-}
 
 describe('ConstraintSystem - All Constraint Types', () => {
   let system: ConstraintSystem;
-  let repo: TestRepository;
 
   beforeEach(() => {
     system = new ConstraintSystem({
@@ -85,25 +22,19 @@ describe('ConstraintSystem - All Constraint Types', () => {
       maxIterations: 100,
       verbose: false,
     });
-    repo = new TestRepository();
   });
 
   describe('DistanceConstraint', () => {
     it('should enforce distance between two points', () => {
-      const p1 = WorldPoint.create('p1', 'P1', { xyz: [0, 0, 0] });
-      const p2 = WorldPoint.create('p2', 'P2', { xyz: [50, 0, 0] }); // 50 units apart
-
-      repo.addPoint(p1);
-      repo.addPoint(p2);
+      const p1 = WorldPoint.create('P1', { lockedXyz: [null, null, null], optimizedXyz: [0, 0, 0] });
+      const p2 = WorldPoint.create('P2', { lockedXyz: [null, null, null], optimizedXyz: [50, 0, 0] }); // 50 units apart
 
       // Constrain to 100 units apart
       const constraint = DistanceConstraint.create(
-        'c1',
         'Distance 100',
-        p1.id,
-        p2.id,
+        p1,
+        p2,
         100,
-        repo,
         { tolerance: 1e-4 }
       );
 
@@ -129,23 +60,17 @@ describe('ConstraintSystem - All Constraint Types', () => {
 
   describe('AngleConstraint', () => {
     it('should enforce angle at vertex', () => {
-      const pA = WorldPoint.create('pA', 'PA', { xyz: [10, 0, 0] });
-      const vertex = WorldPoint.create('vertex', 'Vertex', { xyz: [0, 0, 0] });
-      const pC = WorldPoint.create('pC', 'PC', { xyz: [0, 5, 0] }); // Currently 90 degrees
-
-      repo.addPoint(pA);
-      repo.addPoint(vertex);
-      repo.addPoint(pC);
+      const pA = WorldPoint.create('PA', { lockedXyz: [null, null, null], optimizedXyz: [10, 0, 0] });
+      const vertex = WorldPoint.create('Vertex', { lockedXyz: [null, null, null], optimizedXyz: [0, 0, 0] });
+      const pC = WorldPoint.create('PC', { lockedXyz: [null, null, null], optimizedXyz: [0, 5, 0] }); // Currently 90 degrees
 
       // Constrain to 60 degrees
       const constraint = AngleConstraint.create(
-        'c1',
-        'Angle 60',
-        pA.id,
-        vertex.id,
-        pC.id,
+        'Angle 60 degrees',
+        pA,
+        vertex,
+        pC,
         60, // degrees
-        repo,
         { tolerance: 1e-4 }
       );
 
@@ -177,19 +102,13 @@ describe('ConstraintSystem - All Constraint Types', () => {
 
   describe('CollinearPointsConstraint', () => {
     it('should make 3 points collinear', () => {
-      const p1 = WorldPoint.create('p1', 'P1', { xyz: [0, 0, 0], isLocked: true });
-      const p2 = WorldPoint.create('p2', 'P2', { xyz: [10, 0, 0], isLocked: true });
-      const p3 = WorldPoint.create('p3', 'P3', { xyz: [5, 5, 0] }); // Off the line
-
-      repo.addPoint(p1);
-      repo.addPoint(p2);
-      repo.addPoint(p3);
+      const p1 = WorldPoint.create('P1', { lockedXyz: [0, 0, 0] });
+      const p2 = WorldPoint.create('P2', { lockedXyz: [10, 0, 0] });
+      const p3 = WorldPoint.create('P3', { lockedXyz: [null, null, null], optimizedXyz: [5, 5, 0] }); // Off the line
 
       const constraint = CollinearPointsConstraint.create(
-        'c1',
         'Collinear',
-        [p1.id, p2.id, p3.id],
-        repo,
+        [p1, p2, p3],
         { tolerance: 1e-4 }
       );
 
@@ -211,21 +130,14 @@ describe('ConstraintSystem - All Constraint Types', () => {
 
   describe('CoplanarPointsConstraint', () => {
     it('should make 4 points coplanar', () => {
-      const p1 = WorldPoint.create('p1', 'P1', { xyz: [0, 0, 0], isLocked: true });
-      const p2 = WorldPoint.create('p2', 'P2', { xyz: [10, 0, 0], isLocked: true });
-      const p3 = WorldPoint.create('p3', 'P3', { xyz: [0, 10, 0], isLocked: true });
-      const p4 = WorldPoint.create('p4', 'P4', { xyz: [5, 5, 10] }); // Out of plane
-
-      repo.addPoint(p1);
-      repo.addPoint(p2);
-      repo.addPoint(p3);
-      repo.addPoint(p4);
+      const p1 = WorldPoint.create('P1', { lockedXyz: [0, 0, 0] });
+      const p2 = WorldPoint.create('P2', { lockedXyz: [10, 0, 0] });
+      const p3 = WorldPoint.create('P3', { lockedXyz: [0, 10, 0] });
+      const p4 = WorldPoint.create('P4', { lockedXyz: [null, null, null], optimizedXyz: [5, 5, 10] }); // Out of plane
 
       const constraint = CoplanarPointsConstraint.create(
-        'c1',
         'Coplanar',
-        [p1.id, p2.id, p3.id, p4.id],
-        repo,
+        [p1, p2, p3, p4],
         { tolerance: 1e-4 }
       );
 
@@ -247,25 +159,18 @@ describe('ConstraintSystem - All Constraint Types', () => {
 
   describe('EqualDistancesConstraint', () => {
     it('should enforce equal distances between point pairs', () => {
-      const p1 = WorldPoint.create('p1', 'P1', { xyz: [0, 0, 0], isLocked: true });
-      const p2 = WorldPoint.create('p2', 'P2', { xyz: [10, 0, 0] });
-      const p3 = WorldPoint.create('p3', 'P3', { xyz: [0, 20, 0], isLocked: true });
-      const p4 = WorldPoint.create('p4', 'P4', { xyz: [0, 35, 0] });
-
-      repo.addPoint(p1);
-      repo.addPoint(p2);
-      repo.addPoint(p3);
-      repo.addPoint(p4);
+      const p1 = WorldPoint.create('P1', { lockedXyz: [0, 0, 0] });
+      const p2 = WorldPoint.create('P2', { lockedXyz: [null, null, null], optimizedXyz: [10, 0, 0] });
+      const p3 = WorldPoint.create('P3', { lockedXyz: [0, 20, 0] });
+      const p4 = WorldPoint.create('P4', { lockedXyz: [null, null, null], optimizedXyz: [0, 35, 0] });
 
       // Make distance(p1, p2) equal to distance(p3, p4)
       const constraint = EqualDistancesConstraint.create(
-        'c1',
         'Equal Distances',
         [
-          [p1.id, p2.id],
-          [p3.id, p4.id]
+          [p1, p2],
+          [p3, p4]
         ],
-        repo,
         { tolerance: 1e-4 }
       );
 
@@ -295,31 +200,22 @@ describe('ConstraintSystem - All Constraint Types', () => {
   describe('EqualAnglesConstraint', () => {
     it('should enforce equal angles', () => {
       // First angle: PA1 - V1 - PC1
-      const pA1 = WorldPoint.create('pA1', 'PA1', { xyz: [10, 0, 0], isLocked: true });
-      const v1 = WorldPoint.create('v1', 'V1', { xyz: [0, 0, 0], isLocked: true });
-      const pC1 = WorldPoint.create('pC1', 'PC1', { xyz: [5, 8.66, 0] }); // ~60 degrees
+      const pA1 = WorldPoint.create('PA1', { lockedXyz: [10, 0, 0] });
+      const v1 = WorldPoint.create('V1', { lockedXyz: [0, 0, 0] });
+      const pC1 = WorldPoint.create('PC1', { lockedXyz: [null, null, null], optimizedXyz: [5, 8.66, 0] }); // ~60 degrees
 
       // Second angle: PA2 - V2 - PC2
-      const pA2 = WorldPoint.create('pA2', 'PA2', { xyz: [20, 0, 0], isLocked: true });
-      const v2 = WorldPoint.create('v2', 'V2', { xyz: [10, 0, 0], isLocked: true });
-      const pC2 = WorldPoint.create('pC2', 'PC2', { xyz: [15, 5, 0] }); // ~45 degrees
-
-      repo.addPoint(pA1);
-      repo.addPoint(v1);
-      repo.addPoint(pC1);
-      repo.addPoint(pA2);
-      repo.addPoint(v2);
-      repo.addPoint(pC2);
+      const pA2 = WorldPoint.create('PA2', { lockedXyz: [20, 0, 0] });
+      const v2 = WorldPoint.create('V2', { lockedXyz: [10, 0, 0] });
+      const pC2 = WorldPoint.create('PC2', { lockedXyz: [null, null, null], optimizedXyz: [15, 5, 0] }); // ~45 degrees
 
       // Make both angles equal
       const constraint = EqualAnglesConstraint.create(
-        'c1',
         'Equal Angles',
         [
-          [pA1.id, v1.id, pC1.id],
-          [pA2.id, v2.id, pC2.id]
+          [pA1, v1, pC1],
+          [pA2, v2, pC2]
         ],
-        repo,
         { tolerance: 1e-4 }
       );
 
@@ -364,37 +260,29 @@ describe('ConstraintSystem - All Constraint Types', () => {
   describe('Complex scenarios', () => {
     it('should solve multiple constraints simultaneously', () => {
       // Create an equilateral triangle
-      const p1 = WorldPoint.create('p1', 'P1', { xyz: [0, 0, 0], isLocked: true });
-      const p2 = WorldPoint.create('p2', 'P2', { xyz: [10, 0, 0] });
-      const p3 = WorldPoint.create('p3', 'P3', { xyz: [5, 8, 0] });
-
-      repo.addPoint(p1);
-      repo.addPoint(p2);
-      repo.addPoint(p3);
+      const p1 = WorldPoint.create('P1', { lockedXyz: [0, 0, 0] });
+      const p2 = WorldPoint.create('P2', { lockedXyz: [null, null, null], optimizedXyz: [10, 0, 0] });
+      const p3 = WorldPoint.create('P3', { lockedXyz: [null, null, null], optimizedXyz: [5, 8, 0] });
 
       // Equal distances constraint
       const equalDist = EqualDistancesConstraint.create(
-        'c1',
         'Equal sides',
         [
-          [p1.id, p2.id],
-          [p2.id, p3.id],
-          [p3.id, p1.id]
+          [p1, p2],
+          [p2, p3],
+          [p3, p1]
         ],
-        repo,
         { tolerance: 1e-4 }
       );
 
       // Equal angles constraint (all 60 degrees)
       const equalAngles = EqualAnglesConstraint.create(
-        'c2',
         'Equal angles',
         [
-          [p2.id, p1.id, p3.id],
-          [p1.id, p2.id, p3.id],
-          [p2.id, p3.id, p1.id]
+          [p2, p1, p3],
+          [p1, p2, p3],
+          [p2, p3, p1]
         ],
-        repo,
         { tolerance: 1e-4 }
       );
 

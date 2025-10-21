@@ -10,7 +10,6 @@ export interface WorldPointOptions {
   lockedXyz?: [number | null, number | null, number | null]
   color?: string
   isVisible?: boolean
-  isOrigin?: boolean
 }
 
 export interface LineOptions {

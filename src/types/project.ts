@@ -20,7 +20,6 @@ export interface WorldPoint {
   imagePoints: ImagePoint[]       // Associated image observations
   isVisible: boolean   // Show/hide in UI
   color: string        // Visual distinction
-  isOrigin?: boolean   // Mark as coordinate system origin
   isLocked?: boolean   // Prevent modification
   group?: string       // Point group/layer
   tags?: string[]      // User-defined tags

@@ -15,21 +15,18 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
     optimizedXyz?: [number, number, number]
     color: string
     isVisible: boolean
-    isOrigin: boolean
 
     private constructor(
         name: string,
         lockedXyz: [number | null, number | null, number | null],
         color: string,
         isVisible: boolean,
-        isOrigin: boolean,
         optimizedXyz?: [number, number, number],
     ) {
         this.name = name
         this.lockedXyz = lockedXyz
         this.color = color
         this.isVisible = isVisible
-        this.isOrigin = isOrigin
         this.optimizedXyz = optimizedXyz
     }
 
@@ -45,7 +42,6 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
         lockedXyz: [number | null, number | null, number | null],
         color: string,
         isVisible: boolean,
-        isOrigin: boolean,
         optimizedXyz?: [number, number, number]
     ): WorldPoint {
         return new WorldPoint(
@@ -53,7 +49,6 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
             lockedXyz,
             color,
             isVisible,
-            isOrigin,
             optimizedXyz
         )
     }
@@ -64,7 +59,6 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
             lockedXyz: [number | null, number | null, number | null]
             color?: string
             isVisible?: boolean
-            isOrigin?: boolean
             optimizedXyz?: [number, number, number]
         } = {
             lockedXyz: [null, null, null],
@@ -76,7 +70,6 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
             options.lockedXyz,
             options.color || '#ffffff',
             options.isVisible ?? true,
-            options.isOrigin ?? false,
             options.optimizedXyz
         )
     }

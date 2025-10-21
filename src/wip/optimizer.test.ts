@@ -114,7 +114,6 @@ describe('Optimizer Integration Tests', () => {
           xyz: [0, 0, 0], // Origin fully locked
           color: '#ff0000',
           isVisible: true,
-          isOrigin: true,
           isLocked: false,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
@@ -125,7 +124,6 @@ describe('Optimizer Integration Tests', () => {
           xyz: [null, null, null], // Fully free
           color: '#00ff00',
           isVisible: true,
-          isOrigin: false,
           isLocked: false,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
@@ -182,7 +180,6 @@ describe('Optimizer Integration Tests', () => {
           xyz: [0, null, null], // X locked to 0, Y and Z free
           color: '#ff0000',
           isVisible: true,
-          isOrigin: false,
           isLocked: false,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()

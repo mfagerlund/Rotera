@@ -13,20 +13,8 @@ import { Viewpoint } from '../../entities/viewpoint/Viewpoint';
 import { ProjectionConstraint } from '../../entities/constraints/projection-constraint';
 import { ConstraintSystem } from '../constraint-system';
 
-// Test repository implementations
-class TestConstraintRepository {
-  getPoint() { return undefined; }
-  getLine() { return undefined; }
-  getPlane() { return undefined; }
-  entityExists() { return true; }
-  pointExists() { return true; }
-  lineExists() { return true; }
-  planeExists() { return true; }
-}
-
 describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
   let system: ConstraintSystem;
-  let constraintRepo: TestConstraintRepository;
 
   beforeEach(() => {
     system = new ConstraintSystem({
@@ -34,28 +22,26 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
       maxIterations: 100,
       verbose: false,
     });
-    constraintRepo = new TestConstraintRepository();
   });
 
   describe('Simple Projection', () => {
     it('should optimize camera pose to match multiple observed pixels', () => {
       // Create multiple world points at known locations (LOCKED - we're optimizing camera)
-      const p1 = WorldPoint.create('p1', 'Point1', {
-        xyz: [0, 0, 10], // Center, 10 units away
-        isLocked: true,
+      const p1 = WorldPoint.create('Point1', {
+        lockedXyz: [0, 0, 10], // Center, 10 units away - LOCKED
+        optimizedXyz: [0, 0, 10],
       });
-      const p2 = WorldPoint.create('p2', 'Point2', {
-        xyz: [2, 0, 10], // 2 units to the right
-        isLocked: true,
+      const p2 = WorldPoint.create('Point2', {
+        lockedXyz: [2, 0, 10], // 2 units to the right - LOCKED
+        optimizedXyz: [2, 0, 10],
       });
-      const p3 = WorldPoint.create('p3', 'Point3', {
-        xyz: [0, 2, 10], // 2 units up
-        isLocked: true,
+      const p3 = WorldPoint.create('Point3', {
+        lockedXyz: [0, 2, 10], // 2 units up - LOCKED
+        optimizedXyz: [0, 2, 10],
       });
 
       // Create a viewpoint with wrong initial pose
       const camera = Viewpoint.create(
-        'cam1',
         'TestCamera',
         'test-camera.jpg',
         '',
@@ -75,9 +61,9 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
       // p2 [2,0,10] -> [960 + 1000*(2/10), 540] = [1160, 540]
       // p3 [0,2,10] -> [960, 540 + 1000*(2/10)] = [960, 740]
 
-      const c1 = ProjectionConstraint.create('c1', 'Proj1', 'p1', 'cam1', 960, 540, constraintRepo);
-      const c2 = ProjectionConstraint.create('c2', 'Proj2', 'p2', 'cam1', 1160, 540, constraintRepo);
-      const c3 = ProjectionConstraint.create('c3', 'Proj3', 'p3', 'cam1', 960, 740, constraintRepo);
+      const c1 = ProjectionConstraint.create('Proj1', p1, camera, 960, 540);
+      const c2 = ProjectionConstraint.create('Proj2', p2, camera, 1160, 540);
+      const c3 = ProjectionConstraint.create('Proj3', p3, camera, 960, 740);
 
       system.addPoint(p1);
       system.addPoint(p2);
@@ -115,7 +101,6 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
     it('should optimize point position to match observed pixel', () => {
       // Create a viewpoint at a known pose (LOCKED - we're optimizing the point)
       const camera = Viewpoint.create(
-        'cam1',
         'TestCamera',
         'test-camera.jpg',
         '',
@@ -132,8 +117,9 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
       );
 
       // Create a world point with wrong initial position
-      const worldPoint = WorldPoint.create('p1', 'WorldPoint', {
-        xyz: [1, 1, 10], // Wrong position
+      const worldPoint = WorldPoint.create('WorldPoint', {
+        lockedXyz: [null, null, null],
+        optimizedXyz: [1, 1, 10], // Wrong position
       });
 
       // Point should project to image center if it's at [0, 0, 10]
@@ -141,13 +127,11 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
       const observedV = 540;
 
       const constraint = ProjectionConstraint.create(
-        'proj1',
         'Projection1',
-        'p1',
-        'cam1',
+        worldPoint,
+        camera,
         observedU,
-        observedV,
-        constraintRepo
+        observedV
       );
 
       system.addCamera(camera);
@@ -178,7 +162,7 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
   describe('Bundle Adjustment', () => {
     it('should jointly optimize camera pose and point positions', () => {
       // Create two viewpoints with wrong poses
-      const cam1 = Viewpoint.create('cam1', 'Camera1', 'camera1.jpg', '', 1920, 1080, {
+      const cam1 = Viewpoint.create('Camera1', 'camera1.jpg', '', 1920, 1080, {
         focalLength: 1000,
         position: [-1.5, 0.3, 0.2], // Wrong (should be at [-2, 0, 0])
         rotationEuler: [0, 0.1, 0],      // Wrong (should be [0, 0, 0])
@@ -186,7 +170,7 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
         principalPointY: 540,
       });
 
-      const cam2 = Viewpoint.create('cam2', 'Camera2', 'camera2.jpg', '', 1920, 1080, {
+      const cam2 = Viewpoint.create('Camera2', 'camera2.jpg', '', 1920, 1080, {
         focalLength: 1000,
         position: [1.7, -0.2, 0.1], // Wrong (should be at [2, 0, 0])
         rotationEuler: [0, -0.1, 0],     // Wrong (should be [0, 0, 0])
@@ -195,8 +179,9 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
       });
 
       // Create a 3D point with wrong position
-      const point = WorldPoint.create('p1', 'Point1', {
-        xyz: [0.2, 0.5, 9], // Wrong (should be at [0, 0, 10])
+      const point = WorldPoint.create('Point1', {
+        lockedXyz: [null, null, null],
+        optimizedXyz: [0.2, 0.5, 9], // Wrong (should be at [0, 0, 10])
       });
 
       // Simulated observations:
@@ -204,23 +189,19 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
       // the point would project to image center in both images
 
       const proj1 = ProjectionConstraint.create(
-        'proj1',
         'Proj_Cam1_P1',
-        'p1',
-        'cam1',
+        point,
+        cam1,
         960, // image center
-        540,
-        constraintRepo
+        540
       );
 
       const proj2 = ProjectionConstraint.create(
-        'proj2',
         'Proj_Cam2_P1',
-        'p1',
-        'cam2',
+        point,
+        cam2,
         960, // image center
-        540,
-        constraintRepo
+        540
       );
 
       system.addCamera(cam1);
@@ -257,18 +238,18 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
 
     it('should triangulate point from multiple camera views', () => {
       // Two cameras at known poses (locked)
-      const cam1 = WorldPoint.create('cam1_pos', 'Cam1Position', {
-        xyz: [-2, 0, 0],
-        isLocked: true, // Lock camera position
+      const cam1 = WorldPoint.create('Cam1Position', {
+        lockedXyz: [-2, 0, 0], // Lock camera position
+        optimizedXyz: [-2, 0, 0],
       });
 
-      const cam2 = WorldPoint.create('cam2_pos', 'Cam2Position', {
-        xyz: [2, 0, 0],
-        isLocked: true,
+      const cam2 = WorldPoint.create('Cam2Position', {
+        lockedXyz: [2, 0, 0],
+        optimizedXyz: [2, 0, 0],
       });
 
       // Create viewpoints with locked poses
-      const camera1 = Viewpoint.create('cam1', 'Camera1', 'camera1.jpg', '', 1920, 1080, {
+      const camera1 = Viewpoint.create('Camera1', 'camera1.jpg', '', 1920, 1080, {
         focalLength: 1000,
         position: [-2, 0, 0],
         rotation: [1, 0, 0, 0], // Identity quaternion
@@ -277,7 +258,7 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
         isPoseLocked: true, // Lock camera pose
       });
 
-      const camera2 = Viewpoint.create('cam2', 'Camera2', 'camera2.jpg', '', 1920, 1080, {
+      const camera2 = Viewpoint.create('Camera2', 'camera2.jpg', '', 1920, 1080, {
         focalLength: 1000,
         position: [2, 0, 0],
         rotation: [1, 0, 0, 0], // Identity quaternion
@@ -287,31 +268,28 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
       });
 
       // Unknown 3D point (to be triangulated)
-      const point = WorldPoint.create('p1', 'Point', {
-        xyz: [0, 0, 5], // Initial guess
+      const point = WorldPoint.create('Point', {
+        lockedXyz: [null, null, null],
+        optimizedXyz: [0, 0, 5], // Initial guess
       });
 
       // Observations: point projects to image center in both views
       // Actual point should be at [0, 0, 10] to project to center from both cameras
 
       const proj1 = ProjectionConstraint.create(
-        'proj1',
         'Proj1',
-        'p1',
-        'cam1',
+        point,
+        camera1,
         960,
-        540,
-        constraintRepo
+        540
       );
 
       const proj2 = ProjectionConstraint.create(
-        'proj2',
         'Proj2',
-        'p1',
-        'cam2',
+        point,
+        camera2,
         960,
-        540,
-        constraintRepo
+        540
       );
 
       system.addPoint(cam1); // Add camera positions as locked points
