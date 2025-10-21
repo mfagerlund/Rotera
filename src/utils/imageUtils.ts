@@ -1,9 +1,7 @@
 // Image processing utilities for project management
 
-import type { ViewpointId } from '../types/ids'
-
 export interface ImageLoadResult {
-  id: ViewpointId
+  id: string
   name: string
   url: string
   imageWidth: number

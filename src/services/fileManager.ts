@@ -35,7 +35,7 @@ export class FileManagerService {
           name: metadata.name || project.name || 'Untitled Project',
           description: metadata.description,
           version: this.CURRENT_VERSION,
-          createdAt: project.createdAt || new Date().toISOString(),
+          createdAt: new Date().toISOString(),
           modifiedAt: new Date().toISOString(),
           author: metadata.author,
           tags: metadata.tags || [],
@@ -205,7 +205,7 @@ export class FileManagerService {
 
         const pointCount = project.worldPoints.size
         const imageCount = (project as any).images ? Object.keys((project as any).images).length : project.viewpoints.size
-        const constraintCount = (project.constraints || []).length
+        const constraintCount = project.constraints?.size || 0
 
         ctx.fillText(project.name || 'Untitled', 100, 30)
         ctx.font = '12px Arial'
@@ -229,10 +229,6 @@ export class FileManagerService {
     try {
       // Check required metadata fields
       if (!projectFile.metadata.name || !projectFile.metadata.version) {
-        return false
-      }
-
-      if (!projectFile.project.id) {
         return false
       }
 

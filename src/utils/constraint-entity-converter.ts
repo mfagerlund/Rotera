@@ -57,8 +57,8 @@ export function convertConstraintToEntity(
   lineEntities: Line[]
 ): ConstraintEntity | null {
   // Build lookup maps
-  const pointMap = new Map(pointEntities.map(p => [p.id, p]));
-  const lineMap = new Map(lineEntities.map(l => [l.id, l]));
+  const pointMap = new Map(pointEntities.map(p => [p.getName(), p]));
+  const lineMap = new Map(lineEntities.map(l => [l.getName(), l]));
 
   const repo = new ConstraintConversionRepository(pointMap, lineMap);
 

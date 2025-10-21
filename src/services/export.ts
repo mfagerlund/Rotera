@@ -74,9 +74,7 @@ export class ExportService {
   private exportJSON(options: ExportOptions): ExportResult {
     const exportData: any = {
       project: {
-        name: this.project.name,
-        createdAt: this.project.createdAt,
-        updatedAt: this.project.updatedAt
+        name: this.project.name
       },
       worldPoints: this.getFormattedWorldPoints(options),
       coordinateSystem: options.coordinateSystem === 'world' ? (this.project as any).coordinateSystem : null
@@ -84,13 +82,13 @@ export class ExportService {
 
     if (options.includeConstraints) {
       // Convert entity constraints to DTO constraints for export
-      exportData.constraints = this.project.constraints.map(c => (c as any))
+      exportData.constraints = Array.from(this.project.constraints).map(c => (c as any))
     }
 
     if (options.includeImages) {
       exportData.images = (this.project as any).images
       exportData.cameras = (this.project as any).cameras
-      exportData.viewpoints = Array.from(this.project.viewpoints).reduce((acc, vp) => ({ ...acc, [vp.id]: vp }), {} as Record<string, any>)
+      exportData.viewpoints = Array.from(this.project.viewpoints).reduce((acc, vp) => ({ ...acc, [vp.getName()]: vp }), {} as Record<string, any>)
     }
 
     if (options.includeMetadata) {
@@ -321,8 +319,6 @@ EOF
 <pictorigo-export>
   <project>
     <name>${this.escapeXML(this.project.name)}</name>
-    <created-at>${this.project.createdAt}</created-at>
-    <updated-at>${this.project.updatedAt}</updated-at>
   </project>
   <world-points>
 `
@@ -380,13 +376,12 @@ EOF
   private getFormattedWorldPoints(options: ExportOptions): Record<string, ExportWorldPoint> {
     const worldPoints: Record<string, ExportWorldPoint> = {}
     for (const wp of this.project.worldPoints) {
-      const coords = wp.getDefinedCoordinates()
-      worldPoints[wp.id] = {
-        id: wp.id,
+      const coords = wp.optimizedXyz
+      worldPoints[wp.getName()] = {
+        id: wp.getName(),
         name: wp.getName(),
         xyz: coords || null,
         color: wp.color,
-        group: wp.group,
         isOrigin: wp.isOrigin,
         isLocked: wp.isLocked(),
         imagePoints: [] // Legacy field - image point data now in Viewpoints
@@ -418,7 +413,7 @@ EOF
   private getConstraintsForPoint(pointId: string): any[] {
     if (!this.project.constraints) return []
 
-    return this.project.constraints.filter(constraint => {
+    return Array.from(this.project.constraints).filter((constraint: any) => {
       const pointIds = this.getConstraintPointIds(constraint)
       return pointIds.includes(pointId)
     }) as any[]
@@ -431,7 +426,7 @@ EOF
 
   private getProjectStatistics() {
     const worldPointCount = this.project.worldPoints.size
-    const constraintCount = this.project.constraints?.length || 0
+    const constraintCount = this.project.constraints?.size || 0
     const imageCount = (this.project as any).images ? Object.keys((this.project as any).images).length : this.project.viewpoints.size
     const pointsWithXYZ = Array.from(this.project.worldPoints.values()).filter(wp => (wp as any).xyz).length
 
@@ -454,9 +449,6 @@ EOF
 
 Project: ${this.project.name}
 Description: ${description}
-Created: ${new Date(this.project.createdAt).toLocaleString()}
-Updated: ${new Date(this.project.updatedAt).toLocaleString()}
-
 Statistics:
 - World Points: ${stats.worldPointCount}
 - Points with 3D coordinates: ${stats.pointsWithXYZ}

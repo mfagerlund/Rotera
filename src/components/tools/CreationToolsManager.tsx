@@ -8,6 +8,7 @@ import LoopTraceTool from './LoopTraceTool'
 import FloatingWindow from '../FloatingWindow'
 import { Line, LineDirection } from '../../entities/line'
 import { WorldPoint } from '../../entities/world-point'
+import { Viewpoint } from '../../entities/viewpoint'
 import { ConstructionPreview } from '../image-viewer/types'
 import type { ISelectable } from '../../types/selectable'
 import { getEntityKey } from '../../utils/entityKeys'
@@ -38,7 +39,7 @@ interface CreationToolsManagerProps {
   onCreateCircle: (definition: any) => void
   onConstructionPreviewChange?: (preview: ConstructionPreview | null) => void
   onClearSelection?: () => void
-  currentImageId?: string
+  currentViewpoint?: Viewpoint
   editingLine?: Line | null
   onUpdateLine?: (lineEntity: Line, updatedLine: any) => void
   onDeleteLine?: (line: Line) => void
@@ -59,7 +60,7 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
   onCreateCircle,
   onConstructionPreviewChange,
   onClearSelection,
-  currentImageId,
+  currentViewpoint,
   editingLine = null,
   onUpdateLine,
   onDeleteLine,

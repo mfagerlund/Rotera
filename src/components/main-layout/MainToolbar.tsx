@@ -36,7 +36,7 @@ interface MainToolbarProps {
   selectedPoints: WorldPoint[]
   selectedLines: Line[]
   allConstraints: AvailableConstraint[]
-  onConstraintClick: (type: string, selectedPoints: string[], selectedLines: any[]) => void
+  onConstraintClick: (type: string, selectedPoints: WorldPoint[], selectedLines: Line[]) => void
 
   // Settings
   showPointNames: boolean

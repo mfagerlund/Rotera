@@ -9,17 +9,16 @@
 import { V, Value, Vec3 } from 'scalar-autograd';
 import type { EqualDistancesConstraint } from '../../entities/constraints/equal-distances-constraint';
 import type { ValueMap } from '../IOptimizable';
-import type { PointId } from '../../types/ids';
 
 export function computeEqualDistancesResiduals(
   constraint: EqualDistancesConstraint,
   valueMap: ValueMap
 ): Value[] {
   const points = constraint.points;
-  const pointMap = new Map<PointId, typeof points[0]>();
-  points.forEach(p => pointMap.set(p.id as PointId, p));
+  const pointMap = new Map<string, typeof points[0]>();
+  points.forEach(p => pointMap.set(p.getName(), p));
 
-  const distancePairs = (constraint as any).data.parameters.distancePairs as [PointId, PointId][];
+  const distancePairs = (constraint as any).data.parameters.distancePairs as [string, string][];
 
   if (distancePairs.length < 2) {
     console.warn('Equal distances constraint requires at least 2 pairs');
@@ -27,7 +26,7 @@ export function computeEqualDistancesResiduals(
   }
 
   // Calculate distance for a pair using Vec3 API
-  const calculateDistance = (pair: [PointId, PointId]): Value | undefined => {
+  const calculateDistance = (pair: [string, string]): Value | undefined => {
     const p1 = pointMap.get(pair[0]);
     const p2 = pointMap.get(pair[1]);
 

@@ -39,7 +39,7 @@ export interface LineData {
   color: string
   isVisible: boolean
   isConstruction: boolean
-  createdAt: string
+  createdAt?: string
   updatedAt?: string
   constraints?: {
     direction: 'free' | 'horizontal' | 'vertical' | 'x-aligned' | 'z-aligned'

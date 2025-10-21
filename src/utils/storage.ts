@@ -8,7 +8,6 @@ const SETTINGS_KEY = 'pictorigo_settings'
 export class ProjectStorage {
   static save(project: Project): void {
     try {
-      project.updatedAt = new Date().toISOString()
       const projectData = JSON.stringify(project)
 
       // Check storage size before saving

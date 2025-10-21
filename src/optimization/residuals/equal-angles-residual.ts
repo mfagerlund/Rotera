@@ -9,17 +9,16 @@
 import { V, Value, Vec3 } from 'scalar-autograd';
 import type { EqualAnglesConstraint } from '../../entities/constraints/equal-angles-constraint';
 import type { ValueMap } from '../IOptimizable';
-import type { PointId } from '../../types/ids';
 
 export function computeEqualAnglesResiduals(
   constraint: EqualAnglesConstraint,
   valueMap: ValueMap
 ): Value[] {
   const points = constraint.points;
-  const pointMap = new Map<PointId, typeof points[0]>();
-  points.forEach(p => pointMap.set(p.id as PointId, p));
+  const pointMap = new Map<string, typeof points[0]>();
+  points.forEach(p => pointMap.set(p.getName(), p));
 
-  const angleTriplets = (constraint as any).data.parameters.angleTriplets as [PointId, PointId, PointId][];
+  const angleTriplets = (constraint as any).data.parameters.angleTriplets as [string, string, string][];
 
   if (angleTriplets.length < 2) {
     console.warn('Equal angles constraint requires at least 2 triplets');
@@ -27,7 +26,7 @@ export function computeEqualAnglesResiduals(
   }
 
   // Calculate angle for a triplet [pointA, vertex, pointC] using Vec3 API
-  const calculateAngle = (triplet: [PointId, PointId, PointId]): Value | undefined => {
+  const calculateAngle = (triplet: [string, string, string]): Value | undefined => {
     const pointA = pointMap.get(triplet[0]);
     const vertex = pointMap.get(triplet[1]);
     const pointC = pointMap.get(triplet[2]);

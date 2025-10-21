@@ -10,6 +10,25 @@ export type WorkspaceType = 'image' | 'world'
 export type VisualFeedbackLevel = 'minimal' | 'standard' | 'detailed'
 export type ImageSortOrder = 'name' | 'date'
 
+export type ProjectSettings = Pick<Project,
+    'showPointNames' |
+    'autoSave' |
+    'theme' |
+    'measurementUnits' |
+    'precisionDigits' |
+    'showConstraintGlyphs' |
+    'showMeasurements' |
+    'autoOptimize' |
+    'gridVisible' |
+    'snapToGrid' |
+    'defaultWorkspace' |
+    'showConstructionGeometry' |
+    'enableSmartSnapping' |
+    'constraintPreview' |
+    'visualFeedbackLevel' |
+    'imageSortOrder'
+>
+
 export class Project {
     name: string
     worldPoints: Set<WorldPoint>

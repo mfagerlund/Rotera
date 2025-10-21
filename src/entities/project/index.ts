@@ -4,5 +4,6 @@ export type {
   Theme,
   WorkspaceType,
   VisualFeedbackLevel,
-  ImageSortOrder
+  ImageSortOrder,
+  ProjectSettings
 } from './Project'

@@ -13,6 +13,7 @@ import { ConstructionPreview, LineData } from './image-viewer/types'
 import { Line as LineEntity } from '../entities/line'
 import { WorldPoint } from '../entities/world-point'
 import { Viewpoint } from '../entities/viewpoint'
+import { Plane } from '../entities/plane'
 import type { ISelectable } from '../types/selectable'
 import { COMPONENT_OVERLAY_EVENT, isComponentOverlayEnabled, setComponentOverlayEnabled } from '../utils/componentNameOverlay'
 import { useConfirm } from './ConfirmDialog'
@@ -328,10 +329,12 @@ export const MainLayout: React.FC = () => {
           color: line.color,
           isVisible: line.isVisible,
           isConstruction: line.isConstruction,
-          createdAt: undefined,
-          updatedAt: undefined,
-          length: undefined,
-          constraints: undefined
+          length: line.length(),
+          constraints: {
+            direction: line.direction,
+            targetLength: line.targetLength,
+            tolerance: line.tolerance
+          }
         }
         return [line.getName(), viewerLine]
       })
@@ -413,7 +416,10 @@ export const MainLayout: React.FC = () => {
 
   const handleMovePoint = (worldPoint: WorldPoint, u: number, v: number) => {
     if (currentImage) {
-      moveImagePoint(worldPoint, currentImage, u, v)
+      const imagePoint = currentImage.getImagePointsForWorldPoint(worldPoint)[0]
+      if (imagePoint) {
+        moveImagePoint(imagePoint, u, v)
+      }
     }
   }
 
@@ -483,7 +489,7 @@ export const MainLayout: React.FC = () => {
     }
   }
 
-  const handlePlaneClick = (planeId: string, ctrlKey: boolean, shiftKey: boolean) => {
+  const handlePlaneClick = (plane: Plane, ctrlKey: boolean, shiftKey: boolean) => {
     // TODO: Implement plane selection/editing
   }
 
@@ -610,7 +616,7 @@ export const MainLayout: React.FC = () => {
       imageViewerRef={imageViewerRef}
       worldPoints={worldPointsMap}
       lines={viewerLines}
-      linesArray={linesMap}
+      lineEntities={linesMap}
       selectedPoints={selectedPointEntities}
       selectedLines={selectedLineEntities}
       hoveredConstraintId={hoveredConstraintId}

@@ -104,7 +104,7 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
   const getSelectedWorldPointsInImage = (viewpoint: Viewpoint): number => {
     const selectedSet = new Set(selectedWorldPoints)
     return Array.from(viewpoint.imagePoints).filter(ip => {
-      return selectedSet.has(ip.worldPoint)
+      return selectedSet.has(ip.worldPoint as WorldPoint)
     }).length
   }
 
@@ -474,7 +474,7 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
         {/* World point locations overlay */}
         <div className="wp-locations-overlay">
             {Array.from(image.imagePoints).map(imagePoint => {
-              const wp = imagePoint.worldPoint
+              const wp = imagePoint.worldPoint as WorldPoint
 
               // Use actual rendered image bounds from the DOM
               // This accounts for centering and actual size

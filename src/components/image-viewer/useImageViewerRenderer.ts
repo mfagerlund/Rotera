@@ -37,11 +37,11 @@ export const useImageViewerRenderer = ({
     selectedPoints,
     selectedLines,
     hoveredConstraintId: hoveredConstraintIdForEffect,
-    hoveredWorldPointId,
-    hoveredPointId,
-    hoveredLineId,
+    hoveredWorldPoint,
+    hoveredPoint,
+    hoveredLine,
     isDraggingPoint,
-    draggedPointId,
+    draggedPoint,
     isDragging,
     panVelocity,
     constructionPreview,
@@ -393,8 +393,8 @@ export const useImageViewerRenderer = ({
         const x2 = ipB.u * scale + offset.x
         const y2 = ipB.v * scale + offset.y
 
-        const isSelected = selectedLines.includes(line)
-        const isHovered = hoveredLineId === lineId
+        const isSelected = selectedLines.some(l => l.pointA === line.pointA && l.pointB === line.pointB)
+        const isHovered = hoveredLine && hoveredLine.pointA === line.pointA && hoveredLine.pointB === line.pointB
 
         let strokeColor = line.isConstruction ? 'rgba(0, 150, 255, 0.6)' : line.color
         let lineWidth = line.isConstruction ? 1 : 2
@@ -427,8 +427,8 @@ export const useImageViewerRenderer = ({
         const midY = (y1 + y2) / 2
 
         let directionGlyph = ''
-        if (line.direction && line.direction !== 'free') {
-          switch (line.direction) {
+        if (line.constraints?.direction && line.constraints.direction !== 'free') {
+          switch (line.constraints.direction) {
             case 'horizontal': directionGlyph = '↔'; break
             case 'vertical': directionGlyph = '↕'; break
             case 'x-aligned': directionGlyph = 'X'; break
@@ -436,10 +436,10 @@ export const useImageViewerRenderer = ({
           }
         }
 
-        const displayText = line.targetLength
+        const displayText = line.constraints?.targetLength
           ? directionGlyph
-            ? `${line.name} ${directionGlyph} ${line.targetLength.toFixed(1)}m`
-            : `${line.name} ${line.targetLength.toFixed(1)}m`
+            ? `${line.name} ${directionGlyph} ${line.constraints.targetLength.toFixed(1)}m`
+            : `${line.name} ${line.constraints.targetLength.toFixed(1)}m`
           : directionGlyph
             ? `${line.name} ${directionGlyph}`
             : `${line.name}`
