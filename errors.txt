@@ -1,0 +1,24 @@
+We're working through the ui after a very large change (we've rewritted 95% of the code and introduced mobx).
+
+Here are a number of issues we need to address, get back to me after each task is completed and I'll verify:
+
+* when I click on an image point I should see the edit properties for the world point. that's not shown and there is no error.
+
+* image points show be shown on thumbnails in *almost* the right place, but they seem to not be centered properly. and they're not totally offcenter either. they're too high and too far to the left, is all I can tell. also, the imagepoints are larger on the thumbnails than on the image viewer, which si odd because the image viewer is larger.
+
+
+***********
+
+* the edit wp popup pops to the right (outside the window), it should always pop to the left. also, there are just two buttons in it so I'm wondering if we need it? just the edit and delete icons would be enough.
+
+* adding a new viewpoint/image doesn't make it selected (for imageviewer) which is very confusing. Also the "add
+
+* deleting an image/viewpoint doesn't unselect it in imageviewer. another viewpoint should be selected if there is one, otherwise no viewpoint should be selected.
+
+* the zoom/precision system isn't working as intended. when *moving* a image point, it works. when placing an image point, you can press shift and it slows down the loupe - but it still places the image point where the mouse cursor is, not where the loup is. this happens in several situations. we need to look over the mouse placement of image points and make sure the loupe works *everywhere*!
+
+* the button to copy image points from another viewpoint isn't working <button class="btn-image-top-action" title="Copy 5 points to current image"><svg data-prefix="fas" data-icon="copy" class="svg-inline--fa fa-copy" role="img" viewBox="0 0 448 512" aria-hidden="true"><path fill="currentColor" d="M192 0c-35.3 0-64 28.7-64 64l0 256c0 35.3 28.7 64 64 64l192 0c35.3 0 64-28.7 64-64l0-200.6c0-17.4-7.1-34.1-19.7-46.2L370.6 17.8C358.7 6.4 342.8 0 326.3 0L192 0zM64 128c-35.3 0-64 28.7-64 64L0 448c0 35.3 28.7 64 64 64l192 0c35.3 0 64-28.7 64-64l0-16-64 0 0 16-192 0 0-256 16 0 0-64-16 0z"></path></svg></button>. nothing happens when I press it.
+
+* no edits I make in the edit line properties window are being saved, they're forgotten as soon as I leave.
+
+* 
