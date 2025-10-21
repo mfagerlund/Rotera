@@ -164,7 +164,7 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
       expect(result.converged).toBe(true);
 
       // Point should have moved to correct position
-      const finalPos = worldPoint.getDefinedCoordinates()!;
+      const finalPos = worldPoint.optimizedXyz!;
 
       // Should be near [0, 0, 10]
       expect(Math.abs(finalPos[0])).toBeLessThan(0.1);
@@ -241,7 +241,7 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
       // Check that cameras moved to better poses
       const cam1Pos = cam1.position;
       const cam2Pos = cam2.position;
-      const pointPos = point.getDefinedCoordinates()!;
+      const pointPos = point.optimizedXyz!;
 
       // Cameras should be roughly on opposite sides
       expect(cam1Pos[0]).toBeLessThan(0); // Cam1 on left
@@ -331,7 +331,7 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
 
       expect(result.converged).toBe(true);
 
-      const triangulatedPos = point.getDefinedCoordinates()!;
+      const triangulatedPos = point.optimizedXyz!;
 
       // Point should be centered between cameras and forward
       expect(Math.abs(triangulatedPos[0])).toBeLessThan(0.5); // X near 0

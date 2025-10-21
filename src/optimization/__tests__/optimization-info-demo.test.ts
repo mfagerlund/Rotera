@@ -52,7 +52,7 @@ describe('Optimization Info Demo', () => {
     const p1Info = p1.getOptimizationInfo();
     console.log('Point 1 Optimization Info:');
     console.log(`  Position: [${p1Info.lockedXyz?.map(x => x?.toFixed(3)).join(', ')}]`);
-    console.log(`  Optimized: ${p1Info.isOptimized}`);
+    console.log(`  Optimized: ${p1Info.optimizedXyz !== undefined}`);
     console.log(`  Total Residual: ${p1Info.totalResidual.toFixed(6)}`);
     console.log(`  RMS Residual: ${p1Info.rmsResidual.toFixed(6)}\n`);
 
@@ -60,7 +60,7 @@ describe('Optimization Info Demo', () => {
     const p2Info = p2.getOptimizationInfo();
     console.log('Point 2 Optimization Info:');
     console.log(`  Position: [${p2Info.lockedXyz?.map(x => x?.toFixed(3)).join(', ')}]`);
-    console.log(`  Optimized: ${p2Info.isOptimized}`);
+    console.log(`  Optimized: ${p2Info.optimizedXyz !== undefined}`);
     console.log(`  Total Residual: ${p2Info.totalResidual.toFixed(6)}`);
     console.log(`  RMS Residual: ${p2Info.rmsResidual.toFixed(6)}\n`);
 
@@ -76,8 +76,8 @@ describe('Optimization Info Demo', () => {
 
     // Verify optimization worked
     expect(result.converged).toBe(true);
-    expect(p1Info.isOptimized).toBe(true);
-    expect(p2Info.isOptimized).toBe(true);
+    expect(p1Info.optimizedXyz).toBeDefined();
+    expect(p2Info.optimizedXyz).toBeDefined();
 
     // Line should be very close to target length and horizontal
     expect(lineInfo.length).toBeCloseTo(5.0, 2);

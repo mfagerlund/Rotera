@@ -115,19 +115,21 @@ export function optimizeProject(
     // 2. Line constraint residuals
     exportDto.lines.forEach(line => {
       // Only process lines with direction constraints
-      if (line.constraints.direction === 'free') {
+      if (line.direction === 'free') {
         return;
       }
 
-      const wpA = freePoints.find(wp => wp.id === line.pointA);
-      const wpB = freePoints.find(wp => wp.id === line.pointB);
+      // Note: This is DTO data (serialization format), IDs are expected here
+      // exportDto.lines contains LineDto objects with pointAId/pointBId string fields
+      const wpA = freePoints.find(wp => wp.id === line.pointAId);
+      const wpB = freePoints.find(wp => wp.id === line.pointBId);
 
       if (!wpA || !wpB) {
         return; // Skip if either point is fully locked
       }
 
-      const idxA = wpIdToParamIdx.get(line.pointA);
-      const idxB = wpIdToParamIdx.get(line.pointB);
+      const idxA = wpIdToParamIdx.get(line.pointAId);
+      const idxB = wpIdToParamIdx.get(line.pointBId);
 
       if (idxA === undefined || idxB === undefined) {
         return;
@@ -147,7 +149,7 @@ export function optimizeProject(
 
       // Create virtual third point based on direction constraint
       let posC: [number, number, number];
-      const dir = line.constraints.direction;
+      const dir = line.direction;
 
       if (dir === 'horizontal') {
         // Line in XY plane (Z = constant)
@@ -169,7 +171,7 @@ export function optimizeProject(
         posA,
         posB,
         posC,
-        line.constraints.tolerance ?? 1.0
+        line.tolerance ?? 1.0
       );
 
       residuals.push(...lineResiduals);

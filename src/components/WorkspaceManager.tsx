@@ -150,7 +150,9 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
           onClick={() => {
             const next = currentWorkspace === 'image' ? 'world' :
                         currentWorkspace === 'world' ? 'split' : 'image'
-            if (workspaceConfigs.find(c => c.id === next)?.hasContent) {
+            // Note: This is a UI config ID, not an entity ID - safe to use
+            const config = workspaceConfigs.find(c => c.id === next)
+            if (config?.hasContent) {
               onWorkspaceChange(next)
             }
           }}

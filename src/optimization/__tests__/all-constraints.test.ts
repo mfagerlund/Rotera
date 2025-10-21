@@ -116,8 +116,8 @@ describe('ConstraintSystem - All Constraint Types', () => {
       expect(result.converged).toBe(true);
 
       // Calculate final distance
-      const coords1 = p1.getDefinedCoordinates()!;
-      const coords2 = p2.getDefinedCoordinates()!;
+      const coords1 = p1.optimizedXyz!;
+      const coords2 = p2.optimizedXyz!;
       const dx = coords2[0] - coords1[0];
       const dy = coords2[1] - coords1[1];
       const dz = coords2[2] - coords1[2];
@@ -159,9 +159,9 @@ describe('ConstraintSystem - All Constraint Types', () => {
       expect(result.converged).toBe(true);
 
       // Calculate final angle
-      const cA = pA.getDefinedCoordinates()!;
-      const cV = vertex.getDefinedCoordinates()!;
-      const cC = pC.getDefinedCoordinates()!;
+      const cA = pA.optimizedXyz!;
+      const cV = vertex.optimizedXyz!;
+      const cC = pC.optimizedXyz!;
 
       const v1 = [cA[0] - cV[0], cA[1] - cV[1], cA[2] - cV[2]];
       const v2 = [cC[0] - cV[0], cC[1] - cV[1], cC[2] - cV[2]];
@@ -203,7 +203,7 @@ describe('ConstraintSystem - All Constraint Types', () => {
       expect(result.converged).toBe(true);
 
       // p3 should now be on the line from p1 to p2
-      const c3 = p3.getDefinedCoordinates()!;
+      const c3 = p3.optimizedXyz!;
       expect(c3[1]).toBeCloseTo(0, 4); // y should be 0
       expect(c3[2]).toBeCloseTo(0, 4); // z should be 0
     });
@@ -240,7 +240,7 @@ describe('ConstraintSystem - All Constraint Types', () => {
       expect(result.converged).toBe(true);
 
       // p4 should now be in the xy-plane (z = 0)
-      const c4 = p4.getDefinedCoordinates()!;
+      const c4 = p4.optimizedXyz!;
       expect(c4[2]).toBeCloseTo(0, 4);
     });
   });
@@ -280,10 +280,10 @@ describe('ConstraintSystem - All Constraint Types', () => {
       expect(result.converged).toBe(true);
 
       // Calculate distances
-      const c1 = p1.getDefinedCoordinates()!;
-      const c2 = p2.getDefinedCoordinates()!;
-      const c3 = p3.getDefinedCoordinates()!;
-      const c4 = p4.getDefinedCoordinates()!;
+      const c1 = p1.optimizedXyz!;
+      const c2 = p2.optimizedXyz!;
+      const c3 = p3.optimizedXyz!;
+      const c4 = p4.optimizedXyz!;
 
       const dist1 = Math.sqrt((c2[0] - c1[0]) ** 2 + (c2[1] - c1[1]) ** 2 + (c2[2] - c1[2]) ** 2);
       const dist2 = Math.sqrt((c4[0] - c3[0]) ** 2 + (c4[1] - c3[1]) ** 2 + (c4[2] - c3[2]) ** 2);
@@ -346,15 +346,15 @@ describe('ConstraintSystem - All Constraint Types', () => {
       };
 
       const angle1 = calcAngle(
-        pA1.getDefinedCoordinates()!,
-        v1.getDefinedCoordinates()!,
-        pC1.getDefinedCoordinates()!
+        pA1.optimizedXyz!,
+        v1.optimizedXyz!,
+        pC1.optimizedXyz!
       );
 
       const angle2 = calcAngle(
-        pA2.getDefinedCoordinates()!,
-        v2.getDefinedCoordinates()!,
-        pC2.getDefinedCoordinates()!
+        pA2.optimizedXyz!,
+        v2.optimizedXyz!,
+        pC2.optimizedXyz!
       );
 
       expect(angle1).toBeCloseTo(angle2, 2);
@@ -409,9 +409,9 @@ describe('ConstraintSystem - All Constraint Types', () => {
       expect(result.converged).toBe(true);
 
       // Verify all sides are equal
-      const c1 = p1.getDefinedCoordinates()!;
-      const c2 = p2.getDefinedCoordinates()!;
-      const c3 = p3.getDefinedCoordinates()!;
+      const c1 = p1.optimizedXyz!;
+      const c2 = p2.optimizedXyz!;
+      const c3 = p3.optimizedXyz!;
 
       const dist12 = Math.sqrt((c2[0] - c1[0]) ** 2 + (c2[1] - c1[1]) ** 2 + (c2[2] - c1[2]) ** 2);
       const dist23 = Math.sqrt((c3[0] - c2[0]) ** 2 + (c3[1] - c2[1]) ** 2 + (c3[2] - c2[2]) ** 2);

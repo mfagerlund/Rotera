@@ -1,4 +1,5 @@
 import { Project } from '../entities/project'
+import { WorldPoint } from '../entities/world-point'
 // Note: Constraint export format is defined inline below
 
 // Simple export format (not the same as DTOs)
@@ -136,7 +137,9 @@ export class ExportService {
       ]
 
       if (options.includeConstraints) {
-        const constraintsForPoint = this.getConstraintsForPoint(wp.id)
+        // Find the actual WorldPoint entity by name
+        const worldPoint = Array.from(this.project.worldPoints).find(p => p.getName() === wp.id)
+        const constraintsForPoint = worldPoint ? this.getConstraintsForPoint(worldPoint) : []
         row.push(
           constraintsForPoint.length.toString(),
           constraintsForPoint.map(c => c.type).join(';')
@@ -410,18 +413,24 @@ EOF
     return worldPoints
   }
 
-  private getConstraintsForPoint(pointId: string): any[] {
+  private getConstraintsForPoint(point: WorldPoint): any[] {
     if (!this.project.constraints) return []
 
     return Array.from(this.project.constraints).filter((constraint: any) => {
-      const pointIds = this.getConstraintPointIds(constraint)
-      return pointIds.includes(pointId)
+      const points = this.getConstraintPoints(constraint)
+      return points.includes(point)
     }) as any[]
   }
 
-  private getConstraintPointIds(constraint: any): string[] {
-    // Use the entities structure instead of specific properties
-    return constraint.entities?.points || []
+  private getConstraintPoints(constraint: any): WorldPoint[] {
+    // Use the entities structure to get actual point objects
+    // Note: constraints may have different entity structures depending on type
+    // This is a best-effort approach for the export service
+    const points: WorldPoint[] = []
+    if (constraint.entities?.points) {
+      points.push(...constraint.entities.points)
+    }
+    return points
   }
 
   private getProjectStatistics() {

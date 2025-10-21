@@ -18,6 +18,12 @@ const ALLOWED_PATHS = [
   /[\\/]entityKeys\.ts$/,
   /\.test\.ts$/,
   /check-no-runtime-ids\.ts$/,
+  // Legacy code - Planes not yet migrated to entity architecture
+  /[\\/]PlanesManager\.tsx$/,
+  // Optimizer works with DTO format (serialization), IDs expected
+  /[\\/]wip[\\/]optimizer\.ts$/,
+  // WorkspaceManager uses UI config IDs, not entity IDs
+  /[\\/]WorkspaceManager\.tsx$/,
 ];
 
 const ENTITY_ID_PATTERNS = [

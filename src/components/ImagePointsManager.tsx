@@ -4,7 +4,7 @@ import { faBullseye, faXmark } from '@fortawesome/free-solid-svg-icons'
 import EntityListPopup, { EntityListItem } from './EntityListPopup'
 import { WorldPoint } from '../entities/world-point'
 import { Viewpoint } from '../entities/viewpoint'
-import { IWorldPoint, IViewpoint } from '../entities/interfaces'
+import { IWorldPoint, IViewpoint, IImagePoint } from '../entities/interfaces'
 import { getEntityKey } from '../utils/entityKeys'
 
 export interface ImagePointReference {
@@ -44,7 +44,7 @@ export const ImagePointsManager: React.FC<ImagePointsManagerProps> = ({
     })
   })
 
-  const imagePointEntities: EntityListItem[] = allImagePointRefs.map(ref => {
+  const imagePointEntities: EntityListItem<ImagePointReference>[] = allImagePointRefs.map(ref => {
     const imagePoint = Array.from(ref.viewpoint.imagePoints).find(ip => ip.worldPoint === ref.worldPoint)
     const compositeKey = `${getEntityKey(ref.worldPoint)}-${getEntityKey(ref.viewpoint)}`
     const isSelected = selectedImagePoints.some(sel =>
@@ -60,29 +60,10 @@ export const ImagePointsManager: React.FC<ImagePointsManagerProps> = ({
         `Image: ${ref.viewpoint.getName()}`,
         imagePoint ? `Pixel coordinates: (${imagePoint.u.toFixed(1)}, ${imagePoint.v.toFixed(1)})` : ''
       ],
-      isActive: isSelected
+      isActive: isSelected,
+      entity: ref  // Pass the actual ImagePointReference object
     }
   })
-
-  const refMap = new Map<string, ImagePointReference>()
-  allImagePointRefs.forEach(ref => {
-    refMap.set(`${getEntityKey(ref.worldPoint)}-${getEntityKey(ref.viewpoint)}`, ref)
-  })
-
-  const handleEdit = (compositeKey: string) => {
-    const ref = refMap.get(compositeKey)
-    if (ref) onEditImagePoint?.(ref)
-  }
-
-  const handleDelete = (compositeKey: string) => {
-    const ref = refMap.get(compositeKey)
-    if (ref) onDeleteImagePoint?.(ref)
-  }
-
-  const handleSelect = (compositeKey: string) => {
-    const ref = refMap.get(compositeKey)
-    if (ref) onSelectImagePoint?.(ref)
-  }
 
   return (
     <EntityListPopup
@@ -92,13 +73,13 @@ export const ImagePointsManager: React.FC<ImagePointsManagerProps> = ({
       entities={imagePointEntities}
       emptyMessage="No image points found"
       storageKey="image-points-popup"
-      onEdit={handleEdit}
-      onDelete={handleDelete}
-      onSelect={handleSelect}
-      renderEntityDetails={(entity) => {
-        const ref = refMap.get(entity.id)
+      onEdit={onEditImagePoint}
+      onDelete={onDeleteImagePoint}
+      onSelect={onSelectImagePoint}
+      renderEntityDetails={(entityItem) => {
+        const ref = entityItem.entity
         if (!ref) return null
-        const imagePoint = Array.from(ref.viewpoint.imagePoints).find(ip => ip.worldPoint === ref.worldPoint)
+        const imagePoint: IImagePoint | undefined = Array.from(ref.viewpoint.imagePoints).find(ip => ip.worldPoint === ref.worldPoint)
 
         return (
           <div className="image-point-details">

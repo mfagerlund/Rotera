@@ -47,7 +47,7 @@ describe('Intrinsic Constraints', () => {
       expect(result.converged).toBe(true);
 
       // Locked point should not have moved
-      const lockedCoords = lockedPoint.getDefinedCoordinates()!;
+      const lockedCoords = lockedPoint.optimizedXyz!;
       expect(lockedCoords[0]).toBeCloseTo(10, 6);
       expect(lockedCoords[1]).toBeCloseTo(20, 6);
       expect(lockedCoords[2]).toBeCloseTo(30, 6);
@@ -261,17 +261,17 @@ describe('Intrinsic Constraints', () => {
       expect(lineY.length()).toBeCloseTo(10, 4);
       expect(lineZ.length()).toBeCloseTo(10, 4);
 
-      const pxCoords = px.getDefinedCoordinates()!;
+      const pxCoords = px.optimizedXyz!;
       expect(pxCoords[0]).toBeCloseTo(10, 4); // X-aligned
       expect(Math.abs(pxCoords[1])).toBeLessThan(1e-4);
       expect(Math.abs(pxCoords[2])).toBeLessThan(1e-4);
 
-      const pyCoords = py.getDefinedCoordinates()!;
+      const pyCoords = py.optimizedXyz!;
       expect(Math.abs(pyCoords[0])).toBeLessThan(1e-4);
       expect(pyCoords[1]).toBeCloseTo(10, 4); // Vertical (Y-aligned)
       expect(Math.abs(pyCoords[2])).toBeLessThan(1e-4);
 
-      const pzCoords = pz.getDefinedCoordinates()!;
+      const pzCoords = pz.optimizedXyz!;
       expect(Math.abs(pzCoords[0])).toBeLessThan(1e-4);
       expect(Math.abs(pzCoords[1])).toBeLessThan(1e-4);
       expect(pzCoords[2]).toBeCloseTo(10, 4); // Z-aligned

@@ -7,7 +7,7 @@ import FloatingWindow from './FloatingWindow'
 import ContextMenu, { ContextMenuItem } from './ContextMenu'
 import { useConfirm } from './ConfirmDialog'
 
-export interface EntityListItem {
+export interface EntityListItem<T = any> {
   id: string
   name: string
   displayInfo?: string
@@ -15,24 +15,25 @@ export interface EntityListItem {
   color?: string
   isVisible?: boolean
   isActive?: boolean
+  entity: T  // The actual entity object - use this instead of ID lookups
 }
 
-interface EntityListPopupProps {
+interface EntityListPopupProps<T = any> {
   title: string
   isOpen: boolean
   onClose: () => void
-  entities: EntityListItem[]
+  entities: EntityListItem<T>[]
   emptyMessage?: string
   storageKey: string
   width?: number
   height?: number
-  onEdit?: (id: string) => void
-  onDelete?: (id: string) => void
+  onEdit?: (entity: T) => void
+  onDelete?: (entity: T) => void
   onDeleteAll?: () => void
-  onToggleVisibility?: (id: string) => void
-  onSelect?: (id: string) => void
-  renderCustomActions?: (entity: EntityListItem) => React.ReactNode
-  renderEntityDetails?: (entity: EntityListItem) => React.ReactNode
+  onToggleVisibility?: (entity: T) => void
+  onSelect?: (entity: T) => void
+  renderCustomActions?: (entity: EntityListItem<T>) => React.ReactNode
+  renderEntityDetails?: (entity: EntityListItem<T>) => React.ReactNode
 }
 
 export const EntityListPopup: React.FC<EntityListPopupProps> = ({
@@ -56,16 +57,16 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
   const [contextMenu, setContextMenu] = useState<{
     isOpen: boolean
     position: { x: number; y: number }
-    entityId: string
+    entityItem: EntityListItem | null
   }>({
     isOpen: false,
     position: { x: 0, y: 0 },
-    entityId: ''
+    entityItem: null
   })
 
-  const handleDelete = async (id: string, name: string) => {
-    if (await confirm(`Are you sure you want to delete "${name}"?\n\nThis action cannot be undone.`)) {
-      onDelete?.(id)
+  const handleDelete = async (entityItem: EntityListItem) => {
+    if (await confirm(`Are you sure you want to delete "${entityItem.name}"?\n\nThis action cannot be undone.`)) {
+      onDelete?.(entityItem.entity)
     }
   }
 
@@ -75,12 +76,12 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
     }
   }
 
-  const handleContextMenu = (e: React.MouseEvent, entityId: string) => {
+  const handleContextMenu = (e: React.MouseEvent, entityItem: EntityListItem) => {
     e.preventDefault()
     setContextMenu({
       isOpen: true,
       position: { x: e.clientX, y: e.clientY },
-      entityId
+      entityItem
     })
   }
 
@@ -88,7 +89,7 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
     setContextMenu(prev => ({ ...prev, isOpen: false }))
   }
 
-  const getContextMenuItems = (entity: EntityListItem): ContextMenuItem[] => {
+  const getContextMenuItems = (entityItem: EntityListItem): ContextMenuItem[] => {
     const items: ContextMenuItem[] = []
 
     if (onEdit) {
@@ -96,16 +97,16 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
         id: 'edit',
         label: 'Edit',
         icon: 'faPencil',
-        onClick: () => onEdit(entity.id)
+        onClick: () => onEdit(entityItem.entity)
       })
     }
 
     if (onToggleVisibility) {
       items.push({
         id: 'toggle-visibility',
-        label: entity.isVisible ? 'Hide' : 'Show',
-        icon: entity.isVisible ? 'faEyeSlash' : 'faEye',
-        onClick: () => onToggleVisibility(entity.id)
+        label: entityItem.isVisible ? 'Hide' : 'Show',
+        icon: entityItem.isVisible ? 'faEyeSlash' : 'faEye',
+        onClick: () => onToggleVisibility(entityItem.entity)
       })
     }
 
@@ -123,7 +124,7 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
         id: 'delete',
         label: 'Delete',
         icon: 'faTrash',
-        onClick: () => handleDelete(entity.id, entity.name)
+        onClick: () => handleDelete(entityItem)
       })
     }
 
@@ -161,27 +162,27 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
           </div>
         ) : (
           <div className="entity-list">
-            {entities.map((entity) => (
+            {entities.map((entityItem) => (
               <div
-                key={entity.id}
-                className={`entity-item ${entity.isActive ? 'active' : ''}`}
-                onClick={() => onSelect?.(entity.id)}
-                onContextMenu={(e) => handleContextMenu(e, entity.id)}
+                key={entityItem.id}
+                className={`entity-item ${entityItem.isActive ? 'active' : ''}`}
+                onClick={() => onSelect?.(entityItem.entity)}
+                onContextMenu={(e) => handleContextMenu(e, entityItem)}
               >
                 <div className="entity-header">
                   <div className="entity-info">
                     <div className="entity-name">
-                      {entity.color && (
+                      {entityItem.color && (
                         <span
                           className="entity-color-indicator"
-                          style={{ backgroundColor: entity.color }}
+                          style={{ backgroundColor: entityItem.color }}
                         />
                       )}
-                      <span>{entity.name}</span>
+                      <span>{entityItem.name}</span>
                     </div>
-                    {entity.displayInfo && (
+                    {entityItem.displayInfo && (
                       <div className="entity-display-info">
-                        {entity.displayInfo}
+                        {entityItem.displayInfo}
                       </div>
                     )}
                   </div>
@@ -193,7 +194,7 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
                         className="btn-edit"
                         onClick={(e) => {
                           e.stopPropagation()
-                          onEdit(entity.id)
+                          onEdit(entityItem.entity)
                         }}
                         title="Edit"
                       >
@@ -207,7 +208,7 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
                         className="btn-delete"
                         onClick={(e) => {
                           e.stopPropagation()
-                          handleDelete(entity.id, entity.name)
+                          handleDelete(entityItem)
                         }}
                         title="Delete"
                       >
@@ -215,13 +216,13 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
                       </button>
                     )}
 
-                    {renderCustomActions?.(entity)}
+                    {renderCustomActions?.(entityItem)}
                   </div>
                 </div>
 
-                {entity.additionalInfo && entity.additionalInfo.length > 0 && (
+                {entityItem.additionalInfo && entityItem.additionalInfo.length > 0 && (
                   <div className="entity-additional-info">
-                    {entity.additionalInfo.map((info, index) => (
+                    {entityItem.additionalInfo.map((info, index) => (
                       <div key={index} className="info-line">
                         {info}
                       </div>
@@ -229,18 +230,18 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
                   </div>
                 )}
 
-                {renderEntityDetails?.(entity)}
+                {renderEntityDetails?.(entityItem)}
               </div>
             ))}
           </div>
         )}
 
         {/* Context Menu */}
-        {contextMenu.entityId && (
+        {contextMenu.entityItem && (
           <ContextMenu
             isOpen={contextMenu.isOpen}
             position={contextMenu.position}
-            items={getContextMenuItems(entities.find(e => e.id === contextMenu.entityId)!)}
+            items={getContextMenuItems(contextMenu.entityItem)}
             onClose={closeContextMenu}
           />
         )}

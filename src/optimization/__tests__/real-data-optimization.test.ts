@@ -69,7 +69,7 @@ describe('Real Data Optimization', () => {
 
     // Verify all points have xyz coordinates
     pointEntities.forEach(point => {
-      const xyz = point.getDefinedCoordinates();
+      const xyz = point.optimizedXyz;
       expect(xyz).toBeDefined();
       expect(xyz).toHaveLength(3);
     });
@@ -171,7 +171,7 @@ describe('Real Data Optimization', () => {
     // Print initial point positions
     console.log('\nInitial point positions:');
     pointEntities.slice(0, 5).forEach(p => {
-      const xyz = p.getDefinedCoordinates();
+      const xyz = p.optimizedXyz;
       console.log(`  ${p.name}: [${xyz?.map(v => v.toFixed(2)).join(', ')}]`);
     });
 
@@ -199,7 +199,7 @@ describe('Real Data Optimization', () => {
     // Print final point positions
     console.log('\nFinal point positions:');
     pointEntities.slice(0, 5).forEach(p => {
-      const xyz = p.getDefinedCoordinates();
+      const xyz = p.optimizedXyz;
       console.log(`  ${p.name}: [${xyz?.map(v => v.toFixed(2)).join(', ')}]`);
     });
 

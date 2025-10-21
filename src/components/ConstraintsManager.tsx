@@ -171,7 +171,7 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
 
   // Convert constraints to EntityListItem format
   const selectedSet = new Set(selectedConstraints)
-  const constraintEntities: EntityListItem[] = constraints.map(constraint => {
+  const constraintEntities: EntityListItem<Constraint>[] = constraints.map(constraint => {
     const entities = getConstraintEntities(constraint)
     const entityKey = getEntityKey(constraint)
     const evaluation = constraint.evaluate()
@@ -187,7 +187,8 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
       additionalInfo: getConstraintDetails(constraint),
       color: getStatusColor(status),
       isVisible: constraint.isEnabled,
-      isActive: selectedSet.has(constraint)
+      isActive: selectedSet.has(constraint),
+      entity: constraint  // Pass the actual Constraint object
     }
   })
 
@@ -199,24 +200,12 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
       entities={constraintEntities}
       emptyMessage="No constraints created yet"
       storageKey="constraints-popup"
-      onEdit={onEditConstraint ? (entityId) => {
-        const constraint = constraintMap.get(entityId)
-        if (constraint) onEditConstraint(constraint)
-      } : undefined}
-      onDelete={onDeleteConstraint ? (entityId) => {
-        const constraint = constraintMap.get(entityId)
-        if (constraint) onDeleteConstraint(constraint)
-      } : undefined}
-      onToggleVisibility={onToggleConstraint ? (entityId) => {
-        const constraint = constraintMap.get(entityId)
-        if (constraint) onToggleConstraint(constraint)
-      } : undefined}
-      onSelect={onSelectConstraint ? (entityId) => {
-        const constraint = constraintMap.get(entityId)
-        if (constraint) onSelectConstraint(constraint)
-      } : undefined}
-      renderEntityDetails={(entity) => {
-        const constraint = constraintMap.get(entity.id)
+      onEdit={onEditConstraint}
+      onDelete={onDeleteConstraint}
+      onToggleVisibility={onToggleConstraint}
+      onSelect={onSelectConstraint}
+      renderEntityDetails={(entityItem) => {
+        const constraint = entityItem.entity
         if (!constraint) return null
 
         const evaluation = constraint.evaluate()

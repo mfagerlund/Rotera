@@ -32,12 +32,14 @@ export const PlanesManager: React.FC<PlanesManagerProps> = ({
   onSelectPlane
 }) => {
   // NOTE: Planes are still in legacy format and use string IDs to reference points.
-  // We'll try to match by name as a workaround until Planes are refactored.
-  // This assumes the legacy ID format was based on point names.
+  // LEGACY CODE: This violates the "no runtime IDs" rule, but is acceptable because
+  // Planes haven't been migrated to the entity architecture yet. When Planes are
+  // migrated, they will use WorldPoint object references instead of IDs.
+  // TODO: Remove this when Planes are migrated to entity architecture.
   const pointMap = new Map(allWorldPoints.map(p => [p.getName(), p]))
   const planeMap = new Map(Object.entries(planes).map(([id, plane]) => [id, plane]))
 
-  // Try to look up by name, fall back to showing the ID
+  // LEGACY: Try to look up by name, fall back to showing the ID
   const getPointName = (pointId: string) => {
     // First try direct lookup by name
     const point = pointMap.get(pointId)
@@ -87,14 +89,15 @@ export const PlanesManager: React.FC<PlanesManagerProps> = ({
   }
 
   // Convert planes to EntityListItem format
-  const planeEntities: EntityListItem[] = Object.values(planes).map(plane => ({
+  const planeEntities: EntityListItem<Plane>[] = Object.values(planes).map(plane => ({
     id: plane.id,
     name: plane.name,
     displayInfo: `${plane.definition.type.replace('_', ' ')}`,
     additionalInfo: getPlaneDefinitionInfo(plane),
     color: plane.color,
     isVisible: plane.isVisible,
-    isActive: selectedPlanes.some(p => p.getType() === 'plane' && p.getName() === plane.name)
+    isActive: selectedPlanes.some(p => p.getType() === 'plane' && p.getName() === plane.name),
+    entity: plane  // Pass the actual Plane object
   }))
 
   return (
@@ -105,25 +108,12 @@ export const PlanesManager: React.FC<PlanesManagerProps> = ({
       entities={planeEntities}
       emptyMessage="No planes created yet"
       storageKey="planes-popup"
-      onEdit={onEditPlane ? (entityId) => {
-        const plane = planeMap.get(entityId)
-        if (plane) onEditPlane(plane)
-      } : undefined}
-      onDelete={onDeletePlane ? (entityId) => {
-        const plane = planeMap.get(entityId)
-        if (plane) onDeletePlane(plane)
-      } : undefined}
-      onToggleVisibility={onTogglePlaneVisibility ? (entityId) => {
-        const plane = planeMap.get(entityId)
-        if (plane) onTogglePlaneVisibility(plane)
-      } : undefined}
-      onSelect={onSelectPlane ? (entityId) => {
-        const plane = planeMap.get(entityId)
-        if (plane) onSelectPlane(plane)
-      } : undefined}
-      renderEntityDetails={(entity) => {
-        const plane = planeMap.get(entity.id)
-        if (!plane) return null
+      onEdit={onEditPlane}
+      onDelete={onDeletePlane}
+      onToggleVisibility={onTogglePlaneVisibility}
+      onSelect={onSelectPlane}
+      renderEntityDetails={(entityItem) => {
+        const plane = entityItem.entity
         return (
           <div className="plane-details">
             <div className="definition-type">

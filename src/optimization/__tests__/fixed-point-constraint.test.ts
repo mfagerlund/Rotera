@@ -121,7 +121,7 @@ describe('FixedPointConstraint - Solver Integration', () => {
     expect(result.iterations).toBeLessThan(50); // Should converge quickly
 
     // Point should now be at origin
-    const finalCoords = point.getDefinedCoordinates();
+    const finalCoords = point.optimizedXyz;
     expect(finalCoords).toBeDefined();
     expect(finalCoords![0]).toBeCloseTo(0, 4); // 1e-5 precision is sufficient
     expect(finalCoords![1]).toBeCloseTo(0, 4);
@@ -157,7 +157,7 @@ describe('FixedPointConstraint - Solver Integration', () => {
 
     expect(result.converged).toBe(true);
 
-    const finalCoords = point.getDefinedCoordinates();
+    const finalCoords = point.optimizedXyz;
     expect(finalCoords![0]).toBeCloseTo(targetXyz[0], 4);
     expect(finalCoords![1]).toBeCloseTo(targetXyz[1], 4);
     expect(finalCoords![2]).toBeCloseTo(targetXyz[2], 4);
@@ -189,7 +189,7 @@ describe('FixedPointConstraint - Solver Integration', () => {
     expect(result.iterations).toBe(0);
 
     // Point should NOT have moved
-    const finalCoords = point.getDefinedCoordinates();
+    const finalCoords = point.optimizedXyz;
     expect(finalCoords![0]).toBeCloseTo(5, 4);
     expect(finalCoords![1]).toBeCloseTo(3, 4);
     expect(finalCoords![2]).toBeCloseTo(7, 4);
@@ -235,12 +235,12 @@ describe('FixedPointConstraint - Solver Integration', () => {
     expect(result.converged).toBe(true);
 
     // Both points should be at their targets
-    const coords1 = point1.getDefinedCoordinates();
+    const coords1 = point1.optimizedXyz;
     expect(coords1![0]).toBeCloseTo(1, 4);
     expect(coords1![1]).toBeCloseTo(2, 4);
     expect(coords1![2]).toBeCloseTo(3, 4);
 
-    const coords2 = point2.getDefinedCoordinates();
+    const coords2 = point2.optimizedXyz;
     expect(coords2![0]).toBeCloseTo(4, 4);
     expect(coords2![1]).toBeCloseTo(5, 4);
     expect(coords2![2]).toBeCloseTo(6, 4);
@@ -274,7 +274,7 @@ describe('FixedPointConstraint - Solver Integration', () => {
     expect(result.residual).toBeLessThan(1e-6);
 
     // Final position should be at origin
-    const finalCoords = point.getDefinedCoordinates();
+    const finalCoords = point.optimizedXyz;
     expect(finalCoords![0]).toBeCloseTo(0, 4);
     expect(finalCoords![1]).toBeCloseTo(0, 4);
     expect(finalCoords![2]).toBeCloseTo(0, 4);

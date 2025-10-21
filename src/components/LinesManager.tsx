@@ -40,11 +40,9 @@ export const LinesManager: React.FC<LinesManagerProps> = ({
   const [editingLine, setEditingLine] = useState<Line | null>(null)
 
   const linesList = Array.from(lines.values())
-  const lineMap = new Map<string, Line>()
 
-  const lineEntities: EntityListItem[] = linesList.map(line => {
+  const lineEntities: EntityListItem<Line>[] = linesList.map(line => {
     const entityKey = getEntityKey(line)
-    lineMap.set(entityKey, line)
     const dirVector = line.getDirection()
     const dirLabel = dirVector ? 'constrained' : 'free'
 
@@ -59,15 +57,13 @@ export const LinesManager: React.FC<LinesManagerProps> = ({
       ],
       color: line.color,
       isVisible: line.isVisible,
-      isActive: selectedLines.some(l => l === line)
+      isActive: selectedLines.some(l => l === line),
+      entity: line  // Pass the actual Line object
     }
   })
 
-  const handleEdit = (entityId: string) => {
-    const line = lineMap.get(entityId)
-    if (line) {
-      setEditingLine(line)
-    }
+  const handleEdit = (line: Line) => {
+    setEditingLine(line)
   }
 
   const handleCloseEdit = () => {
@@ -89,28 +85,12 @@ export const LinesManager: React.FC<LinesManagerProps> = ({
         emptyMessage="No lines created yet"
         storageKey="lines-popup"
         onEdit={handleEdit}
-        onDelete={onDeleteLine ? (entityId) => {
-          const line = lineMap.get(entityId)
-          if (line) {
-            onDeleteLine(line)
-          }
-        } : undefined}
+        onDelete={onDeleteLine}
         onDeleteAll={onDeleteAllLines}
-        onToggleVisibility={onToggleLineVisibility ? (entityId) => {
-          const line = lineMap.get(entityId)
-          if (line) {
-            onToggleLineVisibility(line)
-          }
-        } : undefined}
-        onSelect={onSelectLine ? (entityId) => {
-          const line = lineMap.get(entityId)
-          if (line) {
-            onSelectLine(line)
-          }
-        } : undefined}
-        renderEntityDetails={(entity) => {
-          const line = lineMap.get(entity.id)
-          if (!line) return null
+        onToggleVisibility={onToggleLineVisibility}
+        onSelect={onSelectLine}
+        renderEntityDetails={(entityItem) => {
+          const line = entityItem.entity
           const dirVector = line.getDirection()
           return (
             <div className="line-details">
