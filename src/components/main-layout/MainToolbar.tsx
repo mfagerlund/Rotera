@@ -77,18 +77,8 @@ export const MainToolbar: React.FC<MainToolbarProps> = ({
       return
     }
 
-    // Filter out image blobs for smaller file size
-    const filterImageBlobs = (data: OptimizationExportDto): OptimizationExportDto => {
-      return {
-        ...data,
-        viewpoints: data.viewpoints.map(vp => ({
-          ...vp,
-          // Viewpoints already handle blob filtering in their DTO
-        }))
-      }
-    }
-
-    const filteredData = filterImageBlobs(exportData)
+    // Use the data as-is (viewpoints already serialize without blobs by default)
+    const filteredData = exportData
 
     // Create JSON blob and download
     const json = JSON.stringify(filteredData, null, 2)

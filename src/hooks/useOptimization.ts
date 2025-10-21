@@ -127,6 +127,9 @@ export const useOptimization = () => {
           verbose: options.verbose ?? false,
         });
 
+        // Initialize optimizedXyz using smart initialization
+        initializeWorldPoints(points, lines, constraints);
+
         // Add all entities
         points.forEach((p) => system.addPoint(p));
         lines.forEach((l) => system.addLine(l));

@@ -1,15 +1,13 @@
 import { describe, it, expect } from '@jest/globals';
 import { loadProjectFromJson } from '../../store/project-serialization';
 import { ConstraintSystem } from '../constraint-system';
+import { smartInitialization } from '../smart-initialization';
 import * as fs from 'fs';
 
 describe('Bundle Adjustment with Real Fixture', () => {
-  it.skip('should optimize the real fixture data', () => {
-    // SKIPPED: This test loads a specific fixture file from disk
-    // Re-enable when fixture is migrated to Viewpoint format
-
+  it('should optimize the real fixture data', () => {
     // Load the fixture
-    const fixturePath = 'C:\\Users\\matti\\Downloads\\New Project-optimization-2025-10-18(4).json';
+    const fixturePath = 'C:\\Users\\matti\\Downloads\\Untitled Project-optimization-2025-10-21(1).json';
 
     if (!fs.existsSync(fixturePath)) {
       console.log('Fixture file not found, skipping test');
@@ -22,6 +20,17 @@ describe('Bundle Adjustment with Real Fixture', () => {
     console.log(`Points: ${project.worldPoints.size}`);
     console.log(`Viewpoints: ${project.viewpoints.size}`);
     console.log(`Constraints: ${project.constraints.size}`);
+
+    // Initialize optimizedXyz for all world points
+    // TODO: Use smart initialization once it's updated to work with entity objects
+    let i = 0;
+    for (const point of project.worldPoints) {
+      if (!point.optimizedXyz) {
+        // Simple initialization: spread points along X axis
+        point.optimizedXyz = [i * 1.0, 0, 0];
+        i++;
+      }
+    }
 
     // Create constraint system
     const system = new ConstraintSystem({

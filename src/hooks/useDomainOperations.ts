@@ -7,6 +7,7 @@ import { Constraint } from '../entities/constraints'
 import type { OptimizationExportDto } from '../types/optimization-export'
 import { DistanceConstraint } from '../entities/constraints/distance-constraint'
 import { AngleConstraint } from '../entities/constraints/angle-constraint'
+import { Serialization } from '../entities/Serialization'
 
 export interface WorldPointOptions {
   lockedXyz?: [number | null, number | null, number | null]
@@ -75,7 +76,7 @@ export interface DomainOperations {
 
   // Project
   clearProject: () => void
-  exportOptimizationDto: () => OptimizationExportDto | null
+  exportOptimizationDto: () => any | null  // Returns ProjectDto (full serialization)
 }
 
 function cleanupConstraintReferences(constraint: Constraint): void {
@@ -298,8 +299,12 @@ export function useDomainOperations(
   }
 
   const exportOptimizationDto = (): OptimizationExportDto | null => {
-    // TODO: Implement proper export
-    return null
+    if (!project) return null
+
+    // Use the full project serialization (ProjectDto format)
+    // The caller (MainToolbar) will filter out image blobs if needed
+    const json = Serialization.serialize(project)
+    return JSON.parse(json) as any as OptimizationExportDto
   }
 
   return {

@@ -305,9 +305,7 @@ export const MainLayout: React.FC = observer(() => {
     handleEntityClick,
     clearSelection,
     editingLine,
-    setEditingLine,
-    onEditLineOpen: handleEditLineOpen,
-    onEditPointOpen: openWorldPointEdit
+    setEditingLine
   })
 
   const handleImageClick = useCallback((u: number, v: number) => {

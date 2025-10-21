@@ -14,8 +14,6 @@ interface UseMainLayoutHandlersParams {
   clearSelection: () => void
   editingLine: LineEntity | null
   setEditingLine: (line: LineEntity | null) => void
-  onEditLineOpen: (line: LineEntity) => void
-  onEditPointOpen: (point: WorldPoint) => void
 }
 
 export function useMainLayoutHandlers({
@@ -26,9 +24,7 @@ export function useMainLayoutHandlers({
   handleEntityClick,
   clearSelection,
   editingLine,
-  setEditingLine,
-  onEditLineOpen,
-  onEditPointOpen
+  setEditingLine
 }: UseMainLayoutHandlersParams) {
 
   // Point click handler
@@ -59,14 +55,9 @@ export function useMainLayoutHandlers({
       return
     }
 
-    // Normal selection behavior - consistent with lines
-    if (ctrlKey || shiftKey) {
-      handleEntityClick(worldPoint, ctrlKey, shiftKey)
-    } else {
-      handleEntityClick(worldPoint, false, false)
-      onEditPointOpen(worldPoint)
-    }
-  }, [activeTool, selectedPointEntities, handleEntityClick, addToSelection, onEditPointOpen])
+    // Normal selection behavior
+    handleEntityClick(worldPoint, ctrlKey, shiftKey)
+  }, [activeTool, selectedPointEntities, handleEntityClick, addToSelection])
 
   // Line click handler
   const handleEnhancedLineClick = useCallback((
@@ -79,13 +70,8 @@ export function useMainLayoutHandlers({
       return
     }
 
-    if (ctrlKey || shiftKey) {
-      handleEntityClick(line, ctrlKey, shiftKey)
-    } else {
-      handleEntityClick(line, false, false)
-      onEditLineOpen(line)
-    }
-  }, [editingLine, handleEntityClick, onEditLineOpen])
+    handleEntityClick(line, ctrlKey, shiftKey)
+  }, [editingLine, handleEntityClick])
 
   // Plane click handler
   const handlePlaneClick = useCallback((
