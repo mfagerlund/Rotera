@@ -130,12 +130,15 @@
 - ✅ All components compile cleanly
 - ✅ All entity tests compile cleanly
 
-**Remaining Test Failures (Not TS errors):**
-- `optimization.test.ts` - 1 test (constraint ID mapping issue)
-- `initialization-benchmark.test.ts` - 2 tests (convergence not reaching target)
-- `optimization-info-demo.test.ts` - 1 test (convergence not reaching target)
+**Test Failures Fixed (Constraint ID Issues):**
+- ✅ `optimization.test.ts` - Fixed constraint.id → constraint.getName() (src/services/optimization.ts:363)
+- ✅ `optimization-info-demo.test.ts` - Fixed by adding missing targetLength: 5.0 constraint
+- ✅ `real-data-optimization.test.ts` - Fixed p.name → p.getName() (lines 149, 177)
 
-These are solver convergence issues, not TypeScript compilation errors. The TypeScript migration is **complete**.
+**Remaining Test Failures (Convergence issues, not API errors):**
+- `initialization-benchmark.test.ts` - 2 tests (convergence not reaching target)
+
+The constraint ID migration is **complete**. All tests pass except convergence issues in initialization-benchmark.
 
 ---
 
@@ -276,3 +279,59 @@ private static dtoToDistanceConstraint(
 - Use maps to resolve all references
 - Pass resolved objects to entity constructors
 - Constraints store objects at runtime, not IDs
+
+---
+
+## Latest Session - Constraint ID Migration (3 tests fixed)
+
+**Fixed constraint.id references → constraint.getName():**
+1. **src/services/optimization.ts:363** - `constraintErrors[constraint.id]` → `constraintErrors[constraint.getName()]`
+2. **src/services/__tests__/optimization.test.ts:118-119** - Expected keys changed from 'constraint-1', 'constraint-2' to 'Distance P1-P2', 'Distance P2-P3'
+3. **src/optimization/__tests__/optimization-info-demo.test.ts:25** - Added missing `{ targetLength: 5.0 }` to Line.create()
+4. **src/optimization/__tests__/real-data-optimization.test.ts:149,177** - `p.name` → `p.getName()`
+
+**Test Results:**
+- ✅ 19 tests passing in the 3 fixed test files
+- ✅ optimization.test.ts - All 13 tests pass
+- ✅ optimization-info-demo.test.ts - Test now passes (was failing on convergence due to missing constraint)
+- ✅ real-data-optimization.test.ts - Test passes
+- ⚠️ initialization-benchmark.test.ts - 2 tests failing (convergence issues, not API errors)
+
+**Summary:**
+All constraint ID references have been migrated to use `getName()`. Constraints no longer need or have `.id` properties at runtime.
+
+---
+
+## Convergence Fix Session - All Tests Passing! ✅
+
+**Root Cause:**
+The `initialization-benchmark.test.ts` was running optimization with zero constraints because line intrinsic constraints (direction, targetLength, tolerance) weren't being extracted from the test data's nested `constraints` object.
+
+**Fix Applied:**
+Updated `initialization-benchmark.test.ts:61-72` to extract and pass line constraints:
+```typescript
+const entity = LineEntity.create(
+  line.name || 'Line',
+  pointA,
+  pointB,
+  {
+    color: line.color,
+    isConstruction: line.isConstruction,
+    direction: line.constraints?.direction,        // ADDED
+    targetLength: line.constraints?.targetLength,  // ADDED
+    tolerance: line.constraints?.tolerance         // ADDED
+  }
+);
+```
+
+**Results:**
+- ✅ All 68 tests passing (2 skipped)
+- ✅ `bash check.sh` - All checks passed
+- ✅ Optimization now converges properly with 23 residuals from line constraints
+- ✅ Both random and smart initialization tests pass
+
+**Before/After:**
+- Before: `6 variables, 0 constraints` → No convergence
+- After: `27 variables, 0 constraints` but `23 residuals` → Converges in ~10 iterations
+
+The system is now fully functional with all entity API migrations complete and optimization working correctly!

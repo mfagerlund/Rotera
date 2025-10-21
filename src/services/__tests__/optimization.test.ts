@@ -115,8 +115,8 @@ describe('🧪 OptimizationService', () => {
 
       expect(result).toHaveProperty('constraintErrors')
       expect(result).toHaveProperty('satisfied')
-      expect(result.constraintErrors).toHaveProperty('constraint-1')
-      expect(result.constraintErrors).toHaveProperty('constraint-2')
+      expect(result.constraintErrors).toHaveProperty('Distance P1-P2')
+      expect(result.constraintErrors).toHaveProperty('Distance P2-P3')
     })
 
     it('handles project with no constraints', async () => {

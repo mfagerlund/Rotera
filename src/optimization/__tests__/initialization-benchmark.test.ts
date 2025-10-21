@@ -64,7 +64,10 @@ function runOptimizationBenchmark(
         pointB,
         {
           color: line.color,
-          isConstruction: line.isConstruction
+          isConstruction: line.isConstruction,
+          direction: line.constraints?.direction,
+          targetLength: line.constraints?.targetLength,
+          tolerance: line.constraints?.tolerance
         }
       );
       lineEntities.push(entity);

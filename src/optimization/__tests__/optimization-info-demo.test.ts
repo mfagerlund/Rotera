@@ -22,7 +22,7 @@ describe('Optimization Info Demo', () => {
       optimizedXyz: [3.5, 4.2, 0.1]  // Not exactly 5 units from p1
     });
 
-    const line = Line.create('Line 1', p1, p2);
+    const line = Line.create('Line 1', p1, p2, { targetLength: 5.0 });
 
     // Create system and optimize
     const system = new ConstraintSystem({

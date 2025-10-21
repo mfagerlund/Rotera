@@ -146,7 +146,7 @@ describe('Real Data Optimization', () => {
     console.log('\nInitial point positions:');
     pointEntities.slice(0, 5).forEach(p => {
       const xyz = p.optimizedXyz;
-      console.log(`  ${p.name}: [${xyz?.map(v => v.toFixed(2)).join(', ')}]`);
+      console.log(`  ${p.getName()}: [${xyz?.map(v => v.toFixed(2)).join(', ')}]`);
     });
 
     // Run optimization using ConstraintSystem
@@ -174,7 +174,7 @@ describe('Real Data Optimization', () => {
     console.log('\nFinal point positions:');
     pointEntities.slice(0, 5).forEach(p => {
       const xyz = p.optimizedXyz;
-      console.log(`  ${p.name}: [${xyz?.map(v => v.toFixed(2)).join(', ')}]`);
+      console.log(`  ${p.getName()}: [${xyz?.map(v => v.toFixed(2)).join(', ')}]`);
     });
 
     // Verify result
