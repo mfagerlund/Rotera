@@ -7,7 +7,6 @@ import { Constraint } from './constraints'
 import { SerializationContext } from './serialization/SerializationContext'
 import type { ProjectDto } from './project/ProjectDto'
 import type { IImagePoint } from './interfaces'
-import { ObservableSet } from '../utils/ObservableSet'
 
 export class Serialization {
 
@@ -47,23 +46,23 @@ export class Serialization {
     const dto = JSON.parse(json) as ProjectDto
     const context = new SerializationContext()
 
-    const worldPoints = new ObservableSet(
+    const worldPoints = new Set(
       dto.worldPoints.map(wpDto => WorldPoint.deserialize(wpDto, context))
     )
 
-    const viewpoints = new ObservableSet(
+    const viewpoints = new Set(
       dto.viewpoints.map(vpDto => Viewpoint.deserialize(vpDto, context))
     )
 
-    const lines = new ObservableSet(
+    const lines = new Set(
       dto.lines.map(lineDto => Line.deserialize(lineDto, context))
     )
 
-    const imagePoints = new ObservableSet<IImagePoint>(
+    const imagePoints = new Set<IImagePoint>(
       dto.imagePoints.map(ipDto => ImagePoint.deserialize(ipDto, context))
     )
 
-    const constraints = new ObservableSet(
+    const constraints = new Set(
       dto.constraints.map(cDto => Constraint.deserialize(cDto, context))
     )
 

@@ -3,6 +3,7 @@
 // ALL runtime work uses entities
 
 import { useState, useEffect } from 'react'
+import { autorun } from 'mobx'
 import { loadFromLocalStorage, saveToLocalStorage, loadProjectFromJson } from '../store/project-serialization'
 import { Project } from '../entities/project'
 import { Viewpoint } from '../entities/viewpoint'
@@ -17,7 +18,6 @@ const STORAGE_KEY = 'pictorigo-project'
  */
 export const useEntityProject = () => {
   const [entityProject, setEntityProject] = useState<Project | null>(null)
-  const [trigger, setTrigger] = useState(0)
   const [currentViewpoint, setCurrentViewpoint] = useState<Viewpoint | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -47,12 +47,23 @@ export const useEntityProject = () => {
     }
   }, [])
 
-  // Auto-save on project changes
+  // Auto-save on project changes using MobX autorun
   useEffect(() => {
-    if (entityProject && !isLoading) {
+    if (!entityProject || isLoading) return
+
+    const disposer = autorun(() => {
+      const hasChanges =
+        entityProject.worldPoints.size +
+        entityProject.viewpoints.size +
+        entityProject.lines.size +
+        entityProject.imagePoints.size +
+        entityProject.constraints.size
+
       saveToLocalStorage(entityProject, STORAGE_KEY)
-    }
-  }, [entityProject?.version, isLoading])
+    })
+
+    return disposer
+  }, [entityProject, isLoading])
 
   const saveProject = () => {
     if (entityProject) {
@@ -62,10 +73,7 @@ export const useEntityProject = () => {
 
   return {
     project: entityProject,
-    setProject: (p: Project) => {
-      setEntityProject(p)
-      setTrigger(prev => prev + 1)
-    },
+    setProject: setEntityProject,
     saveProject,
     currentViewpoint,
     setCurrentViewpoint,

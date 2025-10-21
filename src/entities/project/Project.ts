@@ -3,7 +3,7 @@ import type {Line} from '../line'
 import type {Viewpoint} from '../viewpoint'
 import type {IImagePoint} from '../interfaces'
 import type {Constraint} from '../constraints'
-import {ObservableSet} from '../../utils/ObservableSet'
+import {makeObservable, observable, action} from 'mobx'
 
 export type MeasurementUnits = 'meters' | 'feet' | 'inches'
 export type Theme = 'dark' | 'light'
@@ -32,11 +32,11 @@ export type ProjectSettings = Pick<Project,
 
 export class Project {
     name: string
-    worldPoints: ObservableSet<WorldPoint>
-    lines: ObservableSet<Line>
-    viewpoints: ObservableSet<Viewpoint>
-    imagePoints: ObservableSet<IImagePoint>
-    constraints: ObservableSet<Constraint>
+    worldPoints: Set<WorldPoint>
+    lines: Set<Line>
+    viewpoints: Set<Viewpoint>
+    imagePoints: Set<IImagePoint>
+    constraints: Set<Constraint>
     
     showPointNames: boolean
     autoSave: boolean
@@ -57,11 +57,11 @@ export class Project {
 
     private constructor(
         name: string,
-        worldPoints: ObservableSet<WorldPoint>,
-        lines: ObservableSet<Line>,
-        viewpoints: ObservableSet<Viewpoint>,
-        imagePoints: ObservableSet<IImagePoint>,
-        constraints: ObservableSet<Constraint>,
+        worldPoints: Set<WorldPoint>,
+        lines: Set<Line>,
+        viewpoints: Set<Viewpoint>,
+        imagePoints: Set<IImagePoint>,
+        constraints: Set<Constraint>,
         showPointNames: boolean,
         autoSave: boolean,
         theme: Theme,
@@ -101,17 +101,53 @@ export class Project {
         this.constraintPreview = constraintPreview
         this.visualFeedbackLevel = visualFeedbackLevel
         this.imageSortOrder = imageSortOrder
+
+        makeObservable(this, {
+            name: observable,
+            worldPoints: observable,
+            lines: observable,
+            viewpoints: observable,
+            imagePoints: observable,
+            constraints: observable,
+            showPointNames: observable,
+            autoSave: observable,
+            theme: observable,
+            measurementUnits: observable,
+            precisionDigits: observable,
+            showConstraintGlyphs: observable,
+            showMeasurements: observable,
+            autoOptimize: observable,
+            gridVisible: observable,
+            snapToGrid: observable,
+            defaultWorkspace: observable,
+            showConstructionGeometry: observable,
+            enableSmartSnapping: observable,
+            constraintPreview: observable,
+            visualFeedbackLevel: observable,
+            imageSortOrder: observable,
+            addWorldPoint: action,
+            removeWorldPoint: action,
+            addLine: action,
+            removeLine: action,
+            addViewpoint: action,
+            removeViewpoint: action,
+            addImagePoint: action,
+            removeImagePoint: action,
+            addConstraint: action,
+            removeConstraint: action,
+            clear: action,
+        })
     }
 
     static create(name: string): Project {
         const now = new Date().toISOString()
         return new Project(
             name,
-            new ObservableSet<WorldPoint>(),
-            new ObservableSet<Line>(),
-            new ObservableSet<Viewpoint>(),
-            new ObservableSet<IImagePoint>(),
-            new ObservableSet<Constraint>(),
+            new Set<WorldPoint>(),
+            new Set<Line>(),
+            new Set<Viewpoint>(),
+            new Set<IImagePoint>(),
+            new Set<Constraint>(),
             true,
             true,
             'dark',
@@ -132,11 +168,11 @@ export class Project {
 
     static createFull(
         name: string,
-        worldPoints: ObservableSet<WorldPoint>,
-        lines: ObservableSet<Line>,
-        viewpoints: ObservableSet<Viewpoint>,
-        imagePoints: ObservableSet<IImagePoint>,
-        constraints: ObservableSet<Constraint>,
+        worldPoints: Set<WorldPoint>,
+        lines: Set<Line>,
+        viewpoints: Set<Viewpoint>,
+        imagePoints: Set<IImagePoint>,
+        constraints: Set<Constraint>,
         showPointNames: boolean,
         autoSave: boolean,
         theme: Theme,
@@ -237,13 +273,5 @@ export class Project {
             imagePoints: this.imagePoints.size,
             constraints: this.constraints.size
         }
-    }
-
-    get version(): number {
-        return this.worldPoints.version +
-               this.lines.version +
-               this.viewpoints.version +
-               this.imagePoints.version +
-               this.constraints.version
     }
 }

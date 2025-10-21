@@ -85,20 +85,17 @@ export function useDomainOperations(
     })
 
     project.addWorldPoint(point)
-    setProject(project)
     return point
   }
 
   const renameWorldPoint = (worldPoint: WorldPoint, name: string) => {
     if (!project) return
     worldPoint.name = name
-    setProject(project)
   }
 
   const deleteWorldPoint = (worldPoint: WorldPoint) => {
     if (!project) return
     project.removeWorldPoint(worldPoint)
-    setProject(project)
   }
 
   const createLine = (pointA: WorldPoint, pointB: WorldPoint, options?: LineOptions): Line => {
@@ -112,7 +109,6 @@ export function useDomainOperations(
     )
 
     project.addLine(line)
-    setProject(project)
     return line
   }
 
@@ -121,28 +117,22 @@ export function useDomainOperations(
     if (updates.name) line.name = updates.name
     if (updates.color) line.color = updates.color
     if (updates.isVisible !== undefined) line.isVisible = updates.isVisible
-    setProject(project)
   }
 
   const deleteLine = (line: Line) => {
     if (!project) return
     line.cleanup()
     project.removeLine(line)
-    setProject(project)
   }
 
   const addImage = async (file: File) => {
     if (!project) return
-
-    console.log('addImage: Starting to load file:', file.name)
 
     const reader = new FileReader()
     const dataUrl = await new Promise<string>((resolve) => {
       reader.onload = (e) => resolve(e.target?.result as string)
       reader.readAsDataURL(file)
     })
-
-    console.log('addImage: File loaded, dataUrl length:', dataUrl.length)
 
     const viewpoint = Viewpoint.create(
       file.name,
@@ -152,27 +142,17 @@ export function useDomainOperations(
       1080
     )
 
-    console.log('addImage: Created viewpoint:', viewpoint.getName())
-
     project.addViewpoint(viewpoint)
-    console.log('addImage: Added to project, viewpoint count:', project.viewpoints.size)
-    setProject(project)
-    console.log('addImage: Project updated')
   }
 
   const renameImage = (viewpoint: Viewpoint, name: string) => {
     if (!project) return
     viewpoint.name = name
-    setProject(project)
   }
 
   const deleteImage = (viewpoint: Viewpoint) => {
     if (!project) return
-    console.log('deleteImage: Before delete, count:', project.viewpoints.size, 'version:', project.version)
     project.removeViewpoint(viewpoint)
-    console.log('deleteImage: After delete, count:', project.viewpoints.size, 'version:', project.version)
-    setProject(project)
-    console.log('deleteImage: Called setProject')
   }
 
   const getImagePointCount = (viewpoint: Viewpoint): number => {
@@ -196,13 +176,11 @@ export function useDomainOperations(
     viewpoint.addImagePoint(imagePoint)
     worldPoint.addImagePoint(imagePoint)
     project.addImagePoint(imagePoint)
-    setProject(project)
   }
 
   const moveImagePoint = (imagePoint: ImagePoint, u: number, v: number) => {
     if (!project) return
     imagePoint.setPosition(u, v)
-    setProject(project)
   }
 
   const getSelectedPointsInImage = (viewpoint: Viewpoint): WorldPoint[] => {
@@ -217,31 +195,26 @@ export function useDomainOperations(
   const addConstraint = (constraint: Constraint) => {
     if (!project) return
     project.addConstraint(constraint)
-    setProject(project)
   }
 
   const updateConstraint = (constraint: Constraint, updates: ConstraintUpdates) => {
     if (!project) return
     // TODO: Implement constraint updates
-    setProject(project)
   }
 
   const deleteConstraint = (constraint: Constraint) => {
     if (!project) return
     project.removeConstraint(constraint)
-    setProject(project)
   }
 
   const toggleConstraint = (constraint: Constraint) => {
     if (!project) return
     constraint.isEnabled = !constraint.isEnabled
-    setProject(project)
   }
 
   const clearProject = () => {
     if (!project) return
     project.clear()
-    setProject(project)
   }
 
   const exportOptimizationDto = (): OptimizationExportDto | null => {

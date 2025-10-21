@@ -1,6 +1,7 @@
 // Main layout with new workspace paradigm
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faFolderOpen, faFloppyDisk, faFileExport, faTrash, faRuler, faGear, faArrowRight, faCamera, faSquare, faBullseye } from '@fortawesome/free-solid-svg-icons'
 import { Project } from '../entities/project'
@@ -58,7 +59,7 @@ import '../styles/tools.css'
 
 type ActiveTool = 'select' | 'point' | 'line' | 'plane' | 'circle' | 'loop'
 
-export const MainLayout: React.FC = () => {
+export const MainLayout: React.FC = observer(() => {
   // Entity-based project system (CLEAN - NO LEGACY)
   const {
     project,
@@ -118,7 +119,6 @@ export const MainLayout: React.FC = () => {
     }
   }
 
-  console.log('viewpointsMap recalculating, count:', project?.viewpoints.size)
   const viewpointsMap = new Map<string, Viewpoint>()
   if (project?.viewpoints) {
     for (const vp of project.viewpoints) {
@@ -302,37 +302,29 @@ export const MainLayout: React.FC = () => {
   const selectedPlaneEntities = getSelectedByType('plane')
 
   // Combined selected entities for components that accept ISelectable[]
-  const selectedEntities = useMemo(() =>
-    [...selectedPointEntities, ...selectedLineEntities, ...selectedPlaneEntities] as ISelectable[],
-    [selectedPointEntities, selectedLineEntities, selectedPlaneEntities]
-  )
+  const selectedEntities = [...selectedPointEntities, ...selectedLineEntities, ...selectedPlaneEntities] as ISelectable[]
 
-  const viewerLines = useMemo<Map<string, LineData>>(() => {
-    if (!project?.lines) {
-      return new Map()
-    }
-
-    return new Map(
-      Array.from(project.lines).map((line) => {
-        const viewerLine: LineData = {
-          id: line.getName(),
-          name: line.name,
-          pointA: line.pointA,
-          pointB: line.pointB,
-          color: line.color,
-          isVisible: line.isVisible,
-          isConstruction: line.isConstruction,
-          length: line.length() ?? undefined,
-          constraints: {
-            direction: line.direction,
-            targetLength: line.targetLength ?? undefined,
-            tolerance: line.tolerance
-          }
+  const viewerLines = new Map<string, LineData>()
+  if (project?.lines) {
+    for (const line of project.lines) {
+      const viewerLine: LineData = {
+        id: line.getName(),
+        name: line.name,
+        pointA: line.pointA,
+        pointB: line.pointB,
+        color: line.color,
+        isVisible: line.isVisible,
+        isConstruction: line.isConstruction,
+        length: line.length() ?? undefined,
+        constraints: {
+          direction: line.direction,
+          targetLength: line.targetLength ?? undefined,
+          tolerance: line.tolerance
         }
-        return [line.getName(), viewerLine]
-      })
-    )
-  }, [project?.lines])
+      }
+      viewerLines.set(line.getName(), viewerLine)
+    }
+  }
 
 
   // Constraint system uses entity objects directly (intrinsic + extrinsic)
@@ -1158,7 +1150,7 @@ export const MainLayout: React.FC = () => {
     {dialog}
   </>
   )
-}
+})
 
 export default MainLayout
 

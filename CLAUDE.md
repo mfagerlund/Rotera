@@ -16,30 +16,43 @@
 
 **Current focus: Update UI components to work with the new entity architecture.**
 
-## React Re-render Pattern (NOT Angular!)
+## MobX Observable Pattern
 
-React uses **reference equality** for change detection, NOT dirty checking like Angular.
+This project uses **MobX** for automatic change detection of entity mutations.
 
 **CORRECT pattern for mutations:**
 ```typescript
-// Mutate entities/Sets directly (like Angular)
+// Just mutate entities directly (like Angular)
 worldPoint.name = "New Name"
 project.addWorldPoint(point)
 
-// Force React re-render with object spread
-setProject({ ...project })  // Creates new Project reference, keeps same Sets
+// MobX automatically detects changes and updates UI
+// NO setProject() calls needed
 ```
 
-**WRONG patterns:**
+**Components:**
 ```typescript
-setProject(project.clone())  // ❌ Shallow clone - doesn't work properly
-setProject(project)          // ❌ Same reference - React won't detect change
+import { observer } from 'mobx-react-lite'
+
+export const MyComponent = observer(() => {
+  // Automatically re-renders when any observable accessed here changes
+  return <div>{worldPoint.name}</div>
+})
 ```
 
-**Why this works:**
-- `{ ...project }` creates a NEW Project object → React detects change ✓
-- Same Set references inside → your mutations are preserved ✓
-- Entities are the same objects → all references stay valid ✓
+**Entity classes:**
+```typescript
+class WorldPoint {
+  constructor() {
+    makeObservable(this, {
+      name: observable,
+      lockedXyz: observable,
+      // mutation methods:
+      addConnectedLine: action,
+    })
+  }
+}
+```
 
 ## CRITICAL: Object References, NOT IDs
 

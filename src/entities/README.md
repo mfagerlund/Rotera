@@ -35,6 +35,28 @@ Do NOT add fields, methods, or IDs to entities to make the UI work. Instead:
 
 See `CLAUDE.md` in project root for complete architectural rules.
 
+## MobX Integration
+
+All entities are MobX observables. Changes are automatically tracked.
+
+**When adding new properties:**
+1. Add to `makeObservable()` call in constructor
+2. Mark as `observable` for data, `action` for mutations
+3. React components wrapped with `observer()` will auto-update
+
+**Example:**
+```typescript
+class Line {
+  constructor() {
+    makeObservable(this, {
+      name: observable,           // auto-tracked
+      color: observable,          // auto-tracked
+      setColor: action,           // mutation method
+    })
+  }
+}
+```
+
 ## If You Need to Change Entities
 
 1. **STOP** - Ask the user first
