@@ -380,20 +380,22 @@ export const MainLayout: React.FC = observer(() => {
       // Legacy placement mode (adding IP to existing WP)
       addImagePointToWorldPoint(placementMode.worldPoint, currentImage, u, v)
       cancelPlacementMode()
-    } else if (activeTool === 'point' && currentImage) {
+    } else if (activeTool === 'point' && currentImage && project) {
       // NEW: Only create world point when WP tool is explicitly active
       const wpCount = worldPointsArray.length + 1
       const color = generateWorldPointColor(worldPointsArray.length)
-      const newWp = createWorldPoint(`WP${wpCount}`, [0, 0, 0], { color })
+      const newWp = WorldPoint.create(`WP${wpCount}`, { color, lockedXyz: [null, null, null] })
+      project.addWorldPoint(newWp)
       // Add image point to the world point
       addImagePointToWorldPoint(newWp, currentImage, u, v)
       // Auto-deactivate tool after point creation
       setActiveTool('select')
-    } else if (activeTool === 'loop' && currentImage) {
+    } else if (activeTool === 'loop' && currentImage && project) {
       // Create world point and auto-select it for loop tool
       const wpCount = worldPointsArray.length + 1
       const color = generateWorldPointColor(worldPointsArray.length)
-      const newWp = createWorldPoint(`WP${wpCount}`, [0, 0, 0], { color })
+      const newWp = WorldPoint.create(`WP${wpCount}`, { color, lockedXyz: [null, null, null] })
+      project.addWorldPoint(newWp)
       // Add image point to the world point
       addImagePointToWorldPoint(newWp, currentImage, u, v)
       // Add to selection
@@ -441,12 +443,9 @@ export const MainLayout: React.FC = observer(() => {
 
   // World point edit handlers
   const handleWorldPointEdit = useCallback((worldPoint: WorldPoint) => {
-    // Don't allow editing while line tool is active
-    if (activeTool === 'line') {
-      return
-    }
+    console.log('Opening WorldPoint edit window for:', worldPoint.getName())
     setWorldPointEditWindow({ isOpen: true, worldPoint })
-  }, [activeTool])
+  }, [])
 
   const handleWorldPointUpdate = (updatedPoint: WorldPoint) => {
     // For now, just update the name if that's different

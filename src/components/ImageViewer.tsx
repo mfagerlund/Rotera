@@ -512,11 +512,15 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
             lastClickedPointRef.current === nearbyPoint &&
             now - lastClickTimeRef.current < 300
 
-          if (isDoubleClick && onPointRightClick) {
+          if (isDoubleClick) {
             // Double-click opens edit properties
-            onPointRightClick(nearbyPoint)
+            if (onPointRightClick) {
+              onPointRightClick(nearbyPoint)
+            }
             lastClickTimeRef.current = 0
             lastClickedPointRef.current = null
+            // Don't start dragging on double-click
+            return
           } else {
             // Single click for selection
             lastClickTimeRef.current = now

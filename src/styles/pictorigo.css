@@ -1668,35 +1668,35 @@ body {
 
 .wp-location-dot {
   position: absolute;
-  width: 6px;
-  height: 6px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  border: 2px solid white;
+  border: 1px solid white;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
   transform: translate(-50%, -50%);
   z-index: 11;
   cursor: pointer;
   pointer-events: auto; /* Ensure clickable */
-  /* Add larger hit area for easier clicking */
-  padding: 4px;
-  margin: -4px; /* Offset padding to maintain visual size */
+  box-sizing: border-box;
 }
 
 .wp-location-dot.selected {
-  width: 8px;
-  height: 8px;
-  border: 2px solid var(--accent-green);
-  box-shadow: 0 0 0 2px white, 0 2px 6px rgba(0, 0, 0, 0.6);
+  width: 18px;
+  height: 18px;
+  border: 3px solid var(--accent-green);
+  box-shadow: 0 0 0 1px white, 0 2px 6px rgba(0, 0, 0, 0.6);
   animation: pulse-wp-dot 2s ease-in-out infinite;
+  box-sizing: border-box;
 }
 
 .wp-location-dot.globally-hovered {
-  width: 8px;
-  height: 8px;
+  width: 14px;
+  height: 14px;
   border: 2px solid #ffc107;
-  box-shadow: 0 0 0 2px white, 0 2px 8px rgba(255, 193, 7, 0.6);
+  box-shadow: 0 0 0 1px white, 0 2px 8px rgba(255, 193, 7, 0.6);
   z-index: 10;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .wp-location-dot:hover {

@@ -1,8 +1,6 @@
-We're working through the ui after a very large change (we've rewritted 95% of the code and introduced mobx).
+We're working through the ui after a very large change (we've rewritted 95% of the code and introduced mobx). Here are a number of issues we need to address, get back to me after each task is completed and I'll verify:
 
-Here are a number of issues we need to address, get back to me after each task is completed and I'll verify:
-
-* when I click on an image point I should see the edit properties for the world point. that's not shown and there is no error.
+* when I double/click on an image point I should see the edit properties for the world point. that's not shown and there is no error. the menu to edit doesn't work either
 
 * image points show be shown on thumbnails in *almost* the right place, but they seem to not be centered properly. and they're not totally offcenter either. they're too high and too far to the left, is all I can tell. also, the imagepoints are larger on the thumbnails than on the image viewer, which si odd because the image viewer is larger.
 
@@ -21,4 +19,98 @@ Here are a number of issues we need to address, get back to me after each task i
 
 * no edits I make in the edit line properties window are being saved, they're forgotten as soon as I leave.
 
-* 
+* creating a loop doesn't work, everything's fine untl i press create:
+
+Opening WorldPoint edit window for: WP5 MainLayout.tsx:444:13
+XHRPOST
+http://localhost:5173/api/beep
+[HTTP/1.1 404 Not Found 7ms]
+
+[mobx] Encountered an uncaught exception that was thrown by a reaction or observer component, in: 'Reaction[Autorun@49]' TypeError: c.serialize is not a function
+    constraints Serialization.ts:22
+    serialize Serialization.ts:22
+    saveToLocalStorage Serialization.ts:96
+    saveToLocalStorage project-serialization.ts:13
+    disposer useEntityProject.ts:62
+    MobX 8
+    batchedUpdates$1 React
+    MobX 6
+    addConstraint useDomainOperations.ts:242
+    complete useLoopTrace.ts:171
+    handleSave LoopTraceTool.tsx:119
+    onOk CreationToolsManager.tsx:371
+    onClick FloatingWindow.tsx:309
+    React 32
+    handleToolActivation CreationToolsManager.tsx:121
+    onClick CreationToolsManager.tsx:234
+    React 23
+    <anonymous> main.tsx:22
+<anonymous code>:1:147461
+XHRPOST
+http://localhost:5173/api/beep
+[HTTP/1.1 404 Not Found 7ms]
+
+XHRPOST
+http://localhost:5173/api/beep
+[HTTP/1.1 404 Not Found 3ms]
+
+Uncaught TypeError: constraint.getConstraintType is not a function
+    getConstraintPoints WorldPointPanel.tsx:111
+    getConstraintsForWorldPoint WorldPointPanel.tsx:166
+    getConstraintsForWorldPoint WorldPointPanel.tsx:165
+    children WorldPointPanel.tsx:361
+    WorldPointPanel WorldPointPanel.tsx:359
+    React 4
+WorldPointPanel.tsx:111:29
+Uncaught TypeError: constraint.evaluate is not a function
+    constraintEntities ConstraintsManager.tsx:177
+    ConstraintsManager ConstraintsManager.tsx:174
+    React 7
+ConstraintsManager.tsx:177:35
+Uncaught TypeError: constraint.getConstraintType is not a function
+    getConstraintPoints WorldPointPanel.tsx:111
+    getConstraintsForWorldPoint WorldPointPanel.tsx:166
+    getConstraintsForWorldPoint WorldPointPanel.tsx:165
+    children WorldPointPanel.tsx:361
+    WorldPointPanel WorldPointPanel.tsx:359
+    React 4
+WorldPointPanel.tsx:111:29
+XHRPOST
+http://localhost:5173/api/beep
+[HTTP/1.1 404 Not Found 2ms]
+
+Uncaught TypeError: constraint.evaluate is not a function
+    constraintEntities ConstraintsManager.tsx:177
+    ConstraintsManager ConstraintsManager.tsx:174
+    React 7
+ConstraintsManager.tsx:177:35
+The above error occurred in the <WorldPointPanel> component:
+
+WorldPointPanel@http://localhost:5173/@fs/C:/Dev/Pictorigo/src/components/WorldPointPanel.tsx:24:32
+div
+div
+div
+div
+WorkspaceManager@http://localhost:5173/@fs/C:/Dev/Pictorigo/src/components/WorkspaceManager.tsx:260:33
+observerComponent@http://localhost:5173/node_modules/.vite/deps/mobx-react-lite.js?v=7fc2cb5a:361:12
+App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries. <anonymous code>:1:147461
+The above error occurred in the <ConstraintsManager> component:
+
+ConstraintsManager@http://localhost:5173/@fs/C:/Dev/Pictorigo/src/components/ConstraintsManager.tsx:32:35
+observerComponent@http://localhost:5173/node_modules/.vite/deps/mobx-react-lite.js?v=7fc2cb5a:361:12
+App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries. <anonymous code>:1:147461
+Uncaught TypeError: constraint.getConstraintType is not a function
+    getConstraintPoints WorldPointPanel.tsx:111
+    getConstraintsForWorldPoint WorldPointPanel.tsx:166
+    getConstraintsForWorldPoint WorldPointPanel.tsx:165
+    children WorldPointPanel.tsx:361
+    WorldPointPanel WorldPointPanel.tsx:359
+    React 4
+	
+page crashes - but all lines were created	

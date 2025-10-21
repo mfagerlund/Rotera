@@ -1,10 +1,9 @@
-// TODO: This component needs to be refactored to work with entity classes
-// WorldPoint is now a class with private fields, can't be mutated like a plain object
-// See WorldPointEditor.tsx.TODO for original implementation
-
-import React from 'react'
+import React, { useState, useEffect } from 'react'
+import { observer } from 'mobx-react-lite'
 import { WorldPoint } from '../entities/world-point'
 import { Viewpoint } from '../entities/viewpoint'
+import FloatingWindow from './FloatingWindow'
+import { useConfirm } from './ConfirmDialog'
 
 type ProjectImage = Viewpoint
 
@@ -17,19 +16,251 @@ interface WorldPointEditorProps {
   images: Map<string, ProjectImage>
 }
 
-export const WorldPointEditor: React.FC<WorldPointEditorProps> = ({
+export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
   isOpen,
-  onClose
+  onClose,
+  worldPoint,
+  onUpdateWorldPoint,
+  onDeleteWorldPoint,
+  images
 }) => {
+  const { confirm, dialog } = useConfirm()
+  const [editedName, setEditedName] = useState(worldPoint.name)
+  const [editedColor, setEditedColor] = useState(worldPoint.color)
+  const [hasChanges, setHasChanges] = useState(false)
+
+  // Locked coordinates (editable, nullable)
+  const [lockedX, setLockedX] = useState<string>(
+    worldPoint.lockedXyz[0] !== null ? worldPoint.lockedXyz[0].toString() : ''
+  )
+  const [lockedY, setLockedY] = useState<string>(
+    worldPoint.lockedXyz[1] !== null ? worldPoint.lockedXyz[1].toString() : ''
+  )
+  const [lockedZ, setLockedZ] = useState<string>(
+    worldPoint.lockedXyz[2] !== null ? worldPoint.lockedXyz[2].toString() : ''
+  )
+
+  // Reset form when worldPoint changes
+  useEffect(() => {
+    setEditedName(worldPoint.name)
+    setEditedColor(worldPoint.color)
+    setLockedX(worldPoint.lockedXyz[0] !== null ? worldPoint.lockedXyz[0].toString() : '')
+    setLockedY(worldPoint.lockedXyz[1] !== null ? worldPoint.lockedXyz[1].toString() : '')
+    setLockedZ(worldPoint.lockedXyz[2] !== null ? worldPoint.lockedXyz[2].toString() : '')
+    setHasChanges(false)
+  }, [worldPoint])
+
+  const handleChange = () => {
+    setHasChanges(true)
+  }
+
+  const handleSave = () => {
+    // Update the world point directly (MobX will detect changes)
+    worldPoint.name = editedName
+    worldPoint.color = editedColor
+
+    // Update locked coordinates (convert empty strings to null)
+    worldPoint.lockedXyz = [
+      lockedX.trim() !== '' ? parseFloat(lockedX) : null,
+      lockedY.trim() !== '' ? parseFloat(lockedY) : null,
+      lockedZ.trim() !== '' ? parseFloat(lockedZ) : null
+    ]
+
+    onUpdateWorldPoint(worldPoint)
+    setHasChanges(false)
+    onClose()
+  }
+
+  const handleCancel = async () => {
+    if (hasChanges) {
+      if (await confirm('You have unsaved changes. Are you sure you want to cancel?')) {
+        // Reset to original values
+        setEditedName(worldPoint.name)
+        setEditedColor(worldPoint.color)
+        setLockedX(worldPoint.lockedXyz[0] !== null ? worldPoint.lockedXyz[0].toString() : '')
+        setLockedY(worldPoint.lockedXyz[1] !== null ? worldPoint.lockedXyz[1].toString() : '')
+        setLockedZ(worldPoint.lockedXyz[2] !== null ? worldPoint.lockedXyz[2].toString() : '')
+        setHasChanges(false)
+        onClose()
+      }
+    } else {
+      onClose()
+    }
+  }
+
+  const handleDelete = async () => {
+    if (await confirm(`Are you sure you want to delete world point "${worldPoint.name}"?`)) {
+      onDeleteWorldPoint?.(worldPoint)
+      onClose()
+    }
+  }
+
   if (!isOpen) return null
 
+  // Get image points for this world point
+  const imagePointsList = Array.from(worldPoint.imagePoints)
+
   return (
-    <div style={{ padding: '20px', background: '#fff', border: '1px solid #ccc' }}>
-      <h3>WorldPoint Editor (TODO - Needs Refactor)</h3>
-      <p>This component needs to be refactored to work with entity classes.</p>
-      <button onClick={onClose}>Close</button>
-    </div>
+    <>
+      {dialog}
+      <FloatingWindow
+        title={`Edit World Point: ${worldPoint.name}`}
+        isOpen={isOpen}
+        onClose={handleCancel}
+        width={450}
+        height={500}
+        storageKey="world-point-edit"
+        showOkCancel={true}
+        onOk={handleSave}
+        onCancel={handleCancel}
+        onDelete={onDeleteWorldPoint ? handleDelete : undefined}
+        okText="Save"
+        cancelText="Cancel"
+        okDisabled={!hasChanges}
+      >
+        <div className="image-edit-content">
+          {/* Basic Properties */}
+          <div className="edit-section">
+            <h4>Basic Properties</h4>
+
+            <div className="form-row">
+              <label>Name</label>
+              <input
+                type="text"
+                value={editedName}
+                onChange={(e) => { setEditedName(e.target.value); handleChange(); }}
+                className="form-input"
+                placeholder="Point name"
+                maxLength={20}
+              />
+            </div>
+
+            <div className="form-row">
+              <label>Color</label>
+              <div style={{ display: 'flex', gap: '8px', flex: 1 }}>
+                <input
+                  type="color"
+                  value={editedColor}
+                  onChange={(e) => { setEditedColor(e.target.value); handleChange(); }}
+                  className="color-input"
+                />
+                <input
+                  type="text"
+                  value={editedColor}
+                  onChange={(e) => { setEditedColor(e.target.value); handleChange(); }}
+                  className="form-input"
+                  style={{ flex: 1 }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 3D Coordinates */}
+          <div className="edit-section">
+            <h4>3D Coordinates</h4>
+
+            <div className="form-row">
+              <label>Locked</label>
+              <div style={{ display: 'flex', gap: '4px', flex: 1, maxWidth: '300px' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                  <span style={{ fontSize: '11px', color: '#999', marginBottom: '2px' }}>X</span>
+                  <input
+                    type="number"
+                    value={lockedX}
+                    onChange={(e) => { setLockedX(e.target.value); handleChange(); }}
+                    placeholder="free"
+                    step="0.001"
+                    className="form-input"
+                    style={{ fontSize: '12px', padding: '4px', width: '100%' }}
+                  />
+                </div>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                  <span style={{ fontSize: '11px', color: '#999', marginBottom: '2px' }}>Y</span>
+                  <input
+                    type="number"
+                    value={lockedY}
+                    onChange={(e) => { setLockedY(e.target.value); handleChange(); }}
+                    placeholder="free"
+                    step="0.001"
+                    className="form-input"
+                    style={{ fontSize: '12px', padding: '4px', width: '100%' }}
+                  />
+                </div>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                  <span style={{ fontSize: '11px', color: '#999', marginBottom: '2px' }}>Z</span>
+                  <input
+                    type="number"
+                    value={lockedZ}
+                    onChange={(e) => { setLockedZ(e.target.value); handleChange(); }}
+                    placeholder="free"
+                    step="0.001"
+                    className="form-input"
+                    style={{ fontSize: '12px', padding: '4px', width: '100%' }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Optimized Coordinates (Read-only) */}
+            {worldPoint.optimizedXyz && (
+              <div className="form-row">
+                <label>Optimized</label>
+                <div style={{
+                  flex: 1,
+                  fontFamily: 'monospace',
+                  fontSize: '12px',
+                  color: '#aaa',
+                  padding: '4px'
+                }}>
+                  X: {worldPoint.optimizedXyz[0].toFixed(3)},
+                  Y: {worldPoint.optimizedXyz[1].toFixed(3)},
+                  Z: {worldPoint.optimizedXyz[2].toFixed(3)}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Image Points */}
+          <div className="edit-section">
+            <h4>Image Points ({imagePointsList.length})</h4>
+
+            <div className="status-grid" style={{
+              maxHeight: '150px',
+              overflowY: 'auto',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--border-radius)',
+              padding: '4px'
+            }}>
+              {imagePointsList.length === 0 ? (
+                <div style={{ color: '#888', fontStyle: 'italic', fontSize: '12px', padding: '4px' }}>
+                  No image points
+                </div>
+              ) : (
+                imagePointsList.map((ip, idx) => {
+                  const viewpoint = ip.viewpoint as Viewpoint
+                  return (
+                    <div
+                      key={idx}
+                      className="status-item"
+                      style={{
+                        padding: '4px',
+                        borderBottom: idx < imagePointsList.length - 1 ? '1px solid var(--border)' : 'none'
+                      }}
+                    >
+                      <label>{viewpoint.name}</label>
+                      <span style={{ fontFamily: 'monospace', fontSize: '11px' }}>
+                        ({ip.u.toFixed(1)}, {ip.v.toFixed(1)})
+                      </span>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      </FloatingWindow>
+    </>
   )
-}
+})
 
 export default WorldPointEditor
