@@ -427,7 +427,65 @@ This architecture enables:
 
 ---
 
-## 11. Decisions Summary
+## 11. Optimization Architecture: Entity-Driven Constraints
+
+### Philosophy
+
+**Traditional Approach**: Convert high-level entities (lines, planes) into atomic constraints (distance, angle) before optimization.
+
+**Entity-Driven Approach**: Optimize directly on semantic entities, preserving UI→optimization→feedback loop with full traceability.
+
+### Constraint Types
+
+**Intrinsic Constraints**: Embedded within entities themselves
+- Line direction (horizontal, vertical, axis-aligned)
+- Line target length
+- Fixed point coordinates
+- These are properties of the entity, not separate constraint objects
+
+**Extrinsic Constraints**: Relationships between separate entities
+- Distance between two points
+- Angle between lines
+- Parallel/perpendicular relationships
+- These exist as separate constraint objects
+
+### Key Benefit: Traceability
+
+```typescript
+// Entity with embedded constraints
+Line {
+  id: "L1",
+  pointA: WorldPoint,
+  pointB: WorldPoint,
+  direction: "horizontal",     // Intrinsic constraint
+  targetLength: 5.0            // Intrinsic constraint
+}
+
+// Optimization result maintains entity link
+Result {
+  "L1": {
+    total_error: 2.5,
+    components: [
+      { type: 'length', error: 2.3, target: 5.0 },
+      { type: 'direction', error: 0.2 }
+    ]
+  }
+}
+
+// User sees: "Line L1 is 2.3m too long"  ✅
+// Not:       "Constraint violation"      ❌
+```
+
+### Rules
+
+1. **Intrinsic constraints are entity properties** - No separate constraint objects for entity properties
+2. **Extrinsic constraints reference entities** - Use object references, not IDs
+3. **Optimization maintains entity identity** - Results trace back to specific entities
+4. **ONE source of truth** - Entity properties ARE the optimization inputs
+
+---
+
+## 12. Decisions Summary
 
 All clarifying questions have been resolved:
 

@@ -31,3 +31,10 @@ yarn-error.log*
 
 # Project specific
 *.pgo
+
+# Scratch/working documents
+scratch/
+
+# Build outputs
+build_output.txt
+*.tmp.md
