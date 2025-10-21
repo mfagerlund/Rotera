@@ -219,7 +219,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
       items.push({
         id: 'edit-properties',
         label: 'Edit Properties',
-        icon: 'faGear',
+        icon: faGear,
         onClick: () => onEditWorldPoint(worldPoint)
       })
     }
@@ -231,7 +231,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
       items.push({
         id: 'place',
         label: 'Place on Image',
-        icon: 'faLocationDot',
+        icon: faLocationDot,
         onClick: () => onStartPlacement(worldPoint)
       })
     }
@@ -250,7 +250,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
     items.push({
       id: 'delete',
       label: 'Delete',
-      icon: 'faTrash',
+      icon: faTrash,
       onClick: async () => {
         if (await confirm(`Delete world point "${worldPoint.getName()}"?\n\nThis will also delete any constraints that reference this point.`)) {
           onDeleteWorldPoint(worldPoint)

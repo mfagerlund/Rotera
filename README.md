@@ -3,21 +3,21 @@ Poor Man's Photogrammetry
 
 ## 🚀 Current Status
 
-**ACTIVE DEVELOPMENT** - Core frontend is functional, solver uses ScalarAutograd.
+**ACTIVE DEVELOPMENT** - Standalone browser application with functional UI and ScalarAutograd solver.
 
-✅ **Frontend**: React TypeScript interface with project management and visualization
-✅ **Solver**: ScalarAutograd (TypeScript) for automatic differentiation and optimization
-✅ **Testing**: Comprehensive frontend test suite
+✅ **UI Layer**: React TypeScript interface with project management and visualization
+✅ **Domain Layer**: Entity-based model (WorldPoint, Line, Viewpoint, Constraint)
+✅ **Solver Layer**: ScalarAutograd (TypeScript) for automatic differentiation and optimization
+✅ **Testing**: Comprehensive test suite
 
 **Quick Start:**
 ```bash
-# Frontend (Node.js 20+)
-cd frontend
+# Standalone browser app (Node.js 20+)
 npm install
-npm run dev  # UI runs on http://localhost:3000
+npm run dev  # Runs on http://localhost:5173
 ```
 
-**Solver:** Uses ScalarAutograd (TypeScript-based) for automatic differentiation and optimization (C:\Dev\ScalarAutograd).
+**Solver:** Uses ScalarAutograd (TypeScript-based) for automatic differentiation and optimization (C:\Dev\ScalarAutograd), runs entirely in browser.
 
 ## Goal
 
@@ -84,8 +84,13 @@ Camera projections are solved from the full constraint graph. IPs cannot exist w
 
 ## Architecture
 
-* **Frontend:** React + TypeScript. Fast image switching, point/constraint editing, residual/uncertainty indicators.
-* **Solver:** ScalarAutograd (TypeScript) for automatic differentiation and constraint optimization. Supports intrinsic constraints (embedded in geometric entities like lines) and extrinsic constraints (relationships between entities).
+**Standalone browser application** with three layers running entirely in-browser:
+
+* **UI Layer:** React + TypeScript. Fast image switching, point/constraint editing, residual/uncertainty indicators.
+* **Domain Layer:** Entity-based model (WorldPoint, Line, Viewpoint, Constraint classes) with MobX observables for automatic change detection.
+* **Solver Layer:** ScalarAutograd (TypeScript) for automatic differentiation and constraint optimization. Supports intrinsic constraints (embedded in geometric entities like lines) and extrinsic constraints (relationships between entities).
+
+All layers run in the browser. No server required.
 
 ## Testing strategy
 

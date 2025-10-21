@@ -197,6 +197,16 @@ export function useDomainOperations(
   const addImagePointToWorldPoint = (worldPoint: WorldPoint, viewpoint: Viewpoint, u: number, v: number) => {
     if (!project) return
 
+    if (!project.viewpoints.has(viewpoint)) {
+      console.error('Viewpoint not in project, adding it now', viewpoint.name)
+      project.addViewpoint(viewpoint)
+    }
+
+    if (!project.worldPoints.has(worldPoint)) {
+      console.error('WorldPoint not in project, adding it now', worldPoint.name)
+      project.addWorldPoint(worldPoint)
+    }
+
     const imagePoint = ImagePoint.create(
       worldPoint,
       viewpoint,

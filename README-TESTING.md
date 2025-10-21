@@ -1,6 +1,6 @@
-# 🧪 Testing Guide for Pictorigo Frontend
+# 🧪 Testing Guide for Pictorigo
 
-This document provides comprehensive information about the testing infrastructure implemented for the Pictorigo photogrammetry system frontend.
+This document provides comprehensive information about the testing infrastructure implemented for the Pictorigo photogrammetry application.
 
 ## Test Coverage Overview
 

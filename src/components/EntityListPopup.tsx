@@ -96,7 +96,7 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
       items.push({
         id: 'edit',
         label: 'Edit',
-        icon: 'faPencil',
+        icon: faPencil,
         onClick: () => onEdit(entityItem.entity)
       })
     }
@@ -105,7 +105,7 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
       items.push({
         id: 'toggle-visibility',
         label: entityItem.isVisible ? 'Hide' : 'Show',
-        icon: entityItem.isVisible ? 'faEyeSlash' : 'faEye',
+        icon: entityItem.isVisible ? faEyeSlash : faEye,
         onClick: () => onToggleVisibility(entityItem.entity)
       })
     }
@@ -123,7 +123,7 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
       items.push({
         id: 'delete',
         label: 'Delete',
-        icon: 'faTrash',
+        icon: faTrash,
         onClick: () => handleDelete(entityItem)
       })
     }

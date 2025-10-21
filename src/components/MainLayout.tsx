@@ -20,6 +20,7 @@ import { COMPONENT_OVERLAY_EVENT, isComponentOverlayEnabled, setComponentOverlay
 import { useConfirm } from './ConfirmDialog'
 import { filterImageBlobs } from '../types/optimization-export'
 import { getEntityKey } from '../utils/entityKeys'
+import { generateWorldPointColor } from '../utils/colorGenerator'
 
 
 // UI Components
@@ -382,7 +383,8 @@ export const MainLayout: React.FC = observer(() => {
     } else if (activeTool === 'point' && currentImage) {
       // NEW: Only create world point when WP tool is explicitly active
       const wpCount = worldPointsArray.length + 1
-      const newWp = createWorldPoint(`WP${wpCount}`, [0, 0, 0], { color: '#ff0000' })
+      const color = generateWorldPointColor(worldPointsArray.length)
+      const newWp = createWorldPoint(`WP${wpCount}`, [0, 0, 0], { color })
       // Add image point to the world point
       addImagePointToWorldPoint(newWp, currentImage, u, v)
       // Auto-deactivate tool after point creation
@@ -390,7 +392,8 @@ export const MainLayout: React.FC = observer(() => {
     } else if (activeTool === 'loop' && currentImage) {
       // Create world point and auto-select it for loop tool
       const wpCount = worldPointsArray.length + 1
-      const newWp = createWorldPoint(`WP${wpCount}`, [0, 0, 0], { color: '#ff0000' })
+      const color = generateWorldPointColor(worldPointsArray.length)
+      const newWp = createWorldPoint(`WP${wpCount}`, [0, 0, 0], { color })
       // Add image point to the world point
       addImagePointToWorldPoint(newWp, currentImage, u, v)
       // Add to selection

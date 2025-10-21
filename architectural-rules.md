@@ -1,5 +1,36 @@
 # Pictorigo Architectural Rules
 
+## Application Architecture
+
+**Pictorigo is a standalone browser application** - all code runs in the browser, no server required.
+
+### Three Layers (All In-Browser)
+
+```
+┌─────────────────────────────────────────┐
+│  UI Layer (React + TypeScript)          │
+│  - Components, rendering, user input    │
+└──────────────┬──────────────────────────┘
+               │ Direct object references
+┌──────────────▼──────────────────────────┐
+│  Domain Layer (Entity Classes)          │
+│  - WorldPoint, Line, Viewpoint, etc.    │
+│  - MobX observables (auto UI updates)   │
+│  - Business logic & constraints         │
+│  - Source of truth for application      │
+└──────────────┬──────────────────────────┘
+               │ Serialization (DTOs)
+┌──────────────▼──────────────────────────┐
+│  Solver Layer (ScalarAutograd)          │
+│  - Optimization engine in browser       │
+│  - Takes entities, returns positions    │
+└─────────────────────────────────────────┘
+```
+
+**Key Point:** No network calls, no separate processes. Everything is in-memory in the browser tab.
+
+---
+
 ## Core Principle: ONE Representation Per Concept
 
 **The Golden Rule**: Each domain concept gets exactly ONE runtime representation - the Entity itself. No duplicates, no alternatives, no legacy types.

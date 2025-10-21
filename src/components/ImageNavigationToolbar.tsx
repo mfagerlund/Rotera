@@ -324,13 +324,23 @@ const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
     }
 
     updateBounds()
-    // Update on resize or when thumbnail height changes
+
+    const imgElement = imgRef.current
+    if (imgElement) {
+      imgElement.addEventListener('load', updateBounds)
+    }
+
     const observer = new ResizeObserver(updateBounds)
     if (imgRef.current) {
       observer.observe(imgRef.current)
     }
 
-    return () => observer.disconnect()
+    return () => {
+      observer.disconnect()
+      if (imgElement) {
+        imgElement.removeEventListener('load', updateBounds)
+      }
+    }
   }, [thumbnailHeight, image, image.imageWidth, image.imageHeight])
 
   return (

@@ -1,9 +1,11 @@
 import React, { useEffect, useRef } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 
 export interface ContextMenuItem {
   id: string
   label: string
-  icon?: string
+  icon?: IconDefinition
   onClick: () => void
   disabled?: boolean
   separator?: boolean
@@ -93,7 +95,11 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
               }}
               disabled={item.disabled}
             >
-              {item.icon && <span className="context-menu-icon">{item.icon}</span>}
+              {item.icon && (
+                <span className="context-menu-icon">
+                  <FontAwesomeIcon icon={item.icon} />
+                </span>
+              )}
               <span className="context-menu-label">{item.label}</span>
             </button>
           )}

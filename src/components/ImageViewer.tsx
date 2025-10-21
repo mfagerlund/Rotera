@@ -97,6 +97,8 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
   const [isPrecisionDrag, setIsPrecisionDrag] = useState(false)
   const [isPrecisionToggleActive, setIsPrecisionToggleActive] = useState(false)
   const [isDragDropActive, setIsDragDropActive] = useState(false)
+  const lastClickTimeRef = useRef<number>(0)
+  const lastClickedPointRef = useRef<WorldPoint | null>(null)
 
   // Load image
   useEffect(() => {
@@ -504,8 +506,23 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
           setDraggedPoint(nearbyPoint)
           // Don't start dragging immediately - wait for mouse movement
 
-          // Loop trace uses normal point clicks (selection system)
-          onPointClick(nearbyPoint, event.ctrlKey, event.shiftKey)
+          // Check for double-click to open edit properties
+          const now = Date.now()
+          const isDoubleClick =
+            lastClickedPointRef.current === nearbyPoint &&
+            now - lastClickTimeRef.current < 300
+
+          if (isDoubleClick && onPointRightClick) {
+            // Double-click opens edit properties
+            onPointRightClick(nearbyPoint)
+            lastClickTimeRef.current = 0
+            lastClickedPointRef.current = null
+          } else {
+            // Single click for selection
+            lastClickTimeRef.current = now
+            lastClickedPointRef.current = nearbyPoint
+            onPointClick(nearbyPoint, event.ctrlKey, event.shiftKey)
+          }
         } else if (nearbyLine && onLineClick) {
           // Handle line click
           dragStartImageCoordsRef.current = null
