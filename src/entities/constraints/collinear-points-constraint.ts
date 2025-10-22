@@ -2,7 +2,7 @@
 
 import type { ValidationResult } from '../../validation/validator'
 import type { ValueMap } from '../../optimization/IOptimizable'
-import { Vec3, type Value } from 'scalar-autograd'
+import { Vec3, Vec3Utils, type Value } from 'scalar-autograd'
 import { ValidationHelpers } from '../../validation/validator'
 import type { WorldPoint } from '../world-point/WorldPoint'
 import {
@@ -63,25 +63,17 @@ export class CollinearPointsConstraint extends Constraint {
 
       let maxDeviation = 0
 
-      // Check each additional point against the line defined by the first two points
       for (let i = 2; i < coordsList.length; i++) {
         const p3 = coordsList[i]
 
-        // Create vectors
-        const v1 = [p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]]
-        const v2 = [p3[0] - p1[0], p3[1] - p1[1], p3[2] - p1[2]]
+        const v1 = Vec3Utils.subtract(p2, p1)
+        const v2 = Vec3Utils.subtract(p3, p1)
 
-        // Cross product magnitude represents the deviation from collinearity
-        const cross = [
-          v1[1] * v2[2] - v1[2] * v2[1],
-          v1[2] * v2[0] - v1[0] * v2[2],
-          v1[0] * v2[1] - v1[1] * v2[0]
-        ]
+        const cross = Vec3Utils.cross(v1, v2)
 
-        const crossMagnitude = Math.sqrt(cross[0] ** 2 + cross[1] ** 2 + cross[2] ** 2)
-        const v1Magnitude = Math.sqrt(v1[0] ** 2 + v1[1] ** 2 + v1[2] ** 2)
+        const crossMagnitude = Vec3Utils.magnitude(cross)
+        const v1Magnitude = Vec3Utils.magnitude(v1)
 
-        // Normalize by the length of the base vector to get a relative measure
         const deviation = v1Magnitude > 0 ? crossMagnitude / v1Magnitude : crossMagnitude
         maxDeviation = Math.max(maxDeviation, deviation)
       }

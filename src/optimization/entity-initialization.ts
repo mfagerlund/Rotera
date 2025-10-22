@@ -1,8 +1,4 @@
-/**
- * Smart initialization for entity-based world points
- * Adapted from smart-initialization.ts to work with entity objects instead of DTOs
- */
-
+import * as vec3 from '../utils/vec3'
 import type { WorldPoint } from '../entities/world-point'
 import type { Line } from '../entities/line'
 import type { Constraint } from '../entities/constraints'
@@ -123,11 +119,12 @@ function propagateViaLineGraph(
 
         // Random direction (could be improved with more constraints)
         const direction = randomUnitVector()
+        const currentXyz = currentPoint.optimizedXyz!
 
         otherPoint.optimizedXyz = [
-          currentPoint.optimizedXyz[0] + direction[0] * distance,
-          currentPoint.optimizedXyz[1] + direction[1] * distance,
-          currentPoint.optimizedXyz[2] + direction[2] * distance
+          currentXyz[0] + direction[0] * distance,
+          currentXyz[1] + direction[1] * distance,
+          currentXyz[2] + direction[2] * distance
         ]
 
         initialized.add(otherPoint)
@@ -137,17 +134,17 @@ function propagateViaLineGraph(
   }
 }
 
-/**
- * Generate a random unit vector in 3D
- */
 function randomUnitVector(): [number, number, number] {
-  let x, y, z, len
+  let vec: [number, number, number]
+  let len: number
   do {
-    x = Math.random() * 2 - 1
-    y = Math.random() * 2 - 1
-    z = Math.random() * 2 - 1
-    len = Math.sqrt(x * x + y * y + z * z)
+    vec = [
+      Math.random() * 2 - 1,
+      Math.random() * 2 - 1,
+      Math.random() * 2 - 1
+    ]
+    len = vec3.magnitude(vec)
   } while (len === 0 || len > 1)
 
-  return [x / len, y / len, z / len]
+  return vec3.normalize(vec)
 }

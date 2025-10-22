@@ -1,6 +1,4 @@
-/**
- * Residual functions for photogrammetry optimization constraints.
- */
+import * as vec3 from '../utils/vec3'
 
 /**
  * WorldPoint axis lock residual.
@@ -47,35 +45,12 @@ export function lineConstraintResidual(
   pointC: [number, number, number],
   sigma: number = 1.0
 ): [number, number, number] {
-  // Vector from A to C
-  const AC: [number, number, number] = [
-    pointC[0] - pointA[0],
-    pointC[1] - pointA[1],
-    pointC[2] - pointA[2]
-  ];
+  const AC = vec3.subtract(pointC, pointA)
+  const AB = vec3.subtract(pointB, pointA)
+  const cross = vec3.cross(AC, AB)
+  const weight = 1.0 / sigma
 
-  // Vector from A to B (line direction)
-  const AB: [number, number, number] = [
-    pointB[0] - pointA[0],
-    pointB[1] - pointA[1],
-    pointB[2] - pointA[2]
-  ];
-
-  // Cross product AC × AB
-  // If C is on the line, this should be zero
-  const cross: [number, number, number] = [
-    AC[1] * AB[2] - AC[2] * AB[1],
-    AC[2] * AB[0] - AC[0] * AB[2],
-    AC[0] * AB[1] - AC[1] * AB[0]
-  ];
-
-  const weight = 1.0 / sigma;
-
-  return [
-    cross[0] * weight,
-    cross[1] * weight,
-    cross[2] * weight
-  ];
+  return vec3.scale(cross, weight)
 }
 
 /**

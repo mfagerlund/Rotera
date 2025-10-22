@@ -1,8 +1,5 @@
-/**
- * Comprehensive tests for ALL constraint types using ScalarAutograd solver.
- */
-
 import { describe, it, expect, beforeEach } from '@jest/globals';
+import * as vec3 from '../../utils/vec3';
 import { WorldPoint } from '../../entities/world-point/WorldPoint';
 import { FixedPointConstraint } from '../../entities/constraints/fixed-point-constraint';
 import { DistanceConstraint } from '../../entities/constraints/distance-constraint';
@@ -46,13 +43,9 @@ describe('ConstraintSystem - All Constraint Types', () => {
 
       expect(result.converged).toBe(true);
 
-      // Calculate final distance
       const coords1 = p1.optimizedXyz!;
       const coords2 = p2.optimizedXyz!;
-      const dx = coords2[0] - coords1[0];
-      const dy = coords2[1] - coords1[1];
-      const dz = coords2[2] - coords1[2];
-      const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      const distance = vec3.distance(coords1, coords2);
 
       expect(distance).toBeCloseTo(100, 4);
     });
@@ -83,18 +76,14 @@ describe('ConstraintSystem - All Constraint Types', () => {
 
       expect(result.converged).toBe(true);
 
-      // Calculate final angle
       const cA = pA.optimizedXyz!;
       const cV = vertex.optimizedXyz!;
       const cC = pC.optimizedXyz!;
 
-      const v1 = [cA[0] - cV[0], cA[1] - cV[1], cA[2] - cV[2]];
-      const v2 = [cC[0] - cV[0], cC[1] - cV[1], cC[2] - cV[2]];
-
-      const dot = v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
-      const mag1 = Math.sqrt(v1[0] ** 2 + v1[1] ** 2 + v1[2] ** 2);
-      const mag2 = Math.sqrt(v2[0] ** 2 + v2[1] ** 2 + v2[2] ** 2);
-      const angleDeg = (Math.acos(dot / (mag1 * mag2)) * 180) / Math.PI;
+      const v1 = vec3.subtract(cA, cV);
+      const v2 = vec3.subtract(cC, cV);
+      const angleRad = vec3.angleBetween(v1, v2);
+      const angleDeg = angleRad * (180 / Math.PI);
 
       expect(angleDeg).toBeCloseTo(60, 2);
     });
@@ -184,14 +173,13 @@ describe('ConstraintSystem - All Constraint Types', () => {
 
       expect(result.converged).toBe(true);
 
-      // Calculate distances
       const c1 = p1.optimizedXyz!;
       const c2 = p2.optimizedXyz!;
       const c3 = p3.optimizedXyz!;
       const c4 = p4.optimizedXyz!;
 
-      const dist1 = Math.sqrt((c2[0] - c1[0]) ** 2 + (c2[1] - c1[1]) ** 2 + (c2[2] - c1[2]) ** 2);
-      const dist2 = Math.sqrt((c4[0] - c3[0]) ** 2 + (c4[1] - c3[1]) ** 2 + (c4[2] - c3[2]) ** 2);
+      const dist1 = vec3.distance(c1, c2);
+      const dist2 = vec3.distance(c3, c4);
 
       expect(dist1).toBeCloseTo(dist2, 4);
     });
@@ -231,14 +219,11 @@ describe('ConstraintSystem - All Constraint Types', () => {
 
       expect(result.converged).toBe(true);
 
-      // Helper to calculate angle
       const calcAngle = (a: [number, number, number], v: [number, number, number], c: [number, number, number]) => {
-        const v1 = [a[0] - v[0], a[1] - v[1], a[2] - v[2]];
-        const v2 = [c[0] - v[0], c[1] - v[1], c[2] - v[2]];
-        const dot = v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
-        const mag1 = Math.sqrt(v1[0] ** 2 + v1[1] ** 2 + v1[2] ** 2);
-        const mag2 = Math.sqrt(v2[0] ** 2 + v2[1] ** 2 + v2[2] ** 2);
-        return (Math.acos(dot / (mag1 * mag2)) * 180) / Math.PI;
+        const v1 = vec3.subtract(a, v);
+        const v2 = vec3.subtract(c, v);
+        const angleRad = vec3.angleBetween(v1, v2);
+        return angleRad * (180 / Math.PI);
       };
 
       const angle1 = calcAngle(
@@ -301,9 +286,9 @@ describe('ConstraintSystem - All Constraint Types', () => {
       const c2 = p2.optimizedXyz!;
       const c3 = p3.optimizedXyz!;
 
-      const dist12 = Math.sqrt((c2[0] - c1[0]) ** 2 + (c2[1] - c1[1]) ** 2 + (c2[2] - c1[2]) ** 2);
-      const dist23 = Math.sqrt((c3[0] - c2[0]) ** 2 + (c3[1] - c2[1]) ** 2 + (c3[2] - c2[2]) ** 2);
-      const dist31 = Math.sqrt((c1[0] - c3[0]) ** 2 + (c1[1] - c3[1]) ** 2 + (c1[2] - c3[2]) ** 2);
+      const dist12 = vec3.distance(c1, c2);
+      const dist23 = vec3.distance(c2, c3);
+      const dist31 = vec3.distance(c3, c1);
 
       expect(dist12).toBeCloseTo(dist23, 3);
       expect(dist23).toBeCloseTo(dist31, 3);

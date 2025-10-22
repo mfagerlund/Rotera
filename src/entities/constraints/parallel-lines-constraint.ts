@@ -3,6 +3,7 @@
 import type { ValidationResult } from '../../validation/validator'
 import type { ValueMap } from '../../optimization/IOptimizable'
 import type { Value } from 'scalar-autograd'
+import { Vec3Utils } from 'scalar-autograd'
 import type { Line } from '../line'
 import {
   Constraint,
@@ -57,13 +58,11 @@ export class ParallelLinesConstraint extends Constraint {
     const dir1 = this.lineA.getDirection()
     const dir2 = this.lineB.getDirection()
     if (dir1 && dir2) {
-      // Calculate dot product to check parallelism
-      // For parallel lines, the absolute dot product should be close to 1
-      const dotProduct = Math.abs(dir1[0] * dir2[0] + dir1[1] * dir2[1] + dir1[2] * dir2[2])
-      const value = Math.acos(Math.min(1, dotProduct)) * (180 / Math.PI) // Angle in degrees
+      const dotProduct = Math.abs(Vec3Utils.dot(dir1, dir2))
+      const value = Math.acos(Math.min(1, dotProduct)) * (180 / Math.PI)
       return {
         value,
-        satisfied: Math.abs(value - 0) <= this.tolerance // Target is 0 degrees for parallel lines
+        satisfied: Math.abs(value - 0) <= this.tolerance
       }
     }
     return { value: 90, satisfied: false }
