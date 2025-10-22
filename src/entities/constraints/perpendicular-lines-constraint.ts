@@ -3,7 +3,7 @@
 import type { ValidationResult } from '../../validation/validator'
 import type { ValueMap } from '../../optimization/IOptimizable'
 import type { Value } from 'scalar-autograd'
-import { Vec3Utils } from 'scalar-autograd'
+import * as vec3 from '../../utils/vec3'
 import type { Line } from '../line/Line'
 import {
   Constraint,
@@ -58,7 +58,7 @@ export class PerpendicularLinesConstraint extends Constraint {
     const dir1 = this.lineA.getDirection()
     const dir2 = this.lineB.getDirection()
     if (dir1 && dir2) {
-      const dotProduct = Vec3Utils.dot(dir1, dir2)
+      const dotProduct = vec3.dot(dir1, dir2)
       const value = Math.abs(dotProduct)
       return {
         value,

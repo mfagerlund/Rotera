@@ -1,6 +1,7 @@
 import type { ISelectable, SelectableType } from '../../types/selectable'
 import type { IResidualProvider, ValueMap } from '../../optimization/IOptimizable'
-import { V, Value, Vec3Utils } from 'scalar-autograd'
+import { V, Value } from 'scalar-autograd'
+import * as vec3 from '../../utils/vec3'
 import type { WorldPoint } from '../world-point'
 import type { IConstraint, ILine, IWorldPoint } from '../interfaces'
 import type { ISerializable } from '../serialization/ISerializable'
@@ -256,7 +257,7 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
       return null
     }
 
-    return Vec3Utils.distance(aCoords, bCoords)
+    return vec3.distance(aCoords, bCoords)
   }
 
   static getDirectionVector(pointA: WorldPoint, pointB: WorldPoint): [number, number, number] | null {
@@ -267,8 +268,8 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
       return null
     }
 
-    const direction = Vec3Utils.subtract(bCoords, aCoords)
-    return Vec3Utils.isZero(direction) ? null : Vec3Utils.normalize(direction)
+    const direction = vec3.subtract(bCoords, aCoords)
+    return vec3.isZero(direction) ? null : vec3.normalize(direction)
   }
 
   static getMidpoint(pointA: WorldPoint, pointB: WorldPoint): [number, number, number] | null {
@@ -279,7 +280,7 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
       return null
     }
 
-    return Vec3Utils.midpoint(aCoords, bCoords)
+    return vec3.midpoint(aCoords, bCoords)
   }
 
   static containsPoint(
@@ -295,11 +296,11 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
       return false
     }
 
-    const lineVec = Vec3Utils.subtract(bCoords, aCoords)
-    const pointVec = Vec3Utils.subtract(testPoint, aCoords)
-    const crossProduct = Vec3Utils.cross(pointVec, lineVec)
+    const lineVec = vec3.subtract(bCoords, aCoords)
+    const pointVec = vec3.subtract(testPoint, aCoords)
+    const crossProduct = vec3.cross(pointVec, lineVec)
 
-    return Vec3Utils.magnitude(crossProduct) < tolerance
+    return vec3.magnitude(crossProduct) < tolerance
   }
 
   static distanceToPoint(
@@ -314,7 +315,7 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
       return null
     }
 
-    return Vec3Utils.distanceToLineSegment(testPoint, aCoords, bCoords)
+    return vec3.distanceToLineSegment(testPoint, aCoords, bCoords)
   }
 
   static angleBetweenLines(
@@ -330,7 +331,7 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
       return null
     }
 
-    const angleRad = Vec3Utils.angleBetween(dir1, dir2)
+    const angleRad = vec3.angleBetween(dir1, dir2)
     return angleRad * (180 / Math.PI)
   }
 

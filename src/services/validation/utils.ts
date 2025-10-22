@@ -1,4 +1,4 @@
-import { Vec3Utils } from 'scalar-autograd'
+import * as vec3 from '../../utils/vec3'
 
 export function calculateDistance(pointA: (number | null)[], pointB: (number | null)[]): number {
   const ax = pointA[0] ?? 0
@@ -8,7 +8,7 @@ export function calculateDistance(pointA: (number | null)[], pointB: (number | n
   const by = pointB[1] ?? 0
   const bz = pointB[2] ?? 0
 
-  return Vec3Utils.distance([ax, ay, az], [bx, by, bz])
+  return vec3.distance([ax, ay, az], [bx, by, bz])
 }
 
 export function calculateAngle(pointA: (number | null)[], vertex: (number | null)[], pointC: (number | null)[]): number {
@@ -25,7 +25,7 @@ export function calculateAngle(pointA: (number | null)[], vertex: (number | null
   const va: [number, number, number] = [ax - vx, ay - vy, az - vz]
   const vc: [number, number, number] = [cx - vx, cy - vy, cz - vz]
 
-  const angleRad = Vec3Utils.angleBetween(va, vc)
+  const angleRad = vec3.angleBetween(va, vc)
   return angleRad * (180 / Math.PI)
 }
 
@@ -33,6 +33,6 @@ export function calculateVectorAngle(vector1: number[], vector2: number[]): numb
   const v1: [number, number, number] = [vector1[0], vector1[1], vector1[2]]
   const v2: [number, number, number] = [vector2[0], vector2[1], vector2[2]]
 
-  const angleRad = Vec3Utils.angleBetween(v1, v2)
+  const angleRad = vec3.angleBetween(v1, v2)
   return angleRad * (180 / Math.PI)
 }

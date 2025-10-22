@@ -2,7 +2,8 @@
 
 import type { ValidationResult } from '../../validation/validator'
 import type { ValueMap } from '../../optimization/IOptimizable'
-import { Vec3, Vec3Utils, type Value } from 'scalar-autograd'
+import { Vec3, type Value } from 'scalar-autograd'
+import * as vec3 from '../../utils/vec3'
 import { ValidationHelpers } from '../../validation/validator'
 import type { WorldPoint } from '../world-point/WorldPoint'
 import {
@@ -60,26 +61,26 @@ export class CoplanarPointsConstraint extends Constraint {
       const p2 = coordsList[1]
       const p3 = coordsList[2]
 
-      const v1 = Vec3Utils.subtract(p2, p1)
-      const v2 = Vec3Utils.subtract(p3, p1)
+      const v1 = vec3.subtract(p2, p1)
+      const v2 = vec3.subtract(p3, p1)
 
-      const normal = Vec3Utils.cross(v1, v2)
+      const normal = vec3.cross(v1, v2)
 
-      const normalMagnitude = Vec3Utils.magnitude(normal)
+      const normalMagnitude = vec3.magnitude(normal)
       if (normalMagnitude === 0) {
         return { value: Infinity, satisfied: false }
       }
 
-      const unitNormal = Vec3Utils.normalize(normal)
+      const unitNormal = vec3.normalize(normal)
 
       let maxDeviation = 0
 
       for (let i = 3; i < coordsList.length; i++) {
         const pi = coordsList[i]
 
-        const v = Vec3Utils.subtract(pi, p1)
+        const v = vec3.subtract(pi, p1)
 
-        const distance = Math.abs(Vec3Utils.dot(v, unitNormal))
+        const distance = Math.abs(vec3.dot(v, unitNormal))
         maxDeviation = Math.max(maxDeviation, distance)
       }
 

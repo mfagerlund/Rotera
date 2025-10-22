@@ -2,7 +2,7 @@ import type { ISelectable, SelectableType } from '../../types/selectable'
 import type { IValidatable, ValidationContext, ValidationResult, ValidationError } from '../../validation/validator'
 import type { ValueMap, IResidualProvider } from '../../optimization/IOptimizable'
 import type { Value } from 'scalar-autograd'
-import { Vec3Utils } from 'scalar-autograd'
+import * as vec3 from '../../utils/vec3'
 import { ValidationHelpers } from '../../validation/validator'
 import type { WorldPoint } from '../world-point'
 import type { Line } from '../line'
@@ -126,10 +126,10 @@ export abstract class Constraint implements ISelectable, IValidatable, IResidual
       return 0
     }
 
-    const vec1 = Vec3Utils.subtract(aCoords, vCoords)
-    const vec2 = Vec3Utils.subtract(cCoords, vCoords)
+    const vec1 = vec3.subtract(aCoords, vCoords)
+    const vec2 = vec3.subtract(cCoords, vCoords)
 
-    const angleRadians = Vec3Utils.angleBetween(vec1, vec2)
+    const angleRadians = vec3.angleBetween(vec1, vec2)
     return (angleRadians * 180) / Math.PI
   }
 }

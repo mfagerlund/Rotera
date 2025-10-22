@@ -1,7 +1,8 @@
 import type {ISelectable, SelectableType} from '../../types/selectable'
 import type {IValueMapContributor, ValueMap} from '../../optimization/IOptimizable'
 import type {IWorldPoint, ILine, IConstraint, IImagePoint} from '../interfaces'
-import {V, Value, Vec3, Vec3Utils} from 'scalar-autograd'
+import {V, Value, Vec3} from 'scalar-autograd'
+import * as vec3 from '../../utils/vec3'
 import type { ISerializable } from '../serialization/ISerializable'
 import type { SerializationContext } from '../serialization/SerializationContext'
 import type { WorldPointDto } from './WorldPointDto'
@@ -210,7 +211,7 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
         pointA: [number, number, number],
         pointB: [number, number, number]
     ): number {
-        return Vec3Utils.distance(pointA, pointB)
+        return vec3.distance(pointA, pointB)
     }
 
     static calculateCentroid(points: Array<[number, number, number]>): [number, number, number] | null {
@@ -236,10 +237,10 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
         pointC: [number, number, number],
         tolerance: number = 1e-6
     ): boolean {
-        const v1 = Vec3Utils.subtract(pointB, pointA)
-        const v2 = Vec3Utils.subtract(pointC, pointA)
-        const cross = Vec3Utils.cross(v1, v2)
-        const magnitude = Vec3Utils.magnitude(cross)
+        const v1 = vec3.subtract(pointB, pointA)
+        const v2 = vec3.subtract(pointC, pointA)
+        const cross = vec3.cross(v1, v2)
+        const magnitude = vec3.magnitude(cross)
         return magnitude < tolerance
     }
 
@@ -248,9 +249,9 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
         vertex: [number, number, number],
         pointC: [number, number, number]
     ): number {
-        const vec1 = Vec3Utils.subtract(pointA, vertex)
-        const vec2 = Vec3Utils.subtract(pointC, vertex)
-        const angleRad = Vec3Utils.angleBetween(vec1, vec2)
+        const vec1 = vec3.subtract(pointA, vertex)
+        const vec2 = vec3.subtract(pointC, vertex)
+        const angleRad = vec3.angleBetween(vec1, vec2)
         return angleRad * (180 / Math.PI)
     }
 
@@ -259,17 +260,17 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
         planePoint: [number, number, number],
         planeNormal: [number, number, number]
     ): [number, number, number] {
-        const vec = Vec3Utils.subtract(point, planePoint)
-        const dotProduct = Vec3Utils.dot(vec, planeNormal)
-        const normalMagSquared = Vec3Utils.sqrMagnitude(planeNormal)
+        const vec = vec3.subtract(point, planePoint)
+        const dotProduct = vec3.dot(vec, planeNormal)
+        const normalMagSquared = vec3.sqrMagnitude(planeNormal)
 
         if (normalMagSquared === 0) {
             return point
         }
 
         const projectionFactor = dotProduct / normalMagSquared
-        const offset = Vec3Utils.scale(planeNormal, projectionFactor)
-        return Vec3Utils.subtract(point, offset)
+        const offset = vec3.scale(planeNormal, projectionFactor)
+        return vec3.subtract(point, offset)
     }
 
     static distanceToPlane(
@@ -277,9 +278,9 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
         planePoint: [number, number, number],
         planeNormal: [number, number, number]
     ): number {
-        const vec = Vec3Utils.subtract(point, planePoint)
-        const dotProduct = Vec3Utils.dot(vec, planeNormal)
-        const normalMag = Vec3Utils.magnitude(planeNormal)
+        const vec = vec3.subtract(point, planePoint)
+        const dotProduct = vec3.dot(vec, planeNormal)
+        const normalMag = vec3.magnitude(planeNormal)
 
         if (normalMag === 0) {
             return 0
@@ -297,9 +298,9 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
         }
 
         const [p1, p2, p3] = points
-        const v1 = Vec3Utils.subtract(p2, p1)
-        const v2 = Vec3Utils.subtract(p3, p1)
-        const normal = Vec3Utils.cross(v1, v2)
+        const v1 = vec3.subtract(p2, p1)
+        const v2 = vec3.subtract(p3, p1)
+        const normal = vec3.cross(v1, v2)
 
         for (let i = 3; i < points.length; i++) {
             const distance = this.distanceToPlane(points[i], p1, normal)

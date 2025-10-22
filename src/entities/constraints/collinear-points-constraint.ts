@@ -2,7 +2,8 @@
 
 import type { ValidationResult } from '../../validation/validator'
 import type { ValueMap } from '../../optimization/IOptimizable'
-import { Vec3, Vec3Utils, type Value } from 'scalar-autograd'
+import { Vec3, type Value } from 'scalar-autograd'
+import * as vec3 from '../../utils/vec3'
 import { ValidationHelpers } from '../../validation/validator'
 import type { WorldPoint } from '../world-point/WorldPoint'
 import {
@@ -66,13 +67,13 @@ export class CollinearPointsConstraint extends Constraint {
       for (let i = 2; i < coordsList.length; i++) {
         const p3 = coordsList[i]
 
-        const v1 = Vec3Utils.subtract(p2, p1)
-        const v2 = Vec3Utils.subtract(p3, p1)
+        const v1 = vec3.subtract(p2, p1)
+        const v2 = vec3.subtract(p3, p1)
 
-        const cross = Vec3Utils.cross(v1, v2)
+        const cross = vec3.cross(v1, v2)
 
-        const crossMagnitude = Vec3Utils.magnitude(cross)
-        const v1Magnitude = Vec3Utils.magnitude(v1)
+        const crossMagnitude = vec3.magnitude(cross)
+        const v1Magnitude = vec3.magnitude(v1)
 
         const deviation = v1Magnitude > 0 ? crossMagnitude / v1Magnitude : crossMagnitude
         maxDeviation = Math.max(maxDeviation, deviation)
