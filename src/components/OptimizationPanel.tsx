@@ -132,6 +132,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
 
     setIsOptimizing(true)
     setResults(null)
+    setPnpResults([])
 
     try {
       console.log('Running optimization with entities...')
@@ -141,7 +142,47 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
       const lineEntities = Array.from(project.lines.values())
       const viewpointEntities = Array.from(project.viewpoints.values())
 
-      // Run optimization
+      // STEP 1: Automatically initialize cameras using PnP if needed
+      const camerasNeedingInit = viewpointEntities.filter(vp => {
+        const vpConcrete = vp as Viewpoint
+        const hasImagePoints = vpConcrete.imagePoints.size > 0
+        const hasTriangulatedPoints = Array.from(vpConcrete.imagePoints).some(ip =>
+          (ip.worldPoint as any).optimizedXyz !== null
+        )
+
+        // Check if camera is at default/uninitialized position
+        const pos = vpConcrete.position
+        const isAtOrigin = Math.abs(pos[0]) < 0.001 && Math.abs(pos[1]) < 0.001 && Math.abs(pos[2]) < 0.001
+
+        return hasImagePoints && hasTriangulatedPoints && isAtOrigin
+      })
+
+      if (camerasNeedingInit.length > 0) {
+        console.log(`Initializing ${camerasNeedingInit.length} camera(s) using PnP...`)
+        const worldPointSet = new Set(pointEntities)
+        const pnpResults: {camera: string, before: number, after: number}[] = []
+
+        for (const vp of camerasNeedingInit) {
+          const vpConcrete = vp as Viewpoint
+          const beforeError = computeCameraReprojectionError(vpConcrete)
+
+          const success = initializeCameraWithPnP(vpConcrete, worldPointSet)
+
+          if (success) {
+            const afterError = computeCameraReprojectionError(vpConcrete)
+            pnpResults.push({
+              camera: vpConcrete.name,
+              before: beforeError,
+              after: afterError
+            })
+          }
+        }
+
+        setPnpResults(pnpResults)
+        console.log('PnP initialization complete:', pnpResults)
+      }
+
+      // STEP 2: Run bundle adjustment optimization
       const solverResult = await clientSolver.optimize(
         pointEntities,
         lineEntities,
@@ -323,27 +364,6 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
             <FontAwesomeIcon icon={faStop} /> Stop
           </button>
         )}
-      </div>
-
-      <div className="panel-header" style={{ marginTop: '20px' }}>
-        <h3>Camera Initialization (PnP)</h3>
-      </div>
-
-      <div className="optimization-stats">
-        <div className="stat-item">
-          <span className="stat-label">Info:</span>
-          <span className="stat-value">Solve camera poses from known 3D points</span>
-        </div>
-      </div>
-
-      <div className="optimization-controls">
-        <button
-          className="btn-optimize"
-          onClick={handleInitializeCameras}
-          disabled={isOptimizing || isInitializingCameras || stats.viewpointCount === 0}
-        >
-          <FontAwesomeIcon icon={faCamera} /> Initialize Cameras
-        </button>
       </div>
 
       {pnpResults.length > 0 && (

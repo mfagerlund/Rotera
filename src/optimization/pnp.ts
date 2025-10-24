@@ -22,6 +22,9 @@
 import type { IViewpoint, IImagePoint, IWorldPoint } from '../entities/interfaces';
 import type { Viewpoint } from '../entities/viewpoint';
 import type { WorldPoint } from '../entities/world-point';
+import { ConstraintSystem } from './constraint-system';
+import { projectWorldPointToPixelQuaternion } from './camera-projection';
+import { V, Vec3, Vec4 } from 'scalar-autograd';
 
 export interface PnPResult {
   position: [number, number, number];
@@ -487,9 +490,6 @@ export function initializeCameraWithPnP(
 
   const initialError = computeReprojectionError(vpConcrete);
 
-  const { ConstraintSystem } = require('./constraint-system');
-  const { ImagePoint } = require('../entities/imagePoint');
-
   const system = new ConstraintSystem({
     maxIterations: 100,
     tolerance: 1e-6,
@@ -521,11 +521,6 @@ export function initializeCameraWithPnP(
 }
 
 function computeReprojectionError(vp: Viewpoint): number {
-  const { projectWorldPointToPixelQuaternion } = require('./camera-projection');
-  const V = require('scalar-autograd').V;
-  const Vec3 = require('scalar-autograd').Vec3;
-  const Vec4 = require('scalar-autograd').Vec4;
-
   let totalError = 0;
   let count = 0;
 
