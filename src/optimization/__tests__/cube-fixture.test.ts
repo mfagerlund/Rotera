@@ -2,6 +2,7 @@ import { describe, it, expect } from '@jest/globals';
 import { loadProjectFromJson } from '../../store/project-serialization';
 import { ConstraintSystem } from '../constraint-system';
 import { initializeFromImagePairs } from '../seed-initialization';
+import { initializeCameraWithPnP } from '../pnp';
 import { Viewpoint } from '../../entities/viewpoint';
 import { WorldPoint } from '../../entities/world-point';
 import { Line } from '../../entities/line';
@@ -232,27 +233,29 @@ describe('Cube Fixture Optimization', () => {
 
     if (remainingViewpoints.length > 0) {
       console.log(`Found ${remainingViewpoints.length} additional camera(s) to initialize\n`);
-      console.log(`Using rescaled scene scale: ${rescaledSceneScale.toFixed(3)}\n`);
 
       for (const vp of remainingViewpoints) {
         const vpConcrete = vp as Viewpoint;
-        const scaleBaseline = rescaledSceneScale;
-        const cameraDistance = scaleBaseline * 2;
-        const randomOffset = Math.random() * scaleBaseline - scaleBaseline / 2;
-
-        vpConcrete.position = [randomOffset, 0, -cameraDistance];
-        vpConcrete.rotation = [1, 0, 0, 0];
-
-        console.log(`Initialized ${vpConcrete.name} at [${vpConcrete.position.map(x => x.toFixed(3)).join(', ')}]`);
 
         const vpWorldPoints = Array.from(vpConcrete.imagePoints).map(ip => ip.worldPoint);
         const sharedWithSeed = vpWorldPoints.filter(wp =>
           seedPair.sharedWorldPoints.includes(wp)
         );
 
-        console.log(`  Shares ${sharedWithSeed.length} points with seed pair`);
+        console.log(`Initializing ${vpConcrete.name} (shares ${sharedWithSeed.length} points with seed pair)`);
+
+        const success = initializeCameraWithPnP(vpConcrete, project.worldPoints);
+
+        if (!success) {
+          console.log(`  WARNING: PnP initialization failed, using fallback\n`);
+          const scaleBaseline = rescaledSceneScale;
+          const cameraDistance = scaleBaseline * 2;
+          const randomOffset = Math.random() * scaleBaseline - scaleBaseline / 2;
+          vpConcrete.position = [randomOffset, 0, -cameraDistance];
+          vpConcrete.rotation = [1, 0, 0, 0];
+        }
+        console.log();
       }
-      console.log();
     } else {
       console.log('No additional cameras to initialize\n');
     }

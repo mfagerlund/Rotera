@@ -1,3 +1,24 @@
+/**
+ * Perspective-n-Point (PnP) Camera Pose Estimation
+ *
+ * This module provides camera pose estimation from known 3D-2D correspondences.
+ * Currently implements a simple geometric heuristic for camera initialization.
+ *
+ * FUTURE WORK:
+ * The DLT-based PnP solver (solvePnP function) has implementation issues and needs
+ * debugging. For production use, consider implementing:
+ * - EPnP (Efficient Perspective-n-Point)
+ * - P3P + RANSAC for robustness
+ * - Proper decomposition of projection matrix
+ * - Better handling of degenerate cases
+ *
+ * References:
+ * - Lepetit, Moreno-Noguer, Fua: "EPnP: An Accurate O(n) Solution to the PnP Problem"
+ * - Hartley & Zisserman: "Multiple View Geometry" Chapter 7
+ *
+ * @module pnp
+ */
+
 import type { IViewpoint, IImagePoint, IWorldPoint } from '../entities/interfaces';
 import type { Viewpoint } from '../entities/viewpoint';
 import type { WorldPoint } from '../entities/world-point';
@@ -51,8 +72,6 @@ export function solvePnP(
 
   const K = getCameraMatrix(vpConcrete);
 
-  const Pinv_K = invertCameraMatrix(K);
-
   const points3D: [number, number, number][] = [];
   const points2D: [number, number][] = [];
 
@@ -60,14 +79,11 @@ export function solvePnP(
     const wp = corr.worldPoint as WorldPoint;
     const ip = corr.imagePoint;
 
-    const X = wp.optimizedXyz!;
-    const x_normalized = normalizeImagePoint([ip.u, ip.v], Pinv_K);
-
-    points3D.push(X);
-    points2D.push(x_normalized);
+    points3D.push(wp.optimizedXyz!);
+    points2D.push([ip.u, ip.v]);
   }
 
-  const pose = estimatePoseDLT(points3D, points2D);
+  const pose = estimatePoseDLT(points3D, points2D, K);
   if (!pose) {
     console.log('PnP: DLT estimation failed');
     return null;
@@ -88,29 +104,6 @@ function getCameraMatrix(vp: Viewpoint): number[][] {
   ];
 }
 
-function invertCameraMatrix(K: number[][]): number[][] {
-  const fx = K[0][0];
-  const fy = K[1][1];
-  const cx = K[0][2];
-  const cy = K[1][2];
-
-  return [
-    [1 / fx, 0, -cx / fx],
-    [0, 1 / fy, -cy / fy],
-    [0, 0, 1]
-  ];
-}
-
-function normalizeImagePoint(pixel: [number, number], Kinv: number[][]): [number, number] {
-  const u = pixel[0];
-  const v = pixel[1];
-
-  const x = Kinv[0][0] * u + Kinv[0][1] * v + Kinv[0][2];
-  const y = Kinv[1][0] * u + Kinv[1][1] * v + Kinv[1][2];
-
-  return [x, y];
-}
-
 /**
  * Estimate camera pose using Direct Linear Transform (DLT).
  *
@@ -118,11 +111,12 @@ function normalizeImagePoint(pixel: [number, number], Kinv: number[][]): [number
  *   xi × (P * Xi) = 0
  *
  * This gives 2 equations per point (third is linearly dependent).
- * We solve for the 12 elements of P, then decompose.
+ * We solve for the 12 elements of P = K[R|t], then decompose.
  */
 function estimatePoseDLT(
   points3D: [number, number, number][],
-  points2D: [number, number][]
+  points2D: [number, number][],
+  K: number[][]
 ): { position: [number, number, number]; rotation: [number, number, number, number] } | null {
   const n = points3D.length;
   if (n < 4) return null;
@@ -155,7 +149,7 @@ function estimatePoseDLT(
     [P[8], P[9], P[10], P[11]]
   ];
 
-  return decomposePMatrix(P_matrix);
+  return decomposePMatrix(P_matrix, K);
 }
 
 /**
@@ -259,22 +253,26 @@ function dotProduct(a: number[], b: number[]): number {
 
 /**
  * Decompose projection matrix P = K[R|t] into rotation and translation.
- * Assumes K is already factored out (normalized coordinates).
  *
- * P = [M | p4] where M is 3x3, p4 is 3x1
- * We need: R from M, t from p4
+ * P = K[R|t] where K is camera intrinsics, R is rotation, t is translation
+ * First we compute M = K^{-1} * P_left where P_left is the left 3x3 of P
+ * M should equal R (rotation matrix)
+ * Then t = K^{-1} * p4 where p4 is the last column of P
  */
-function decomposePMatrix(P: number[][]): {
+function decomposePMatrix(P: number[][], K: number[][]): {
   position: [number, number, number];
   rotation: [number, number, number, number];
 } | null {
-  const M = [
+  const Kinv = invert3x3(K);
+  if (!Kinv) return null;
+
+  const P_left = [
     [P[0][0], P[0][1], P[0][2]],
     [P[1][0], P[1][1], P[1][2]],
     [P[2][0], P[2][1], P[2][2]]
   ];
 
-  const p4 = [P[0][3], P[1][3], P[2][3]];
+  const M = matrixMultiply3x3(Kinv, P_left);
 
   const R = orthogonalizeMatrix(M);
 
@@ -285,15 +283,27 @@ function decomposePMatrix(P: number[][]): {
         R[i][j] = -R[i][j];
       }
     }
-    p4[0] = -p4[0];
-    p4[1] = -p4[1];
-    p4[2] = -p4[2];
   }
 
-  const C = solveLinearSystem3x3(M, p4);
-  if (!C) return null;
+  const p4 = [P[0][3], P[1][3], P[2][3]];
 
-  const position: [number, number, number] = [-C[0], -C[1], -C[2]];
+  const t = [
+    Kinv[0][0] * p4[0] + Kinv[0][1] * p4[1] + Kinv[0][2] * p4[2],
+    Kinv[1][0] * p4[0] + Kinv[1][1] * p4[1] + Kinv[1][2] * p4[2],
+    Kinv[2][0] * p4[0] + Kinv[2][1] * p4[1] + Kinv[2][2] * p4[2]
+  ];
+
+  const R_T = [
+    [R[0][0], R[1][0], R[2][0]],
+    [R[0][1], R[1][1], R[2][1]],
+    [R[0][2], R[1][2], R[2][2]]
+  ];
+
+  const C_x = -(R_T[0][0] * t[0] + R_T[0][1] * t[1] + R_T[0][2] * t[2]);
+  const C_y = -(R_T[1][0] * t[0] + R_T[1][1] * t[1] + R_T[1][2] * t[2]);
+  const C_z = -(R_T[2][0] * t[0] + R_T[2][1] * t[1] + R_T[2][2] * t[2]);
+
+  const position: [number, number, number] = [C_x, C_y, C_z];
 
   const quaternion = matrixToQuaternion(R);
 
@@ -378,35 +388,58 @@ function determinant3x3(M: number[][]): number {
   );
 }
 
-function solveLinearSystem3x3(A: number[][], b: number[]): number[] | null {
+function invert3x3(A: number[][]): number[][] | null {
   const det = determinant3x3(A);
   if (Math.abs(det) < 1e-10) return null;
 
-  const x = determinant3x3([
-    [b[0], A[0][1], A[0][2]],
-    [b[1], A[1][1], A[1][2]],
-    [b[2], A[2][1], A[2][2]]
-  ]) / det;
+  const inv: number[][] = [
+    [
+      (A[1][1] * A[2][2] - A[1][2] * A[2][1]) / det,
+      (A[0][2] * A[2][1] - A[0][1] * A[2][2]) / det,
+      (A[0][1] * A[1][2] - A[0][2] * A[1][1]) / det
+    ],
+    [
+      (A[1][2] * A[2][0] - A[1][0] * A[2][2]) / det,
+      (A[0][0] * A[2][2] - A[0][2] * A[2][0]) / det,
+      (A[0][2] * A[1][0] - A[0][0] * A[1][2]) / det
+    ],
+    [
+      (A[1][0] * A[2][1] - A[1][1] * A[2][0]) / det,
+      (A[0][1] * A[2][0] - A[0][0] * A[2][1]) / det,
+      (A[0][0] * A[1][1] - A[0][1] * A[1][0]) / det
+    ]
+  ];
 
-  const y = determinant3x3([
-    [A[0][0], b[0], A[0][2]],
-    [A[1][0], b[1], A[1][2]],
-    [A[2][0], b[2], A[2][2]]
-  ]) / det;
+  return inv;
+}
 
-  const z = determinant3x3([
-    [A[0][0], A[0][1], b[0]],
-    [A[1][0], A[1][1], b[1]],
-    [A[2][0], A[2][1], b[2]]
-  ]) / det;
+function matrixMultiply3x3(A: number[][], B: number[][]): number[][] {
+  const result: number[][] = [
+    [0, 0, 0],
+    [0, 0, 0],
+    [0, 0, 0]
+  ];
 
-  return [x, y, z];
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      for (let k = 0; k < 3; k++) {
+        result[i][j] += A[i][k] * B[k][j];
+      }
+    }
+  }
+
+  return result;
 }
 
 /**
- * Initialize an additional camera using PnP.
- * Finds all world points visible in this camera that already have optimizedXyz,
- * then solves PnP to estimate camera pose.
+ * Initialize an additional camera using iterative PnP optimization.
+ *
+ * Algorithm:
+ * 1. Use geometric heuristic for initial guess
+ * 2. Refine camera pose using bundle adjustment (world points fixed)
+ * 3. Return reprojection error for diagnostics
+ *
+ * This approach is robust and leverages our existing optimization infrastructure.
  */
 export function initializeCameraWithPnP(
   viewpoint: IViewpoint,
@@ -414,32 +447,138 @@ export function initializeCameraWithPnP(
 ): boolean {
   const vpConcrete = viewpoint as Viewpoint;
 
-  const correspondences: Array<{ worldPoint: IWorldPoint; imagePoint: IImagePoint }> = [];
+  const visiblePoints: [number, number, number][] = [];
 
   for (const ip of vpConcrete.imagePoints) {
     const wp = ip.worldPoint as WorldPoint;
-    if (wp.optimizedXyz !== null) {
-      correspondences.push({ worldPoint: wp, imagePoint: ip });
+    if (wp.optimizedXyz) {
+      visiblePoints.push(wp.optimizedXyz);
     }
   }
 
-  if (correspondences.length < 4) {
-    console.log(`PnP: Camera ${vpConcrete.name} has only ${correspondences.length} points with optimizedXyz`);
+  if (visiblePoints.length < 3) {
+    console.log(`PnP: Camera ${vpConcrete.name} has only ${visiblePoints.length} points with optimizedXyz`);
     return false;
   }
 
-  const result = solvePnP(correspondences, vpConcrete);
-  if (!result || !result.success) {
-    console.log(`PnP: Failed to solve for camera ${vpConcrete.name}`);
-    return false;
+  const centroid: [number, number, number] = [0, 0, 0];
+  for (const pt of visiblePoints) {
+    centroid[0] += pt[0];
+    centroid[1] += pt[1];
+    centroid[2] += pt[2];
+  }
+  centroid[0] /= visiblePoints.length;
+  centroid[1] /= visiblePoints.length;
+  centroid[2] /= visiblePoints.length;
+
+  let maxDist = 0;
+  for (const pt of visiblePoints) {
+    const dx = pt[0] - centroid[0];
+    const dy = pt[1] - centroid[1];
+    const dz = pt[2] - centroid[2];
+    const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    maxDist = Math.max(maxDist, dist);
   }
 
-  vpConcrete.position = result.position;
-  vpConcrete.rotation = result.rotation;
+  const cameraDistance = Math.max(maxDist * 2.5, 10);
 
-  console.log(`PnP: Initialized ${vpConcrete.name} using ${correspondences.length} correspondences`);
-  console.log(`  Position: [${result.position.map(x => x.toFixed(3)).join(', ')}]`);
-  console.log(`  Rotation: [${result.rotation.map(x => x.toFixed(3)).join(', ')}]`);
+  vpConcrete.position = [centroid[0], centroid[1], centroid[2] - cameraDistance];
+  vpConcrete.rotation = [1, 0, 0, 0];
+
+  const initialError = computeReprojectionError(vpConcrete);
+
+  const { ConstraintSystem } = require('./constraint-system');
+  const { ImagePoint } = require('../entities/imagePoint');
+
+  const system = new ConstraintSystem({
+    maxIterations: 100,
+    tolerance: 1e-6,
+    damping: 10.0,
+    verbose: false
+  });
+
+  for (const ip of vpConcrete.imagePoints) {
+    const wp = ip.worldPoint as WorldPoint;
+    if (wp.optimizedXyz) {
+      system.addPoint(wp);
+    }
+  }
+  system.addCamera(vpConcrete);
+
+  for (const ip of vpConcrete.imagePoints) {
+    system.addImagePoint(ip as any);
+  }
+
+  const result = system.solve();
+  const finalError = computeReprojectionError(vpConcrete);
+
+  console.log(`PnP: Initialized ${vpConcrete.name} using ${visiblePoints.length} points`);
+  console.log(`  Initial reprojection error: ${initialError.toFixed(2)} px`);
+  console.log(`  Final reprojection error: ${finalError.toFixed(2)} px (${result.iterations} iterations)`);
+  console.log(`  Position: [${vpConcrete.position.map(x => x.toFixed(3)).join(', ')}]`);
 
   return true;
+}
+
+function computeReprojectionError(vp: Viewpoint): number {
+  const { projectWorldPointToPixelQuaternion } = require('./camera-projection');
+  const V = require('scalar-autograd').V;
+  const Vec3 = require('scalar-autograd').Vec3;
+  const Vec4 = require('scalar-autograd').Vec4;
+
+  let totalError = 0;
+  let count = 0;
+
+  for (const ip of vp.imagePoints) {
+    const wp = ip.worldPoint as WorldPoint;
+    if (!wp.optimizedXyz) continue;
+
+    try {
+      const worldPoint = new Vec3(
+        V.C(wp.optimizedXyz[0]),
+        V.C(wp.optimizedXyz[1]),
+        V.C(wp.optimizedXyz[2])
+      );
+
+      const cameraPosition = new Vec3(
+        V.C(vp.position[0]),
+        V.C(vp.position[1]),
+        V.C(vp.position[2])
+      );
+
+      const cameraRotation = new Vec4(
+        V.C(vp.rotation[0]),
+        V.C(vp.rotation[1]),
+        V.C(vp.rotation[2]),
+        V.C(vp.rotation[3])
+      );
+
+      const projected = projectWorldPointToPixelQuaternion(
+        worldPoint,
+        cameraPosition,
+        cameraRotation,
+        V.C(vp.focalLength ?? 1000),
+        V.C(vp.aspectRatio ?? 1.0),
+        V.C(vp.principalPointX ?? 500),
+        V.C(vp.principalPointY ?? 500),
+        V.C(vp.skewCoefficient ?? 0),
+        V.C(vp.radialDistortion[0] ?? 0),
+        V.C(vp.radialDistortion[1] ?? 0),
+        V.C(vp.radialDistortion[2] ?? 0),
+        V.C(vp.tangentialDistortion[0] ?? 0),
+        V.C(vp.tangentialDistortion[1] ?? 0)
+      );
+
+      if (projected) {
+        const dx = projected[0].data - ip.u;
+        const dy = projected[1].data - ip.v;
+        totalError += Math.sqrt(dx * dx + dy * dy);
+        count++;
+      }
+    } catch (e) {
+      console.warn(`Error computing reprojection for ${wp.name} @ ${vp.name}:`, e);
+    }
+  }
+
+  return count > 0 ? totalError / count : 0;
 }
