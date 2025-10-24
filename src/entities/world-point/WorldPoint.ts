@@ -100,6 +100,10 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
         return false
     }
 
+    isFullyLocked(): boolean {
+        return this.lockedXyz[0] !== null && this.lockedXyz[1] !== null && this.lockedXyz[2] !== null
+    }
+
     isXLocked(): boolean {
         return this.lockedXyz[0] !== null
     }
