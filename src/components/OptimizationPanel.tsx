@@ -10,6 +10,8 @@ import { defaultOptimizationSettings } from '../services/optimization'
 import { getEntityKey } from '../utils/entityKeys'
 import { initializeCameraWithPnP } from '../optimization/pnp'
 import { Viewpoint } from '../entities/viewpoint'
+import { projectWorldPointToPixelQuaternion } from '../optimization/camera-projection'
+import { V, Vec3, Vec4 } from 'scalar-autograd'
 
 interface OptimizationPanelProps {
   project: Project
@@ -17,11 +19,6 @@ interface OptimizationPanelProps {
 }
 
 function computeCameraReprojectionError(vp: Viewpoint): number {
-  const { projectWorldPointToPixelQuaternion } = require('../optimization/camera-projection')
-  const V = require('scalar-autograd').V
-  const Vec3 = require('scalar-autograd').Vec3
-  const Vec4 = require('scalar-autograd').Vec4
-
   let totalError = 0
   let count = 0
 
