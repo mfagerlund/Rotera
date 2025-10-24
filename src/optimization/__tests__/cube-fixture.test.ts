@@ -1,7 +1,7 @@
 import { describe, it, expect } from '@jest/globals';
 import { loadProjectFromJson } from '../../store/project-serialization';
 import { ConstraintSystem } from '../constraint-system';
-import { smartInitialization } from '../smart-initialization';
+import { initializeFromImagePairs } from '../seed-initialization';
 import * as fs from 'fs';
 
 describe('Cube Fixture Optimization', () => {
@@ -16,218 +16,175 @@ describe('Cube Fixture Optimization', () => {
     const fixtureJson = fs.readFileSync(fixturePath, 'utf-8');
     const project = loadProjectFromJson(fixtureJson);
 
-    console.log('\n=== CUBE FIXTURE TEST ===\n');
+    console.log('\n=== CUBE FIXTURE TEST (SfM INITIALIZATION) ===\n');
 
-    // Check what cameras look like before we modify them
-    console.log('=== CAMERAS BEFORE INITIALIZATION ===');
-    for (const vp of project.viewpoints) {
-      console.log(`${vp.name}: pos=${vp.position}, rot=${vp.rotation}`);
-    }
-    console.log();
+    console.log('Project info:');
+    console.log(`  World Points: ${project.worldPoints.size}`);
+    console.log(`  Lines: ${project.lines.size}`);
+    console.log(`  Viewpoints: ${project.viewpoints.size}`);
+    console.log(`  Image Points: ${Array.from(project.viewpoints).reduce((sum, vp) => sum + vp.imagePoints.size, 0)}`);
+    console.log(`  Constraints: ${project.constraints.size}\n`);
 
-    console.log('Initializing cube structure...');
+    console.log('=== STAGE 0: INITIALIZE SEED PAIR FROM IMAGE CORRESPONDENCES ===\n');
 
-    // Initialize cube corners at ACTUAL TARGET scale (10x10x10)
-    // This gives bundle adjustment a good starting point
-    const cubeCorners = [
-      [10, 0, 0],     // WP1
-      [10, 10, 0],     // WP2
-      [0, 10, 0],     // WP3
-      // WP4 at [0,0,0] is locked - skip
-      [0, 0, 10],     // WP5
-      [10, 0, 10],     // WP6
-      [10, 10, 10],     // WP7
-      [0, 10, 10],     // WP8
-      [5, 5, 5],  // WP9 (center)
-    ];
+    const initResult = initializeFromImagePairs(project);
 
-    let i = 0;
-    for (const point of project.worldPoints) {
-      if (!point.optimizedXyz && !point.isLocked()) {
-        if (i < cubeCorners.length) {
-          point.optimizedXyz = cubeCorners[i] as [number, number, number];
-        } else {
-          point.optimizedXyz = [i * 2.0, i * 1.5, i * 1.0];
-        }
-        i++;
-      }
+    if (!initResult.success || !initResult.seedPair) {
+      console.log('Initialization failed!');
+      initResult.errors.forEach(err => console.log(`  ERROR: ${err}`));
+      expect(initResult.success).toBe(true);
+      return;
     }
 
-    // Initialize cameras close to cube on -Z axis with slight variations
-    // Cube center is at (5, 5, 5), cameras look at it from front
-    // Start closer (~15 units) for better initial reprojections
-    const cameraData = [
-      { position: [5, 5, -15], rotation: [1, 0, 0, 0] },    // Camera 1: centered front view
-      { position: [3, 7, -18], rotation: [1, 0, 0, 0] },    // Camera 2: offset front view
-      { position: [7, 3, -12], rotation: [1, 0, 0, 0] },    // Camera 3: different offset
-    ];
+    console.log(`Seed pair: ${initResult.seedPair.viewpoint1.name} + ${initResult.seedPair.viewpoint2.name}`);
+    console.log(`  Scale baseline: ${initResult.scaleBaseline?.toFixed(3)}`);
+    console.log(`  Triangulated: ${initResult.triangulatedPoints}/${initResult.seedPair.sharedWorldPoints.length} points`);
 
-    const viewpoints = Array.from(project.viewpoints);
-    for (let j = 0; j < Math.min(viewpoints.length, cameraData.length); j++) {
-      viewpoints[j].position = cameraData[j].position as [number, number, number];
-      viewpoints[j].rotation = cameraData[j].rotation as [number, number, number, number];
+    if (initResult.warnings.length > 0) {
+      console.log('\nWarnings:');
+      initResult.warnings.forEach(warn => console.log(`  - ${warn}`));
     }
 
-    console.log(`Initialized ${i} world points and ${Math.min(viewpoints.length, cameraData.length)} cameras.\n`);
-    console.log(`World Points: ${project.worldPoints.size}`);
-    console.log(`Lines: ${project.lines.size}`);
-    console.log(`Viewpoints: ${project.viewpoints.size}`);
-    console.log(`Image Points: ${Array.from(project.viewpoints).reduce((sum, vp) => sum + vp.imagePoints.size, 0)}`);
-    console.log(`Constraints: ${project.constraints.size}\n`);
-
-    console.log('=== INITIAL STATE ===\n');
-
-    for (const wp of project.worldPoints) {
-      const locked = wp.lockedXyz.map(x => x !== null ? x.toFixed(3) : 'null').join(', ');
-      const opt = wp.optimizedXyz ? wp.optimizedXyz.map(x => x.toFixed(3)).join(', ') : 'none';
-      console.log(`${wp.name}:`);
-      console.log(`  Locked: [${locked}]`);
-      console.log(`  Optimized: [${opt}]`);
-    }
-    console.log();
-
-    for (const line of project.lines) {
-      console.log(`${line.name || 'Line'}:`);
-      console.log(`  ${line.pointA.name} -> ${line.pointB.name}`);
-      console.log(`  Target: ${line.targetLength}`);
-      console.log(`  Direction: ${line.direction}`);
-    }
-    console.log();
-
-    // STAGE 1: Bundle adjustment - find relative geometry from image observations
-    console.log('=== STAGE 1: BUNDLE ADJUSTMENT (CAMERAS + IMAGE POINTS) ===\n');
+    console.log('\n=== STAGE 1: BUNDLE ADJUSTMENT (SEED PAIR ONLY) ===\n');
 
     const system1 = new ConstraintSystem({
       maxIterations: 200,
       tolerance: 1e-6,
-      damping: 10.0,  // Very high damping for stability in bundle adjustment
+      damping: 10.0,
       verbose: true
     });
 
-    project.worldPoints.forEach(p => system1.addPoint(p));
-    project.viewpoints.forEach(v => system1.addCamera(v));
-    project.imagePoints.forEach(ip => system1.addImagePoint(ip as any));
-    // NO geometric constraints yet - let it find relative geometry
+    const seedPair = initResult.seedPair;
+    seedPair.sharedWorldPoints.forEach(p => system1.addPoint(p));
+    system1.addCamera(seedPair.viewpoint1);
+    system1.addCamera(seedPair.viewpoint2);
+
+    const seedImagePoints = [
+      ...Array.from(seedPair.viewpoint1.imagePoints).filter(ip =>
+        seedPair.sharedWorldPoints.includes(ip.worldPoint)
+      ),
+      ...Array.from(seedPair.viewpoint2.imagePoints).filter(ip =>
+        seedPair.sharedWorldPoints.includes(ip.worldPoint)
+      )
+    ];
+    seedImagePoints.forEach(ip => system1.addImagePoint(ip as any));
 
     const result1 = system1.solve();
-    console.log(`Stage 1 Result: Converged=${result1.converged}, Iterations=${result1.iterations}, Residual=${result1.residual.toFixed(2)}`);
+    console.log(`Converged: ${result1.converged}`);
+    console.log(`Iterations: ${result1.iterations}`);
+    console.log(`Residual: ${result1.residual.toFixed(2)}\n`);
 
-    console.log('\nStage 1 Camera Poses:');
-    for (const vp of project.viewpoints) {
-      console.log(`  ${vp.name}: pos=[${vp.position.map(x => x.toFixed(3)).join(', ')}], rot=[${vp.rotation.map(x => x.toFixed(3)).join(', ')}]`);
-    }
+    console.log('Seed pair camera poses:');
+    console.log(`  ${seedPair.viewpoint1.name}: pos=[${seedPair.viewpoint1.position.map(x => x.toFixed(3)).join(', ')}]`);
+    console.log(`  ${seedPair.viewpoint2.name}: pos=[${seedPair.viewpoint2.position.map(x => x.toFixed(3)).join(', ')}]`);
 
-    console.log('\nStage 1 Reprojection Errors:');
-    for (const vp of project.viewpoints) {
-      let totalError = 0;
-      let count = 0;
-      for (const ip of vp.imagePoints) {
-        if (ip.lastResiduals && ip.lastResiduals.length === 2) {
-          const error = Math.sqrt(ip.lastResiduals[0]**2 + ip.lastResiduals[1]**2);
-          totalError += error;
-          count++;
-        }
-      }
-      if (count > 0) {
-        console.log(`  ${vp.name}: avg = ${(totalError / count).toFixed(2)} pixels`);
+    console.log('\nSeed pair reprojection errors:');
+    let totalErrorSeed = 0;
+    let countSeed = 0;
+    for (const ip of seedImagePoints) {
+      if (ip.lastResiduals && ip.lastResiduals.length === 2) {
+        const error = Math.sqrt(ip.lastResiduals[0]**2 + ip.lastResiduals[1]**2);
+        totalErrorSeed += error;
+        countSeed++;
       }
     }
-
-    console.log('\nStage 1 Point Positions:');
-    for (const wp of project.worldPoints) {
-      const pos = wp.optimizedXyz || wp.lockedXyz;
-      if (pos && pos.some(x => x !== null)) {
-        const coords = pos.map(x => x !== null ? x.toFixed(3) : 'null').join(', ');
-        console.log(`  ${wp.name}: [${coords}]`);
-      }
+    if (countSeed > 0) {
+      console.log(`  Average: ${(totalErrorSeed / countSeed).toFixed(2)} pixels (${countSeed} observations)`);
     }
 
-    // Compute scale factor from a line with target length
-    console.log('\n=== SCALING TO FIX METRIC ===');
-    let scaleFactor = 1.0;
-    for (const line of project.lines) {
-      if (line.targetLength !== undefined && line.targetLength > 0) {
-        const info = line.getOptimizationInfo();
-        if (info.length && info.length > 0.001) {
-          scaleFactor = line.targetLength / info.length;
-          console.log(`Using ${line.name || 'Line'}: current=${info.length.toFixed(3)}, target=${line.targetLength}, scale=${scaleFactor.toFixed(3)}`);
-          break;
-        }
+    console.log('\n=== STAGE 2: ADD REMAINING CAMERAS (if any) ===\n');
+
+    const remainingViewpoints = Array.from(project.viewpoints).filter(vp =>
+      vp !== seedPair.viewpoint1 && vp !== seedPair.viewpoint2
+    );
+
+    if (remainingViewpoints.length > 0) {
+      console.log(`Found ${remainingViewpoints.length} additional camera(s) to initialize\n`);
+
+      for (const vp of remainingViewpoints) {
+        const scaleBaseline = initResult.scaleBaseline || 10.0;
+        const cameraDistance = scaleBaseline * 2;
+        const randomOffset = Math.random() * scaleBaseline - scaleBaseline / 2;
+
+        vp.position = [randomOffset, 0, -cameraDistance];
+        vp.rotation = [1, 0, 0, 0];
+
+        console.log(`Initialized ${vp.name} at [${vp.position.map(x => x.toFixed(3)).join(', ')}]`);
+
+        const vpWorldPoints = Array.from(vp.imagePoints).map(ip => ip.worldPoint);
+        const sharedWithSeed = vpWorldPoints.filter(wp =>
+          seedPair.sharedWorldPoints.includes(wp)
+        );
+
+        console.log(`  Shares ${sharedWithSeed.length} points with seed pair`);
       }
+      console.log();
+    } else {
+      console.log('No additional cameras to initialize\n');
     }
 
-    // Apply scale to all world points (except locked WP4 at origin)
-    for (const wp of project.worldPoints) {
-      if (wp.optimizedXyz && !wp.isLocked()) {
-        wp.optimizedXyz = wp.optimizedXyz.map(x => x * scaleFactor) as [number, number, number];
-      }
-    }
-
-    // Also scale camera positions AND focal lengths to maintain reprojections
-    for (const vp of project.viewpoints) {
-      vp.position = vp.position.map(x => x * scaleFactor) as [number, number, number];
-      vp.focalLength = vp.focalLength * scaleFactor;
-    }
-
-    console.log('Scaled world, cameras, and focal lengths by factor', scaleFactor.toFixed(3));
-    console.log();
-
-    // TRANSLATION: Align WP4 (locked point) to origin
-    console.log('=== TRANSLATION TO ALIGN WP4 TO ORIGIN ===');
-    const wp4 = Array.from(project.worldPoints).find(wp => wp.name === 'WP4');
-    if (wp4 && wp4.optimizedXyz) {
-      const offset = wp4.optimizedXyz.map(x => -x) as [number, number, number];
-      console.log(`WP4 is at [${wp4.optimizedXyz.map(x => x.toFixed(3)).join(', ')}]`);
-      console.log(`Translating by [${offset.map(x => x.toFixed(3)).join(', ')}]`);
-
-      // Apply translation to all world points
-      for (const wp of project.worldPoints) {
-        if (wp.optimizedXyz) {
-          wp.optimizedXyz = [
-            wp.optimizedXyz[0] + offset[0],
-            wp.optimizedXyz[1] + offset[1],
-            wp.optimizedXyz[2] + offset[2]
-          ];
-        }
-      }
-
-      // Apply translation to all cameras to maintain reprojections
-      for (const vp of project.viewpoints) {
-        vp.position = [
-          vp.position[0] + offset[0],
-          vp.position[1] + offset[1],
-          vp.position[2] + offset[2]
-        ];
-      }
-
-      console.log(`After translation, WP4 is at [${wp4.optimizedXyz.map(x => x.toFixed(3)).join(', ')}]`);
-
-      console.log('\nCamera poses after translation:');
-      for (const vp of project.viewpoints) {
-        console.log(`  ${vp.name}: pos=[${vp.position.map(x => x.toFixed(3)).join(', ')}], rot=[${vp.rotation.map(x => x.toFixed(3)).join(', ')}]`);
-      }
-    }
-    console.log();
-
-    // STAGE 2: Apply geometric constraints while maintaining reprojections
-    // Include cameras and image points so they co-optimize with geometric constraints
-    // Higher damping to prevent collapsing back to smaller scale
-    console.log('=== STAGE 2: APPLY GEOMETRIC CONSTRAINTS + REFINE CAMERAS ===\n');
+    console.log('=== STAGE 3: BUNDLE ADJUSTMENT (ALL CAMERAS) ===\n');
 
     const system2 = new ConstraintSystem({
-      maxIterations: 500,
-      tolerance: 1e-4,  // Relax tolerance since perfect fit may not be possible
-      damping: 2.0,  // Medium damping
+      maxIterations: 200,
+      tolerance: 1e-6,
+      damping: 10.0,
       verbose: true
     });
 
     project.worldPoints.forEach(p => system2.addPoint(p));
-    project.lines.forEach(l => system2.addLine(l));
     project.viewpoints.forEach(v => system2.addCamera(v));
     project.imagePoints.forEach(ip => system2.addImagePoint(ip as any));
-    project.constraints.forEach(c => system2.addConstraint(c));
 
-    const result = system2.solve();
+    const result2 = system2.solve();
+    console.log(`\nConverged: ${result2.converged}`);
+    console.log(`Iterations: ${result2.iterations}`);
+    console.log(`Residual: ${result2.residual.toFixed(2)}\n`);
+
+    console.log('All camera poses:');
+    for (const vp of project.viewpoints) {
+      console.log(`  ${vp.name}: pos=[${vp.position.map(x => x.toFixed(3)).join(', ')}]`);
+    }
+
+    console.log('\nAll reprojection errors:');
+    let totalErrorAll = 0;
+    let countAll = 0;
+    for (const vp of project.viewpoints) {
+      let vpError = 0;
+      let vpCount = 0;
+      for (const ip of vp.imagePoints) {
+        if (ip.lastResiduals && ip.lastResiduals.length === 2) {
+          const error = Math.sqrt(ip.lastResiduals[0]**2 + ip.lastResiduals[1]**2);
+          vpError += error;
+          vpCount++;
+          totalErrorAll += error;
+          countAll++;
+        }
+      }
+      if (vpCount > 0) {
+        console.log(`  ${vp.name}: ${(vpError / vpCount).toFixed(2)} px (${vpCount} obs)`);
+      }
+    }
+    if (countAll > 0) {
+      console.log(`  Overall average: ${(totalErrorAll / countAll).toFixed(2)} px (${countAll} obs)`);
+    }
+
+    console.log('\n=== STAGE 4: APPLY GEOMETRIC CONSTRAINTS ===\n');
+
+    const system3 = new ConstraintSystem({
+      maxIterations: 500,
+      tolerance: 1e-4,
+      damping: 2.0,
+      verbose: true
+    });
+
+    project.worldPoints.forEach(p => system3.addPoint(p));
+    project.lines.forEach(l => system3.addLine(l));
+    project.viewpoints.forEach(v => system3.addCamera(v));
+    project.imagePoints.forEach(ip => system3.addImagePoint(ip as any));
+    project.constraints.forEach(c => system3.addConstraint(c));
+
+    const result = system3.solve();
 
     console.log('\n=== OPTIMIZATION RESULT ===\n');
     console.log(`Converged: ${result.converged}`);
