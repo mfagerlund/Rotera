@@ -47,23 +47,23 @@ export class Serialization {
     const context = new SerializationContext()
 
     const worldPoints = new Set(
-      dto.worldPoints.map(wpDto => WorldPoint.deserialize(wpDto, context))
+      (dto.worldPoints || []).map(wpDto => WorldPoint.deserialize(wpDto, context))
     )
 
     const viewpoints = new Set(
-      dto.viewpoints.map(vpDto => Viewpoint.deserialize(vpDto, context))
+      (dto.viewpoints || []).map(vpDto => Viewpoint.deserialize(vpDto, context))
     )
 
     const lines = new Set(
-      dto.lines.map(lineDto => Line.deserialize(lineDto, context))
+      (dto.lines || []).map(lineDto => Line.deserialize(lineDto, context))
     )
 
     const imagePoints = new Set<IImagePoint>(
-      dto.imagePoints.map(ipDto => ImagePoint.deserialize(ipDto, context))
+      (dto.imagePoints || []).map(ipDto => ImagePoint.deserialize(ipDto, context))
     )
 
     const constraints = new Set(
-      dto.constraints.map(cDto => deserializeConstraint(cDto, context))
+      (dto.constraints || []).map(cDto => deserializeConstraint(cDto, context))
     )
 
     return Project.createFull(

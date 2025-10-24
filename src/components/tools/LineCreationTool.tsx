@@ -96,8 +96,6 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
   // Initialize to false so first activation is detected
   const prevIsActiveRef = useRef(false)
 
-  console.log('[LineCreationTool] Component rendered. isActive:', isActive, 'editMode:', editMode)
-
   // Pre-populate form when in edit mode
   // IMPORTANT: Only run this on initial mount in edit mode to prevent reverting changes
   useEffect(() => {
@@ -126,30 +124,16 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
     const wasActive = prevIsActiveRef.current
     const isNowActive = isActive
 
-    console.log('[LineCreationTool] Pre-populate effect running:', {
-      wasActive,
-      isNowActive,
-      selectedPointsLength: selectedPoints.length,
-      selectedPointsArray: selectedPoints,
-      editMode,
-      currentSlot1: pointSlot1,
-      currentSlot2: pointSlot2
-    })
-
     // Tool just became active (opened)
     if (!wasActive && isNowActive && !editMode) {
       if (selectedPoints.length > 0) {
-        console.log('[LineCreationTool] ✓ Pre-populating slots:', selectedPoints)
         setPointSlot1(selectedPoints[0] || null)
         setPointSlot2(selectedPoints[1] || null)
-      } else {
-        console.log('[LineCreationTool] ✗ Not pre-populating - no points selected')
       }
     }
 
     // Tool just became inactive (closed) - reset slots and ref
     if (wasActive && !isNowActive) {
-      console.log('[LineCreationTool] Clearing slots on deactivation')
       setPointSlot1(null)
       setPointSlot2(null)
     }

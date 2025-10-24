@@ -15,6 +15,7 @@ import type { ValueMap } from './IOptimizable';
 import type { WorldPoint } from '../entities/world-point/WorldPoint';
 import type { Line } from '../entities/line/Line';
 import type { Viewpoint } from '../entities/viewpoint/Viewpoint';
+import type { ImagePoint } from '../entities/imagePoint/ImagePoint';
 import type { Constraint } from '../entities/constraints/base-constraint';
 
 export interface SolverResult {
@@ -41,6 +42,7 @@ export class ConstraintSystem {
   private points: Set<WorldPoint> = new Set();
   private lines: Set<Line> = new Set();
   private cameras: Set<Viewpoint> = new Set();
+  private imagePoints: Set<ImagePoint> = new Set();
   private constraints: Set<Constraint> = new Set();
 
   constructor(options: SolverOptions = {}) {
@@ -71,6 +73,14 @@ export class ConstraintSystem {
    */
   addCamera(viewpoint: Viewpoint): void {
     this.cameras.add(viewpoint);
+  }
+
+  /**
+   * Add an image point to the constraint system.
+   * Image points compute reprojection residuals.
+   */
+  addImagePoint(imagePoint: ImagePoint): void {
+    this.imagePoints.add(imagePoint);
   }
 
   /**
@@ -133,6 +143,12 @@ export class ConstraintSystem {
         }
       }
 
+      // IMAGE POINT REPROJECTION CONSTRAINTS
+      for (const imagePoint of this.imagePoints) {
+        const reprojectionResiduals = imagePoint.computeResiduals(valueMap);
+        residuals.push(...reprojectionResiduals);
+      }
+
       // EXPLICIT USER CONSTRAINTS
       for (const constraint of this.constraints) {
         try {
@@ -169,14 +185,58 @@ export class ConstraintSystem {
     // Test residual function before optimization
     try {
       console.log('[ConstraintSystem] Testing residual function...');
-      const testResiduals = residualFn(variables);
-      console.log(`[ConstraintSystem] Initial residuals: ${testResiduals.length} residuals`);
-      const hasNaN = testResiduals.some(r => isNaN(r.data));
+
+      const allResiduals: Value[] = [];
+
+      console.log(`[ConstraintSystem] Computing line residuals (${this.lines.size} lines)...`);
+      for (const line of this.lines) {
+        const lineResiduals = line.computeResiduals(valueMap);
+        console.log(`  ${line.name || 'Line'}: ${lineResiduals.length} residuals = [${lineResiduals.map(r => r.data.toFixed(4)).join(', ')}]`);
+        allResiduals.push(...lineResiduals);
+      }
+
+      console.log(`[ConstraintSystem] Computing camera residuals (${this.cameras.size} cameras)...`);
+      for (const camera of this.cameras) {
+        if ('computeResiduals' in camera && typeof camera.computeResiduals === 'function') {
+          const cameraResiduals = (camera as any).computeResiduals(valueMap);
+          console.log(`  ${camera.name}: ${cameraResiduals.length} residuals = [${cameraResiduals.map((r: Value) => r.data.toFixed(4)).join(', ')}]`);
+          allResiduals.push(...cameraResiduals);
+        }
+      }
+
+      console.log(`[ConstraintSystem] Computing image point reprojections (${this.imagePoints.size} image points)...`);
+      for (const imagePoint of this.imagePoints) {
+        const reprojectionResiduals = imagePoint.computeResiduals(valueMap);
+        console.log(`  ${imagePoint.getName()}: ${reprojectionResiduals.length} residuals = [${reprojectionResiduals.map(r => r.data.toFixed(4)).join(', ')}]`);
+        allResiduals.push(...reprojectionResiduals);
+      }
+
+      console.log(`[ConstraintSystem] Computing constraint residuals (${this.constraints.size} constraints)...`);
+      for (const constraint of this.constraints) {
+        const constraintResiduals = constraint.computeResiduals(valueMap);
+        console.log(`  ${constraint.getName()}: ${constraintResiduals.length} residuals = [${constraintResiduals.map(r => r.data.toFixed(4)).join(', ')}]`);
+        allResiduals.push(...constraintResiduals);
+      }
+
+      console.log(`[ConstraintSystem] Total residuals: ${allResiduals.length}`);
+
+      const hasNaN = allResiduals.some(r => isNaN(r.data));
+      const hasInfinity = allResiduals.some(r => !isFinite(r.data));
+
       if (hasNaN) {
         console.error('[ConstraintSystem] NaN detected in initial residuals!');
-        testResiduals.forEach((r, i) => {
+        allResiduals.forEach((r, i) => {
           if (isNaN(r.data)) {
             console.error(`  Residual ${i}: NaN`);
+          }
+        });
+      }
+
+      if (hasInfinity) {
+        console.error('[ConstraintSystem] Infinity detected in initial residuals!');
+        allResiduals.forEach((r, i) => {
+          if (!isFinite(r.data)) {
+            console.error(`  Residual ${i}: ${r.data}`);
           }
         });
       }
@@ -208,11 +268,21 @@ export class ConstraintSystem {
         }
       }
 
+      // Update image points with solved values
+      for (const imagePoint of this.imagePoints) {
+        imagePoint.applyOptimizationResult(valueMap);
+      }
+
       // Evaluate and store residuals for lines (intrinsic constraints)
       for (const line of this.lines) {
         if ('evaluateAndStoreResiduals' in line && typeof line.evaluateAndStoreResiduals === 'function') {
           (line as any).evaluateAndStoreResiduals(valueMap);
         }
+      }
+
+      // Validate push/pop symmetry in verbose mode
+      if (this.verbose) {
+        this.validateResidualSymmetry(valueMap);
       }
 
       // Compute final residual magnitude
@@ -236,6 +306,79 @@ export class ConstraintSystem {
         residual: Infinity,
         error: error instanceof Error ? error.message : 'Unknown error',
       };
+    }
+  }
+
+  /**
+   * Validate that entities pop the same number of residuals they push.
+   * This ensures architectural invariant: push count == pop count.
+   *
+   * @param valueMap - The ValueMap with solved values
+   */
+  private validateResidualSymmetry(valueMap: ValueMap): void {
+    const pushCounts = new Map<any, { count: number; name: string }>();
+
+    // Count pushed residuals for lines
+    for (const line of this.lines) {
+      const residuals = line.computeResiduals(valueMap);
+      pushCounts.set(line, {
+        count: residuals.length,
+        name: (line as any).name || 'Line'
+      });
+    }
+
+    // Count pushed residuals for cameras
+    for (const camera of this.cameras) {
+      if ('computeResiduals' in camera && typeof camera.computeResiduals === 'function') {
+        const residuals = (camera as any).computeResiduals(valueMap);
+        pushCounts.set(camera, {
+          count: residuals.length,
+          name: (camera as any).name || 'Camera'
+        });
+      }
+    }
+
+    // Count pushed residuals for image points
+    for (const imagePoint of this.imagePoints) {
+      const residuals = imagePoint.computeResiduals(valueMap);
+      pushCounts.set(imagePoint, {
+        count: residuals.length,
+        name: imagePoint.getName()
+      });
+    }
+
+    // Count pushed residuals for constraints
+    for (const constraint of this.constraints) {
+      const residuals = constraint.computeResiduals(valueMap);
+      pushCounts.set(constraint, {
+        count: residuals.length,
+        name: constraint.getName()
+      });
+    }
+
+    // Verify pop counts match push counts
+    let hasViolations = false;
+    for (const [entity, info] of pushCounts) {
+      if ('lastResiduals' in entity) {
+        const actualCount = (entity as any).lastResiduals?.length ?? 0;
+        if (actualCount !== info.count) {
+          console.error(
+            `[ConstraintSystem] Push/pop mismatch for ${info.name}: ` +
+            `pushed ${info.count}, popped ${actualCount}`
+          );
+          hasViolations = true;
+        }
+      } else if (info.count > 0) {
+        console.warn(
+          `[ConstraintSystem] ${info.name} pushed ${info.count} residuals ` +
+          `but has no lastResiduals field to pop them into`
+        );
+        hasViolations = true;
+      }
+    }
+
+    if (!hasViolations) {
+      console.log('[ConstraintSystem] ✓ All entities have symmetric push/pop residuals');
     }
   }
 

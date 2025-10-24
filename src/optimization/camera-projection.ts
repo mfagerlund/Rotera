@@ -171,8 +171,13 @@ export function cameraToPixelCoordinates(
   p2: Value
 ): [Value, Value] | null {
   // Check if point is behind camera (z <= 0)
-  // Note: In optimization, we can't early return, so we handle this differently
-  // For now, we'll proceed and let the optimizer deal with it
+  const zThreshold = V.C(0.1);
+  const isBehindCamera = V.sub(cameraPoint.z, zThreshold);
+
+  // If z is too small, return null (point behind camera)
+  if (cameraPoint.z.data < 0.1) {
+    return null;
+  }
 
   // Normalize by z (perspective projection)
   const x_normalized = V.div(cameraPoint.x, cameraPoint.z);
@@ -198,6 +203,81 @@ export function cameraToPixelCoordinates(
   const v = V.add(V.mul(fy, y_distorted), principalPointY);
 
   return [u, v];
+}
+
+/**
+ * Transform world point to camera coordinates using quaternion rotation.
+ * P_camera = q * (P_world - C_world) * q*
+ *
+ * @param worldPoint - Point in world coordinates (Vec3)
+ * @param cameraPosition - Camera position in world coordinates (Vec3)
+ * @param cameraRotation - Camera rotation as quaternion (Vec4, w,x,y,z)
+ * @returns Point in camera coordinates (Vec3)
+ */
+export function worldToCameraCoordinatesQuaternion(
+  worldPoint: Vec3,
+  cameraPosition: Vec3,
+  cameraRotation: any
+): Vec3 {
+  const { Quaternion } = require('./Quaternion');
+
+  // Translate to camera origin
+  const translated = worldPoint.sub(cameraPosition);
+
+  // Rotate into camera frame using quaternion
+  return Quaternion.rotateVector(cameraRotation, translated);
+}
+
+/**
+ * Full camera projection pipeline using quaternion: World coordinates → Pixel coordinates.
+ *
+ * @param worldPoint - Point in world coordinates (Vec3)
+ * @param cameraPosition - Camera position in world coordinates (Vec3)
+ * @param cameraRotation - Camera rotation as quaternion (Vec4, w,x,y,z)
+ * @param focalLength - Focal length (pixels)
+ * @param aspectRatio - Aspect ratio (fy/fx)
+ * @param principalPointX - Principal point x coordinate (pixels)
+ * @param principalPointY - Principal point y coordinate (pixels)
+ * @param skew - Skew coefficient
+ * @param k1 - First radial distortion coefficient
+ * @param k2 - Second radial distortion coefficient
+ * @param k3 - Third radial distortion coefficient
+ * @param p1 - First tangential distortion coefficient
+ * @param p2 - Second tangential distortion coefficient
+ * @returns Pixel coordinates [u, v]
+ */
+export function projectWorldPointToPixelQuaternion(
+  worldPoint: Vec3,
+  cameraPosition: Vec3,
+  cameraRotation: any,
+  focalLength: Value,
+  aspectRatio: Value,
+  principalPointX: Value,
+  principalPointY: Value,
+  skew: Value,
+  k1: Value,
+  k2: Value,
+  k3: Value,
+  p1: Value,
+  p2: Value
+): [Value, Value] | null {
+  // Transform to camera coordinates using quaternion
+  const cameraPoint = worldToCameraCoordinatesQuaternion(worldPoint, cameraPosition, cameraRotation);
+
+  // Project to pixel coordinates
+  return cameraToPixelCoordinates(
+    cameraPoint,
+    focalLength,
+    aspectRatio,
+    principalPointX,
+    principalPointY,
+    skew,
+    k1,
+    k2,
+    k3,
+    p1,
+    p2
+  );
 }
 
 /**

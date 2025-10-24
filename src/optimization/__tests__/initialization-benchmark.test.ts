@@ -5,17 +5,42 @@
  * Measures: initial residual, iterations to converge, final residual, time.
  */
 
-import { WorldPoint as WorldPointEntity } from '../../entities/world-point/WorldPoint';
-import { Line as LineEntity } from '../../entities/line/Line';
 import { ConstraintSystem } from '../constraint-system';
 import { randomInitialization, smartInitialization, computeInitialResidual } from '../smart-initialization';
-import * as fs from 'fs';
-import * as path from 'path';
+import { saveProjectToJson, loadProjectFromJson } from '../../store/project-serialization';
+import { Project } from '../../entities/project';
+import { WorldPoint } from '../../entities/world-point';
+import { Line } from '../../entities/line';
 
-// Load the test project (without xyz coordinates)
-const testDataPath = path.join(__dirname, '../../../test-data/test-project.json');
-const baseProject = JSON.parse(fs.readFileSync(testDataPath, 'utf-8'));
-delete baseProject.images; // Remove images
+function createTestProject(): Project {
+  const project = Project.create('Test Project');
+
+  const wp1 = WorldPoint.create('WP1', { lockedXyz: [null, null, null], color: '#ff6b6b' });
+  const wp2 = WorldPoint.create('WP2', { lockedXyz: [null, null, null], color: '#4ecdc4' });
+  const wp3 = WorldPoint.create('WP3', { lockedXyz: [null, null, null], color: '#45b7d1' });
+  const wp4 = WorldPoint.create('WP4', { lockedXyz: [null, null, null], color: '#96ceb4' });
+  const wp5 = WorldPoint.create('WP5', { lockedXyz: [null, null, null], color: '#ffeaa7' });
+
+  project.addWorldPoint(wp1);
+  project.addWorldPoint(wp2);
+  project.addWorldPoint(wp3);
+  project.addWorldPoint(wp4);
+  project.addWorldPoint(wp5);
+
+  const line1 = Line.create('Loop_1', wp1, wp2, { direction: 'z-aligned', targetLength: 10 });
+  const line2 = Line.create('Loop_2', wp2, wp3);
+  const line3 = Line.create('Loop_3', wp3, wp4);
+  const line4 = Line.create('Loop_4', wp4, wp5, { direction: 'x-aligned', targetLength: 10 });
+  const line5 = Line.create('Loop_5', wp5, wp1, { direction: 'free', targetLength: 10 });
+
+  project.addLine(line1);
+  project.addLine(line2);
+  project.addLine(line3);
+  project.addLine(line4);
+  project.addLine(line5);
+
+  return project;
+}
 
 interface BenchmarkResult {
   method: string;
@@ -27,57 +52,13 @@ interface BenchmarkResult {
 }
 
 function runOptimizationBenchmark(
-  project: any,
+  project: Project,
   method: string
 ): BenchmarkResult {
   const startTime = performance.now();
 
-  // Compute initial residual
   const initialResidual = computeInitialResidual(project);
 
-  // Convert to entities
-  const pointEntities: WorldPointEntity[] = [];
-  const lineEntities: LineEntity[] = [];
-  const pointIdMap = new Map<string, WorldPointEntity>();
-
-  Object.values(project.worldPoints).forEach((wp: any) => {
-    if (wp.xyz) {
-      const entity = WorldPointEntity.create(wp.name, {
-        lockedXyz: [null, null, null],
-        optimizedXyz: wp.xyz as [number, number, number],
-        color: wp.color,
-        isVisible: wp.isVisible
-      });
-      pointEntities.push(entity);
-      pointIdMap.set(wp.id, entity);
-    }
-  });
-
-  Object.values(project.lines || {}).forEach((line: any) => {
-    const pointA = pointIdMap.get(line.pointA);
-    const pointB = pointIdMap.get(line.pointB);
-
-    if (pointA && pointB) {
-      const entity = LineEntity.create(
-        line.name || 'Line',
-        pointA,
-        pointB,
-        {
-          color: line.color,
-          isConstruction: line.isConstruction,
-          direction: line.constraints?.direction,
-          targetLength: line.constraints?.targetLength,
-          tolerance: line.constraints?.tolerance
-        }
-      );
-      lineEntities.push(entity);
-    }
-  });
-
-  // TODO: Constraint conversion needs to be implemented with new entity system
-  const constraintEntities: any[] = [];
-
-  // Run optimization
   const solver = new ConstraintSystem({
     maxIterations: 100,
     tolerance: 1e-6,
@@ -85,9 +66,9 @@ function runOptimizationBenchmark(
     verbose: false
   });
 
-  pointEntities.forEach(p => solver.addPoint(p));
-  lineEntities.forEach(l => solver.addLine(l));
-  constraintEntities.forEach(c => solver.addConstraint(c));
+  project.worldPoints.forEach(p => solver.addPoint(p));
+  project.lines.forEach(l => solver.addLine(l));
+  project.constraints.forEach(c => solver.addConstraint(c));
 
   const result = solver.solve();
 
@@ -113,7 +94,10 @@ describe('Initialization Benchmark', () => {
 
     // Test 1: Random initialization
     console.log('🎲 Testing RANDOM initialization...');
-    const randomProject = JSON.parse(JSON.stringify(baseProject));
+    const baseProject = createTestProject();
+    const baseProjectJson = saveProjectToJson(baseProject);
+
+    const randomProject = loadProjectFromJson(baseProjectJson);
     randomInitialization(randomProject, 10);
     const randomResult = runOptimizationBenchmark(randomProject, 'Random');
     results.push(randomResult);
@@ -126,7 +110,7 @@ describe('Initialization Benchmark', () => {
 
     // Test 2: Smart initialization
     console.log('🧠 Testing SMART initialization...');
-    const smartProject = JSON.parse(JSON.stringify(baseProject));
+    const smartProject = loadProjectFromJson(baseProjectJson);
     smartInitialization(smartProject);
     const smartResult = runOptimizationBenchmark(smartProject, 'Smart');
     results.push(smartResult);
@@ -175,14 +159,17 @@ describe('Initialization Benchmark', () => {
     const randomResults: BenchmarkResult[] = [];
     const smartResults: BenchmarkResult[] = [];
 
+    const baseProject = createTestProject();
+    const baseProjectJson = saveProjectToJson(baseProject);
+
     for (let i = 0; i < numTrials; i++) {
       // Random
-      const randomProject = JSON.parse(JSON.stringify(baseProject));
+      const randomProject = loadProjectFromJson(baseProjectJson);
       randomInitialization(randomProject, 10);
       randomResults.push(runOptimizationBenchmark(randomProject, 'Random'));
 
       // Smart
-      const smartProject = JSON.parse(JSON.stringify(baseProject));
+      const smartProject = loadProjectFromJson(baseProjectJson);
       smartInitialization(smartProject);
       smartResults.push(runOptimizationBenchmark(smartProject, 'Smart'));
     }

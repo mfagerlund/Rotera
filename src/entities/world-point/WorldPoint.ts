@@ -397,7 +397,16 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
             return
         }
 
-        const xyz: [number, number, number] = [vec.x.data, vec.y.data, vec.z.data]
+        const xLocked = this.isXLocked()
+        const yLocked = this.isYLocked()
+        const zLocked = this.isZLocked()
+
+        const xyz: [number, number, number] = [
+            xLocked ? this.lockedXyz[0]! : vec.x.data,
+            yLocked ? this.lockedXyz[1]! : vec.y.data,
+            zLocked ? this.lockedXyz[2]! : vec.z.data
+        ]
+
         const residuals = this.computeResiduals(valueMap)
         this.lastResiduals = residuals.map(r => r.data)
         this.applyOptimizationResult({xyz})
