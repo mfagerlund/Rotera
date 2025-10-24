@@ -1,8 +1,7 @@
 import { describe, it, expect } from '@jest/globals';
 import { loadProjectFromJson } from '../../store/project-serialization';
 import { ConstraintSystem } from '../constraint-system';
-import { findBestViewpointPair, validateSolvingRequirements } from '../solving-requirements';
-import { triangulateSharedPoints } from '../triangulation';
+import { initializeFromImagePairs } from '../seed-initialization';
 import * as fs from 'fs';
 import type { IViewpoint, IWorldPoint, IImagePoint } from '../../entities/interfaces';
 
@@ -26,84 +25,42 @@ describe('Simple Two-Camera Solving (Proof of Concept)', () => {
     console.log(`  Image Points: ${Array.from(project.viewpoints).reduce((sum, vp) => sum + vp.imagePoints.size, 0)}`);
     console.log(`  Lines: ${project.lines.size}\n`);
 
-    console.log('=== STEP 1: VALIDATE REQUIREMENTS ===\n');
+    console.log('=== STEP 1: INITIALIZE FROM IMAGE PAIRS ===\n');
 
-    const requirements = validateSolvingRequirements(project);
+    const initResult = initializeFromImagePairs(project);
 
-    console.log(`Valid: ${requirements.isValid}`);
+    console.log(`Success: ${initResult.success}`);
 
-    if (requirements.errors.length > 0) {
+    if (initResult.errors.length > 0) {
       console.log('\nErrors:');
-      requirements.errors.forEach(err => console.log(`  - ${err}`));
+      initResult.errors.forEach(err => console.log(`  - ${err}`));
     }
 
-    if (requirements.warnings.length > 0) {
+    if (initResult.warnings.length > 0) {
       console.log('\nWarnings:');
-      requirements.warnings.forEach(warn => console.log(`  - ${warn}`));
+      initResult.warnings.forEach(warn => console.log(`  - ${warn}`));
     }
 
-    if (!requirements.isValid || !requirements.bestPair) {
-      expect(requirements.isValid).toBe(true);
+    if (!initResult.success || !initResult.seedPair) {
+      expect(initResult.success).toBe(true);
       return;
     }
 
-    console.log('\n=== STEP 2: USE BEST PAIR ===\n');
+    const bestPair = initResult.seedPair;
 
-    const bestPair = requirements.bestPair;
+    console.log(`\nSeed pair: ${bestPair.viewpoint1.name} + ${bestPair.viewpoint2.name}`);
+    console.log(`  Shared points: ${bestPair.sharedWorldPoints.length}`);
+    console.log(`  Fully locked: ${bestPair.fullyLockedSharedPoints.length}`);
+    console.log(`  Scale baseline: ${initResult.scaleBaseline?.toFixed(3)}`);
+    console.log(`  Triangulated: ${initResult.triangulatedPoints} points`);
+    console.log(`  Failed: ${initResult.failedPoints} points`);
 
-    console.log(`Selected: ${bestPair.viewpoint1.name} + ${bestPair.viewpoint2.name}`);
-    console.log(`  Shared points: ${bestPair.sharedWorldPoints.length} (${bestPair.sharedWorldPoints.map(wp => wp.name).join(', ')})`);
-    console.log(`  Fully locked: ${bestPair.fullyLockedSharedPoints.length} (${bestPair.fullyLockedSharedPoints.map(wp => wp.name).join(', ')})`);
-    console.log(`  Has scale constraint: ${bestPair.hasScaleConstraint}`);
+    console.log('\n=== STEP 2: CAMERA POSITIONS ===\n');
 
-    const lockedPoint = bestPair.fullyLockedSharedPoints[0];
-    console.log(`  Using locked point: ${lockedPoint.name} at [${lockedPoint.lockedXyz.join(', ')}]`);
+    console.log(`${bestPair.viewpoint1.name}: pos=[${bestPair.viewpoint1.position.map(x => x.toFixed(3)).join(', ')}]`);
+    console.log(`${bestPair.viewpoint2.name}: pos=[${bestPair.viewpoint2.position.map(x => x.toFixed(3)).join(', ')}]`);
 
-    console.log('\n=== STEP 3: DETERMINE SCALE ===\n');
-
-    let scaleBaseline = 10.0;
-
-    if (bestPair.scaleInfo) {
-      if (bestPair.scaleInfo.type === 'distance') {
-        scaleBaseline = bestPair.scaleInfo.value * 1.5;
-        console.log(`Using distance between locked points: ${bestPair.scaleInfo.point1!.name}, ${bestPair.scaleInfo.point2!.name}`);
-        console.log(`  Distance: ${bestPair.scaleInfo.value.toFixed(3)}`);
-        console.log(`  Baseline: ${scaleBaseline.toFixed(3)}`);
-      } else {
-        scaleBaseline = bestPair.scaleInfo.value * 1.5;
-        console.log(`Using line target length: ${bestPair.scaleInfo.line!.name || 'Line'}`);
-        console.log(`  Target length: ${bestPair.scaleInfo.value}`);
-        console.log(`  Baseline: ${scaleBaseline.toFixed(3)}`);
-      }
-    } else {
-      console.log('Using default baseline: 10.0');
-    }
-
-    console.log('\n=== STEP 4: INITIALIZE CAMERAS (LOOKING AT LOCKED POINT) ===\n');
-
-    const cameraDistance = scaleBaseline * 2;
-    const offset = scaleBaseline * 0.5;
-
-    bestPair.viewpoint1.position = [offset, 0, -cameraDistance];
-    bestPair.viewpoint1.rotation = [1, 0, 0, 0];
-
-    bestPair.viewpoint2.position = [-offset, 0, -cameraDistance];
-    bestPair.viewpoint2.rotation = [1, 0, 0, 0];
-
-    console.log(`Camera distance from origin: ${cameraDistance.toFixed(3)}`);
-    console.log(`${bestPair.viewpoint1.name}: pos=[${offset.toFixed(3)}, 0, ${-cameraDistance.toFixed(3)}], rot=[1, 0, 0, 0]`);
-    console.log(`${bestPair.viewpoint2.name}: pos=[${-offset.toFixed(3)}, 0, ${-cameraDistance.toFixed(3)}], rot=[1, 0, 0, 0]`);
-
-    console.log('\n=== STEP 5: TRIANGULATE SHARED POINTS ===\n');
-
-    const triangulationResult = triangulateSharedPoints(
-      bestPair.sharedWorldPoints,
-      bestPair.viewpoint1,
-      bestPair.viewpoint2,
-      scaleBaseline * 2
-    );
-
-    console.log(`Triangulation result: ${triangulationResult.success} succeeded, ${triangulationResult.failed} failed\n`);
+    console.log('\n=== STEP 3: WORLD POINT POSITIONS ===\n');
 
     for (const wp of bestPair.sharedWorldPoints) {
       if (wp.optimizedXyz) {
@@ -112,7 +69,7 @@ describe('Simple Two-Camera Solving (Proof of Concept)', () => {
       }
     }
 
-    console.log('\n=== STEP 6: BUNDLE ADJUSTMENT (SEED PAIR ONLY) ===\n');
+    console.log('\n=== STEP 4: BUNDLE ADJUSTMENT (SEED PAIR ONLY) ===\n');
 
     const system = new ConstraintSystem({
       maxIterations: 200,
