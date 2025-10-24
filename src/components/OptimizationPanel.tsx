@@ -3,15 +3,80 @@
 
 import React, { useState, useCallback } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faBullseye, faGear, faStop } from '@fortawesome/free-solid-svg-icons'
+import { faBullseye, faGear, faStop, faCamera } from '@fortawesome/free-solid-svg-icons'
 import { Project } from '../entities/project'
 import { useOptimization } from '../hooks/useOptimization'
 import { defaultOptimizationSettings } from '../services/optimization'
 import { getEntityKey } from '../utils/entityKeys'
+import { initializeCameraWithPnP } from '../optimization/pnp'
+import { Viewpoint } from '../entities/viewpoint'
 
 interface OptimizationPanelProps {
   project: Project
   onOptimizationComplete: (success: boolean, message: string) => void
+}
+
+function computeCameraReprojectionError(vp: Viewpoint): number {
+  const { projectWorldPointToPixelQuaternion } = require('../optimization/camera-projection')
+  const V = require('scalar-autograd').V
+  const Vec3 = require('scalar-autograd').Vec3
+  const Vec4 = require('scalar-autograd').Vec4
+
+  let totalError = 0
+  let count = 0
+
+  for (const ip of vp.imagePoints) {
+    const wp = ip.worldPoint as any
+    if (!wp.optimizedXyz) continue
+
+    try {
+      const worldPoint = new Vec3(
+        V.C(wp.optimizedXyz[0]),
+        V.C(wp.optimizedXyz[1]),
+        V.C(wp.optimizedXyz[2])
+      )
+
+      const cameraPosition = new Vec3(
+        V.C(vp.position[0]),
+        V.C(vp.position[1]),
+        V.C(vp.position[2])
+      )
+
+      const cameraRotation = new Vec4(
+        V.C(vp.rotation[0]),
+        V.C(vp.rotation[1]),
+        V.C(vp.rotation[2]),
+        V.C(vp.rotation[3])
+      )
+
+      const projected = projectWorldPointToPixelQuaternion(
+        worldPoint,
+        cameraPosition,
+        cameraRotation,
+        V.C(vp.focalLength ?? 1000),
+        V.C(vp.aspectRatio ?? 1.0),
+        V.C(vp.principalPointX ?? 500),
+        V.C(vp.principalPointY ?? 500),
+        V.C(vp.skewCoefficient ?? 0),
+        V.C(vp.radialDistortion[0] ?? 0),
+        V.C(vp.radialDistortion[1] ?? 0),
+        V.C(vp.radialDistortion[2] ?? 0),
+        V.C(vp.tangentialDistortion[0] ?? 0),
+        V.C(vp.tangentialDistortion[1] ?? 0)
+      )
+
+      if (projected) {
+        const dx = projected[0].data - ip.u
+        const dy = projected[1].data - ip.v
+        totalError += Math.sqrt(dx * dx + dy * dy)
+        count++
+      }
+    } catch (e) {
+      console.warn('Error computing reprojection:', e)
+    }
+  }
+
+  return count > 0 ? totalError / count : 0
 }
 
 export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
@@ -22,6 +87,8 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
   const [settings, setSettings] = useState(defaultOptimizationSettings)
   const [results, setResults] = useState<any>(null)
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [pnpResults, setPnpResults] = useState<{camera: string, before: number, after: number, iterations: number}[]>([])
+  const [isInitializingCameras, setIsInitializingCameras] = useState(false)
 
   const clientSolver = useOptimization()
 
@@ -120,6 +187,65 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
     setIsOptimizing(false)
   }, [])
 
+  const handleInitializeCameras = useCallback(async () => {
+    if (isOptimizing || isInitializingCameras) return
+
+    setIsInitializingCameras(true)
+    setPnpResults([])
+
+    try {
+      const viewpointArray = Array.from(project.viewpoints.values())
+      const worldPointArray = Array.from(project.worldPoints.values())
+
+      const camerasToInitialize = viewpointArray.filter(vp => {
+        const hasImagePoints = vp.imagePoints.size > 0
+        const hasTriangulatedPoints = Array.from(vp.imagePoints).some(ip =>
+          (ip.worldPoint as any).optimizedXyz !== null
+        )
+        return hasImagePoints && hasTriangulatedPoints
+      })
+
+      if (camerasToInitialize.length === 0) {
+        onOptimizationComplete(false, 'No cameras to initialize. Need cameras with image points linked to triangulated world points.')
+        return
+      }
+
+      const newResults: {camera: string, before: number, after: number, iterations: number}[] = []
+
+      for (const vp of camerasToInitialize) {
+        const vpConcrete = vp as Viewpoint
+
+        const beforeError = computeCameraReprojectionError(vpConcrete)
+
+        const success = initializeCameraWithPnP(vpConcrete, new Set(worldPointArray))
+
+        if (success) {
+          const afterError = computeCameraReprojectionError(vpConcrete)
+          newResults.push({
+            camera: vpConcrete.name,
+            before: beforeError,
+            after: afterError,
+            iterations: 0
+          })
+        }
+      }
+
+      setPnpResults(newResults)
+
+      if (newResults.length > 0) {
+        onOptimizationComplete(true, `Initialized ${newResults.length} camera(s) using PnP`)
+      } else {
+        onOptimizationComplete(false, 'PnP initialization failed for all cameras')
+      }
+
+    } catch (error) {
+      console.error('Camera initialization failed:', error)
+      onOptimizationComplete(false, error instanceof Error ? error.message : 'Camera initialization failed')
+    } finally {
+      setIsInitializingCameras(false)
+    }
+  }, [project, isOptimizing, isInitializingCameras, onOptimizationComplete])
+
   const handleSettingChange = useCallback((key: string, value: any) => {
     setSettings(prev => ({ ...prev, [key]: value }))
   }, [])
@@ -198,6 +324,46 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
           </button>
         )}
       </div>
+
+      <div className="panel-header" style={{ marginTop: '20px' }}>
+        <h3>Camera Initialization (PnP)</h3>
+      </div>
+
+      <div className="optimization-stats">
+        <div className="stat-item">
+          <span className="stat-label">Info:</span>
+          <span className="stat-value">Solve camera poses from known 3D points</span>
+        </div>
+      </div>
+
+      <div className="optimization-controls">
+        <button
+          className="btn-optimize"
+          onClick={handleInitializeCameras}
+          disabled={isOptimizing || isInitializingCameras || stats.viewpointCount === 0}
+        >
+          <FontAwesomeIcon icon={faCamera} /> Initialize Cameras
+        </button>
+      </div>
+
+      {pnpResults.length > 0 && (
+        <div className="optimization-results success">
+          <div className="results-header">
+            <span className="results-status">
+              Camera Initialization Results
+            </span>
+          </div>
+          <div className="results-details">
+            {pnpResults.map((result, idx) => (
+              <div key={idx} className="result-item" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+                <span style={{ fontWeight: 'bold' }}>{result.camera}:</span>
+                <span style={{ marginLeft: '10px' }}>Before: {result.before.toFixed(2)} px</span>
+                <span style={{ marginLeft: '10px' }}>After: {result.after.toFixed(2)} px</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {results && (
         <div className={`optimization-results ${results.converged ? 'success' : 'error'}`}>
