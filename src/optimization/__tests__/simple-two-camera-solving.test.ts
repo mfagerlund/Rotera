@@ -2,6 +2,7 @@ import { describe, it, expect } from '@jest/globals';
 import { loadProjectFromJson } from '../../store/project-serialization';
 import { ConstraintSystem } from '../constraint-system';
 import { findBestViewpointPair, validateSolvingRequirements } from '../solving-requirements';
+import { triangulateSharedPoints } from '../triangulation';
 import * as fs from 'fs';
 import type { IViewpoint, IWorldPoint, IImagePoint } from '../../entities/interfaces';
 
@@ -93,83 +94,22 @@ describe('Simple Two-Camera Solving (Proof of Concept)', () => {
     console.log(`${bestPair.viewpoint1.name}: pos=[${offset.toFixed(3)}, 0, ${-cameraDistance.toFixed(3)}], rot=[1, 0, 0, 0]`);
     console.log(`${bestPair.viewpoint2.name}: pos=[${-offset.toFixed(3)}, 0, ${-cameraDistance.toFixed(3)}], rot=[1, 0, 0, 0]`);
 
-    console.log('\n=== STEP 5: TRIANGULATE SHARED POINTS (RAY-RAY CLOSEST POINT) ===\n');
+    console.log('\n=== STEP 5: TRIANGULATE SHARED POINTS ===\n');
+
+    const triangulationResult = triangulateSharedPoints(
+      bestPair.sharedWorldPoints,
+      bestPair.viewpoint1,
+      bestPair.viewpoint2,
+      scaleBaseline * 2
+    );
+
+    console.log(`Triangulation result: ${triangulationResult.success} succeeded, ${triangulationResult.failed} failed\n`);
 
     for (const wp of bestPair.sharedWorldPoints) {
-      if (wp.isFullyLocked()) {
-        wp.optimizedXyz = [wp.lockedXyz[0]!, wp.lockedXyz[1]!, wp.lockedXyz[2]!];
-        console.log(`${wp.name}: using locked position [${wp.optimizedXyz.join(', ')}]`);
-        continue;
+      if (wp.optimizedXyz) {
+        const status = wp.isFullyLocked() ? 'locked' : 'triangulated';
+        console.log(`${wp.name}: ${status} at [${wp.optimizedXyz.map(x => x.toFixed(3)).join(', ')}]`);
       }
-
-      const ip1 = Array.from(bestPair.viewpoint1.imagePoints).find(ip => ip.worldPoint === wp);
-      const ip2 = Array.from(bestPair.viewpoint2.imagePoints).find(ip => ip.worldPoint === wp);
-
-      if (!ip1 || !ip2) {
-        console.log(`${wp.name}: ERROR - missing image point`);
-        continue;
-      }
-
-      const ray1_x = (ip1.u - bestPair.viewpoint1.principalPointX) / bestPair.viewpoint1.focalLength;
-      const ray1_y = (ip1.v - bestPair.viewpoint1.principalPointY) / bestPair.viewpoint1.focalLength;
-      const ray1_z = 1.0;
-      const ray1_norm = Math.sqrt(ray1_x * ray1_x + ray1_y * ray1_y + ray1_z * ray1_z);
-      const d1_x = ray1_x / ray1_norm;
-      const d1_y = ray1_y / ray1_norm;
-      const d1_z = ray1_z / ray1_norm;
-
-      const ray2_x = (ip2.u - bestPair.viewpoint2.principalPointX) / bestPair.viewpoint2.focalLength;
-      const ray2_y = (ip2.v - bestPair.viewpoint2.principalPointY) / bestPair.viewpoint2.focalLength;
-      const ray2_z = 1.0;
-      const ray2_norm = Math.sqrt(ray2_x * ray2_x + ray2_y * ray2_y + ray2_z * ray2_z);
-      const d2_x = ray2_x / ray2_norm;
-      const d2_y = ray2_y / ray2_norm;
-      const d2_z = ray2_z / ray2_norm;
-
-      const o1_x = bestPair.viewpoint1.position[0];
-      const o1_y = bestPair.viewpoint1.position[1];
-      const o1_z = bestPair.viewpoint1.position[2];
-
-      const o2_x = bestPair.viewpoint2.position[0];
-      const o2_y = bestPair.viewpoint2.position[1];
-      const o2_z = bestPair.viewpoint2.position[2];
-
-      const w_x = o1_x - o2_x;
-      const w_y = o1_y - o2_y;
-      const w_z = o1_z - o2_z;
-
-      const a = d1_x * d1_x + d1_y * d1_y + d1_z * d1_z;
-      const b = d1_x * d2_x + d1_y * d2_y + d1_z * d2_z;
-      const c = d2_x * d2_x + d2_y * d2_y + d2_z * d2_z;
-      const d = d1_x * w_x + d1_y * w_y + d1_z * w_z;
-      const e = d2_x * w_x + d2_y * w_y + d2_z * w_z;
-
-      const denom = a * c - b * b;
-      let t1, t2;
-      if (Math.abs(denom) < 1e-10) {
-        t1 = scaleBaseline * 2;
-        t2 = scaleBaseline * 2;
-      } else {
-        t1 = (b * e - c * d) / denom;
-        t2 = (a * e - b * d) / denom;
-        if (t1 < 0) t1 = scaleBaseline * 2;
-        if (t2 < 0) t2 = scaleBaseline * 2;
-      }
-
-      const p1_x = o1_x + d1_x * t1;
-      const p1_y = o1_y + d1_y * t1;
-      const p1_z = o1_z + d1_z * t1;
-
-      const p2_x = o2_x + d2_x * t2;
-      const p2_y = o2_y + d2_y * t2;
-      const p2_z = o2_z + d2_z * t2;
-
-      const mid_x = (p1_x + p2_x) / 2;
-      const mid_y = (p1_y + p2_y) / 2;
-      const mid_z = (p1_z + p2_z) / 2;
-
-      wp.optimizedXyz = [mid_x, mid_y, mid_z];
-      console.log(`${wp.name}: triangulated to [${mid_x.toFixed(3)}, ${mid_y.toFixed(3)}, ${mid_z.toFixed(3)}]`);
     }
 
     console.log('\n=== STEP 6: BUNDLE ADJUSTMENT (SEED PAIR ONLY) ===\n');
