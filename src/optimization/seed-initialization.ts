@@ -1,4 +1,5 @@
-import type { Project } from '../store/Project';
+import type { Project } from '../entities/project';
+import type { Viewpoint } from '../entities/viewpoint';
 import { validateSolvingRequirements, type ViewpointPair } from './solving-requirements';
 import { triangulateSharedPoints } from './triangulation';
 
@@ -48,11 +49,14 @@ export function initializeFromImagePairs(
   const cameraDistance = scaleBaseline * cameraDistanceMultiplier;
   const offset = scaleBaseline * cameraOffsetMultiplier;
 
-  bestPair.viewpoint1.position = [offset, 0, -cameraDistance];
-  bestPair.viewpoint1.rotation = [1, 0, 0, 0];
+  const vp1 = bestPair.viewpoint1 as Viewpoint;
+  const vp2 = bestPair.viewpoint2 as Viewpoint;
 
-  bestPair.viewpoint2.position = [-offset, 0, -cameraDistance];
-  bestPair.viewpoint2.rotation = [1, 0, 0, 0];
+  vp1.position = [offset, 0, -cameraDistance];
+  vp1.rotation = [1, 0, 0, 0];
+
+  vp2.position = [-offset, 0, -cameraDistance];
+  vp2.rotation = [1, 0, 0, 0];
 
   const triangulationResult = triangulateSharedPoints(
     bestPair.sharedWorldPoints,

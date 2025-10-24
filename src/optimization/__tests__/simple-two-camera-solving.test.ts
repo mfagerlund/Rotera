@@ -2,8 +2,10 @@ import { describe, it, expect } from '@jest/globals';
 import { loadProjectFromJson } from '../../store/project-serialization';
 import { ConstraintSystem } from '../constraint-system';
 import { initializeFromImagePairs } from '../seed-initialization';
+import { Viewpoint } from '../../entities/viewpoint';
+import { WorldPoint } from '../../entities/world-point';
+import { ImagePoint } from '../../entities/imagePoint';
 import * as fs from 'fs';
-import type { IViewpoint, IWorldPoint, IImagePoint } from '../../entities/interfaces';
 
 describe('Simple Two-Camera Solving (Proof of Concept)', () => {
   it('should manually solve seed pair with shared points', () => {
@@ -47,8 +49,10 @@ describe('Simple Two-Camera Solving (Proof of Concept)', () => {
     }
 
     const bestPair = initResult.seedPair;
+    const vp1 = bestPair.viewpoint1 as Viewpoint;
+    const vp2 = bestPair.viewpoint2 as Viewpoint;
 
-    console.log(`\nSeed pair: ${bestPair.viewpoint1.name} + ${bestPair.viewpoint2.name}`);
+    console.log(`\nSeed pair: ${vp1.name} + ${vp2.name}`);
     console.log(`  Shared points: ${bestPair.sharedWorldPoints.length}`);
     console.log(`  Fully locked: ${bestPair.fullyLockedSharedPoints.length}`);
     console.log(`  Scale baseline: ${initResult.scaleBaseline?.toFixed(3)}`);
@@ -57,15 +61,16 @@ describe('Simple Two-Camera Solving (Proof of Concept)', () => {
 
     console.log('\n=== STEP 2: CAMERA POSITIONS ===\n');
 
-    console.log(`${bestPair.viewpoint1.name}: pos=[${bestPair.viewpoint1.position.map(x => x.toFixed(3)).join(', ')}]`);
-    console.log(`${bestPair.viewpoint2.name}: pos=[${bestPair.viewpoint2.position.map(x => x.toFixed(3)).join(', ')}]`);
+    console.log(`${vp1.name}: pos=[${vp1.position.map(x => x.toFixed(3)).join(', ')}]`);
+    console.log(`${vp2.name}: pos=[${vp2.position.map(x => x.toFixed(3)).join(', ')}]`);
 
     console.log('\n=== STEP 3: WORLD POINT POSITIONS ===\n');
 
     for (const wp of bestPair.sharedWorldPoints) {
-      if (wp.optimizedXyz) {
-        const status = wp.isFullyLocked() ? 'locked' : 'triangulated';
-        console.log(`${wp.name}: ${status} at [${wp.optimizedXyz.map(x => x.toFixed(3)).join(', ')}]`);
+      const wpConcrete = wp as WorldPoint;
+      if (wpConcrete.optimizedXyz) {
+        const status = wpConcrete.isFullyLocked() ? 'locked' : 'triangulated';
+        console.log(`${wpConcrete.name}: ${status} at [${wpConcrete.optimizedXyz.map(x => x.toFixed(3)).join(', ')}]`);
       }
     }
 
@@ -78,19 +83,19 @@ describe('Simple Two-Camera Solving (Proof of Concept)', () => {
       verbose: true
     });
 
-    bestPair.sharedWorldPoints.forEach(p => system.addPoint(p));
-    system.addCamera(bestPair.viewpoint1);
-    system.addCamera(bestPair.viewpoint2);
+    bestPair.sharedWorldPoints.forEach(p => system.addPoint(p as WorldPoint));
+    system.addCamera(vp1);
+    system.addCamera(vp2);
 
-    const ipsForVp1 = Array.from(bestPair.viewpoint1.imagePoints).filter(ip =>
+    const ipsForVp1 = Array.from(vp1.imagePoints).filter(ip =>
       bestPair.sharedWorldPoints.includes(ip.worldPoint)
-    );
-    const ipsForVp2 = Array.from(bestPair.viewpoint2.imagePoints).filter(ip =>
+    ).map(ip => ip as ImagePoint);
+    const ipsForVp2 = Array.from(vp2.imagePoints).filter(ip =>
       bestPair.sharedWorldPoints.includes(ip.worldPoint)
-    );
+    ).map(ip => ip as ImagePoint);
 
-    ipsForVp1.forEach(ip => system.addImagePoint(ip as any));
-    ipsForVp2.forEach(ip => system.addImagePoint(ip as any));
+    ipsForVp1.forEach(ip => system.addImagePoint(ip));
+    ipsForVp2.forEach(ip => system.addImagePoint(ip));
 
     console.log(`Optimizing:`);
     console.log(`  Points: ${bestPair.sharedWorldPoints.length}`);
@@ -105,13 +110,14 @@ describe('Simple Two-Camera Solving (Proof of Concept)', () => {
     console.log(`Final Residual: ${result.residual.toFixed(6)}\n`);
 
     console.log('Camera poses after BA:');
-    console.log(`  ${bestPair.viewpoint1.name}: pos=[${bestPair.viewpoint1.position.map(x => x.toFixed(3)).join(', ')}]`);
-    console.log(`  ${bestPair.viewpoint2.name}: pos=[${bestPair.viewpoint2.position.map(x => x.toFixed(3)).join(', ')}]\n`);
+    console.log(`  ${vp1.name}: pos=[${vp1.position.map(x => x.toFixed(3)).join(', ')}]`);
+    console.log(`  ${vp2.name}: pos=[${vp2.position.map(x => x.toFixed(3)).join(', ')}]\n`);
 
     console.log('Point positions after BA:');
     for (const wp of bestPair.sharedWorldPoints) {
-      if (wp.optimizedXyz) {
-        console.log(`  ${wp.name}: [${wp.optimizedXyz.map(x => x.toFixed(3)).join(', ')}]`);
+      const wpConcrete = wp as WorldPoint;
+      if (wpConcrete.optimizedXyz) {
+        console.log(`  ${wpConcrete.name}: [${wpConcrete.optimizedXyz.map(x => x.toFixed(3)).join(', ')}]`);
       }
     }
 

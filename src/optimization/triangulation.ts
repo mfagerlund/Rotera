@@ -1,4 +1,6 @@
 import type { IViewpoint, IImagePoint, IWorldPoint } from '../entities/interfaces';
+import type { Viewpoint } from '../entities/viewpoint';
+import type { WorldPoint } from '../entities/world-point';
 
 export interface TriangulationResult {
   worldPoint: [number, number, number];
@@ -14,29 +16,32 @@ export function triangulateRayRay(
   vp2: IViewpoint,
   fallbackDepth: number = 10.0
 ): TriangulationResult | null {
-  const ray1_x = (ip1.u - vp1.principalPointX) / vp1.focalLength;
-  const ray1_y = (ip1.v - vp1.principalPointY) / vp1.focalLength;
+  const vp1Concrete = vp1 as Viewpoint;
+  const vp2Concrete = vp2 as Viewpoint;
+
+  const ray1_x = (ip1.u - vp1Concrete.principalPointX) / vp1Concrete.focalLength;
+  const ray1_y = (ip1.v - vp1Concrete.principalPointY) / vp1Concrete.focalLength;
   const ray1_z = 1.0;
   const ray1_norm = Math.sqrt(ray1_x * ray1_x + ray1_y * ray1_y + ray1_z * ray1_z);
   const d1_x = ray1_x / ray1_norm;
   const d1_y = ray1_y / ray1_norm;
   const d1_z = ray1_z / ray1_norm;
 
-  const ray2_x = (ip2.u - vp2.principalPointX) / vp2.focalLength;
-  const ray2_y = (ip2.v - vp2.principalPointY) / vp2.focalLength;
+  const ray2_x = (ip2.u - vp2Concrete.principalPointX) / vp2Concrete.focalLength;
+  const ray2_y = (ip2.v - vp2Concrete.principalPointY) / vp2Concrete.focalLength;
   const ray2_z = 1.0;
   const ray2_norm = Math.sqrt(ray2_x * ray2_x + ray2_y * ray2_y + ray2_z * ray2_z);
   const d2_x = ray2_x / ray2_norm;
   const d2_y = ray2_y / ray2_norm;
   const d2_z = ray2_z / ray2_norm;
 
-  const o1_x = vp1.position[0];
-  const o1_y = vp1.position[1];
-  const o1_z = vp1.position[2];
+  const o1_x = vp1Concrete.position[0];
+  const o1_y = vp1Concrete.position[1];
+  const o1_z = vp1Concrete.position[2];
 
-  const o2_x = vp2.position[0];
-  const o2_y = vp2.position[1];
-  const o2_z = vp2.position[2];
+  const o2_x = vp2Concrete.position[0];
+  const o2_y = vp2Concrete.position[1];
+  const o2_z = vp2Concrete.position[2];
 
   const w_x = o1_x - o2_x;
   const w_y = o1_y - o2_y;
@@ -87,25 +92,29 @@ export function triangulateWorldPoint(
   vp2: IViewpoint,
   fallbackDepth: number = 10.0
 ): boolean {
-  if (wp.isFullyLocked()) {
-    wp.optimizedXyz = [wp.lockedXyz[0]!, wp.lockedXyz[1]!, wp.lockedXyz[2]!];
+  const wpConcrete = wp as WorldPoint;
+  const vp1Concrete = vp1 as Viewpoint;
+  const vp2Concrete = vp2 as Viewpoint;
+
+  if (wpConcrete.isFullyLocked()) {
+    wpConcrete.optimizedXyz = [wpConcrete.lockedXyz[0]!, wpConcrete.lockedXyz[1]!, wpConcrete.lockedXyz[2]!];
     return true;
   }
 
-  const ip1 = Array.from(vp1.imagePoints).find(ip => ip.worldPoint === wp);
-  const ip2 = Array.from(vp2.imagePoints).find(ip => ip.worldPoint === wp);
+  const ip1 = Array.from(vp1Concrete.imagePoints).find(ip => ip.worldPoint === wp);
+  const ip2 = Array.from(vp2Concrete.imagePoints).find(ip => ip.worldPoint === wp);
 
   if (!ip1 || !ip2) {
     return false;
   }
 
-  const result = triangulateRayRay(ip1, ip2, vp1, vp2, fallbackDepth);
+  const result = triangulateRayRay(ip1, ip2, vp1Concrete, vp2Concrete, fallbackDepth);
 
   if (!result) {
     return false;
   }
 
-  wp.optimizedXyz = result.worldPoint;
+  wpConcrete.optimizedXyz = result.worldPoint;
   return true;
 }
 

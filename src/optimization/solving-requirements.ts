@@ -1,5 +1,6 @@
 import type { IViewpoint, IWorldPoint, ILine } from '../entities/interfaces';
-import type { Project } from '../store/Project';
+import type { WorldPoint } from '../entities/world-point';
+import type { Project } from '../entities/project';
 
 export interface ViewpointPair {
   viewpoint1: IViewpoint;
@@ -42,7 +43,7 @@ export function findBestViewpointPair(project: Project): ViewpointPair | null {
       );
 
       const fullyLockedSharedPoints = sharedWorldPoints.filter(wp =>
-        wp.isFullyLocked()
+        (wp as WorldPoint).isFullyLocked()
       );
 
       let hasScaleConstraint = false;
@@ -51,19 +52,21 @@ export function findBestViewpointPair(project: Project): ViewpointPair | null {
       if (fullyLockedSharedPoints.length >= 2) {
         const wp1 = fullyLockedSharedPoints[0];
         const wp2 = fullyLockedSharedPoints[1];
-        const dx = wp2.lockedXyz[0]! - wp1.lockedXyz[0]!;
-        const dy = wp2.lockedXyz[1]! - wp1.lockedXyz[1]!;
-        const dz = wp2.lockedXyz[2]! - wp1.lockedXyz[2]!;
-        const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (wp1.lockedXyz && wp2.lockedXyz) {
+          const dx = wp2.lockedXyz[0]! - wp1.lockedXyz[0]!;
+          const dy = wp2.lockedXyz[1]! - wp1.lockedXyz[1]!;
+          const dz = wp2.lockedXyz[2]! - wp1.lockedXyz[2]!;
+          const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
-        if (distance > 0.001) {
-          hasScaleConstraint = true;
-          scaleInfo = {
-            type: 'distance',
-            value: distance,
-            point1: wp1,
-            point2: wp2
-          };
+          if (distance > 0.001) {
+            hasScaleConstraint = true;
+            scaleInfo = {
+              type: 'distance',
+              value: distance,
+              point1: wp1,
+              point2: wp2
+            };
+          }
         }
       }
 
