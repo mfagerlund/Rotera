@@ -1,5 +1,3 @@
-// Hit detection utilities
-
 import type { Project } from '../../entities/project'
 import type { WorldPoint } from '../../entities/world-point/WorldPoint'
 import type { Line } from '../../entities/line/Line'

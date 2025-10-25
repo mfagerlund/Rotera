@@ -76,10 +76,17 @@ export interface IValueMapContributor {
 /**
  * Interface for entities that contribute residuals to the constraint system.
  * Residuals are Value objects that should equal zero when constraints are satisfied.
+ *
+ * ARCHITECTURAL INVARIANT: The number of residuals returned by computeResiduals()
+ * MUST match the number of residuals stored by applyOptimizationResult().
+ * This ensures push/pop symmetry during optimization.
  */
 export interface IResidualProvider {
   /**
    * Compute residuals for this entity's constraints.
+   *
+   * INVARIANT: The number of residuals returned here MUST be stored
+   * by applyOptimizationResult() for proper push/pop symmetry.
    *
    * @param valueMap - The ValueMap containing all entity values
    * @returns Array of Value objects (residuals that should be zero)
@@ -89,11 +96,18 @@ export interface IResidualProvider {
 
 /**
  * Interface for entities that can receive optimization results.
+ *
+ * ARCHITECTURAL INVARIANT: Must store exactly the same number of residuals
+ * that were returned by computeResiduals() to maintain push/pop symmetry.
  */
 export interface IOptimizationResultReceiver {
   /**
    * Apply optimization results back to this entity.
    * Should update internal state and mark values as optimized.
+   *
+   * INVARIANT: MUST store exactly the same number of residuals as were
+   * returned by computeResiduals(). Typically done by re-computing
+   * residuals and storing them in a lastResiduals field.
    *
    * @param valueMap - The ValueMap with solved values
    */

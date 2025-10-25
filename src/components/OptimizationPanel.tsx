@@ -3,15 +3,77 @@
 
 import React, { useState, useCallback } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faBullseye, faGear, faStop } from '@fortawesome/free-solid-svg-icons'
+import { faBullseye, faGear, faStop, faCamera } from '@fortawesome/free-solid-svg-icons'
 import { Project } from '../entities/project'
 import { useOptimization } from '../hooks/useOptimization'
 import { defaultOptimizationSettings } from '../services/optimization'
 import { getEntityKey } from '../utils/entityKeys'
+import { initializeCameraWithPnP } from '../optimization/pnp'
+import { Viewpoint } from '../entities/viewpoint'
+import { projectWorldPointToPixelQuaternion } from '../optimization/camera-projection'
+import { V, Vec3, Vec4 } from 'scalar-autograd'
 
 interface OptimizationPanelProps {
   project: Project
   onOptimizationComplete: (success: boolean, message: string) => void
+}
+
+function computeCameraReprojectionError(vp: Viewpoint): number {
+  let totalError = 0
+  let count = 0
+
+  for (const ip of vp.imagePoints) {
+    const wp = ip.worldPoint as any
+    if (!wp.optimizedXyz) continue
+
+    try {
+      const worldPoint = new Vec3(
+        V.C(wp.optimizedXyz[0]),
+        V.C(wp.optimizedXyz[1]),
+        V.C(wp.optimizedXyz[2])
+      )
+
+      const cameraPosition = new Vec3(
+        V.C(vp.position[0]),
+        V.C(vp.position[1]),
+        V.C(vp.position[2])
+      )
+
+      const cameraRotation = new Vec4(
+        V.C(vp.rotation[0]),
+        V.C(vp.rotation[1]),
+        V.C(vp.rotation[2]),
+        V.C(vp.rotation[3])
+      )
+
+      const projected = projectWorldPointToPixelQuaternion(
+        worldPoint,
+        cameraPosition,
+        cameraRotation,
+        V.C(vp.focalLength ?? 1000),
+        V.C(vp.aspectRatio ?? 1.0),
+        V.C(vp.principalPointX ?? 500),
+        V.C(vp.principalPointY ?? 500),
+        V.C(vp.skewCoefficient ?? 0),
+        V.C(vp.radialDistortion[0] ?? 0),
+        V.C(vp.radialDistortion[1] ?? 0),
+        V.C(vp.radialDistortion[2] ?? 0),
+        V.C(vp.tangentialDistortion[0] ?? 0),
+        V.C(vp.tangentialDistortion[1] ?? 0)
+      )
+
+      if (projected) {
+        const dx = projected[0].data - ip.u
+        const dy = projected[1].data - ip.v
+        totalError += Math.sqrt(dx * dx + dy * dy)
+        count++
+      }
+    } catch (e) {
+      console.warn('Error computing reprojection:', e)
+    }
+  }
+
+  return count > 0 ? totalError / count : 0
 }
 
 export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
@@ -22,6 +84,8 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
   const [settings, setSettings] = useState(defaultOptimizationSettings)
   const [results, setResults] = useState<any>(null)
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [pnpResults, setPnpResults] = useState<{camera: string, before: number, after: number, iterations: number}[]>([])
+  const [isInitializingCameras, setIsInitializingCameras] = useState(false)
 
   const clientSolver = useOptimization()
 
@@ -65,16 +129,15 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
 
     setIsOptimizing(true)
     setResults(null)
+    setPnpResults([])
 
     try {
       console.log('Running optimization with entities...')
 
-      // Extract entity arrays
       const pointEntities = Array.from(project.worldPoints.values())
       const lineEntities = Array.from(project.lines.values())
       const viewpointEntities = Array.from(project.viewpoints.values())
 
-      // Run optimization
       const solverResult = await clientSolver.optimize(
         pointEntities,
         lineEntities,
@@ -89,9 +152,6 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
       )
 
       console.log('Optimization result:', solverResult)
-
-      // Entities are updated in-place, no need to copy back
-      // Just notify that optimization completed
 
       const result = {
         converged: solverResult.converged,
@@ -120,6 +180,65 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
     setIsOptimizing(false)
   }, [])
 
+  const handleInitializeCameras = useCallback(async () => {
+    if (isOptimizing || isInitializingCameras) return
+
+    setIsInitializingCameras(true)
+    setPnpResults([])
+
+    try {
+      const viewpointArray = Array.from(project.viewpoints.values())
+      const worldPointArray = Array.from(project.worldPoints.values())
+
+      const camerasToInitialize = viewpointArray.filter(vp => {
+        const hasImagePoints = vp.imagePoints.size > 0
+        const hasTriangulatedPoints = Array.from(vp.imagePoints).some(ip =>
+          (ip.worldPoint as any).optimizedXyz !== null
+        )
+        return hasImagePoints && hasTriangulatedPoints
+      })
+
+      if (camerasToInitialize.length === 0) {
+        onOptimizationComplete(false, 'No cameras to initialize. Need cameras with image points linked to triangulated world points.')
+        return
+      }
+
+      const newResults: {camera: string, before: number, after: number, iterations: number}[] = []
+
+      for (const vp of camerasToInitialize) {
+        const vpConcrete = vp as Viewpoint
+
+        const beforeError = computeCameraReprojectionError(vpConcrete)
+
+        const success = initializeCameraWithPnP(vpConcrete, new Set(worldPointArray))
+
+        if (success) {
+          const afterError = computeCameraReprojectionError(vpConcrete)
+          newResults.push({
+            camera: vpConcrete.name,
+            before: beforeError,
+            after: afterError,
+            iterations: 0
+          })
+        }
+      }
+
+      setPnpResults(newResults)
+
+      if (newResults.length > 0) {
+        onOptimizationComplete(true, `Initialized ${newResults.length} camera(s) using PnP`)
+      } else {
+        onOptimizationComplete(false, 'PnP initialization failed for all cameras')
+      }
+
+    } catch (error) {
+      console.error('Camera initialization failed:', error)
+      onOptimizationComplete(false, error instanceof Error ? error.message : 'Camera initialization failed')
+    } finally {
+      setIsInitializingCameras(false)
+    }
+  }, [project, isOptimizing, isInitializingCameras, onOptimizationComplete])
+
   const handleSettingChange = useCallback((key: string, value: any) => {
     setSettings(prev => ({ ...prev, [key]: value }))
   }, [])
@@ -127,6 +246,20 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
   const resetToDefaults = useCallback(() => {
     setSettings(defaultOptimizationSettings)
   }, [])
+
+  function formatNumber(value: number): string {
+    if (value === 0) {
+      return '0.000';
+    }
+    const abs = Math.abs(value);
+    if (abs >= 0.01) {
+      return value.toFixed(3);
+    }
+    if (abs >= 1e-6) {
+      return value.toFixed(6);
+    }
+    return value.toExponential(2);
+  }
 
   return (
     <div className="optimization-panel">
@@ -199,6 +332,25 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
         )}
       </div>
 
+      {pnpResults.length > 0 && (
+        <div className="optimization-results success">
+          <div className="results-header">
+            <span className="results-status">
+              Camera Initialization Results
+            </span>
+          </div>
+          <div className="results-details">
+            {pnpResults.map((result, idx) => (
+              <div key={idx} className="result-item" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+                <span style={{ fontWeight: 'bold' }}>{result.camera}:</span>
+                <span style={{ marginLeft: '10px' }}>Before: {result.before.toFixed(2)} px</span>
+                <span style={{ marginLeft: '10px' }}>After: {result.after.toFixed(2)} px</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {results && (
         <div className={`optimization-results ${results.converged ? 'success' : 'error'}`}>
           <div className="results-header">
@@ -210,11 +362,11 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
             <div className="results-details">
               <div className="result-item">
                 <span>Total Error:</span>
-                <span>{results.totalError.toExponential(3)}</span>
+                <span>{formatNumber(results.totalError)}</span>
               </div>
               <div className="result-item">
                 <span>Point Accuracy:</span>
-                <span>{results.pointAccuracy.toExponential(3)}</span>
+                <span>{formatNumber(results.pointAccuracy)}</span>
               </div>
               <div className="result-item">
                 <span>Iterations:</span>
@@ -243,12 +395,12 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                             <div className="data-row">
                               <span className="data-label">Position:</span>
                               <span className="data-value">
-                                [{info.lockedXyz?.map(v => v?.toFixed(3)).join(', ')}]
+                                [{info.optimizedXyz?.map(v => formatNumber(v)).join(', ')}]
                               </span>
                             </div>
                             <div className="data-row">
                               <span className="data-label">RMS Residual:</span>
-                              <span className="data-value">{info.rmsResidual.toExponential(2)}</span>
+                              <span className="data-value">{formatNumber(info.rmsResidual)}</span>
                             </div>
                           </div>
                         </div>
@@ -281,7 +433,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                             {info.lengthError !== null && (
                               <div className="data-row">
                                 <span className="data-label">Error:</span>
-                                <span className="data-value">{info.lengthError.toExponential(2)}</span>
+                                <span className="data-value">{formatNumber(info.lengthError)}</span>
                               </div>
                             )}
                             {info.direction && info.direction !== 'free' && (
@@ -292,7 +444,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                             )}
                             <div className="data-row">
                               <span className="data-label">RMS Residual:</span>
-                              <span className="data-value">{info.rmsResidual.toExponential(2)}</span>
+                              <span className="data-value">{formatNumber(info.rmsResidual)}</span>
                             </div>
                           </div>
                         </div>

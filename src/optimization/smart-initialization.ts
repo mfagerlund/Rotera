@@ -1,52 +1,10 @@
-/**
- * Smart initialization strategies for 3D point positions
- *
- * Uses constraint information to provide better initial guesses than random positions.
- * This leads to faster convergence and better optimization results.
- */
+import type { Project } from '../entities/project'
+import type { WorldPoint } from '../entities/world-point'
+import type { Line } from '../entities/line'
+import type { Constraint } from '../entities/constraints'
+import type { CoplanarPointsConstraint } from '../entities/constraints/coplanar-points-constraint'
 
-interface WorldPoint {
-  id: string;
-  name: string;
-  xyz?: [number, number, number];
-  imagePoints?: any[];
-  [key: string]: any;
-}
-
-interface Line {
-  id: string;
-  pointA: string;
-  pointB: string;
-  constraints?: {
-    targetLength?: number;
-    direction?: string;
-    tolerance?: number;
-  };
-  [key: string]: any;
-}
-
-interface Constraint {
-  id: string;
-  type: string;
-  entities: {
-    points?: string[];
-    lines?: string[];
-  };
-  [key: string]: any;
-}
-
-interface Project {
-  worldPoints: Record<string, WorldPoint>;
-  lines?: Record<string, Line>;
-  constraints?: Constraint[];
-  [key: string]: any;
-}
-
-/**
- * Generate a random unit vector in 3D
- */
 function randomUnitVector(): [number, number, number] {
-  // Marsaglia method for uniform random point on sphere
   let x, y, z, len;
   do {
     x = Math.random() * 2 - 1;
@@ -59,16 +17,13 @@ function randomUnitVector(): [number, number, number] {
   return [x * scale, y * scale, z * scale];
 }
 
-/**
- * Simple random initialization (baseline)
- */
 export function randomInitialization(
   project: Project,
   sceneRadius: number = 10
 ): void {
-  Object.values(project.worldPoints).forEach(point => {
-    if (!point.xyz) {
-      point.xyz = [
+  project.worldPoints.forEach(point => {
+    if (!point.optimizedXyz) {
+      point.optimizedXyz = [
         (Math.random() - 0.5) * 2 * sceneRadius,
         (Math.random() - 0.5) * 2 * sceneRadius,
         (Math.random() - 0.5) * 2 * sceneRadius
@@ -77,36 +32,30 @@ export function randomInitialization(
   });
 }
 
-/**
- * Estimate scene scale from line length constraints
- */
-function estimateSceneScale(lines: Record<string, Line>): number {
+function estimateSceneScale(lines: Set<Line>): number {
   const lengths: number[] = [];
 
-  Object.values(lines).forEach(line => {
-    if (line.constraints?.targetLength) {
-      lengths.push(line.constraints.targetLength);
+  lines.forEach(line => {
+    if (line.targetLength !== undefined) {
+      lengths.push(line.targetLength);
     }
   });
 
-  if (lengths.length === 0) return 10; // Default 10m
+  if (lengths.length === 0) return 10;
 
-  // Use average target length as scene scale
   const avg = lengths.reduce((a, b) => a + b, 0) / lengths.length;
-  return avg * 2; // Scene is ~2x the average line length
+  return avg * 2;
 }
 
-/**
- * Find groups of coplanar points from constraints
- */
-function findCoplanarGroups(constraints: Constraint[]): string[][] {
-  const groups: string[][] = [];
+function findCoplanarGroups(constraints: Set<Constraint>): WorldPoint[][] {
+  const groups: WorldPoint[][] = [];
 
   constraints.forEach(constraint => {
-    if (constraint.type === 'points_coplanar') {
-      const pointIds = constraint.entities.points || [];
-      if (pointIds.length >= 4) {
-        groups.push(pointIds);
+    if (constraint.getConstraintType() === 'coplanar_points') {
+      const coplanarConstraint = constraint as CoplanarPointsConstraint;
+      const points = coplanarConstraint.points;
+      if (points.length >= 4) {
+        groups.push(points);
       }
     }
   });
@@ -114,102 +63,82 @@ function findCoplanarGroups(constraints: Constraint[]): string[][] {
   return groups;
 }
 
-/**
- * Initialize points on planes for coplanar groups
- */
 function initializeCoplanarGroups(
-  points: Record<string, WorldPoint>,
-  groups: string[][],
+  groups: WorldPoint[][],
   sceneScale: number
-): Set<string> {
-  const initialized = new Set<string>();
+): Set<WorldPoint> {
+  const initialized = new Set<WorldPoint>();
 
   groups.forEach((group, planeIdx) => {
-    // Each plane at a different z-level
     const planeZ = (planeIdx - groups.length / 2) * sceneScale * 0.3;
-
-    // Create a grid on the plane
     const gridSize = Math.ceil(Math.sqrt(group.length));
     const spacing = sceneScale / gridSize;
 
-    group.forEach((pointId, idx) => {
-      if (!points[pointId]) return;
-
+    group.forEach((point, idx) => {
       const row = Math.floor(idx / gridSize);
       const col = idx % gridSize;
 
       const x = (col - gridSize / 2) * spacing;
       const y = (row - gridSize / 2) * spacing;
 
-      points[pointId].xyz = [x, y, planeZ];
-      initialized.add(pointId);
+      point.optimizedXyz = [x, y, planeZ];
+      initialized.add(point);
     });
   });
 
   return initialized;
 }
 
-/**
- * Propagate positions through line graph using BFS
- */
 function propagateViaLineGraph(
-  points: Record<string, WorldPoint>,
-  lines: Record<string, Line>,
-  initialized: Set<string>,
+  points: Set<WorldPoint>,
+  lines: Set<Line>,
+  initialized: Set<WorldPoint>,
   sceneScale: number
 ): void {
-  const lineArray = Object.values(lines);
+  const lineArray = Array.from(lines);
 
-  // If no points initialized yet, start with first point at origin
   if (initialized.size === 0) {
-    const firstPointId = Object.keys(points)[0];
-    if (firstPointId && points[firstPointId]) {
-      points[firstPointId].xyz = [0, 0, 0];
-      initialized.add(firstPointId);
+    const firstPoint = Array.from(points)[0];
+    if (firstPoint) {
+      firstPoint.optimizedXyz = [0, 0, 0];
+      initialized.add(firstPoint);
     }
   }
 
-  // BFS to propagate positions
   const queue = Array.from(initialized);
 
   while (queue.length > 0) {
-    const currentId = queue.shift()!;
-    const currentPoint = points[currentId];
-    if (!currentPoint || !currentPoint.xyz) continue;
+    const currentPoint = queue.shift()!;
+    if (!currentPoint.optimizedXyz) continue;
 
-    const currentPos = currentPoint.xyz;
+    const currentPos = currentPoint.optimizedXyz;
 
-    // Find connected lines
     const connectedLines = lineArray.filter(line =>
-      line.pointA === currentId || line.pointB === currentId
+      line.pointA === currentPoint || line.pointB === currentPoint
     );
 
     connectedLines.forEach(line => {
-      const otherId = line.pointA === currentId ? line.pointB : line.pointA;
-      const otherPoint = points[otherId];
+      const otherPoint = line.pointA === currentPoint ? line.pointB : line.pointA;
 
-      if (!otherPoint || initialized.has(otherId)) return;
+      if (initialized.has(otherPoint)) return;
 
-      // Place at target distance in random direction
       const direction = randomUnitVector();
-      const distance = line.constraints?.targetLength || sceneScale * 0.5;
+      const distance = line.targetLength || sceneScale * 0.5;
 
-      otherPoint.xyz = [
+      otherPoint.optimizedXyz = [
         currentPos[0] + direction[0] * distance,
         currentPos[1] + direction[1] * distance,
         currentPos[2] + direction[2] * distance
       ];
 
-      initialized.add(otherId);
-      queue.push(otherId);
+      initialized.add(otherPoint);
+      queue.push(otherPoint);
     });
   }
 
-  // Handle any remaining unconnected points
-  Object.keys(points).forEach(pointId => {
-    if (!initialized.has(pointId) && points[pointId]) {
-      // Place randomly within scene bounds
-      points[pointId].xyz = [
+  points.forEach(point => {
+    if (!initialized.has(point)) {
+      point.optimizedXyz = [
         (Math.random() - 0.5) * sceneScale,
         (Math.random() - 0.5) * sceneScale,
         (Math.random() - 0.5) * sceneScale
@@ -218,58 +147,36 @@ function propagateViaLineGraph(
   });
 }
 
-/**
- * Smart initialization using constraint information
- *
- * Strategy:
- * 1. Estimate scene scale from line length constraints
- * 2. Group coplanar points and place them on separate planes
- * 3. Propagate positions through line graph using target lengths
- * 4. Fill in any remaining points randomly
- */
 export function smartInitialization(project: Project): void {
-  const points = project.worldPoints;
-  const lines = project.lines || {};
-  const constraints = project.constraints || [];
+  const sceneScale = estimateSceneScale(project.lines);
 
-  // Step 1: Estimate scene scale
-  const sceneScale = estimateSceneScale(lines);
-
-  // Step 2: Initialize coplanar groups
-  const coplanarGroups = findCoplanarGroups(constraints);
-  const initialized = initializeCoplanarGroups(points, coplanarGroups, sceneScale);
+  const coplanarGroups = findCoplanarGroups(project.constraints);
+  const initialized = initializeCoplanarGroups(coplanarGroups, sceneScale);
 
   console.log(`Smart init: ${coplanarGroups.length} coplanar groups, ${initialized.size} points initialized`);
 
-  // Step 3: Propagate through line graph
-  propagateViaLineGraph(points, lines, initialized, sceneScale);
+  propagateViaLineGraph(project.worldPoints, project.lines, initialized, sceneScale);
 
-  console.log(`Smart init: All ${Object.keys(points).length} points initialized`);
+  console.log(`Smart init: All ${project.worldPoints.size} points initialized`);
 }
 
-/**
- * Compare initialization quality by computing initial residual
- */
 export function computeInitialResidual(project: Project): number {
-  const lines = Object.values(project.lines || {});
-  const points = project.worldPoints;
   let totalError = 0;
   let count = 0;
 
-  // Compute line length errors
-  lines.forEach(line => {
-    const pointA = points[line.pointA];
-    const pointB = points[line.pointB];
+  project.lines.forEach(line => {
+    const pointA = line.pointA;
+    const pointB = line.pointB;
 
-    if (!pointA?.xyz || !pointB?.xyz) return;
-    if (!line.constraints?.targetLength) return;
+    if (!pointA.optimizedXyz || !pointB.optimizedXyz) return;
+    if (line.targetLength === undefined) return;
 
-    const dx = pointB.xyz[0] - pointA.xyz[0];
-    const dy = pointB.xyz[1] - pointA.xyz[1];
-    const dz = pointB.xyz[2] - pointA.xyz[2];
+    const dx = pointB.optimizedXyz[0] - pointA.optimizedXyz[0];
+    const dy = pointB.optimizedXyz[1] - pointA.optimizedXyz[1];
+    const dz = pointB.optimizedXyz[2] - pointA.optimizedXyz[2];
     const length = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
-    const error = Math.abs(length - line.constraints.targetLength);
+    const error = Math.abs(length - line.targetLength);
     totalError += error * error;
     count++;
   });

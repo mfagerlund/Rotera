@@ -7,25 +7,20 @@
  * - Residual should be [0, 0] when camera pose and point position are correct
  */
 
-import { describe, it, expect, beforeEach } from '@jest/globals';
+import { describe, it, expect } from '@jest/globals';
 import { WorldPoint } from '../../entities/world-point/WorldPoint';
 import { Viewpoint } from '../../entities/viewpoint/Viewpoint';
 import { ProjectionConstraint } from '../../entities/constraints/projection-constraint';
-import { ConstraintSystem } from '../constraint-system';
+import { Project } from '../../entities/project';
+import { ImagePoint } from '../../entities/imagePoint';
+import { optimizeProject } from '../optimize-project';
 
 describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
-  let system: ConstraintSystem;
-
-  beforeEach(() => {
-    system = new ConstraintSystem({
-      tolerance: 1e-4,
-      maxIterations: 100,
-      verbose: false,
-    });
-  });
 
   describe('Simple Projection', () => {
     it('should optimize camera pose to match multiple observed pixels', () => {
+      const project = Project.create('Camera Pose Test');
+
       // Create multiple world points at known locations (LOCKED - we're optimizing camera)
       const p1 = WorldPoint.create('Point1', {
         lockedXyz: [0, 0, 10], // Center, 10 units away - LOCKED
@@ -61,19 +56,25 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
       // p2 [2,0,10] -> [960 + 1000*(2/10), 540] = [1160, 540]
       // p3 [0,2,10] -> [960, 540 + 1000*(2/10)] = [960, 740]
 
-      const c1 = ProjectionConstraint.create('Proj1', p1, camera, 960, 540);
-      const c2 = ProjectionConstraint.create('Proj2', p2, camera, 1160, 540);
-      const c3 = ProjectionConstraint.create('Proj3', p3, camera, 960, 740);
+      const ip1 = ImagePoint.create(p1, camera, 960, 540);
+      const ip2 = ImagePoint.create(p2, camera, 1160, 540);
+      const ip3 = ImagePoint.create(p3, camera, 960, 740);
 
-      system.addPoint(p1);
-      system.addPoint(p2);
-      system.addPoint(p3);
-      system.addCamera(camera);
-      system.addConstraint(c1);
-      system.addConstraint(c2);
-      system.addConstraint(c3);
+      project.addWorldPoint(p1);
+      project.addWorldPoint(p2);
+      project.addWorldPoint(p3);
+      project.addViewpoint(camera);
+      project.addImagePoint(ip1);
+      project.addImagePoint(ip2);
+      project.addImagePoint(ip3);
 
-      const result = system.solve();
+      const result = optimizeProject(project, {
+        tolerance: 1e-4,
+        maxIterations: 100,
+        verbose: false,
+        autoInitializeCameras: false,
+        autoInitializeWorldPoints: false
+      });
 
       console.log('\n=== Camera Pose Optimization ===');
       console.log('Converged:', result.converged);
@@ -99,6 +100,8 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
     });
 
     it('should optimize point position to match observed pixel', () => {
+      const project = Project.create('Point Position Test');
+
       // Create a viewpoint at a known pose (LOCKED - we're optimizing the point)
       const camera = Viewpoint.create(
         'TestCamera',
@@ -126,19 +129,19 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
       const observedU = 960;
       const observedV = 540;
 
-      const constraint = ProjectionConstraint.create(
-        'Projection1',
-        worldPoint,
-        camera,
-        observedU,
-        observedV
-      );
+      const ip = ImagePoint.create(worldPoint, camera, observedU, observedV);
 
-      system.addCamera(camera);
-      system.addPoint(worldPoint);
-      system.addConstraint(constraint);
+      project.addViewpoint(camera);
+      project.addWorldPoint(worldPoint);
+      project.addImagePoint(ip);
 
-      const result = system.solve();
+      const result = optimizeProject(project, {
+        tolerance: 1e-4,
+        maxIterations: 100,
+        verbose: false,
+        autoInitializeCameras: false,
+        autoInitializeWorldPoints: false
+      });
 
       console.log('\n=== Point Position from Single Observation ===');
       console.log('Converged:', result.converged);
@@ -161,6 +164,8 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
 
   describe('Bundle Adjustment', () => {
     it('should jointly optimize camera pose and point positions', () => {
+      const project = Project.create('Bundle Adjustment Test');
+
       // Create two viewpoints with wrong poses
       const cam1 = Viewpoint.create('Camera1', 'camera1.jpg', '', 1920, 1080, {
         focalLength: 1000,
@@ -188,29 +193,22 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
       // If cameras were at [-2, 0, 0] and [2, 0, 0], both pointing at [0, 0, 10],
       // the point would project to image center in both images
 
-      const proj1 = ProjectionConstraint.create(
-        'Proj_Cam1_P1',
-        point,
-        cam1,
-        960, // image center
-        540
-      );
+      const ip1 = ImagePoint.create(point, cam1, 960, 540);
+      const ip2 = ImagePoint.create(point, cam2, 960, 540);
 
-      const proj2 = ProjectionConstraint.create(
-        'Proj_Cam2_P1',
-        point,
-        cam2,
-        960, // image center
-        540
-      );
+      project.addViewpoint(cam1);
+      project.addViewpoint(cam2);
+      project.addWorldPoint(point);
+      project.addImagePoint(ip1);
+      project.addImagePoint(ip2);
 
-      system.addCamera(cam1);
-      system.addCamera(cam2);
-      system.addPoint(point);
-      system.addConstraint(proj1);
-      system.addConstraint(proj2);
-
-      const result = system.solve();
+      const result = optimizeProject(project, {
+        tolerance: 1e-4,
+        maxIterations: 100,
+        verbose: false,
+        autoInitializeCameras: false,
+        autoInitializeWorldPoints: false
+      });
 
       console.log('\n=== Bundle Adjustment (2 cameras, 1 point) ===');
       console.log('Converged:', result.converged);
@@ -237,16 +235,7 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
     });
 
     it('should triangulate point from multiple camera views', () => {
-      // Two cameras at known poses (locked)
-      const cam1 = WorldPoint.create('Cam1Position', {
-        lockedXyz: [-2, 0, 0], // Lock camera position
-        optimizedXyz: [-2, 0, 0],
-      });
-
-      const cam2 = WorldPoint.create('Cam2Position', {
-        lockedXyz: [2, 0, 0],
-        optimizedXyz: [2, 0, 0],
-      });
+      const project = Project.create('Triangulation Test');
 
       // Create viewpoints with locked poses
       const camera1 = Viewpoint.create('Camera1', 'camera1.jpg', '', 1920, 1080, {
@@ -276,31 +265,22 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
       // Observations: point projects to image center in both views
       // Actual point should be at [0, 0, 10] to project to center from both cameras
 
-      const proj1 = ProjectionConstraint.create(
-        'Proj1',
-        point,
-        camera1,
-        960,
-        540
-      );
+      const ip1 = ImagePoint.create(point, camera1, 960, 540);
+      const ip2 = ImagePoint.create(point, camera2, 960, 540);
 
-      const proj2 = ProjectionConstraint.create(
-        'Proj2',
-        point,
-        camera2,
-        960,
-        540
-      );
+      project.addViewpoint(camera1);
+      project.addViewpoint(camera2);
+      project.addWorldPoint(point);
+      project.addImagePoint(ip1);
+      project.addImagePoint(ip2);
 
-      system.addPoint(cam1); // Add camera positions as locked points
-      system.addPoint(cam2);
-      system.addCamera(camera1); // Cameras will use these positions
-      system.addCamera(camera2);
-      system.addPoint(point);
-      system.addConstraint(proj1);
-      system.addConstraint(proj2);
-
-      const result = system.solve();
+      const result = optimizeProject(project, {
+        tolerance: 1e-4,
+        maxIterations: 100,
+        verbose: false,
+        autoInitializeCameras: false,
+        autoInitializeWorldPoints: false
+      });
 
       console.log('\n=== Triangulation (2 cameras, locked poses) ===');
       console.log('Converged:', result.converged);

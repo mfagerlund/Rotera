@@ -2,6 +2,7 @@ import type { ISelectable, SelectableType } from '../../types/selectable'
 import type { IValidatable, ValidationContext, ValidationResult, ValidationError } from '../../validation/validator'
 import type { ValueMap, IResidualProvider } from '../../optimization/IOptimizable'
 import type { Value } from 'scalar-autograd'
+import * as vec3 from '../../utils/vec3'
 import { ValidationHelpers } from '../../validation/validator'
 import type { WorldPoint } from '../world-point'
 import type { Line } from '../line'
@@ -116,7 +117,6 @@ export abstract class Constraint implements ISelectable, IValidatable, IResidual
     }
   }
 
-  // Helper method for calculating angle between three points (in degrees)
   protected calculateAngleBetweenPoints(pointA: WorldPoint, vertex: WorldPoint, pointC: WorldPoint): number {
     const aCoords = getPointCoordinates(pointA)
     const vCoords = getPointCoordinates(vertex)
@@ -126,25 +126,10 @@ export abstract class Constraint implements ISelectable, IValidatable, IResidual
       return 0
     }
 
-    const [x1, y1, z1] = aCoords
-    const [x2, y2, z2] = vCoords
-    const [x3, y3, z3] = cCoords
+    const vec1 = vec3.subtract(aCoords, vCoords)
+    const vec2 = vec3.subtract(cCoords, vCoords)
 
-    // Calculate vectors from vertex to other points
-    const vec1 = [x1 - x2, y1 - y2, z1 - z2]
-    const vec2 = [x3 - x2, y3 - y2, z3 - z2]
-
-    // Calculate magnitudes
-    const mag1 = Math.sqrt(vec1[0] ** 2 + vec1[1] ** 2 + vec1[2] ** 2)
-    const mag2 = Math.sqrt(vec2[0] ** 2 + vec2[1] ** 2 + vec2[2] ** 2)
-
-    if (mag1 === 0 || mag2 === 0) return 0
-
-    // Calculate dot product
-    const dotProduct = vec1[0] * vec2[0] + vec1[1] * vec2[1] + vec1[2] * vec2[2]
-
-    // Calculate angle in radians and convert to degrees
-    const angleRadians = Math.acos(Math.max(-1, Math.min(1, dotProduct / (mag1 * mag2))))
+    const angleRadians = vec3.angleBetween(vec1, vec2)
     return (angleRadians * 180) / Math.PI
   }
 }

@@ -2,6 +2,7 @@ import type {ISelectable, SelectableType} from '../../types/selectable'
 import type {IValueMapContributor, ValueMap} from '../../optimization/IOptimizable'
 import type {IWorldPoint, ILine, IConstraint, IImagePoint} from '../interfaces'
 import {V, Value, Vec3} from 'scalar-autograd'
+import * as vec3 from '../../utils/vec3'
 import type { ISerializable } from '../serialization/ISerializable'
 import type { SerializationContext } from '../serialization/SerializationContext'
 import type { WorldPointDto } from './WorldPointDto'
@@ -97,6 +98,10 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
             return this.lockedXyz[0] !== null || this.lockedXyz[1] !== null || this.lockedXyz[2] !== null
         }
         return false
+    }
+
+    isFullyLocked(): boolean {
+        return this.lockedXyz[0] !== null && this.lockedXyz[1] !== null && this.lockedXyz[2] !== null
     }
 
     isXLocked(): boolean {
@@ -210,14 +215,7 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
         pointA: [number, number, number],
         pointB: [number, number, number]
     ): number {
-        const [x1, y1, z1] = pointA
-        const [x2, y2, z2] = pointB
-
-        return Math.sqrt(
-            Math.pow(x2 - x1, 2) +
-            Math.pow(y2 - y1, 2) +
-            Math.pow(z2 - z1, 2)
-        )
+        return vec3.distance(pointA, pointB)
     }
 
     static calculateCentroid(points: Array<[number, number, number]>): [number, number, number] | null {
@@ -243,22 +241,10 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
         pointC: [number, number, number],
         tolerance: number = 1e-6
     ): boolean {
-        const [x1, y1, z1] = pointA
-        const [x2, y2, z2] = pointB
-        const [x3, y3, z3] = pointC
-
-        // Calculate cross product vectors
-        const v1 = [x2 - x1, y2 - y1, z2 - z1]
-        const v2 = [x3 - x1, y3 - y1, z3 - z1]
-
-        // Cross product
-        const cross = [
-            v1[1] * v2[2] - v1[2] * v2[1],
-            v1[2] * v2[0] - v1[0] * v2[2],
-            v1[0] * v2[1] - v1[1] * v2[0]
-        ]
-
-        const magnitude = Math.sqrt(cross[0] ** 2 + cross[1] ** 2 + cross[2] ** 2)
+        const v1 = vec3.subtract(pointB, pointA)
+        const v2 = vec3.subtract(pointC, pointA)
+        const cross = vec3.cross(v1, v2)
+        const magnitude = vec3.magnitude(cross)
         return magnitude < tolerance
     }
 
@@ -267,25 +253,9 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
         vertex: [number, number, number],
         pointC: [number, number, number]
     ): number {
-        const [x1, y1, z1] = pointA
-        const [x2, y2, z2] = vertex
-        const [x3, y3, z3] = pointC
-
-        // Calculate vectors from vertex to other points
-        const vec1 = [x1 - x2, y1 - y2, z1 - z2]
-        const vec2 = [x3 - x2, y3 - y2, z3 - z2]
-
-        // Calculate magnitudes
-        const mag1 = Math.sqrt(vec1[0] ** 2 + vec1[1] ** 2 + vec1[2] ** 2)
-        const mag2 = Math.sqrt(vec2[0] ** 2 + vec2[1] ** 2 + vec2[2] ** 2)
-
-        if (mag1 === 0 || mag2 === 0) return 0
-
-        // Calculate dot product
-        const dotProduct = vec1[0] * vec2[0] + vec1[1] * vec2[1] + vec1[2] * vec2[2]
-
-        // Calculate angle in radians then convert to degrees
-        const angleRad = Math.acos(Math.max(-1, Math.min(1, dotProduct / (mag1 * mag2))))
+        const vec1 = vec3.subtract(pointA, vertex)
+        const vec2 = vec3.subtract(pointC, vertex)
+        const angleRad = vec3.angleBetween(vec1, vec2)
         return angleRad * (180 / Math.PI)
     }
 
@@ -294,31 +264,17 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
         planePoint: [number, number, number],
         planeNormal: [number, number, number]
     ): [number, number, number] {
-        const [px, py, pz] = point
-        const [planePx, planePy, planePz] = planePoint
-        const [nx, ny, nz] = planeNormal
-
-        // Vector from plane point to the point
-        const vec = [px - planePx, py - planePy, pz - planePz]
-
-        // Dot product of vector with normal
-        const dot = vec[0] * nx + vec[1] * ny + vec[2] * nz
-
-        // Normal magnitude squared
-        const normalMagSquared = nx * nx + ny * ny + nz * nz
+        const vec = vec3.subtract(point, planePoint)
+        const dotProduct = vec3.dot(vec, planeNormal)
+        const normalMagSquared = vec3.sqrMagnitude(planeNormal)
 
         if (normalMagSquared === 0) {
-            // Degenerate normal, return original point
             return point
         }
 
-        // Project point onto plane
-        const projectionFactor = dot / normalMagSquared
-        return [
-            px - projectionFactor * nx,
-            py - projectionFactor * ny,
-            pz - projectionFactor * nz
-        ]
+        const projectionFactor = dotProduct / normalMagSquared
+        const offset = vec3.scale(planeNormal, projectionFactor)
+        return vec3.subtract(point, offset)
     }
 
     static distanceToPlane(
@@ -326,24 +282,15 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
         planePoint: [number, number, number],
         planeNormal: [number, number, number]
     ): number {
-        const [px, py, pz] = point
-        const [planePx, planePy, planePz] = planePoint
-        const [nx, ny, nz] = planeNormal
-
-        // Vector from plane point to the point
-        const vec = [px - planePx, py - planePy, pz - planePz]
-
-        // Dot product of vector with normal
-        const dot = vec[0] * nx + vec[1] * ny + vec[2] * nz
-
-        // Normal magnitude
-        const normalMag = Math.sqrt(nx * nx + ny * ny + nz * nz)
+        const vec = vec3.subtract(point, planePoint)
+        const dotProduct = vec3.dot(vec, planeNormal)
+        const normalMag = vec3.magnitude(planeNormal)
 
         if (normalMag === 0) {
-            return 0 // Degenerate normal
+            return 0
         }
 
-        return Math.abs(dot) / normalMag
+        return Math.abs(dotProduct) / normalMag
     }
 
     static areCoplanar(
@@ -351,23 +298,14 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
         tolerance: number = 1e-6
     ): boolean {
         if (points.length < 4) {
-            return true // Less than 4 points are always coplanar
+            return true
         }
 
-        // Use first 3 points to define the plane
         const [p1, p2, p3] = points
+        const v1 = vec3.subtract(p2, p1)
+        const v2 = vec3.subtract(p3, p1)
+        const normal = vec3.cross(v1, v2)
 
-        // Calculate normal vector using cross product
-        const v1 = [p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]]
-        const v2 = [p3[0] - p1[0], p3[1] - p1[1], p3[2] - p1[2]]
-
-        const normal: [number, number, number] = [
-            v1[1] * v2[2] - v1[2] * v2[1],
-            v1[2] * v2[0] - v1[0] * v2[2],
-            v1[0] * v2[1] - v1[1] * v2[0]
-        ]
-
-        // Check if all other points lie on the same plane
         for (let i = 3; i < points.length; i++) {
             const distance = this.distanceToPlane(points[i], p1, normal)
             if (distance > tolerance) {
@@ -463,7 +401,16 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
             return
         }
 
-        const xyz: [number, number, number] = [vec.x.data, vec.y.data, vec.z.data]
+        const xLocked = this.isXLocked()
+        const yLocked = this.isYLocked()
+        const zLocked = this.isZLocked()
+
+        const xyz: [number, number, number] = [
+            xLocked ? this.lockedXyz[0]! : vec.x.data,
+            yLocked ? this.lockedXyz[1]! : vec.y.data,
+            zLocked ? this.lockedXyz[2]! : vec.z.data
+        ]
+
         const residuals = this.computeResiduals(valueMap)
         this.lastResiduals = residuals.map(r => r.data)
         this.applyOptimizationResult({xyz})

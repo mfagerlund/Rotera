@@ -1,6 +1,7 @@
 import type { ISelectable, SelectableType } from '../../types/selectable'
 import type { IResidualProvider, ValueMap } from '../../optimization/IOptimizable'
 import { V, Value } from 'scalar-autograd'
+import * as vec3 from '../../utils/vec3'
 import type { WorldPoint } from '../world-point'
 import type { IConstraint, ILine, IWorldPoint } from '../interfaces'
 import type { ISerializable } from '../serialization/ISerializable'
@@ -256,14 +257,7 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
       return null
     }
 
-    const [x1, y1, z1] = aCoords
-    const [x2, y2, z2] = bCoords
-
-    return Math.sqrt(
-      Math.pow(x2 - x1, 2) +
-      Math.pow(y2 - y1, 2) +
-      Math.pow(z2 - z1, 2)
-    )
+    return vec3.distance(aCoords, bCoords)
   }
 
   static getDirectionVector(pointA: WorldPoint, pointB: WorldPoint): [number, number, number] | null {
@@ -274,17 +268,8 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
       return null
     }
 
-    const [x1, y1, z1] = aCoords
-    const [x2, y2, z2] = bCoords
-
-    const dx = x2 - x1
-    const dy = y2 - y1
-    const dz = z2 - z1
-
-    const length = Math.sqrt(dx * dx + dy * dy + dz * dz)
-    if (length === 0) return null
-
-    return [dx / length, dy / length, dz / length]
+    const direction = vec3.subtract(bCoords, aCoords)
+    return vec3.isZero(direction) ? null : vec3.normalize(direction)
   }
 
   static getMidpoint(pointA: WorldPoint, pointB: WorldPoint): [number, number, number] | null {
@@ -295,14 +280,7 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
       return null
     }
 
-    const [x1, y1, z1] = aCoords
-    const [x2, y2, z2] = bCoords
-
-    return [
-      (x1 + x2) / 2,
-      (y1 + y2) / 2,
-      (z1 + z2) / 2
-    ]
+    return vec3.midpoint(aCoords, bCoords)
   }
 
   static containsPoint(
@@ -318,23 +296,11 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
       return false
     }
 
-    const [x, y, z] = testPoint
-    const [x1, y1, z1] = aCoords
-    const [x2, y2, z2] = bCoords
+    const lineVec = vec3.subtract(bCoords, aCoords)
+    const pointVec = vec3.subtract(testPoint, aCoords)
+    const crossProduct = vec3.cross(pointVec, lineVec)
 
-    const crossProduct = [
-      (y - y1) * (z2 - z1) - (z - z1) * (y2 - y1),
-      (z - z1) * (x2 - x1) - (x - x1) * (z2 - z1),
-      (x - x1) * (y2 - y1) - (y - y1) * (x2 - x1)
-    ]
-
-    const crossMagnitude = Math.sqrt(
-      crossProduct[0] * crossProduct[0] +
-      crossProduct[1] * crossProduct[1] +
-      crossProduct[2] * crossProduct[2]
-    )
-
-    return crossMagnitude < tolerance
+    return vec3.magnitude(crossProduct) < tolerance
   }
 
   static distanceToPoint(
@@ -349,36 +315,7 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
       return null
     }
 
-    const [px, py, pz] = testPoint
-    const [x1, y1, z1] = aCoords
-    const [x2, y2, z2] = bCoords
-
-    const lineVector = [x2 - x1, y2 - y1, z2 - z1]
-    const pointVector = [px - x1, py - y1, pz - z1]
-
-    const lineLengthSquared = lineVector[0] ** 2 + lineVector[1] ** 2 + lineVector[2] ** 2
-
-    if (lineLengthSquared === 0) {
-      return Math.sqrt((px - x1) ** 2 + (py - y1) ** 2 + (pz - z1) ** 2)
-    }
-
-    const projection = (
-      pointVector[0] * lineVector[0] +
-      pointVector[1] * lineVector[1] +
-      pointVector[2] * lineVector[2]
-    ) / lineLengthSquared
-
-    const closestPoint = [
-      x1 + projection * lineVector[0],
-      y1 + projection * lineVector[1],
-      z1 + projection * lineVector[2]
-    ]
-
-    return Math.sqrt(
-      (px - closestPoint[0]) ** 2 +
-      (py - closestPoint[1]) ** 2 +
-      (pz - closestPoint[2]) ** 2
-    )
+    return vec3.distanceToLineSegment(testPoint, aCoords, bCoords)
   }
 
   static angleBetweenLines(
@@ -394,9 +331,7 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
       return null
     }
 
-    const dotProduct = dir1[0] * dir2[0] + dir1[1] * dir2[1] + dir1[2] * dir2[2]
-    const clampedDotProduct = Math.max(-1, Math.min(1, dotProduct))
-    const angleRad = Math.acos(Math.abs(clampedDotProduct))
+    const angleRad = vec3.angleBetween(dir1, dir2)
     return angleRad * (180 / Math.PI)
   }
 

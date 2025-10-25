@@ -3,10 +3,14 @@ import type {IWorldPoint, IImagePoint, IViewpoint} from '../interfaces'
 import type { ISerializable } from '../serialization/ISerializable'
 import type { SerializationContext } from '../serialization/SerializationContext'
 import type { ImagePointDto } from './ImagePointDto'
+import type { IResidualProvider, IOptimizationResultReceiver, ValueMap } from '../../optimization/IOptimizable'
+import { V, Value } from 'scalar-autograd'
+import { projectWorldPointToPixelQuaternion } from '../../optimization/camera-projection'
 import {makeAutoObservable} from 'mobx'
 
-export class ImagePoint implements ISelectable, IImagePoint, ISerializable<ImagePointDto> {
+export class ImagePoint implements ISelectable, IImagePoint, IResidualProvider, IOptimizationResultReceiver, ISerializable<ImagePointDto> {
     selected = false
+    lastResiduals: number[] = []
 
     worldPoint: IWorldPoint
     viewpoint: IViewpoint
@@ -97,6 +101,63 @@ export class ImagePoint implements ISelectable, IImagePoint, ISerializable<Image
             throw new Error('Confidence must be between 0 and 1')
         }
         this.confidence = confidence
+    }
+
+    computeResiduals(valueMap: ValueMap): Value[] {
+        const worldPointVec = valueMap.points.get(this.worldPoint as any)
+        if (!worldPointVec) {
+            return []
+        }
+
+        const cameraValues = valueMap.cameras.get(this.viewpoint as any)
+        if (!cameraValues) {
+            return []
+        }
+
+        const projection = projectWorldPointToPixelQuaternion(
+            worldPointVec,
+            cameraValues.position,
+            cameraValues.rotation,
+            cameraValues.focalLength,
+            cameraValues.aspectRatio,
+            cameraValues.principalPointX,
+            cameraValues.principalPointY,
+            cameraValues.skew,
+            cameraValues.k1,
+            cameraValues.k2,
+            cameraValues.k3,
+            cameraValues.p1,
+            cameraValues.p2
+        )
+
+        if (!projection) {
+            return [V.C(1000), V.C(1000)]
+        }
+
+        const [projected_u, projected_v] = projection
+
+        const residual_u = V.sub(projected_u, V.C(this.u))
+        const residual_v = V.sub(projected_v, V.C(this.v))
+
+        return [residual_u, residual_v]
+    }
+
+    applyOptimizationResult(_valueMap: ValueMap): void {
+        const residuals = this.computeResiduals(_valueMap)
+        this.lastResiduals = residuals.map(r => r.data)
+    }
+
+    getOptimizationInfo() {
+        const residuals = this.lastResiduals
+        const totalResidual = residuals.length > 0
+            ? Math.sqrt(residuals.reduce((sum, r) => sum + r * r, 0))
+            : 0
+
+        return {
+            residuals: residuals,
+            totalResidual,
+            rmsResidual: residuals.length > 0 ? totalResidual / Math.sqrt(residuals.length) : 0
+        }
     }
 
     serialize(context: SerializationContext): ImagePointDto {
