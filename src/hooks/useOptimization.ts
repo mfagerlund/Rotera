@@ -9,7 +9,7 @@ import { WorldPoint } from '../entities/world-point/WorldPoint';
 import { Line } from '../entities/line/Line';
 import { Viewpoint } from '../entities/viewpoint/Viewpoint';
 import { Constraint } from '../entities/constraints/base-constraint';
-import { initializeWorldPoints } from '../optimization/entity-initialization';
+import { optimizeProject } from '../optimization/optimize-project';
 
 type ConstraintId = string;
 
@@ -62,7 +62,10 @@ export const useOptimization = () => {
       // Add entities
       points.forEach((p) => system.addPoint(p));
       lines.forEach((l) => system.addLine(l));
-      viewpoints.forEach((v) => system.addCamera(v));
+      viewpoints.forEach((v) => {
+        system.addCamera(v);
+        v.imagePoints.forEach((ip) => system.addImagePoint(ip as any));
+      });
       constraints.forEach((c) => system.addConstraint(c));
 
       // Build value map
@@ -120,33 +123,30 @@ export const useOptimization = () => {
       }));
 
       try {
-        // Build constraint system
-        const system = new ConstraintSystem({
-          tolerance: options.tolerance ?? 1e-6,
-          maxIterations: options.maxIterations ?? 100,
-          damping: options.damping ?? 1e-3,
-          verbose: options.verbose ?? false,
-        });
+        const project = {
+          worldPoints: new Set(points),
+          lines: new Set(lines),
+          viewpoints: new Set(viewpoints),
+          imagePoints: new Set(
+            viewpoints.flatMap(vp => Array.from(vp.imagePoints))
+          ),
+          constraints: new Set(constraints),
+        } as any;
 
-        // Initialize optimizedXyz using smart initialization
-        initializeWorldPoints(points, lines, constraints);
-
-        // Add all entities
-        points.forEach((p) => system.addPoint(p));
-        lines.forEach((l) => system.addLine(l));
-        viewpoints.forEach((v) => system.addCamera(v));
-        constraints.forEach((c) => system.addConstraint(c));
-
-        // Run optimization (this updates entity positions in-place)
         const result = await new Promise<SolverResult>((resolve) => {
-          // Use setTimeout to allow UI to update
           setTimeout(() => {
-            const solverResult = system.solve();
+            const solverResult = optimizeProject(project, {
+              tolerance: options.tolerance ?? 1e-6,
+              maxIterations: options.maxIterations ?? 100,
+              damping: options.damping ?? 1e-3,
+              verbose: options.verbose ?? false,
+              autoInitializeCameras: true,
+              autoInitializeWorldPoints: true,
+            });
             resolve(solverResult);
           }, 0);
         });
 
-        // Compute final residuals per constraint
         const constraintResiduals = computeResiduals(points, lines, viewpoints, constraints);
 
         setState({

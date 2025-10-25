@@ -3,24 +3,20 @@
  * These constraints are NOT created explicitly by the user - they're part of the entity itself.
  */
 
-import { describe, it, expect, beforeEach } from '@jest/globals';
+import { describe, it, expect } from '@jest/globals';
 import { WorldPoint } from '../../entities/world-point/WorldPoint';
 import { Line } from '../../entities/line/Line';
-import { ConstraintSystem } from '../constraint-system';
+import { Project } from '../../entities/project';
+import { optimizeProject } from '../optimize-project';
 
 describe('Intrinsic Constraints', () => {
-  let system: ConstraintSystem;
 
-  beforeEach(() => {
-    system = new ConstraintSystem({
-      tolerance: 1e-6,
-      maxIterations: 100,
-      verbose: false,
-    });
-  });
 
   describe('Point - Locked (Fixed Position)', () => {
-    it('should not move locked points when constrained to another point', () => {
+        it('should not move locked points when constrained to another point', () => {
+      const project = Project.create('Test');
+
+      
       const lockedPoint = WorldPoint.create('Locked', {
         lockedXyz: [10, 20, 30], // INTRINSIC constraint - point is fixed
       });
@@ -36,11 +32,17 @@ describe('Intrinsic Constraints', () => {
         targetLength: 50,
       });
 
-      system.addPoint(lockedPoint);
-      system.addPoint(freePoint);
-      system.addLine(line);
+      project.addWorldPoint(lockedPoint);
+      project.addWorldPoint(freePoint);
+      project.addLine(line);
 
-      const result = system.solve();
+      const result = optimizeProject(project, {
+        tolerance: 1e-6,
+        maxIterations: 100,
+        verbose: false,
+        autoInitializeCameras: false,
+        autoInitializeWorldPoints: false
+      });
 
       expect(result.converged).toBe(true);
 
@@ -56,7 +58,10 @@ describe('Intrinsic Constraints', () => {
   });
 
   describe('Line - Fixed Length', () => {
-    it('should enforce fixed length intrinsic constraint', () => {
+        it('should enforce fixed length intrinsic constraint', () => {
+      const project = Project.create('Test');
+
+      
       const p1 = WorldPoint.create('P1', { lockedXyz: [0, 0, 0] });
       const p2 = WorldPoint.create('P2', { lockedXyz: [null, null, null], optimizedXyz: [5, 0, 0] }); // Currently 5 units
 
@@ -66,11 +71,17 @@ describe('Intrinsic Constraints', () => {
         tolerance: 1e-4,
       });
 
-      system.addPoint(p1);
-      system.addPoint(p2);
-      system.addLine(line); // Automatically extracts intrinsic constraints
+      project.addWorldPoint(p1);
+      project.addWorldPoint(p2);
+      project.addLine(line); // Automatically extracts intrinsic constraints
 
-      const result = system.solve();
+      const result = optimizeProject(project, {
+        tolerance: 1e-6,
+        maxIterations: 100,
+        verbose: false,
+        autoInitializeCameras: false,
+        autoInitializeWorldPoints: false
+      });
 
       expect(result.converged).toBe(true);
 
@@ -81,7 +92,10 @@ describe('Intrinsic Constraints', () => {
   });
 
   describe('Line - Horizontal', () => {
-    it('should enforce horizontal direction intrinsic constraint', () => {
+        it('should enforce horizontal direction intrinsic constraint', () => {
+      const project = Project.create('Test');
+
+      
       const p1 = WorldPoint.create('P1', { lockedXyz: [0, 0, 0] });
       const p2 = WorldPoint.create('P2', { lockedXyz: [null, null, null], optimizedXyz: [10, 5, 3] }); // Not horizontal
 
@@ -90,11 +104,17 @@ describe('Intrinsic Constraints', () => {
         tolerance: 1e-4,
       });
 
-      system.addPoint(p1);
-      system.addPoint(p2);
-      system.addLine(line);
+      project.addWorldPoint(p1);
+      project.addWorldPoint(p2);
+      project.addLine(line);
 
-      const result = system.solve();
+      const result = optimizeProject(project, {
+        tolerance: 1e-6,
+        maxIterations: 100,
+        verbose: false,
+        autoInitializeCameras: false,
+        autoInitializeWorldPoints: false
+      });
 
       expect(result.converged).toBe(true);
 
@@ -106,7 +126,10 @@ describe('Intrinsic Constraints', () => {
   });
 
   describe('Line - Vertical', () => {
-    it('should enforce vertical direction intrinsic constraint', () => {
+        it('should enforce vertical direction intrinsic constraint', () => {
+      const project = Project.create('Test');
+
+      
       const p1 = WorldPoint.create('P1', { lockedXyz: [0, 0, 0] });
       const p2 = WorldPoint.create('P2', { lockedXyz: [null, null, null], optimizedXyz: [5, 10, 3] }); // Not vertical
 
@@ -115,11 +138,17 @@ describe('Intrinsic Constraints', () => {
         tolerance: 1e-4,
       });
 
-      system.addPoint(p1);
-      system.addPoint(p2);
-      system.addLine(line);
+      project.addWorldPoint(p1);
+      project.addWorldPoint(p2);
+      project.addLine(line);
 
-      const result = system.solve();
+      const result = optimizeProject(project, {
+        tolerance: 1e-6,
+        maxIterations: 100,
+        verbose: false,
+        autoInitializeCameras: false,
+        autoInitializeWorldPoints: false
+      });
 
       expect(result.converged).toBe(true);
 
@@ -131,7 +160,10 @@ describe('Intrinsic Constraints', () => {
   });
 
   describe('Line - X-Aligned', () => {
-    it('should enforce x-aligned direction intrinsic constraint', () => {
+        it('should enforce x-aligned direction intrinsic constraint', () => {
+      const project = Project.create('Test');
+
+      
       const p1 = WorldPoint.create('P1', { lockedXyz: [0, 0, 0] });
       const p2 = WorldPoint.create('P2', { lockedXyz: [null, null, null], optimizedXyz: [10, 5, 3] }); // Not x-aligned
 
@@ -140,11 +172,17 @@ describe('Intrinsic Constraints', () => {
         tolerance: 1e-4,
       });
 
-      system.addPoint(p1);
-      system.addPoint(p2);
-      system.addLine(line);
+      project.addWorldPoint(p1);
+      project.addWorldPoint(p2);
+      project.addLine(line);
 
-      const result = system.solve();
+      const result = optimizeProject(project, {
+        tolerance: 1e-6,
+        maxIterations: 100,
+        verbose: false,
+        autoInitializeCameras: false,
+        autoInitializeWorldPoints: false
+      });
 
       expect(result.converged).toBe(true);
 
@@ -156,7 +194,10 @@ describe('Intrinsic Constraints', () => {
   });
 
   describe('Line - Z-Aligned', () => {
-    it('should enforce z-aligned direction intrinsic constraint', () => {
+        it('should enforce z-aligned direction intrinsic constraint', () => {
+      const project = Project.create('Test');
+
+      
       const p1 = WorldPoint.create('P1', { lockedXyz: [0, 0, 0] });
       const p2 = WorldPoint.create('P2', { lockedXyz: [null, null, null], optimizedXyz: [5, 3, 10] }); // Not z-aligned
 
@@ -165,11 +206,17 @@ describe('Intrinsic Constraints', () => {
         tolerance: 1e-4,
       });
 
-      system.addPoint(p1);
-      system.addPoint(p2);
-      system.addLine(line);
+      project.addWorldPoint(p1);
+      project.addWorldPoint(p2);
+      project.addLine(line);
 
-      const result = system.solve();
+      const result = optimizeProject(project, {
+        tolerance: 1e-6,
+        maxIterations: 100,
+        verbose: false,
+        autoInitializeCameras: false,
+        autoInitializeWorldPoints: false
+      });
 
       expect(result.converged).toBe(true);
 
@@ -181,7 +228,10 @@ describe('Intrinsic Constraints', () => {
   });
 
   describe('Line - Combined Constraints', () => {
-    it('should enforce both direction and length intrinsic constraints', () => {
+        it('should enforce both direction and length intrinsic constraints', () => {
+      const project = Project.create('Test');
+
+      
       const p1 = WorldPoint.create('P1', { lockedXyz: [0, 0, 0] });
       const p2 = WorldPoint.create('P2', { lockedXyz: [null, null, null], optimizedXyz: [5, 3, 2] }); // Wrong direction and length
 
@@ -191,11 +241,17 @@ describe('Intrinsic Constraints', () => {
         tolerance: 1e-4,
       });
 
-      system.addPoint(p1);
-      system.addPoint(p2);
-      system.addLine(line);
+      project.addWorldPoint(p1);
+      project.addWorldPoint(p2);
+      project.addLine(line);
 
-      const result = system.solve();
+      const result = optimizeProject(project, {
+        tolerance: 1e-6,
+        maxIterations: 100,
+        verbose: false,
+        autoInitializeCameras: false,
+        autoInitializeWorldPoints: false
+      });
 
       expect(result.converged).toBe(true);
 
@@ -211,7 +267,10 @@ describe('Intrinsic Constraints', () => {
   });
 
   describe('Multiple Lines with Intrinsic Constraints', () => {
-    it('should solve multiple lines each with their own intrinsic constraints', () => {
+        it('should solve multiple lines each with their own intrinsic constraints', () => {
+      const project = Project.create('Test');
+
+      
       const origin = WorldPoint.create('Origin', { lockedXyz: [0, 0, 0] });
       const px = WorldPoint.create('X-Point', { lockedXyz: [null, null, null], optimizedXyz: [5, 1, 1] });
       const py = WorldPoint.create('Y-Point', { lockedXyz: [null, null, null], optimizedXyz: [1, 5, 1] });
@@ -230,15 +289,21 @@ describe('Intrinsic Constraints', () => {
         direction: 'z-aligned', targetLength: 10,
       });
 
-      system.addPoint(origin);
-      system.addPoint(px);
-      system.addPoint(py);
-      system.addPoint(pz);
-      system.addLine(lineX);
-      system.addLine(lineY);
-      system.addLine(lineZ);
+      project.addWorldPoint(origin);
+      project.addWorldPoint(px);
+      project.addWorldPoint(py);
+      project.addWorldPoint(pz);
+      project.addLine(lineX);
+      project.addLine(lineY);
+      project.addLine(lineZ);
 
-      const result = system.solve();
+      const result = optimizeProject(project, {
+        tolerance: 1e-6,
+        maxIterations: 100,
+        verbose: false,
+        autoInitializeCameras: false,
+        autoInitializeWorldPoints: false
+      });
 
       expect(result.converged).toBe(true);
 

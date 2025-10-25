@@ -9,6 +9,7 @@
  */
 
 import { V, Value, Vec3 } from 'scalar-autograd';
+import { Quaternion } from './Quaternion';
 
 /**
  * Convert Euler angles (rx, ry, rz) to rotation matrix.
@@ -219,8 +220,6 @@ export function worldToCameraCoordinatesQuaternion(
   cameraPosition: Vec3,
   cameraRotation: any
 ): Vec3 {
-  const { Quaternion } = require('./Quaternion');
-
   // Translate to camera origin
   const translated = worldPoint.sub(cameraPosition);
 

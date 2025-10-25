@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from '@jest/globals';
+import { describe, it, expect } from '@jest/globals';
 import * as vec3 from '../../utils/vec3';
 import { WorldPoint } from '../../entities/world-point/WorldPoint';
 import { FixedPointConstraint } from '../../entities/constraints/fixed-point-constraint';
@@ -8,21 +8,15 @@ import { CollinearPointsConstraint } from '../../entities/constraints/collinear-
 import { CoplanarPointsConstraint } from '../../entities/constraints/coplanar-points-constraint';
 import { EqualDistancesConstraint } from '../../entities/constraints/equal-distances-constraint';
 import { EqualAnglesConstraint } from '../../entities/constraints/equal-angles-constraint';
-import { ConstraintSystem } from '../constraint-system';
+import { Project } from '../../entities/project';
+import { optimizeProject } from '../optimize-project';
 
 describe('ConstraintSystem - All Constraint Types', () => {
-  let system: ConstraintSystem;
-
-  beforeEach(() => {
-    system = new ConstraintSystem({
-      tolerance: 1e-6,
-      maxIterations: 100,
-      verbose: false,
-    });
-  });
 
   describe('DistanceConstraint', () => {
     it('should enforce distance between two points', () => {
+      const project = Project.create('Distance Test');
+
       const p1 = WorldPoint.create('P1', { lockedXyz: [null, null, null], optimizedXyz: [0, 0, 0] });
       const p2 = WorldPoint.create('P2', { lockedXyz: [null, null, null], optimizedXyz: [50, 0, 0] }); // 50 units apart
 
@@ -35,11 +29,17 @@ describe('ConstraintSystem - All Constraint Types', () => {
         { tolerance: 1e-4 }
       );
 
-      system.addPoint(p1);
-      system.addPoint(p2);
-      system.addConstraint(constraint);
+      project.addWorldPoint(p1);
+      project.addWorldPoint(p2);
+      project.addConstraint(constraint);
 
-      const result = system.solve();
+      const result = optimizeProject(project, {
+        tolerance: 1e-6,
+        maxIterations: 100,
+        verbose: false,
+        autoInitializeCameras: false,
+        autoInitializeWorldPoints: false
+      });
 
       expect(result.converged).toBe(true);
 
@@ -53,6 +53,8 @@ describe('ConstraintSystem - All Constraint Types', () => {
 
   describe('AngleConstraint', () => {
     it('should enforce angle at vertex', () => {
+      const project = Project.create('Angle Test');
+
       const pA = WorldPoint.create('PA', { lockedXyz: [null, null, null], optimizedXyz: [10, 0, 0] });
       const vertex = WorldPoint.create('Vertex', { lockedXyz: [null, null, null], optimizedXyz: [0, 0, 0] });
       const pC = WorldPoint.create('PC', { lockedXyz: [null, null, null], optimizedXyz: [0, 5, 0] }); // Currently 90 degrees
@@ -67,12 +69,18 @@ describe('ConstraintSystem - All Constraint Types', () => {
         { tolerance: 1e-4 }
       );
 
-      system.addPoint(pA);
-      system.addPoint(vertex);
-      system.addPoint(pC);
-      system.addConstraint(constraint);
+      project.addWorldPoint(pA);
+      project.addWorldPoint(vertex);
+      project.addWorldPoint(pC);
+      project.addConstraint(constraint);
 
-      const result = system.solve();
+      const result = optimizeProject(project, {
+        tolerance: 1e-6,
+        maxIterations: 100,
+        verbose: false,
+        autoInitializeCameras: false,
+        autoInitializeWorldPoints: false
+      });
 
       expect(result.converged).toBe(true);
 
@@ -91,6 +99,8 @@ describe('ConstraintSystem - All Constraint Types', () => {
 
   describe('CollinearPointsConstraint', () => {
     it('should make 3 points collinear', () => {
+      const project = Project.create('Collinear Test');
+
       const p1 = WorldPoint.create('P1', { lockedXyz: [0, 0, 0] });
       const p2 = WorldPoint.create('P2', { lockedXyz: [10, 0, 0] });
       const p3 = WorldPoint.create('P3', { lockedXyz: [null, null, null], optimizedXyz: [5, 5, 0] }); // Off the line
@@ -101,12 +111,18 @@ describe('ConstraintSystem - All Constraint Types', () => {
         { tolerance: 1e-4 }
       );
 
-      system.addPoint(p1);
-      system.addPoint(p2);
-      system.addPoint(p3);
-      system.addConstraint(constraint);
+      project.addWorldPoint(p1);
+      project.addWorldPoint(p2);
+      project.addWorldPoint(p3);
+      project.addConstraint(constraint);
 
-      const result = system.solve();
+      const result = optimizeProject(project, {
+        tolerance: 1e-6,
+        maxIterations: 100,
+        verbose: false,
+        autoInitializeCameras: false,
+        autoInitializeWorldPoints: false
+      });
 
       expect(result.converged).toBe(true);
 
@@ -119,6 +135,8 @@ describe('ConstraintSystem - All Constraint Types', () => {
 
   describe('CoplanarPointsConstraint', () => {
     it('should make 4 points coplanar', () => {
+      const project = Project.create('Coplanar Test');
+
       const p1 = WorldPoint.create('P1', { lockedXyz: [0, 0, 0] });
       const p2 = WorldPoint.create('P2', { lockedXyz: [10, 0, 0] });
       const p3 = WorldPoint.create('P3', { lockedXyz: [0, 10, 0] });
@@ -130,13 +148,19 @@ describe('ConstraintSystem - All Constraint Types', () => {
         { tolerance: 1e-4 }
       );
 
-      system.addPoint(p1);
-      system.addPoint(p2);
-      system.addPoint(p3);
-      system.addPoint(p4);
-      system.addConstraint(constraint);
+      project.addWorldPoint(p1);
+      project.addWorldPoint(p2);
+      project.addWorldPoint(p3);
+      project.addWorldPoint(p4);
+      project.addConstraint(constraint);
 
-      const result = system.solve();
+      const result = optimizeProject(project, {
+        tolerance: 1e-6,
+        maxIterations: 100,
+        verbose: false,
+        autoInitializeCameras: false,
+        autoInitializeWorldPoints: false
+      });
 
       expect(result.converged).toBe(true);
 
@@ -148,6 +172,8 @@ describe('ConstraintSystem - All Constraint Types', () => {
 
   describe('EqualDistancesConstraint', () => {
     it('should enforce equal distances between point pairs', () => {
+      const project = Project.create('Equal Distances Test');
+
       const p1 = WorldPoint.create('P1', { lockedXyz: [0, 0, 0] });
       const p2 = WorldPoint.create('P2', { lockedXyz: [null, null, null], optimizedXyz: [10, 0, 0] });
       const p3 = WorldPoint.create('P3', { lockedXyz: [0, 20, 0] });
@@ -163,13 +189,19 @@ describe('ConstraintSystem - All Constraint Types', () => {
         { tolerance: 1e-4 }
       );
 
-      system.addPoint(p1);
-      system.addPoint(p2);
-      system.addPoint(p3);
-      system.addPoint(p4);
-      system.addConstraint(constraint);
+      project.addWorldPoint(p1);
+      project.addWorldPoint(p2);
+      project.addWorldPoint(p3);
+      project.addWorldPoint(p4);
+      project.addConstraint(constraint);
 
-      const result = system.solve();
+      const result = optimizeProject(project, {
+        tolerance: 1e-6,
+        maxIterations: 100,
+        verbose: false,
+        autoInitializeCameras: false,
+        autoInitializeWorldPoints: false
+      });
 
       expect(result.converged).toBe(true);
 
@@ -187,6 +219,8 @@ describe('ConstraintSystem - All Constraint Types', () => {
 
   describe('EqualAnglesConstraint', () => {
     it('should enforce equal angles', () => {
+      const project = Project.create('Equal Angles Test');
+
       // First angle: PA1 - V1 - PC1
       const pA1 = WorldPoint.create('PA1', { lockedXyz: [10, 0, 0] });
       const v1 = WorldPoint.create('V1', { lockedXyz: [0, 0, 0] });
@@ -207,15 +241,21 @@ describe('ConstraintSystem - All Constraint Types', () => {
         { tolerance: 1e-4 }
       );
 
-      system.addPoint(pA1);
-      system.addPoint(v1);
-      system.addPoint(pC1);
-      system.addPoint(pA2);
-      system.addPoint(v2);
-      system.addPoint(pC2);
-      system.addConstraint(constraint);
+      project.addWorldPoint(pA1);
+      project.addWorldPoint(v1);
+      project.addWorldPoint(pC1);
+      project.addWorldPoint(pA2);
+      project.addWorldPoint(v2);
+      project.addWorldPoint(pC2);
+      project.addConstraint(constraint);
 
-      const result = system.solve();
+      const result = optimizeProject(project, {
+        tolerance: 1e-6,
+        maxIterations: 100,
+        verbose: false,
+        autoInitializeCameras: false,
+        autoInitializeWorldPoints: false
+      });
 
       expect(result.converged).toBe(true);
 
@@ -244,6 +284,8 @@ describe('ConstraintSystem - All Constraint Types', () => {
 
   describe('Complex scenarios', () => {
     it('should solve multiple constraints simultaneously', () => {
+      const project = Project.create('Complex Test');
+
       // Create an equilateral triangle
       const p1 = WorldPoint.create('P1', { lockedXyz: [0, 0, 0] });
       const p2 = WorldPoint.create('P2', { lockedXyz: [null, null, null], optimizedXyz: [10, 0, 0] });
@@ -271,13 +313,19 @@ describe('ConstraintSystem - All Constraint Types', () => {
         { tolerance: 1e-4 }
       );
 
-      system.addPoint(p1);
-      system.addPoint(p2);
-      system.addPoint(p3);
-      system.addConstraint(equalDist);
-      system.addConstraint(equalAngles);
+      project.addWorldPoint(p1);
+      project.addWorldPoint(p2);
+      project.addWorldPoint(p3);
+      project.addConstraint(equalDist);
+      project.addConstraint(equalAngles);
 
-      const result = system.solve();
+      const result = optimizeProject(project, {
+        tolerance: 1e-6,
+        maxIterations: 100,
+        verbose: false,
+        autoInitializeCameras: false,
+        autoInitializeWorldPoints: false
+      });
 
       expect(result.converged).toBe(true);
 

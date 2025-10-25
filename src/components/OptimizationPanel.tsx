@@ -134,52 +134,10 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
     try {
       console.log('Running optimization with entities...')
 
-      // Extract entity arrays
       const pointEntities = Array.from(project.worldPoints.values())
       const lineEntities = Array.from(project.lines.values())
       const viewpointEntities = Array.from(project.viewpoints.values())
 
-      // STEP 1: Automatically initialize cameras using PnP if needed
-      const camerasNeedingInit = viewpointEntities.filter(vp => {
-        const vpConcrete = vp as Viewpoint
-        const hasImagePoints = vpConcrete.imagePoints.size > 0
-        const hasTriangulatedPoints = Array.from(vpConcrete.imagePoints).some(ip =>
-          (ip.worldPoint as any).optimizedXyz !== null
-        )
-
-        // Check if camera is at default/uninitialized position
-        const pos = vpConcrete.position
-        const isAtOrigin = Math.abs(pos[0]) < 0.001 && Math.abs(pos[1]) < 0.001 && Math.abs(pos[2]) < 0.001
-
-        return hasImagePoints && hasTriangulatedPoints && isAtOrigin
-      })
-
-      if (camerasNeedingInit.length > 0) {
-        console.log(`Initializing ${camerasNeedingInit.length} camera(s) using PnP...`)
-        const worldPointSet = new Set(pointEntities)
-        const pnpResults: {camera: string, before: number, after: number}[] = []
-
-        for (const vp of camerasNeedingInit) {
-          const vpConcrete = vp as Viewpoint
-          const beforeError = computeCameraReprojectionError(vpConcrete)
-
-          const success = initializeCameraWithPnP(vpConcrete, worldPointSet)
-
-          if (success) {
-            const afterError = computeCameraReprojectionError(vpConcrete)
-            pnpResults.push({
-              camera: vpConcrete.name,
-              before: beforeError,
-              after: afterError
-            })
-          }
-        }
-
-        setPnpResults(pnpResults)
-        console.log('PnP initialization complete:', pnpResults)
-      }
-
-      // STEP 2: Run bundle adjustment optimization
       const solverResult = await clientSolver.optimize(
         pointEntities,
         lineEntities,
@@ -194,9 +152,6 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
       )
 
       console.log('Optimization result:', solverResult)
-
-      // Entities are updated in-place, no need to copy back
-      // Just notify that optimization completed
 
       const result = {
         converged: solverResult.converged,
@@ -291,6 +246,20 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
   const resetToDefaults = useCallback(() => {
     setSettings(defaultOptimizationSettings)
   }, [])
+
+  function formatNumber(value: number): string {
+    if (value === 0) {
+      return '0.000';
+    }
+    const abs = Math.abs(value);
+    if (abs >= 0.01) {
+      return value.toFixed(3);
+    }
+    if (abs >= 1e-6) {
+      return value.toFixed(6);
+    }
+    return value.toExponential(2);
+  }
 
   return (
     <div className="optimization-panel">
@@ -393,11 +362,11 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
             <div className="results-details">
               <div className="result-item">
                 <span>Total Error:</span>
-                <span>{results.totalError.toExponential(3)}</span>
+                <span>{formatNumber(results.totalError)}</span>
               </div>
               <div className="result-item">
                 <span>Point Accuracy:</span>
-                <span>{results.pointAccuracy.toExponential(3)}</span>
+                <span>{formatNumber(results.pointAccuracy)}</span>
               </div>
               <div className="result-item">
                 <span>Iterations:</span>
@@ -426,12 +395,12 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                             <div className="data-row">
                               <span className="data-label">Position:</span>
                               <span className="data-value">
-                                [{info.lockedXyz?.map(v => v?.toFixed(3)).join(', ')}]
+                                [{info.optimizedXyz?.map(v => formatNumber(v)).join(', ')}]
                               </span>
                             </div>
                             <div className="data-row">
                               <span className="data-label">RMS Residual:</span>
-                              <span className="data-value">{info.rmsResidual.toExponential(2)}</span>
+                              <span className="data-value">{formatNumber(info.rmsResidual)}</span>
                             </div>
                           </div>
                         </div>
@@ -464,7 +433,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                             {info.lengthError !== null && (
                               <div className="data-row">
                                 <span className="data-label">Error:</span>
-                                <span className="data-value">{info.lengthError.toExponential(2)}</span>
+                                <span className="data-value">{formatNumber(info.lengthError)}</span>
                               </div>
                             )}
                             {info.direction && info.direction !== 'free' && (
@@ -475,7 +444,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                             )}
                             <div className="data-row">
                               <span className="data-label">RMS Residual:</span>
-                              <span className="data-value">{info.rmsResidual.toExponential(2)}</span>
+                              <span className="data-value">{formatNumber(info.rmsResidual)}</span>
                             </div>
                           </div>
                         </div>

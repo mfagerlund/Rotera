@@ -53,7 +53,7 @@ describe('Real Camera Data Optimization', () => {
 
     // Import required modules
     const { dtoToProject } = require('../../store/project-serialization');
-    const { ConstraintSystem } = require('../constraint-system');
+    const { optimizeProject } = require('../optimize-project');
 
     // Deserialize to entities
     const project = dtoToProject(fixtureData);
@@ -62,22 +62,15 @@ describe('Real Camera Data Optimization', () => {
     console.log(`Viewpoints: ${project.viewpoints.size}`);
     console.log(`Constraints: ${project.constraints.length}`);
 
-    // Create constraint system
-    const system = new ConstraintSystem({
+    // Run optimization
+    const result = optimizeProject(project, {
       maxIterations: 200,
       tolerance: 1e-6,
       damping: 0.1,
-      verbose: false
+      verbose: false,
+      autoInitializeCameras: false,
+      autoInitializeWorldPoints: false
     });
-
-    // Add entities
-    project.worldPoints.forEach((p: any) => system.addPoint(p));
-    project.lines.forEach((l: any) => system.addLine(l));
-    project.viewpoints.forEach((v: any) => system.addCamera(v));
-    project.constraints.forEach((c: any) => system.addConstraint(c));
-
-    // Run optimization
-    const result = system.solve();
 
     console.log('\n=== Results ===');
     console.log(`Converged: ${result.converged}`);

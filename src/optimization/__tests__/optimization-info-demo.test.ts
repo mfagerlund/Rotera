@@ -5,13 +5,13 @@
 import { describe, it, expect } from '@jest/globals';
 import { WorldPoint } from '../../entities/world-point/WorldPoint';
 import { Line } from '../../entities/line/Line';
-import { ConstraintSystem } from '../constraint-system';
+import { Project } from '../../entities/project';
+import { optimizeProject } from '../optimize-project';
 
 describe('Optimization Info Demo', () => {
   it('should show optimization info for WorldPoint and Line', () => {
     console.log('\n=== Optimization Info Demo ===\n');
 
-    // Create 2 points and a line with constraints
     const p1 = WorldPoint.create('Point 1', {
       lockedXyz: [null, null, null],
       optimizedXyz: [0, 0, 0]
@@ -19,24 +19,24 @@ describe('Optimization Info Demo', () => {
 
     const p2 = WorldPoint.create('Point 2', {
       lockedXyz: [null, null, null],
-      optimizedXyz: [3.5, 4.2, 0.1]  // Not exactly 5 units from p1
+      optimizedXyz: [3.5, 4.2, 0.1]
     });
 
     const line = Line.create('Line 1', p1, p2, { targetLength: 5.0 });
 
-    // Create system and optimize
-    const system = new ConstraintSystem({
+    const project = Project.create('Optimization Info Demo');
+    project.addWorldPoint(p1);
+    project.addWorldPoint(p2);
+    project.addLine(line);
+
+    const result = optimizeProject(project, {
       maxIterations: 50,
       tolerance: 1e-6,
       damping: 0.1,
-      verbose: false
+      verbose: false,
+      autoInitializeCameras: false,
+      autoInitializeWorldPoints: false
     });
-
-    system.addPoint(p1);
-    system.addPoint(p2);
-    system.addLine(line);
-
-    const result = system.solve();
 
     console.log(`Optimization converged: ${result.converged}`);
     console.log(`Iterations: ${result.iterations}`);

@@ -6,7 +6,9 @@
       "Bash(git branch:*)",
       "Bash(git remote add:*)",
       "Bash(git push:*)",
-      "Bash(bash ../check.sh)"
+      "Bash(bash ../check.sh)",
+      "Bash(npm test:*)",
+      "SlashCommand(/n++:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,10 +1,11 @@
 import { describe, it, expect } from '@jest/globals';
 import { loadProjectFromJson } from '../../store/project-serialization';
-import { ConstraintSystem } from '../constraint-system';
+import { optimizeProject } from '../optimize-project';
 import { initializeFromImagePairs } from '../seed-initialization';
 import { Viewpoint } from '../../entities/viewpoint';
 import { WorldPoint } from '../../entities/world-point';
 import { ImagePoint } from '../../entities/imagePoint';
+import { Project } from '../../entities/project';
 import * as fs from 'fs';
 
 describe('Simple Two-Camera Solving (Proof of Concept)', () => {
@@ -76,17 +77,6 @@ describe('Simple Two-Camera Solving (Proof of Concept)', () => {
 
     console.log('\n=== STEP 4: BUNDLE ADJUSTMENT (SEED PAIR ONLY) ===\n');
 
-    const system = new ConstraintSystem({
-      maxIterations: 200,
-      tolerance: 1e-6,
-      damping: 10.0,
-      verbose: true
-    });
-
-    bestPair.sharedWorldPoints.forEach(p => system.addPoint(p as WorldPoint));
-    system.addCamera(vp1);
-    system.addCamera(vp2);
-
     const ipsForVp1 = Array.from(vp1.imagePoints).filter(ip =>
       bestPair.sharedWorldPoints.includes(ip.worldPoint)
     ).map(ip => ip as ImagePoint);
@@ -94,15 +84,26 @@ describe('Simple Two-Camera Solving (Proof of Concept)', () => {
       bestPair.sharedWorldPoints.includes(ip.worldPoint)
     ).map(ip => ip as ImagePoint);
 
-    ipsForVp1.forEach(ip => system.addImagePoint(ip));
-    ipsForVp2.forEach(ip => system.addImagePoint(ip));
-
     console.log(`Optimizing:`);
     console.log(`  Points: ${bestPair.sharedWorldPoints.length}`);
     console.log(`  Cameras: 2`);
     console.log(`  Image points: ${ipsForVp1.length + ipsForVp2.length}\n`);
 
-    const result = system.solve();
+    const seedProject = Project.create('Seed Pair Optimization');
+    bestPair.sharedWorldPoints.forEach(p => seedProject.addWorldPoint(p as WorldPoint));
+    seedProject.addViewpoint(vp1);
+    seedProject.addViewpoint(vp2);
+    ipsForVp1.forEach(ip => seedProject.addImagePoint(ip));
+    ipsForVp2.forEach(ip => seedProject.addImagePoint(ip));
+
+    const result = optimizeProject(seedProject, {
+      maxIterations: 200,
+      tolerance: 1e-6,
+      damping: 10.0,
+      verbose: true,
+      autoInitializeCameras: false,
+      autoInitializeWorldPoints: false
+    });
 
     console.log('\n=== OPTIMIZATION RESULT ===\n');
     console.log(`Converged: ${result.converged}`);

@@ -5,7 +5,7 @@
  * Measures: initial residual, iterations to converge, final residual, time.
  */
 
-import { ConstraintSystem } from '../constraint-system';
+import { optimizeProject } from '../optimize-project';
 import { randomInitialization, smartInitialization, computeInitialResidual } from '../smart-initialization';
 import { saveProjectToJson, loadProjectFromJson } from '../../store/project-serialization';
 import { Project } from '../../entities/project';
@@ -59,18 +59,14 @@ function runOptimizationBenchmark(
 
   const initialResidual = computeInitialResidual(project);
 
-  const solver = new ConstraintSystem({
+  const result = optimizeProject(project, {
     maxIterations: 100,
     tolerance: 1e-6,
     damping: 0.1,
-    verbose: false
+    verbose: false,
+    autoInitializeCameras: false,
+    autoInitializeWorldPoints: false
   });
-
-  project.worldPoints.forEach(p => solver.addPoint(p));
-  project.lines.forEach(l => solver.addLine(l));
-  project.constraints.forEach(c => solver.addConstraint(c));
-
-  const result = solver.solve();
 
   const endTime = performance.now();
 

@@ -10,7 +10,7 @@
  * - Constraints compute their own residuals
  */
 
-import { Value, nonlinearLeastSquares } from 'scalar-autograd';
+import { Value, V, nonlinearLeastSquares } from 'scalar-autograd';
 import type { ValueMap } from './IOptimizable';
 import type { WorldPoint } from '../entities/world-point/WorldPoint';
 import type { Line } from '../entities/line/Line';
@@ -129,6 +129,12 @@ export class ConstraintSystem {
     const residualFn = (vars: Value[]) => {
       const residuals: Value[] = [];
 
+      // Determine weighting strategy based on constraints
+      const hasGeometricConstraints = this.constraints.size > 0 ||
+                                       Array.from(this.lines).some(line =>
+                                         line.direction !== 'free' || line.hasFixedLength());
+      const reprojectionWeight = hasGeometricConstraints ? 0.015 : 1.0;
+
       // INTRINSIC LINE CONSTRAINTS (direction, length)
       for (const line of this.lines) {
         const lineResiduals = line.computeResiduals(valueMap);
@@ -143,10 +149,13 @@ export class ConstraintSystem {
         }
       }
 
-      // IMAGE POINT REPROJECTION CONSTRAINTS
+      // IMAGE POINT REPROJECTION CONSTRAINTS (down-weighted when geometric constraints exist)
       for (const imagePoint of this.imagePoints) {
         const reprojectionResiduals = imagePoint.computeResiduals(valueMap);
-        residuals.push(...reprojectionResiduals);
+        const weighted = reprojectionResiduals.map(r =>
+          V.mul(r, V.C(reprojectionWeight))
+        );
+        residuals.push(...weighted);
       }
 
       // EXPLICIT USER CONSTRAINTS
@@ -280,6 +289,12 @@ export class ConstraintSystem {
         }
       }
 
+      // Evaluate and store residuals for constraints
+      for (const constraint of this.constraints) {
+        const residuals = constraint.computeResiduals(valueMap);
+        constraint.lastResiduals = residuals.map(r => r.data);
+      }
+
       // Validate push/pop symmetry in verbose mode
       if (this.verbose) {
         this.validateResidualSymmetry(valueMap);
@@ -363,14 +378,14 @@ export class ConstraintSystem {
         const actualCount = (entity as any).lastResiduals?.length ?? 0;
         if (actualCount !== info.count) {
           console.error(
-            `[ConstraintSystem] Push/pop mismatch for ${info.name}: ` +
+            `[ConstraintSystem] Push/pop mismatch for ${info.type} "${info.name}": ` +
             `pushed ${info.count}, popped ${actualCount}`
           );
           hasViolations = true;
         }
       } else if (info.count > 0) {
         console.warn(
-          `[ConstraintSystem] ${info.name} pushed ${info.count} residuals ` +
+          `[ConstraintSystem] ${info.type} "${info.name}" pushed ${info.count} residuals ` +
           `but has no lastResiduals field to pop them into`
         );
         hasViolations = true;

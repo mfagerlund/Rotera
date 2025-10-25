@@ -436,10 +436,7 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
       const dist = direction.magnitude
       const targetLength = this.targetLength
       const lengthResidual = V.sub(dist, V.C(targetLength))
-
-      const WEIGHT = 50.0;
-      const weightedResidual = V.mul(lengthResidual, V.C(WEIGHT))
-      residuals.push(weightedResidual)
+      residuals.push(lengthResidual)
     }
 
     return residuals

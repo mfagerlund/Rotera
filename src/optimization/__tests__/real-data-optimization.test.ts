@@ -9,7 +9,8 @@
 
 import { WorldPoint as WorldPointEntity } from '../../entities/world-point/WorldPoint';
 import { Line as LineEntity } from '../../entities/line/Line';
-import { ConstraintSystem } from '../constraint-system';
+import { Project } from '../../entities/project';
+import { optimizeProject } from '../optimize-project';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -142,27 +143,25 @@ describe('Real Data Optimization', () => {
     console.log(`Lines: ${lineEntities.length}`);
     console.log(`Constraints: ${constraintEntities.length}`);
 
-    // Print initial point positions
     console.log('\nInitial point positions:');
     pointEntities.slice(0, 5).forEach(p => {
       const xyz = p.optimizedXyz;
       console.log(`  ${p.getName()}: [${xyz?.map(v => v.toFixed(2)).join(', ')}]`);
     });
 
-    // Run optimization using ConstraintSystem
-    const solver = new ConstraintSystem({
+    const project = Project.create('Real Data Optimization Test');
+    pointEntities.forEach(p => project.addWorldPoint(p));
+    lineEntities.forEach(l => project.addLine(l));
+    constraintEntities.forEach(c => project.addConstraint(c));
+
+    const result = optimizeProject(project, {
       maxIterations: 100,
       tolerance: 1e-6,
       damping: 0.1,
-      verbose: true
+      verbose: true,
+      autoInitializeCameras: false,
+      autoInitializeWorldPoints: false
     });
-
-    // Add entities to solver
-    pointEntities.forEach(p => solver.addPoint(p));
-    lineEntities.forEach(l => solver.addLine(l));
-    constraintEntities.forEach(c => solver.addConstraint(c));
-
-    const result = solver.solve();
 
     console.log('\n=== Optimization Result ===');
     console.log(`Converged: ${result.converged}`);
@@ -232,7 +231,6 @@ describe('Real Data Optimization', () => {
     console.log('\n=== Line Constraints Test ===');
     console.log(`Lines with constraints: ${lineEntities.length}`);
 
-    // Check initial line lengths
     console.log('\nInitial line lengths:');
     lineEntities.slice(0, 5).forEach((line) => {
       const length = line.length();
@@ -240,19 +238,18 @@ describe('Real Data Optimization', () => {
       console.log(`  ${line.getName()}: length=${length?.toFixed(2)}, target=${target}`);
     });
 
-    // Run optimization with line constraints
-    const solver = new ConstraintSystem({
+    const project = Project.create('Line Constraints Test');
+    pointEntities.forEach(p => project.addWorldPoint(p));
+    lineEntities.forEach(l => project.addLine(l));
+
+    const result = optimizeProject(project, {
       maxIterations: 100,
       tolerance: 1e-6,
       damping: 0.1,
-      verbose: false
+      verbose: false,
+      autoInitializeCameras: false,
+      autoInitializeWorldPoints: false
     });
-
-    // Add entities (lines have intrinsic constraints)
-    pointEntities.forEach(p => solver.addPoint(p));
-    lineEntities.forEach(l => solver.addLine(l));
-
-    const result = solver.solve();
 
     console.log('\nOptimization result:');
     console.log(`  Converged: ${result.converged}`);

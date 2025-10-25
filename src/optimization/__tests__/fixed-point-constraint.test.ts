@@ -5,23 +5,17 @@
  * geometric system, apply constraints, solve using ScalarAutograd, and verify results.
  */
 
-import { describe, it, expect, beforeEach } from '@jest/globals';
+import { describe, it, expect } from '@jest/globals';
 import { WorldPoint } from '../../entities/world-point/WorldPoint';
 import { FixedPointConstraint } from '../../entities/constraints/fixed-point-constraint';
-import { ConstraintSystem } from '../constraint-system';
+import { Project } from '../../entities/project';
+import { optimizeProject } from '../optimize-project';
 
 describe('FixedPointConstraint - Solver Integration', () => {
-  let system: ConstraintSystem;
-
-  beforeEach(() => {
-    system = new ConstraintSystem({
-      tolerance: 1e-6,
-      maxIterations: 100,
-      verbose: false, // Disable verbose output for cleaner test runs
-    });
-  });
 
   it('should lock point to specified 3D coordinates', () => {
+    const project = Project.create('Fixed Point Test');
+
     // === 1. CREATE POINT (unsatisfied initial state) ===
     const point = WorldPoint.create('P1', {
       lockedXyz: [null, null, null],
@@ -36,12 +30,18 @@ describe('FixedPointConstraint - Solver Integration', () => {
       { tolerance: 1e-6 }
     );
 
-    // === 3. BUILD SYSTEM ===
-    system.addPoint(point);
-    system.addConstraint(constraint);
+    // === 3. BUILD PROJECT ===
+    project.addWorldPoint(point);
+    project.addConstraint(constraint);
 
     // === 4. SOLVE ===
-    const result = system.solve();
+    const result = optimizeProject(project, {
+      tolerance: 1e-6,
+      maxIterations: 100,
+      verbose: false,
+      autoInitializeCameras: false,
+      autoInitializeWorldPoints: false
+    });
 
     // === 5. VERIFY ===
     expect(result.converged).toBe(true);
@@ -59,6 +59,8 @@ describe('FixedPointConstraint - Solver Integration', () => {
   });
 
   it('should lock point to arbitrary target position', () => {
+    const project = Project.create('Target Position Test');
+
     // Point starts far from target
     const point = WorldPoint.create('P1', {
       lockedXyz: [null, null, null],
@@ -74,10 +76,16 @@ describe('FixedPointConstraint - Solver Integration', () => {
       { tolerance: 1e-4 } // Match test tolerance
     );
 
-    system.addPoint(point);
-    system.addConstraint(constraint);
+    project.addWorldPoint(point);
+    project.addConstraint(constraint);
 
-    const result = system.solve();
+    const result = optimizeProject(project, {
+      tolerance: 1e-6,
+      maxIterations: 100,
+      verbose: false,
+      autoInitializeCameras: false,
+      autoInitializeWorldPoints: false
+    });
 
     expect(result.converged).toBe(true);
 
@@ -88,6 +96,8 @@ describe('FixedPointConstraint - Solver Integration', () => {
   });
 
   it('should not move locked points', () => {
+    const project = Project.create('Locked Point Test');
+
     // Locked point should not be affected by constraints
     const point = WorldPoint.create('P1', {
       lockedXyz: [5, 3, 7], // LOCKED at this position
@@ -100,10 +110,16 @@ describe('FixedPointConstraint - Solver Integration', () => {
       [0, 0, 0]
     );
 
-    system.addPoint(point);
-    system.addConstraint(constraint);
+    project.addWorldPoint(point);
+    project.addConstraint(constraint);
 
-    const result = system.solve();
+    const result = optimizeProject(project, {
+      tolerance: 1e-6,
+      maxIterations: 100,
+      verbose: false,
+      autoInitializeCameras: false,
+      autoInitializeWorldPoints: false
+    });
 
     // Solver should recognize over-constrained system (no free variables)
     expect(result.iterations).toBe(0);
@@ -116,6 +132,8 @@ describe('FixedPointConstraint - Solver Integration', () => {
   });
 
   it('should handle multiple independent fixed points', () => {
+    const project = Project.create('Multiple Fixed Points Test');
+
     const point1 = WorldPoint.create('P1', {
       lockedXyz: [null, null, null],
       optimizedXyz: [10, 20, 30],
@@ -140,12 +158,18 @@ describe('FixedPointConstraint - Solver Integration', () => {
       { tolerance: 1e-4 }
     );
 
-    system.addPoint(point1);
-    system.addPoint(point2);
-    system.addConstraint(constraint1);
-    system.addConstraint(constraint2);
+    project.addWorldPoint(point1);
+    project.addWorldPoint(point2);
+    project.addConstraint(constraint1);
+    project.addConstraint(constraint2);
 
-    const result = system.solve();
+    const result = optimizeProject(project, {
+      tolerance: 1e-6,
+      maxIterations: 100,
+      verbose: false,
+      autoInitializeCameras: false,
+      autoInitializeWorldPoints: false
+    });
 
     expect(result.converged).toBe(true);
 
@@ -165,6 +189,8 @@ describe('FixedPointConstraint - Solver Integration', () => {
   });
 
   it('should report residual magnitude correctly', () => {
+    const project = Project.create('Residual Test');
+
     const point = WorldPoint.create('P1', {
       lockedXyz: [null, null, null],
       optimizedXyz: [3, 4, 0], // Distance of 5 from origin
@@ -177,10 +203,16 @@ describe('FixedPointConstraint - Solver Integration', () => {
       { tolerance: 1e-4 }
     );
 
-    system.addPoint(point);
-    system.addConstraint(constraint);
+    project.addWorldPoint(point);
+    project.addConstraint(constraint);
 
-    const result = system.solve();
+    const result = optimizeProject(project, {
+      tolerance: 1e-6,
+      maxIterations: 100,
+      verbose: false,
+      autoInitializeCameras: false,
+      autoInitializeWorldPoints: false
+    });
 
     expect(result.converged).toBe(true);
     expect(result.residual).toBeLessThan(1e-6);

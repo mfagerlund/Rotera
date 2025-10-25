@@ -2,6 +2,7 @@ import type { Project } from '../entities/project';
 import type { Viewpoint } from '../entities/viewpoint';
 import { validateSolvingRequirements, type ViewpointPair } from './solving-requirements';
 import { triangulateSharedPoints } from './triangulation';
+import { initializeCamerasWithEssentialMatrix } from './essential-matrix';
 
 export interface SeedInitializationResult {
   success: boolean;
@@ -46,17 +47,20 @@ export function initializeFromImagePairs(
     scaleBaseline = bestPair.scaleInfo.value * baselineMultiplier;
   }
 
-  const cameraDistance = scaleBaseline * cameraDistanceMultiplier;
-  const offset = scaleBaseline * cameraOffsetMultiplier;
-
   const vp1 = bestPair.viewpoint1 as Viewpoint;
   const vp2 = bestPair.viewpoint2 as Viewpoint;
 
-  vp1.position = [offset, 0, -cameraDistance];
-  vp1.rotation = [1, 0, 0, 0];
+  const essentialMatrixResult = initializeCamerasWithEssentialMatrix(vp1, vp2, scaleBaseline);
 
-  vp2.position = [-offset, 0, -cameraDistance];
-  vp2.rotation = [1, 0, 0, 0];
+  if (!essentialMatrixResult.success) {
+    return {
+      success: false,
+      errors: [essentialMatrixResult.error || 'Essential matrix initialization failed'],
+      warnings: requirements.warnings
+    };
+  }
+
+  const cameraDistance = scaleBaseline;
 
   const triangulationResult = triangulateSharedPoints(
     bestPair.sharedWorldPoints,

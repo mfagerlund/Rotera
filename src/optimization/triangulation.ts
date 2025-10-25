@@ -9,6 +9,25 @@ export interface TriangulationResult {
   reprojectionError?: number;
 }
 
+function quaternionRotateVector(q: number[], v: number[]): number[] {
+  const qw = q[0], qx = q[1], qy = q[2], qz = q[3];
+  const vx = v[0], vy = v[1], vz = v[2];
+
+  const tx = 2 * (qy * vz - qz * vy);
+  const ty = 2 * (qz * vx - qx * vz);
+  const tz = 2 * (qx * vy - qy * vx);
+
+  return [
+    vx + qw * tx + (qy * tz - qz * ty),
+    vy + qw * ty + (qz * tx - qx * tz),
+    vz + qw * tz + (qx * ty - qy * tx)
+  ];
+}
+
+function quaternionInverse(q: number[]): number[] {
+  return [q[0], -q[1], -q[2], -q[3]];
+}
+
 export function triangulateRayRay(
   ip1: IImagePoint,
   ip2: IImagePoint,
@@ -19,21 +38,29 @@ export function triangulateRayRay(
   const vp1Concrete = vp1 as Viewpoint;
   const vp2Concrete = vp2 as Viewpoint;
 
-  const ray1_x = (ip1.u - vp1Concrete.principalPointX) / vp1Concrete.focalLength;
-  const ray1_y = (ip1.v - vp1Concrete.principalPointY) / vp1Concrete.focalLength;
-  const ray1_z = 1.0;
-  const ray1_norm = Math.sqrt(ray1_x * ray1_x + ray1_y * ray1_y + ray1_z * ray1_z);
-  const d1_x = ray1_x / ray1_norm;
-  const d1_y = ray1_y / ray1_norm;
-  const d1_z = ray1_z / ray1_norm;
+  const ray1_cam_x = (ip1.u - vp1Concrete.principalPointX) / vp1Concrete.focalLength;
+  const ray1_cam_y = (ip1.v - vp1Concrete.principalPointY) / vp1Concrete.focalLength;
+  const ray1_cam_z = 1.0;
+  const ray1_cam_norm = Math.sqrt(ray1_cam_x * ray1_cam_x + ray1_cam_y * ray1_cam_y + ray1_cam_z * ray1_cam_z);
+  const ray1_cam = [ray1_cam_x / ray1_cam_norm, ray1_cam_y / ray1_cam_norm, ray1_cam_z / ray1_cam_norm];
 
-  const ray2_x = (ip2.u - vp2Concrete.principalPointX) / vp2Concrete.focalLength;
-  const ray2_y = (ip2.v - vp2Concrete.principalPointY) / vp2Concrete.focalLength;
-  const ray2_z = 1.0;
-  const ray2_norm = Math.sqrt(ray2_x * ray2_x + ray2_y * ray2_y + ray2_z * ray2_z);
-  const d2_x = ray2_x / ray2_norm;
-  const d2_y = ray2_y / ray2_norm;
-  const d2_z = ray2_z / ray2_norm;
+  const q1_inv = quaternionInverse(vp1Concrete.rotation);
+  const ray1_world = quaternionRotateVector(q1_inv, ray1_cam);
+  const d1_x = ray1_world[0];
+  const d1_y = ray1_world[1];
+  const d1_z = ray1_world[2];
+
+  const ray2_cam_x = (ip2.u - vp2Concrete.principalPointX) / vp2Concrete.focalLength;
+  const ray2_cam_y = (ip2.v - vp2Concrete.principalPointY) / vp2Concrete.focalLength;
+  const ray2_cam_z = 1.0;
+  const ray2_cam_norm = Math.sqrt(ray2_cam_x * ray2_cam_x + ray2_cam_y * ray2_cam_y + ray2_cam_z * ray2_cam_z);
+  const ray2_cam = [ray2_cam_x / ray2_cam_norm, ray2_cam_y / ray2_cam_norm, ray2_cam_z / ray2_cam_norm];
+
+  const q2_inv = quaternionInverse(vp2Concrete.rotation);
+  const ray2_world = quaternionRotateVector(q2_inv, ray2_cam);
+  const d2_x = ray2_world[0];
+  const d2_y = ray2_world[1];
+  const d2_z = ray2_world[2];
 
   const o1_x = vp1Concrete.position[0];
   const o1_y = vp1Concrete.position[1];

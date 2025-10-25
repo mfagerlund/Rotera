@@ -1,12 +1,13 @@
 import { describe, it, expect } from '@jest/globals';
 import { loadProjectFromJson } from '../../store/project-serialization';
-import { ConstraintSystem } from '../constraint-system';
+import { optimizeProject } from '../optimize-project';
 import { initializeFromImagePairs } from '../seed-initialization';
 import { initializeCameraWithPnP } from '../pnp';
 import { Viewpoint } from '../../entities/viewpoint';
 import { WorldPoint } from '../../entities/world-point';
 import { Line } from '../../entities/line';
 import { ImagePoint } from '../../entities/imagePoint';
+import { Project } from '../../entities/project';
 import type { ValueMap } from '../IOptimizable';
 import * as fs from 'fs';
 
@@ -54,20 +55,17 @@ describe('Cube Fixture Optimization', () => {
       initResult.warnings.forEach(warn => console.log(`  - ${warn}`));
     }
 
-    console.log('\n=== STAGE 1: BUNDLE ADJUSTMENT (SEED PAIR ONLY) ===\n');
+    console.log('\nCamera positions AFTER initialization, BEFORE bundle adjustment:');
+    console.log(`  ${vp1.name}: focal=${vp1.focalLength}, pos=[${vp1.position.map(x => x.toFixed(3)).join(', ')}]`);
+    console.log(`  ${vp2.name}: focal=${vp2.focalLength}, pos=[${vp2.position.map(x => x.toFixed(3)).join(', ')}]`);
 
-    const system1 = new ConstraintSystem({
-      maxIterations: 200,
-      tolerance: 1e-6,
-      damping: 10.0,
-      verbose: true
-    });
+    vp1.isPoseLocked = true;
+    vp2.isPoseLocked = true;
+    console.log('\nLocking camera poses for initial bundle adjustment (to prevent scale drift)');
+
+    console.log('\n=== STAGE 1: BUNDLE ADJUSTMENT (SEED PAIR ONLY - cameras locked) ===\n');
 
     const seedPair = initResult.seedPair;
-    seedPair.sharedWorldPoints.forEach(p => system1.addPoint(p as WorldPoint));
-    system1.addCamera(vp1);
-    system1.addCamera(vp2);
-
     const seedImagePoints = [
       ...Array.from(vp1.imagePoints).filter(ip =>
         seedPair.sharedWorldPoints.includes(ip.worldPoint)
@@ -76,9 +74,21 @@ describe('Cube Fixture Optimization', () => {
         seedPair.sharedWorldPoints.includes(ip.worldPoint)
       )
     ].map(ip => ip as ImagePoint);
-    seedImagePoints.forEach(ip => system1.addImagePoint(ip));
 
-    const result1 = system1.solve();
+    const seedProject1 = Project.create('Seed Pair Bundle Adjustment');
+    seedPair.sharedWorldPoints.forEach(p => seedProject1.addWorldPoint(p as WorldPoint));
+    seedProject1.addViewpoint(vp1);
+    seedProject1.addViewpoint(vp2);
+    seedImagePoints.forEach(ip => seedProject1.addImagePoint(ip));
+
+    const result1 = optimizeProject(seedProject1, {
+      maxIterations: 200,
+      tolerance: 1e-6,
+      damping: 10.0,
+      verbose: true,
+      autoInitializeCameras: false,
+      autoInitializeWorldPoints: false
+    });
     console.log(`Converged: ${result1.converged}`);
     console.log(`Iterations: ${result1.iterations}`);
     console.log(`Residual: ${result1.residual.toFixed(2)}\n`);
@@ -152,16 +162,14 @@ describe('Cube Fixture Optimization', () => {
           vp1.position[1] * scaleFactor,
           vp1.position[2] * scaleFactor
         ];
-        vp1.focalLength = vp1.focalLength * scaleFactor;
 
         vp2.position = [
           vp2.position[0] * scaleFactor,
           vp2.position[1] * scaleFactor,
           vp2.position[2] * scaleFactor
         ];
-        vp2.focalLength = vp2.focalLength * scaleFactor;
 
-        console.log('Scaled all world points, seed camera positions, and focal lengths');
+        console.log('Scaled all world points and seed camera positions (focal length unchanged)');
         console.log(`  ${vp1.name}: focal=${vp1.focalLength.toFixed(2)}, pos=[${vp1.position.map(x => x.toFixed(3)).join(', ')}]`);
         console.log(`  ${vp2.name}: focal=${vp2.focalLength.toFixed(2)}, pos=[${vp2.position.map(x => x.toFixed(3)).join(', ')}]`);
 
@@ -182,33 +190,38 @@ describe('Cube Fixture Optimization', () => {
           console.log(`  Line ${line.name}: ${info.length?.toFixed(3)} (expected ${expectedValue.toFixed(3)})`);
         }
 
+        vp1.isPoseLocked = false;
+        vp2.isPoseLocked = false;
+        console.log('\nUnlocking camera poses for refinement with constraints');
+
         console.log('\n=== REFINE SEED PAIR WITH CONSTRAINTS (hold scale) ===\n');
 
-        const systemConstrained = new ConstraintSystem({
-          maxIterations: 100,
-          tolerance: 1e-6,
-          damping: 5.0,
-          verbose: true
-        });
-
-        seedPair.sharedWorldPoints.forEach(p => systemConstrained.addPoint(p as WorldPoint));
+        const seedProjectConstrained = Project.create('Seed Pair with Constraints');
+        seedPair.sharedWorldPoints.forEach(p => seedProjectConstrained.addWorldPoint(p as WorldPoint));
         project.lines.forEach(l => {
           if (seedPair.sharedWorldPoints.includes(l.pointA) && seedPair.sharedWorldPoints.includes(l.pointB)) {
-            systemConstrained.addLine(l);
+            seedProjectConstrained.addLine(l);
           }
         });
-        systemConstrained.addCamera(vp1);
-        systemConstrained.addCamera(vp2);
-        seedImagePoints.forEach(ip => systemConstrained.addImagePoint(ip));
+        seedProjectConstrained.addViewpoint(vp1);
+        seedProjectConstrained.addViewpoint(vp2);
+        seedImagePoints.forEach(ip => seedProjectConstrained.addImagePoint(ip));
         project.constraints.forEach(c => {
           const cAny = c as any;
           const constraintPoints = [cAny.pointA, cAny.pointB, cAny.pointC].filter(p => p);
           if (constraintPoints.every(p => seedPair.sharedWorldPoints.includes(p!))) {
-            systemConstrained.addConstraint(c);
+            seedProjectConstrained.addConstraint(c);
           }
         });
 
-        const resultConstrained = systemConstrained.solve();
+        const resultConstrained = optimizeProject(seedProjectConstrained, {
+          maxIterations: 100,
+          tolerance: 1e-6,
+          damping: 5.0,
+          verbose: true,
+          autoInitializeCameras: false,
+          autoInitializeWorldPoints: false
+        });
         console.log(`\nConverged: ${resultConstrained.converged}`);
         console.log(`Iterations: ${resultConstrained.iterations}`);
         console.log(`Residual: ${resultConstrained.residual.toFixed(2)}\n`);
@@ -262,20 +275,14 @@ describe('Cube Fixture Optimization', () => {
 
     console.log('=== STAGE 3: BUNDLE ADJUSTMENT (ALL CAMERAS) WITH CONSTRAINTS ===\n');
 
-    const system2 = new ConstraintSystem({
+    const result2 = optimizeProject(project, {
       maxIterations: 200,
       tolerance: 1e-6,
       damping: 5.0,
-      verbose: true
+      verbose: true,
+      autoInitializeCameras: false,
+      autoInitializeWorldPoints: false
     });
-
-    project.worldPoints.forEach(p => system2.addPoint(p));
-    project.lines.forEach(l => system2.addLine(l));
-    project.viewpoints.forEach(v => system2.addCamera(v));
-    project.imagePoints.forEach(ip => system2.addImagePoint(ip as ImagePoint));
-    project.constraints.forEach(c => system2.addConstraint(c));
-
-    const result2 = system2.solve();
     console.log(`\nConverged: ${result2.converged}`);
     console.log(`Iterations: ${result2.iterations}`);
     console.log(`Residual: ${result2.residual.toFixed(2)}\n`);
@@ -310,22 +317,37 @@ describe('Cube Fixture Optimization', () => {
       console.log(`  Overall average: ${(totalErrorAll / countAll).toFixed(2)} px (${countAll} obs)`);
     }
 
+    console.log('\n=== PRE-STAGE 4 DIAGNOSTICS ===\n');
+
+    console.log('Line lengths BEFORE Stage 4:');
+    for (const line of project.lines) {
+      const info = line.getOptimizationInfo();
+      console.log(`  ${line.name || 'Line'}: ${info.length?.toFixed(3) || 'unknown'} (target: ${info.targetLength})`);
+    }
+    console.log();
+
+    console.log('Sample world point positions BEFORE Stage 4:');
+    let sampleCount = 0;
+    for (const wp of project.worldPoints) {
+      if (sampleCount < 4) {
+        const info = wp.getOptimizationInfo();
+        const opt = info.optimizedXyz ? info.optimizedXyz.map(x => x.toFixed(3)).join(', ') : 'none';
+        console.log(`  ${wp.name}: [${opt}]`);
+        sampleCount++;
+      }
+    }
+    console.log();
+
     console.log('\n=== STAGE 4: APPLY GEOMETRIC CONSTRAINTS ===\n');
 
-    const system3 = new ConstraintSystem({
+    const result = optimizeProject(project, {
       maxIterations: 500,
       tolerance: 1e-4,
       damping: 2.0,
-      verbose: true
+      verbose: true,
+      autoInitializeCameras: false,
+      autoInitializeWorldPoints: false
     });
-
-    project.worldPoints.forEach(p => system3.addPoint(p));
-    project.lines.forEach(l => system3.addLine(l));
-    project.viewpoints.forEach(v => system3.addCamera(v));
-    project.imagePoints.forEach(ip => system3.addImagePoint(ip as ImagePoint));
-    project.constraints.forEach(c => system3.addConstraint(c));
-
-    const result = system3.solve();
 
     console.log('\n=== OPTIMIZATION RESULT ===\n');
     console.log(`Converged: ${result.converged}`);
@@ -369,35 +391,16 @@ describe('Cube Fixture Optimization', () => {
     }
     console.log();
 
-    // STAGE 3: Re-evaluate reprojection errors (without optimizing)
     console.log('=== STAGE 3: RE-EVALUATE REPROJECTION ERRORS ===\n');
 
-    const systemEval = new ConstraintSystem({
-      maxIterations: 0,  // Don't optimize, just evaluate
+    optimizeProject(project, {
+      maxIterations: 0,
       tolerance: 1e-6,
       damping: 0.1,
-      verbose: false
+      verbose: false,
+      autoInitializeCameras: false,
+      autoInitializeWorldPoints: false
     });
-
-    project.worldPoints.forEach(p => systemEval.addPoint(p));
-    project.viewpoints.forEach(v => systemEval.addCamera(v));
-    project.imagePoints.forEach(ip => systemEval.addImagePoint(ip as ImagePoint));
-
-    // This will compute and store residuals in lastResiduals without optimizing
-    for (const ip of project.imagePoints) {
-      const ipConcrete = ip as ImagePoint;
-      const valueMap: ValueMap = {
-        points: new Map(),
-        cameras: new Map(),
-      };
-      for (const point of project.worldPoints) {
-        (point as WorldPoint).addToValueMap(valueMap);
-      }
-      for (const camera of project.viewpoints) {
-        (camera as Viewpoint).addToValueMap(valueMap);
-      }
-      ipConcrete.applyOptimizationResult(valueMap);
-    }
 
     console.log('=== VIEWPOINT REPROJECTIONS (after Stage 2) ===\n');
     for (const vp of project.viewpoints) {
