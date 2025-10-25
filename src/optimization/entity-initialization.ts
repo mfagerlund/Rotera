@@ -105,7 +105,8 @@ function propagateViaLineGraph(
 
   while (queue.length > 0) {
     const currentPoint = queue.shift()!
-    if (!currentPoint.optimizedXyz) continue
+    const currentXyz = currentPoint.optimizedXyz
+    if (!currentXyz) continue
 
     // Find lines connected to this point
     lines.forEach(line => {
@@ -125,9 +126,9 @@ function propagateViaLineGraph(
         const direction = randomUnitVector()
 
         otherPoint.optimizedXyz = [
-          currentPoint.optimizedXyz[0] + direction[0] * distance,
-          currentPoint.optimizedXyz[1] + direction[1] * distance,
-          currentPoint.optimizedXyz[2] + direction[2] * distance
+          currentXyz[0] + direction[0] * distance,
+          currentXyz[1] + direction[1] * distance,
+          currentXyz[2] + direction[2] * distance
         ]
 
         initialized.add(otherPoint)

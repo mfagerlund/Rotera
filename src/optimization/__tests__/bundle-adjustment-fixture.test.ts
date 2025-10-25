@@ -1,7 +1,7 @@
 import { describe, it, expect } from '@jest/globals';
 import { loadProjectFromJson } from '../../store/project-serialization';
 import { ConstraintSystem } from '../constraint-system';
-import { smartInitialization } from '../smart-initialization';
+import { initializeWorldPoints } from '../entity-initialization';
 import * as fs from 'fs';
 
 describe('Bundle Adjustment with Real Fixture', () => {
@@ -21,16 +21,12 @@ describe('Bundle Adjustment with Real Fixture', () => {
     console.log(`Viewpoints: ${project.viewpoints.size}`);
     console.log(`Constraints: ${project.constraints.size}`);
 
-    // Initialize optimizedXyz for all world points
-    // TODO: Use smart initialization once it's updated to work with entity objects
-    let i = 0;
-    for (const point of project.worldPoints) {
-      if (!point.optimizedXyz) {
-        // Simple initialization: spread points along X axis
-        point.optimizedXyz = [i * 1.0, 0, 0];
-        i++;
-      }
-    }
+    // Initialize optimizedXyz using smart initialization
+    initializeWorldPoints(
+      Array.from(project.worldPoints),
+      Array.from(project.lines),
+      Array.from(project.constraints)
+    );
 
     // Create constraint system
     const system = new ConstraintSystem({

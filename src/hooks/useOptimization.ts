@@ -9,6 +9,7 @@ import { WorldPoint } from '../entities/world-point/WorldPoint';
 import { Line } from '../entities/line/Line';
 import { Viewpoint } from '../entities/viewpoint/Viewpoint';
 import { Constraint } from '../entities/constraints/base-constraint';
+import { initializeWorldPoints } from '../optimization/entity-initialization';
 
 type ConstraintId = string;
 
