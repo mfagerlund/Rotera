@@ -79,11 +79,31 @@ function svd3x3(A: number[][]): { U: number[][], S: number[], V: number[][] } {
           sum += A[i][k] * Vsorted[k][j];
         }
         U[i][j] = sum / S[j];
+      } else {
+        U[i][j] = Vsorted[i][j];
       }
     }
   }
 
-  return { U, S, V: Vsorted };
+  const Unorm: number[][] = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+  for (let j = 0; j < 3; j++) {
+    let colNorm = 0;
+    for (let i = 0; i < 3; i++) {
+      colNorm += U[i][j] * U[i][j];
+    }
+    colNorm = Math.sqrt(colNorm);
+    if (colNorm > 1e-10) {
+      for (let i = 0; i < 3; i++) {
+        Unorm[i][j] = U[i][j] / colNorm;
+      }
+    } else {
+      for (let i = 0; i < 3; i++) {
+        Unorm[i][j] = i === j ? 1 : 0;
+      }
+    }
+  }
+
+  return { U: Unorm, S, V: Vsorted };
 }
 
 function jacobiEigenDecomposition(A: number[][]): { eigenvalues: number[], eigenvectors: number[][] } {
@@ -288,6 +308,13 @@ function jacobiEigenDecomposition9x9(A: number[][]): { eigenvalues: number[], ei
 function decomposeEssentialMatrix(E: number[][]): DecomposedEssentialMatrix[] {
   const svd = svd3x3(E);
 
+  console.log('[decomposeEssentialMatrix] SVD of E:');
+  console.log(`  Singular values: [${svd.S.map(v => v.toFixed(6)).join(', ')}]`);
+  console.log(`  U[0] = [${svd.U[0].map(v => v.toFixed(6)).join(', ')}]`);
+  console.log(`  U[1] = [${svd.U[1].map(v => v.toFixed(6)).join(', ')}]`);
+  console.log(`  U[2] = [${svd.U[2].map(v => v.toFixed(6)).join(', ')}]`);
+  console.log(`  Translation t (3rd column of U) = [${svd.U[0][2].toFixed(6)}, ${svd.U[1][2].toFixed(6)}, ${svd.U[2][2].toFixed(6)}]`);
+
   const W = [
     [0, -1, 0],
     [1, 0, 0],
@@ -321,6 +348,9 @@ function decomposeEssentialMatrix(E: number[][]): DecomposedEssentialMatrix[] {
 
   const t1 = [svd.U[0][2], svd.U[1][2], svd.U[2][2]];
   const t2 = [-svd.U[0][2], -svd.U[1][2], -svd.U[2][2]];
+
+  console.log(`  t1 (3rd column of U): [${t1.map(v => v.toFixed(6)).join(', ')}]`);
+  console.log(`  t2 (negated): [${t2.map(v => v.toFixed(6)).join(', ')}]`);
 
   return [
     { R: R1, t: t1 },
@@ -630,17 +660,28 @@ export function initializeCamerasWithEssentialMatrix(
   const bestDecomposition = selectCorrectDecomposition(decompositions, correspondences);
   console.log('[Essential Matrix] Selected best decomposition');
 
+  console.log(`\n[Essential Matrix] Translation vector t: [${bestDecomposition.t.map(v => v.toFixed(4)).join(', ')}]`);
+
   const tNorm = Math.sqrt(
     bestDecomposition.t[0] * bestDecomposition.t[0] +
     bestDecomposition.t[1] * bestDecomposition.t[1] +
     bestDecomposition.t[2] * bestDecomposition.t[2]
   );
 
+  console.log(`[Essential Matrix] tNorm: ${tNorm}, baselineScale: ${baselineScale}`);
+
+  if (tNorm < 1e-10) {
+    console.error('[Essential Matrix] ERROR: Translation norm is too small!');
+    return { success: false, error: 'Translation norm is too small (degenerate configuration)' };
+  }
+
   const tScaled = [
     bestDecomposition.t[0] / tNorm * baselineScale,
     bestDecomposition.t[1] / tNorm * baselineScale,
     bestDecomposition.t[2] / tNorm * baselineScale
   ];
+
+  console.log(`[Essential Matrix] tScaled: [${tScaled.map(v => v.toFixed(4)).join(', ')}]`);
 
   vp1.position = [0, 0, 0];
   vp1.rotation = [1, 0, 0, 0];

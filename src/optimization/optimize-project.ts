@@ -5,6 +5,8 @@ import { initializeCameraWithPnP } from './pnp';
 import { Viewpoint } from '../entities/viewpoint';
 import { WorldPoint } from '../entities/world-point';
 import { ImagePoint } from '../entities/imagePoint';
+import { initializeCamerasWithEssentialMatrix } from './essential-matrix';
+import { initializeWorldPoints as unifiedInitialize } from './unified-initialization';
 
 // Global log buffer for export
 export const optimizationLogs: string[] = [];
@@ -14,13 +16,66 @@ function log(message: string) {
   optimizationLogs.push(message);
 }
 
+function detectOutliers(
+  project: Project,
+  threshold: number
+): { outliers: OutlierInfo[]; medianError: number; actualThreshold: number } {
+  const errors: number[] = [];
+  const imagePointErrors: Array<{ imagePoint: ImagePoint; error: number }> = [];
+
+  for (const vp of project.viewpoints) {
+    for (const ip of vp.imagePoints) {
+      const ipConcrete = ip as ImagePoint;
+      if (ipConcrete.lastResiduals && ipConcrete.lastResiduals.length === 2) {
+        const error = Math.sqrt(ipConcrete.lastResiduals[0] ** 2 + ipConcrete.lastResiduals[1] ** 2);
+        errors.push(error);
+        imagePointErrors.push({ imagePoint: ipConcrete, error });
+      }
+    }
+  }
+
+  errors.sort((a, b) => a - b);
+  const medianError = errors.length > 0 ? errors[Math.floor(errors.length / 2)] : 0;
+
+  const outlierThreshold = medianError < 20
+    ? Math.max(threshold * medianError, 50)
+    : Math.min(threshold * medianError, 80);
+
+  const outliers: OutlierInfo[] = [];
+  for (const { imagePoint, error } of imagePointErrors) {
+    if (error > outlierThreshold) {
+      outliers.push({
+        imagePoint,
+        error,
+        worldPointName: imagePoint.worldPoint.getName(),
+        viewpointName: imagePoint.viewpoint.getName(),
+      });
+    }
+  }
+
+  outliers.sort((a, b) => b.error - a.error);
+
+  return { outliers, medianError, actualThreshold: outlierThreshold };
+}
+
+export interface OutlierInfo {
+  imagePoint: ImagePoint;
+  error: number;
+  worldPointName: string;
+  viewpointName: string;
+}
+
 export interface OptimizeProjectOptions extends SolverOptions {
   autoInitializeCameras?: boolean;
   autoInitializeWorldPoints?: boolean;
+  detectOutliers?: boolean;
+  outlierThreshold?: number;
 }
 
 export interface OptimizeProjectResult extends SolverResult {
   camerasInitialized?: string[];
+  outliers?: OutlierInfo[];
+  medianReprojectionError?: number;
 }
 
 export function optimizeProject(
@@ -30,6 +85,8 @@ export function optimizeProject(
   const {
     autoInitializeCameras = true,
     autoInitializeWorldPoints = true,
+    detectOutliers: shouldDetectOutliers = true,
+    outlierThreshold = 3.0,
     tolerance = 1e-6,
     maxIterations = 100,
     damping = 1e-3,
@@ -56,25 +113,96 @@ export function optimizeProject(
 
   const camerasInitialized: string[] = [];
 
+  if (autoInitializeCameras || autoInitializeWorldPoints) {
+    console.log('[optimizeProject] Running initialization pipeline...');
+
+    const viewpointArray = Array.from(project.viewpoints);
+    const uninitializedCameras = viewpointArray.filter(vp => {
+      const v = vp as Viewpoint;
+      return v.position[0] === 0 && v.position[1] === 0 && v.position[2] === 0;
+    });
+
+    console.log(`[optimizeProject] Cameras needing initialization: ${uninitializedCameras.length}/${viewpointArray.length}`);
+
+    if (uninitializedCameras.length >= 2 && autoInitializeCameras) {
+      const worldPointArray = Array.from(project.worldPoints) as WorldPoint[];
+      const lockedPoints = worldPointArray.filter(wp => wp.isFullyLocked());
+
+      if (lockedPoints.length >= 2) {
+        console.log(`[optimizeProject] Found ${lockedPoints.length} locked points - using PnP initialization`);
+
+        for (const wp of lockedPoints) {
+          wp.optimizedXyz = [wp.lockedXyz[0]!, wp.lockedXyz[1]!, wp.lockedXyz[2]!];
+          console.log(`  ${wp.name}: [${wp.optimizedXyz.join(', ')}]`);
+        }
+
+        const worldPointSet = new Set<WorldPoint>(worldPointArray);
+
+        for (const vp of uninitializedCameras) {
+          const vpConcrete = vp as Viewpoint;
+          const vpLockedPoints = Array.from(vpConcrete.imagePoints).filter(ip =>
+            (ip.worldPoint as WorldPoint).isFullyLocked()
+          );
+
+          if (vpLockedPoints.length >= 4) {
+            console.log(`[optimizeProject] Initializing ${vpConcrete.name} with PnP (${vpLockedPoints.length} locked points visible)...`);
+            const success = initializeCameraWithPnP(vpConcrete, worldPointSet);
+            if (success) {
+              console.log(`[optimizeProject] ${vpConcrete.name} initialized: pos=[${vpConcrete.position.map(x => x.toFixed(3)).join(', ')}]`);
+              camerasInitialized.push(vpConcrete.name);
+            } else {
+              console.warn(`[optimizeProject] PnP failed for ${vpConcrete.name}`);
+            }
+          } else {
+            console.warn(`[optimizeProject] ${vpConcrete.name} has only ${vpLockedPoints.length} locked points visible (need 4+)`);
+          }
+        }
+      } else {
+        console.log('[optimizeProject] No locked points - using Essential Matrix initialization');
+
+        const vp1 = uninitializedCameras[0] as Viewpoint;
+        const vp2 = uninitializedCameras[1] as Viewpoint;
+
+        const result = initializeCamerasWithEssentialMatrix(vp1, vp2, 10.0);
+
+        if (result.success) {
+          console.log('[optimizeProject] Essential Matrix initialization successful');
+          console.log(`  ${vp1.name}: [${vp1.position.map(x => x.toFixed(3)).join(', ')}]`);
+          console.log(`  ${vp2.name}: [${vp2.position.map(x => x.toFixed(3)).join(', ')}]`);
+          camerasInitialized.push(vp1.name, vp2.name);
+        } else {
+          console.warn(`[optimizeProject] Essential Matrix failed: ${result.error}`);
+        }
+      }
+    }
+  }
+
   if (autoInitializeWorldPoints) {
     const pointArray = Array.from(project.worldPoints);
     const lineArray = Array.from(project.lines);
     const constraintArray = Array.from(project.constraints);
-    initializeWorldPoints(pointArray, lineArray, constraintArray);
+    unifiedInitialize(pointArray, lineArray, constraintArray, {
+      sceneScale: 10.0,
+      verbose: true
+    });
   }
 
   if (autoInitializeCameras) {
     const viewpointArray = Array.from(project.viewpoints);
     const worldPointSet = new Set(project.worldPoints);
 
-    for (const vp of viewpointArray) {
+    const stillUninitializedCameras = viewpointArray.filter(vp => {
+      const v = vp as Viewpoint;
+      return v.position[0] === 0 && v.position[1] === 0 && v.position[2] === 0;
+    });
+
+    for (const vp of stillUninitializedCameras) {
       const vpConcrete = vp as Viewpoint;
       const hasImagePoints = vpConcrete.imagePoints.size > 0;
       const hasTriangulatedPoints = Array.from(vpConcrete.imagePoints).some(ip =>
         (ip.worldPoint as WorldPoint).optimizedXyz !== null
       );
 
-      // Run PnP if camera has image points and world points are triangulated
       if (hasImagePoints && hasTriangulatedPoints) {
         console.log(`[optimizeProject] Initializing camera ${vpConcrete.name} with PnP...`);
         const success = initializeCameraWithPnP(vpConcrete, worldPointSet);
@@ -120,8 +248,35 @@ export function optimizeProject(
   console.log(`  Iterations: ${result.iterations}`);
   console.log(`  Residual: ${result.residual.toFixed(6)}`);
 
+  let outliers: OutlierInfo[] | undefined;
+  let medianReprojectionError: number | undefined;
+
+  if (shouldDetectOutliers && project.imagePoints.size > 0) {
+    console.log('\n=== OUTLIER DETECTION ===');
+    const detection = detectOutliers(project, outlierThreshold);
+    outliers = detection.outliers;
+    medianReprojectionError = detection.medianError;
+
+    console.log(`Median reprojection error: ${medianReprojectionError.toFixed(2)} px`);
+    console.log(`Outlier threshold: ${detection.actualThreshold.toFixed(2)} px (adaptive based on median quality)`);
+
+    if (outliers.length > 0) {
+      console.log(`\nFound ${outliers.length} potential outlier image points (error > ${detection.actualThreshold.toFixed(1)} px):`);
+      for (const outlier of outliers) {
+        console.log(`  - ${outlier.worldPointName} @ ${outlier.viewpointName}: ${outlier.error.toFixed(1)} px (median: ${medianReprojectionError.toFixed(1)} px)`);
+        outlier.imagePoint.isOutlier = true;
+      }
+      console.log('\nThese points may have incorrect manual clicks.');
+      console.log('Consider reviewing or removing them.');
+    } else {
+      console.log('No outliers detected - all reprojection errors are within acceptable range.');
+    }
+  }
+
   return {
     ...result,
     camerasInitialized: camerasInitialized.length > 0 ? camerasInitialized : undefined,
+    outliers,
+    medianReprojectionError,
   };
 }

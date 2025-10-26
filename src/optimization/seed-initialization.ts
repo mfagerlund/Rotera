@@ -1,8 +1,9 @@
 import type { Project } from '../entities/project';
 import type { Viewpoint } from '../entities/viewpoint';
+import type { WorldPoint } from '../entities/world-point';
 import { validateSolvingRequirements, type ViewpointPair } from './solving-requirements';
-import { triangulateSharedPoints } from './triangulation';
 import { initializeCamerasWithEssentialMatrix } from './essential-matrix';
+import { initializeWorldPoints } from './unified-initialization';
 
 export interface SeedInitializationResult {
   success: boolean;
@@ -60,14 +61,17 @@ export function initializeFromImagePairs(
     };
   }
 
-  const cameraDistance = scaleBaseline;
+  const pointsArray = Array.from(project.worldPoints) as WorldPoint[];
+  const linesArray = Array.from(project.lines);
+  const constraintsArray = Array.from(project.constraints);
 
-  const triangulationResult = triangulateSharedPoints(
-    bestPair.sharedWorldPoints,
-    bestPair.viewpoint1,
-    bestPair.viewpoint2,
-    cameraDistance
-  );
+  initializeWorldPoints(pointsArray, linesArray, constraintsArray, {
+    sceneScale: scaleBaseline,
+    verbose: true
+  });
+
+  const triangulatedCount = pointsArray.filter(p => p.optimizedXyz !== null && p.optimizedXyz !== undefined).length;
+  const failedCount = pointsArray.length - triangulatedCount;
 
   return {
     success: true,
@@ -75,7 +79,7 @@ export function initializeFromImagePairs(
     warnings: requirements.warnings,
     seedPair: bestPair,
     scaleBaseline,
-    triangulatedPoints: triangulationResult.success,
-    failedPoints: triangulationResult.failed
+    triangulatedPoints: triangulatedCount,
+    failedPoints: failedCount
   };
 }

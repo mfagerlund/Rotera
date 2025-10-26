@@ -9,7 +9,7 @@ import { WorldPoint } from '../entities/world-point/WorldPoint';
 import { Line } from '../entities/line/Line';
 import { Viewpoint } from '../entities/viewpoint/Viewpoint';
 import { Constraint } from '../entities/constraints/base-constraint';
-import { optimizeProject } from '../optimization/optimize-project';
+import { optimizeProject, OptimizeProjectResult } from '../optimization/optimize-project';
 
 type ConstraintId = string;
 
@@ -114,7 +114,7 @@ export const useOptimization = () => {
       viewpoints: Viewpoint[],
       constraints: Constraint[],
       options: OptimizationOptions = {}
-    ): Promise<SolverResult> => {
+    ): Promise<OptimizeProjectResult> => {
       setState((prev) => ({
         ...prev,
         isRunning: true,
@@ -133,7 +133,7 @@ export const useOptimization = () => {
           constraints: new Set(constraints),
         } as any;
 
-        const result = await new Promise<SolverResult>((resolve) => {
+        const result = await new Promise<OptimizeProjectResult>((resolve) => {
           setTimeout(() => {
             const solverResult = optimizeProject(project, {
               tolerance: options.tolerance ?? 1e-6,

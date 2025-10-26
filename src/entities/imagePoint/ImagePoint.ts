@@ -11,6 +11,7 @@ import {makeAutoObservable} from 'mobx'
 export class ImagePoint implements ISelectable, IImagePoint, IResidualProvider, IOptimizationResultReceiver, ISerializable<ImagePointDto> {
     selected = false
     lastResiduals: number[] = []
+    isOutlier = false
 
     worldPoint: IWorldPoint
     viewpoint: IViewpoint

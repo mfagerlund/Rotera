@@ -133,7 +133,12 @@ export class ConstraintSystem {
       const hasGeometricConstraints = this.constraints.size > 0 ||
                                        Array.from(this.lines).some(line =>
                                          line.direction !== 'free' || line.hasFixedLength());
-      const reprojectionWeight = hasGeometricConstraints ? 0.015 : 1.0;
+
+      // NOTE: When geometric constraints exist, reprojection errors are downweighted.
+      // This prioritizes geometric accuracy (line lengths, angles) over exact pixel matches.
+      // If cameras are unlocked, they may drift to satisfy geometry, causing high reprojection errors.
+      // Solution: Lock cameras if you trust their initial PnP positions, or increase this weight.
+      const reprojectionWeight = hasGeometricConstraints ? 0.0001 : 1.0;
 
       // INTRINSIC LINE CONSTRAINTS (direction, length)
       for (const line of this.lines) {
@@ -378,14 +383,14 @@ export class ConstraintSystem {
         const actualCount = (entity as any).lastResiduals?.length ?? 0;
         if (actualCount !== info.count) {
           console.error(
-            `[ConstraintSystem] Push/pop mismatch for ${info.type} "${info.name}": ` +
+            `[ConstraintSystem] Push/pop mismatch for "${info.name}": ` +
             `pushed ${info.count}, popped ${actualCount}`
           );
           hasViolations = true;
         }
       } else if (info.count > 0) {
         console.warn(
-          `[ConstraintSystem] ${info.type} "${info.name}" pushed ${info.count} residuals ` +
+          `[ConstraintSystem] "${info.name}" pushed ${info.count} residuals ` +
           `but has no lastResiduals field to pop them into`
         );
         hasViolations = true;

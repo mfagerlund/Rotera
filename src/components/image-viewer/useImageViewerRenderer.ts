@@ -110,6 +110,23 @@ export const useImageViewerRenderer = ({
           ctx.setLineDash([])
         }
 
+        if (imagePoint.isOutlier) {
+          ctx.strokeStyle = 'rgba(255, 0, 0, 0.9)'
+          ctx.lineWidth = 3
+          ctx.beginPath()
+          ctx.arc(x, y, 14, 0, 2 * Math.PI)
+          ctx.stroke()
+
+          ctx.strokeStyle = 'rgba(255, 0, 0, 0.7)'
+          ctx.lineWidth = 2
+          ctx.beginPath()
+          ctx.moveTo(x - 8, y - 8)
+          ctx.lineTo(x + 8, y + 8)
+          ctx.moveTo(x + 8, y - 8)
+          ctx.lineTo(x - 8, y + 8)
+          ctx.stroke()
+        }
+
         ctx.fillStyle = wp.color || '#ff6b6b'
         ctx.strokeStyle = isSelected ? '#ffffff' : '#000000'
         ctx.lineWidth = isSelected ? 3 : 1

@@ -20,6 +20,7 @@ export interface IImagePoint {
     v: number
     isVisible: boolean
     confidence: number
+    isOutlier: boolean
 }
 
 export interface IViewpoint {

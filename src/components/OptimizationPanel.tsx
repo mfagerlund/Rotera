@@ -157,7 +157,9 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
         converged: solverResult.converged,
         totalError: solverResult.residual,
         pointAccuracy: solverResult.residual / Math.max(1, pointEntities.length),
-        iterations: solverResult.iterations
+        iterations: solverResult.iterations,
+        outliers: solverResult.outliers || [],
+        medianReprojectionError: solverResult.medianReprojectionError
       }
 
       setResults(result)
@@ -372,8 +374,82 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                 <span>Iterations:</span>
                 <span>{results.iterations}</span>
               </div>
+              {results.medianReprojectionError !== undefined && (
+                <div className="result-item">
+                  <span>Median Reprojection Error:</span>
+                  <span>{formatNumber(results.medianReprojectionError)} px</span>
+                </div>
+              )}
             </div>
           )}
+
+          {/* Outlier Detection */}
+          {results && results.outliers && results.outliers.length > 0 && (() => {
+            const byWorldPoint = new Map<string, Array<{viewpoint: string, error: number}>>();
+            results.outliers.forEach((outlier: any) => {
+              if (!byWorldPoint.has(outlier.worldPointName)) {
+                byWorldPoint.set(outlier.worldPointName, []);
+              }
+              byWorldPoint.get(outlier.worldPointName)!.push({
+                viewpoint: outlier.viewpointName,
+                error: outlier.error
+              });
+            });
+
+            return (
+              <div className="outliers-section" style={{
+                marginTop: '12px',
+                padding: '12px',
+                backgroundColor: '#fff3cd',
+                border: '2px solid #ffc107',
+                borderRadius: '4px'
+              }}>
+                <h4 style={{ margin: '0 0 8px 0', color: '#856404', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  ⚠️ Outliers Detected ({results.outliers.length} image points)
+                </h4>
+                <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#856404' }}>
+                  These image points have large reprojection errors and may be incorrect manual clicks:
+                </p>
+                <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                  {Array.from(byWorldPoint.entries()).map(([worldPoint, images]) => (
+                    <div key={worldPoint} style={{
+                      padding: '8px',
+                      margin: '6px 0',
+                      backgroundColor: '#fff',
+                      border: '1px solid #ffc107',
+                      borderRadius: '4px'
+                    }}>
+                      <div style={{
+                        fontWeight: 'bold',
+                        color: '#333',
+                        marginBottom: '4px',
+                        fontSize: '13px'
+                      }}>
+                        {worldPoint} <span style={{ color: '#666', fontWeight: 'normal', fontSize: '11px' }}>({images.length} image{images.length > 1 ? 's' : ''})</span>
+                      </div>
+                      {images.map((img, idx) => (
+                        <div key={idx} style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          padding: '3px 0 3px 12px',
+                          fontSize: '12px',
+                          color: '#555'
+                        }}>
+                          <span style={{ color: '#555' }}>📷 {img.viewpoint}</span>
+                          <span style={{ color: '#dc3545', fontWeight: 'bold', marginLeft: '12px' }}>
+                            {formatNumber(img.error)} px
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+                <p style={{ margin: '8px 0 0 0', fontSize: '11px', color: '#856404', fontStyle: 'italic' }}>
+                  💡 Outliers are marked with red circle + X on the images. Consider re-clicking these points.
+                </p>
+              </div>
+            );
+          })()}
 
           {/* Entity-level optimization information */}
           {results.converged && (

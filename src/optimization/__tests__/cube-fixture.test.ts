@@ -59,9 +59,8 @@ describe('Cube Fixture Optimization', () => {
     console.log(`  ${vp1.name}: focal=${vp1.focalLength}, pos=[${vp1.position.map(x => x.toFixed(3)).join(', ')}]`);
     console.log(`  ${vp2.name}: focal=${vp2.focalLength}, pos=[${vp2.position.map(x => x.toFixed(3)).join(', ')}]`);
 
-    vp1.isPoseLocked = true;
-    vp2.isPoseLocked = true;
-    console.log('\nLocking camera poses for initial bundle adjustment (to prevent scale drift)');
+    // DON'T lock cameras - let them optimize freely
+    console.log('\nCameras will be free to optimize in bundle adjustment');
 
     console.log('\n=== STAGE 1: BUNDLE ADJUSTMENT (SEED PAIR ONLY - cameras locked) ===\n');
 
@@ -100,15 +99,36 @@ describe('Cube Fixture Optimization', () => {
     console.log('\nSeed pair reprojection errors:');
     let totalErrorSeed = 0;
     let countSeed = 0;
+    const seedErrors: {ip: ImagePoint, error: number}[] = [];
     for (const ip of seedImagePoints) {
       if (ip.lastResiduals && ip.lastResiduals.length === 2) {
         const error = Math.sqrt(ip.lastResiduals[0]**2 + ip.lastResiduals[1]**2);
         totalErrorSeed += error;
         countSeed++;
+        seedErrors.push({ip, error});
       }
     }
     if (countSeed > 0) {
       console.log(`  Average: ${(totalErrorSeed / countSeed).toFixed(2)} pixels (${countSeed} observations)`);
+    }
+
+    console.log('\n=== OUTLIER DETECTION IN SEED PAIR ===\n');
+
+    const outlierThreshold = 1000;
+    const seedOutliers = seedErrors.filter(({error}) => error > outlierThreshold);
+
+    if (seedOutliers.length > 0) {
+      seedOutliers.sort((a, b) => b.error - a.error);
+      console.log(`Found ${seedOutliers.length} outliers in seed pair (error > ${outlierThreshold}px):`);
+      for (const {ip, error} of seedOutliers) {
+        console.log(`  - ${ip.worldPoint.getName()} @ ${ip.viewpoint.getName()}: ${error.toFixed(1)} px`);
+        const vp = ip.viewpoint as Viewpoint;
+        vp.removeImagePoint(ip);
+        project.removeImagePoint(ip);
+      }
+      console.log(`\nRemoved ${seedOutliers.length} outlier image points from project\n`);
+    } else {
+      console.log('No outliers detected in seed pair\n');
     }
 
     console.log('\n=== RESCALE TO FIX METRIC (using scale constraint) ===\n');
@@ -341,9 +361,9 @@ describe('Cube Fixture Optimization', () => {
     console.log('\n=== STAGE 4: APPLY GEOMETRIC CONSTRAINTS ===\n');
 
     const result = optimizeProject(project, {
-      maxIterations: 500,
-      tolerance: 1e-4,
-      damping: 2.0,
+      maxIterations: 1000,
+      tolerance: 1e-8,
+      damping: 20.0,
       verbose: true,
       autoInitializeCameras: false,
       autoInitializeWorldPoints: false
@@ -390,6 +410,110 @@ describe('Cube Fixture Optimization', () => {
       console.log(`  RMS Residual: ${info.rmsResidual.toExponential(2)}`);
     }
     console.log();
+
+    console.log('\n=== OUTLIER DETECTION AND REMOVAL (AFTER STAGE 4) ===\n');
+
+    console.log('Line lengths BEFORE outlier removal:');
+    for (const line of project.lines) {
+      const info = line.getOptimizationInfo();
+      const target = info.targetLength !== undefined ? info.targetLength.toFixed(1) : 'none';
+      console.log(`  ${line.name || 'Line'}: ${info.length?.toFixed(3) || 'unknown'} (target: ${target})`);
+    }
+    console.log();
+
+    interface OutlierInfo {
+      imagePoint: ImagePoint;
+      worldPointName: string;
+      viewpointName: string;
+      error: number;
+    }
+
+    const outliers: OutlierInfo[] = [];
+    const errors: number[] = [];
+
+    for (const vp of project.viewpoints) {
+      for (const ip of vp.imagePoints) {
+        const ipConcrete = ip as ImagePoint;
+        if (ipConcrete.lastResiduals && ipConcrete.lastResiduals.length === 2) {
+          const error = Math.sqrt(ipConcrete.lastResiduals[0]**2 + ipConcrete.lastResiduals[1]**2);
+          errors.push(error);
+        }
+      }
+    }
+
+    errors.sort((a, b) => a - b);
+    const medianError = errors.length > 0 ? errors[Math.floor(errors.length / 2)] : 0;
+    const threshold = 80;
+
+    console.log(`Median reprojection error: ${medianError.toFixed(2)} px`);
+    console.log(`Outlier threshold: ${threshold.toFixed(2)} px (any point > ${threshold}px is considered an outlier)\n`);
+
+    for (const vp of project.viewpoints) {
+      for (const ip of vp.imagePoints) {
+        const ipConcrete = ip as ImagePoint;
+        if (ipConcrete.lastResiduals && ipConcrete.lastResiduals.length === 2) {
+          const error = Math.sqrt(ipConcrete.lastResiduals[0]**2 + ipConcrete.lastResiduals[1]**2);
+          if (error > threshold) {
+            outliers.push({
+              imagePoint: ipConcrete,
+              worldPointName: ipConcrete.worldPoint.getName(),
+              viewpointName: ipConcrete.viewpoint.getName(),
+              error: error
+            });
+          }
+        }
+      }
+    }
+
+    outliers.sort((a, b) => b.error - a.error);
+
+    if (outliers.length > 0) {
+      console.log(`Removed ${outliers.length} outlier image points (error > ${threshold}px):`);
+      for (const outlier of outliers) {
+        console.log(`  - ${outlier.imagePoint.worldPoint.getName()} @ ${outlier.imagePoint.viewpoint.getName()}: ${outlier.error.toFixed(1)} px`);
+        const vp = outlier.imagePoint.viewpoint as Viewpoint;
+        vp.removeImagePoint(outlier.imagePoint);
+        project.removeImagePoint(outlier.imagePoint);
+      }
+      console.log();
+
+      const totalImagePoints = Array.from(project.viewpoints).reduce((sum, vp) => sum + vp.imagePoints.size, 0);
+      console.log(`Remaining: ${totalImagePoints} good image points\n`);
+
+      console.log('=== RE-OPTIMIZATION WITH CLEAN DATA ===\n');
+
+      const resultClean = optimizeProject(project, {
+        maxIterations: 1000,
+        tolerance: 1e-8,
+        damping: 20.0,
+        verbose: true,
+        autoInitializeCameras: false,
+        autoInitializeWorldPoints: false
+      });
+
+      console.log('\n=== CLEAN OPTIMIZATION RESULT ===\n');
+      console.log(`Converged: ${resultClean.converged}`);
+      console.log(`Iterations: ${resultClean.iterations}`);
+      console.log(`Final Residual: ${resultClean.residual.toFixed(6)}\n`);
+
+      console.log('\n=== FINAL LINE LENGTHS (AFTER OUTLIER REMOVAL) ===\n');
+      for (const line of project.lines) {
+        const info = line.getOptimizationInfo();
+        if (info.targetLength !== undefined) {
+          const diff = info.length ? Math.abs(info.length - info.targetLength) : 999;
+          const status = diff < 0.5 ? 'GOOD' : 'POOR';
+          const lengthStr = info.length?.toFixed(2) || 'unknown';
+          const targetStr = info.targetLength.toFixed(1);
+          const diffStr = diff < 999 ? diff.toFixed(2) : 'N/A';
+          console.log(`  ${line.name}: ${lengthStr} (target: ${targetStr}, error: ${diffStr}) ${status}`);
+        } else {
+          console.log(`  ${line.name || 'Line'}: ${info.length?.toFixed(3) || 'unknown'} (target: none)`);
+        }
+      }
+      console.log();
+    } else {
+      console.log('No outliers detected - all reprojection errors below threshold\n');
+    }
 
     console.log('=== STAGE 3: RE-EVALUATE REPROJECTION ERRORS ===\n');
 

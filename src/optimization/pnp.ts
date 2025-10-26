@@ -474,6 +474,12 @@ export function initializeCameraWithPnP(
   centroid[1] /= visiblePoints.length;
   centroid[2] /= visiblePoints.length;
 
+  console.log(`  Centroid of ${visiblePoints.length} points: [${centroid.map(x => x.toFixed(3)).join(', ')}]`);
+  console.log(`  Sample points (first 5):`);
+  for (let i = 0; i < Math.min(5, visiblePoints.length); i++) {
+    console.log(`    [${visiblePoints[i].map(x => x.toFixed(3)).join(', ')}]`);
+  }
+
   let maxDist = 0;
   for (const pt of visiblePoints) {
     const dx = pt[0] - centroid[0];
@@ -484,9 +490,12 @@ export function initializeCameraWithPnP(
   }
 
   const cameraDistance = Math.max(maxDist * 2.5, 10);
+  console.log(`  Max distance from centroid: ${maxDist.toFixed(3)}`);
+  console.log(`  Computed camera distance: ${cameraDistance.toFixed(3)}`);
 
   vpConcrete.position = [centroid[0], centroid[1], centroid[2] - cameraDistance];
   vpConcrete.rotation = [1, 0, 0, 0];
+  console.log(`  Initial camera position: [${vpConcrete.position.map(x => x.toFixed(3)).join(', ')}]`);
 
   const initialError = computeReprojectionError(vpConcrete);
 
