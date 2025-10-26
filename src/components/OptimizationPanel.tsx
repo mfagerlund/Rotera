@@ -97,7 +97,19 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
 
     const unlockedPoints = pointArray.filter(p => !p.isLocked())
     const totalDOF = (unlockedPoints.length * 3) + (viewpointArray.length * 6)
-    const constraintDOF = project.constraints.size
+
+    // Count intrinsic line constraints (direction and length)
+    let lineConstraintCount = 0
+    for (const line of lineArray) {
+      if (line.direction !== 'free') {
+        lineConstraintCount += 2
+      }
+      if (line.hasFixedLength()) {
+        lineConstraintCount += 1
+      }
+    }
+
+    const constraintDOF = project.constraints.size + lineConstraintCount
     const netDOF = Math.max(0, totalDOF - constraintDOF)
 
     // Count projection constraints
@@ -111,11 +123,12 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
       lineCount: lineArray.length,
       viewpointCount: viewpointArray.length,
       constraintCount: project.constraints.size,
+      lineConstraintCount,
       projectionConstraintCount: projectionCount,
       totalDOF,
       constraintDOF,
       netDOF,
-      canOptimize: project.constraints.size > 0 && (unlockedPoints.length > 0 || viewpointArray.length > 0)
+      canOptimize: (project.constraints.size + lineConstraintCount) > 0 && (unlockedPoints.length > 0 || viewpointArray.length > 0)
     }
   }, [project])
 
@@ -250,17 +263,17 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
   }, [])
 
   function formatNumber(value: number): string {
-    if (value === 0) {
+    if (value === 0 || Math.abs(value) < 1e-10) {
       return '0.000';
     }
     const abs = Math.abs(value);
-    if (abs >= 0.01) {
+    if (abs >= 1) {
       return value.toFixed(3);
     }
-    if (abs >= 1e-6) {
+    if (abs >= 0.001) {
       return value.toFixed(6);
     }
-    return value.toExponential(2);
+    return '< 0.001';
   }
 
   return (
@@ -283,7 +296,8 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
         <div className="stat-item">
           <span className="stat-label">Constraints:</span>
           <span className="stat-value">
-            {stats.constraintCount}
+            {stats.constraintDOF}
+            {stats.lineConstraintCount > 0 && ` (${stats.lineConstraintCount} from lines)`}
             {stats.projectionConstraintCount > 0 && ` (${stats.projectionConstraintCount} observations)`}
           </span>
         </div>
@@ -498,15 +512,15 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                           <div className="entity-data">
                             <div className="data-row">
                               <span className="data-label">Length:</span>
-                              <span className="data-value">{info.length?.toFixed(3) || 'N/A'}</span>
+                              <span className="data-value">{info.length !== undefined && info.length !== null ? formatNumber(info.length) : 'N/A'}</span>
                             </div>
-                            {info.targetLength && (
+                            {info.targetLength !== undefined && (
                               <div className="data-row">
                                 <span className="data-label">Target:</span>
-                                <span className="data-value">{info.targetLength.toFixed(3)}</span>
+                                <span className="data-value">{formatNumber(info.targetLength)}</span>
                               </div>
                             )}
-                            {info.lengthError !== null && (
+                            {info.lengthError !== null && info.lengthError !== undefined && (
                               <div className="data-row">
                                 <span className="data-label">Error:</span>
                                 <span className="data-value">{formatNumber(info.lengthError)}</span>

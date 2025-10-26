@@ -8,6 +8,7 @@ import { useProjection } from './hooks/useProjection'
 import { renderWorldPoints } from './renderers/pointRenderer'
 import { renderLines } from './renderers/lineRenderer'
 import { renderAxes } from './renderers/axesRenderer'
+import { renderCameras } from './renderers/cameraRenderer'
 import { findPointAt, findLineAt } from './utils'
 
 export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
@@ -42,8 +43,9 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
     ctx.fillStyle = '#f5f5f5'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-    // Render in order: axes, planes, lines, points
+    // Render in order: axes, cameras, lines, points
     renderAxes(ctx, project.gridVisible, project3DTo2D)
+    renderCameras(ctx, project, selectedSet, null, project3DTo2D)
     renderLines(ctx, project, selectedSet, hoverState.hoveredLine, project3DTo2D)
     renderWorldPoints(ctx, project, selectedSet, hoverState.hoveredPoint, project3DTo2D)
   }, [project, selectedSet, hoverState, project3DTo2D])
@@ -179,14 +181,38 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
     const canvas = canvasRef.current
     if (!canvas) return
 
-    const resizeObserver = new ResizeObserver(() => {
+    const updateSize = () => {
+      const parent = canvas.parentElement
+      if (!parent) return
+
+      const controls = parent.querySelector('.world-view-controls') as HTMLElement
+      const controlsHeight = controls?.offsetHeight || 0
+
+      // Position canvas below controls
+      canvas.style.top = `${controlsHeight}px`
+
       const rect = canvas.getBoundingClientRect()
-      canvas.width = rect.width
-      canvas.height = rect.height
-      render()
+      console.log('[WorldView] Controls height:', controlsHeight, 'Canvas rect:', rect.width, 'x', rect.height)
+
+      if (rect.width > 0 && rect.height > 0) {
+        canvas.width = rect.width
+        canvas.height = rect.height
+        console.log('[WorldView] Set canvas resolution to:', canvas.width, 'x', canvas.height)
+        render()
+      }
+    }
+
+    requestAnimationFrame(() => {
+      updateSize()
     })
 
-    resizeObserver.observe(canvas)
+    const resizeObserver = new ResizeObserver(updateSize)
+    // Observe the grandparent (.workspace-world-view) to avoid resize feedback loop
+    const containerToObserve = canvas.parentElement?.parentElement || canvas.parentElement
+    if (containerToObserve) {
+      console.log('[WorldView] Observing container:', containerToObserve.className)
+      resizeObserver.observe(containerToObserve)
+    }
     return () => resizeObserver.disconnect()
   }, [render])
 

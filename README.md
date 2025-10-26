@@ -57,7 +57,12 @@ Camera projections are solved from the full constraint graph. IPs cannot exist w
   * Under-constrained variables (DoF accounting via Jacobian rank).
   * Degeneracy detection (planar scenes, colinear points, tiny baselines).
 * Over-constraints are allowed and reduce variance.
-* Initialization: EPnP from 3D-2D correspondences, then global bundle adjustment.
+* **Two-camera initialization:**
+  * **7-point algorithm** for Essential Matrix estimation (minimum 7 point correspondences)
+  * **8-point algorithm** as fallback for 8+ correspondences
+  * Future: 5-point algorithm (Nistér 2004) could reduce to 5 correspondences but requires solving 10th-degree polynomials
+* **Single-camera initialization:** PnP from 3D-2D correspondences when world points already have coordinates
+* **Global bundle adjustment:** Refines all parameters jointly after initialization
 
 ## Workflow (condensed example)
 

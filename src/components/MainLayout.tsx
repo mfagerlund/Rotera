@@ -309,17 +309,19 @@ export const MainLayout: React.FC = observer(() => {
   })
 
   const handleImageClick = useCallback((u: number, v: number) => {
+    if (!project) return
+
     if (placementMode.active && placementMode.worldPoint && currentImage) {
       addImagePointToWorldPoint(placementMode.worldPoint, currentImage, u, v)
       cancelPlacementMode()
-    } else if (activeTool === 'point' && currentImage && project) {
+    } else if (activeTool === 'point' && currentImage) {
       const wpCount = worldPointsArray.length + 1
       const color = generateWorldPointColor(worldPointsArray.length)
       const newWp = WorldPoint.create(`WP${wpCount}`, { color, lockedXyz: [null, null, null] })
       project.addWorldPoint(newWp)
       addImagePointToWorldPoint(newWp, currentImage, u, v)
       setActiveTool('select')
-    } else if (activeTool === 'loop' && currentImage && project) {
+    } else if (activeTool === 'loop' && currentImage) {
       const wpCount = worldPointsArray.length + 1
       const color = generateWorldPointColor(worldPointsArray.length)
       const newWp = WorldPoint.create(`WP${wpCount}`, { color, lockedXyz: [null, null, null] })

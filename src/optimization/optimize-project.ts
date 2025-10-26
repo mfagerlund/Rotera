@@ -171,7 +171,9 @@ export function optimizeProject(
           console.log(`  ${vp2.name}: [${vp2.position.map(x => x.toFixed(3)).join(', ')}]`);
           camerasInitialized.push(vp1.name, vp2.name);
         } else {
-          console.warn(`[optimizeProject] Essential Matrix failed: ${result.error}`);
+          const errorMsg = `Cannot initialize cameras: ${result.error || 'Unknown error'}. Need at least 7 shared point correspondences between two cameras for Essential Matrix initialization. Add more image points or lock some world point coordinates to use PnP instead.`;
+          console.error(`[optimizeProject] ${errorMsg}`);
+          throw new Error(errorMsg);
         }
       }
     }
@@ -253,6 +255,14 @@ export function optimizeProject(
 
   if (shouldDetectOutliers && project.imagePoints.size > 0) {
     console.log('\n=== OUTLIER DETECTION ===');
+
+    // Clear all previous outlier flags before re-detecting
+    for (const vp of project.viewpoints) {
+      for (const ip of vp.imagePoints) {
+        (ip as ImagePoint).isOutlier = false;
+      }
+    }
+
     const detection = detectOutliers(project, outlierThreshold);
     outliers = detection.outliers;
     medianReprojectionError = detection.medianError;

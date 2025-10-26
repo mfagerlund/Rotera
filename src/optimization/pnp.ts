@@ -2,18 +2,14 @@
  * Perspective-n-Point (PnP) Camera Pose Estimation
  *
  * This module provides camera pose estimation from known 3D-2D correspondences.
- * Currently implements a simple geometric heuristic for camera initialization.
  *
- * FUTURE WORK:
- * The DLT-based PnP solver (solvePnP function) has implementation issues and needs
- * debugging. For production use, consider implementing:
- * - EPnP (Efficient Perspective-n-Point)
- * - P3P + RANSAC for robustness
- * - Proper decomposition of projection matrix
- * - Better handling of degenerate cases
+ * Implements:
+ * - P3P (Perspective-3-Point) using Kneip's method for 3-4 points
+ * - DLT-based approach for 4+ points
+ * - Iterative refinement using bundle adjustment
  *
  * References:
- * - Lepetit, Moreno-Noguer, Fua: "EPnP: An Accurate O(n) Solution to the PnP Problem"
+ * - Kneip, Scaramuzza, Siegwart: "A Novel Parametrization of the P3P Problem for a Direct Computation of Absolute Camera Position and Orientation" (CVPR 2011)
  * - Hartley & Zisserman: "Multiple View Geometry" Chapter 7
  *
  * @module pnp
@@ -35,20 +31,14 @@ export interface PnPResult {
 }
 
 /**
- * Solve Perspective-n-Point (PnP) problem using DLT-based approach.
+ * Solve Perspective-n-Point (PnP) problem.
  * Computes camera pose from known 3D-2D correspondences.
  *
- * This is a simplified linear approach suitable for initialization.
- * For production with noisy data, consider EPnP + RANSAC.
+ * Algorithm selection:
+ * - 3-4 points: Use P3P (Kneip's method)
+ * - 4+ points: Use DLT-based approach
  *
- * Algorithm:
- * 1. Build linear system from 3D-2D correspondences
- * 2. Solve for camera projection matrix P (3x4)
- * 3. Decompose P into rotation R and translation t
- * 4. Convert rotation matrix to quaternion
- *
- * @param worldPoints - 3D points in world coordinates (already triangulated)
- * @param imagePoints - Corresponding 2D image observations
+ * @param correspondences - Array of 3D world points and their 2D image projections
  * @param viewpoint - Camera to initialize (uses intrinsics, updates pose)
  * @returns Camera pose or null if solve fails
  */
@@ -58,8 +48,8 @@ export function solvePnP(
 ): PnPResult | null {
   const vpConcrete = viewpoint as Viewpoint;
 
-  if (correspondences.length < 4) {
-    console.log(`PnP: Need at least 4 correspondences, got ${correspondences.length}`);
+  if (correspondences.length < 3) {
+    console.log(`PnP: Need at least 3 correspondences, got ${correspondences.length}`);
     return null;
   }
 
@@ -68,8 +58,8 @@ export function solvePnP(
     return wp.optimizedXyz !== null;
   });
 
-  if (validCorrespondences.length < 4) {
-    console.log(`PnP: Need at least 4 points with optimizedXyz, got ${validCorrespondences.length}`);
+  if (validCorrespondences.length < 3) {
+    console.log(`PnP: Need at least 3 points with optimizedXyz, got ${validCorrespondences.length}`);
     return null;
   }
 
@@ -86,9 +76,22 @@ export function solvePnP(
     points2D.push([ip.u, ip.v]);
   }
 
-  const pose = estimatePoseDLT(points3D, points2D, K);
+  let pose: { position: [number, number, number]; rotation: [number, number, number, number] } | null = null;
+
+  if (validCorrespondences.length === 3 || validCorrespondences.length === 4) {
+    pose = solveP3P(points3D, points2D, K);
+    if (!pose) {
+      console.log('PnP: P3P estimation failed, falling back to DLT');
+      if (validCorrespondences.length >= 4) {
+        pose = estimatePoseDLT(points3D, points2D, K);
+      }
+    }
+  } else {
+    pose = estimatePoseDLT(points3D, points2D, K);
+  }
+
   if (!pose) {
-    console.log('PnP: DLT estimation failed');
+    console.log('PnP: All estimation methods failed');
     return null;
   }
 
@@ -104,6 +107,457 @@ function getCameraMatrix(vp: Viewpoint): number[][] {
     [vp.focalLength, 0, vp.principalPointX],
     [0, vp.focalLength * vp.aspectRatio, vp.principalPointY],
     [0, 0, 1]
+  ];
+}
+
+/**
+ * Solve P3P (Perspective-3-Point) problem using Kneip's method.
+ * Works with 3 or 4 points. For 4 points, returns the solution with best reprojection error.
+ *
+ * Algorithm:
+ * 1. Convert image points to bearing vectors (normalized camera coordinates)
+ * 2. Compute angles between bearing vectors
+ * 3. Solve quartic polynomial for camera-point distances
+ * 4. For each valid solution, compute rotation and translation
+ * 5. Return the solution with minimum reprojection error
+ *
+ * Reference: Kneip et al. "A Novel Parametrization of the P3P Problem" CVPR 2011
+ */
+function solveP3P(
+  points3D: [number, number, number][],
+  points2D: [number, number][],
+  K: number[][]
+): { position: [number, number, number]; rotation: [number, number, number, number] } | null {
+  if (points3D.length < 3 || points3D.length > 4) {
+    return null;
+  }
+
+  const Kinv = invert3x3(K);
+  if (!Kinv) return null;
+
+  const bearingVectors: [number, number, number][] = [];
+  for (const pt2D of points2D) {
+    const x = Kinv[0][0] * pt2D[0] + Kinv[0][1] * pt2D[1] + Kinv[0][2];
+    const y = Kinv[1][0] * pt2D[0] + Kinv[1][1] * pt2D[1] + Kinv[1][2];
+    const z = Kinv[2][0] * pt2D[0] + Kinv[2][1] * pt2D[1] + Kinv[2][2];
+
+    const norm = Math.sqrt(x * x + y * y + z * z);
+    bearingVectors.push([x / norm, y / norm, z / norm]);
+  }
+
+  const P1 = points3D[0];
+  const P2 = points3D[1];
+  const P3 = points3D[2];
+
+  const d12 = distance3D(P1, P2);
+  const d13 = distance3D(P1, P3);
+  const d23 = distance3D(P2, P3);
+
+  const cosAlpha = dot3D(bearingVectors[1], bearingVectors[2]);
+  const cosBeta = dot3D(bearingVectors[0], bearingVectors[2]);
+  const cosGamma = dot3D(bearingVectors[0], bearingVectors[1]);
+
+  const a = d23 * d23;
+  const b = d13 * d13;
+  const c = d12 * d12;
+
+  const a4 = (a - c) * (a - c) - 4 * c * a * cosAlpha * cosAlpha;
+  const a3 = 4 * (a - c) * (c * (1 - cosAlpha * cosAlpha) - b) * cosBeta
+    + 4 * c * cosAlpha * ((a - c) * cosGamma + 2 * a * cosAlpha * cosBeta);
+  const a2 = 2 * (a * a - c * c + 2 * a * c + 2 * b * c
+    - 4 * a * c * cosAlpha * cosAlpha - 2 * a * b)
+    + 8 * b * c * cosBeta * cosBeta
+    + (a - c) * (a + c - 2 * b) * cosGamma * cosGamma
+    - 4 * (a + c) * c * cosAlpha * cosGamma
+    + 4 * (a * c + b * c - a * b) * cosAlpha * cosAlpha;
+  const a1 = 4 * (-a + c + 2 * b) * (c * cosAlpha * cosGamma + b * cosBeta)
+    + 4 * b * ((a - c) * cosGamma * cosBeta + 2 * c * cosAlpha * cosBeta * cosBeta);
+  const a0 = (b - c) * (b - c) - 4 * b * c * cosBeta * cosBeta;
+
+  const roots = solveQuartic(a4, a3, a2, a1, a0);
+
+  const solutions: Array<{ position: [number, number, number]; rotation: [number, number, number, number] }> = [];
+
+  for (const v of roots) {
+    if (v <= 0) continue;
+
+    const u = (((-1 + v * v + b / a) * cosGamma - v * (1 - v * v - c / a) * cosBeta)
+      / (v * v - 2 * v * cosGamma + 1));
+
+    if (u <= 0) continue;
+
+    const s1Squared = c / (1 + u * u - 2 * u * cosGamma);
+    if (s1Squared <= 0) continue;
+
+    const s1 = Math.sqrt(s1Squared);
+    const s2 = u * s1;
+    const s3 = v * s1;
+
+    if (s2 <= 0 || s3 <= 0) continue;
+
+    const P1_cam: [number, number, number] = [
+      bearingVectors[0][0] * s1,
+      bearingVectors[0][1] * s1,
+      bearingVectors[0][2] * s1
+    ];
+    const P2_cam: [number, number, number] = [
+      bearingVectors[1][0] * s2,
+      bearingVectors[1][1] * s2,
+      bearingVectors[1][2] * s2
+    ];
+    const P3_cam: [number, number, number] = [
+      bearingVectors[2][0] * s3,
+      bearingVectors[2][1] * s3,
+      bearingVectors[2][2] * s3
+    ];
+
+    const pose = computePoseFrom3Points(
+      [P1, P2, P3],
+      [P1_cam, P2_cam, P3_cam]
+    );
+
+    if (pose) {
+      solutions.push(pose);
+    }
+  }
+
+  if (solutions.length === 0) {
+    return null;
+  }
+
+  if (points3D.length === 3 || solutions.length === 1) {
+    return solutions[0];
+  }
+
+  let bestSolution = solutions[0];
+  let bestError = computeReprojectionErrorForPose(points3D, points2D, K, solutions[0]);
+
+  for (let i = 1; i < solutions.length; i++) {
+    const error = computeReprojectionErrorForPose(points3D, points2D, K, solutions[i]);
+    if (error < bestError) {
+      bestError = error;
+      bestSolution = solutions[i];
+    }
+  }
+
+  return bestSolution;
+}
+
+function solveQuartic(a4: number, a3: number, a2: number, a1: number, a0: number): number[] {
+  if (Math.abs(a4) < 1e-10) {
+    return solveCubic(a3, a2, a1, a0);
+  }
+
+  const b3 = a3 / a4;
+  const b2 = a2 / a4;
+  const b1 = a1 / a4;
+  const b0 = a0 / a4;
+
+  const p = b2 - (3 * b3 * b3) / 8;
+  const q = b1 - (b3 * b2) / 2 + (b3 * b3 * b3) / 8;
+  const r = b0 - (b3 * b1) / 4 + (b3 * b3 * b2) / 16 - (3 * b3 * b3 * b3 * b3) / 256;
+
+  const cubicRoots = solveCubic(1, p / 2, (p * p - 4 * r) / 16, -(q * q) / 64);
+
+  if (cubicRoots.length === 0) return [];
+
+  const y = cubicRoots[0];
+  const D = 2 * y - p;
+
+  if (D < -1e-10) return [];
+
+  const sqrtD = Math.sqrt(Math.max(0, D));
+
+  const roots: number[] = [];
+
+  const E1 = -q / (2 * sqrtD) - p / 2 - y;
+  if (E1 >= -1e-10) {
+    const sqrtE1 = Math.sqrt(Math.max(0, E1));
+    roots.push(-b3 / 4 + sqrtD / 2 + sqrtE1 / 2);
+    roots.push(-b3 / 4 + sqrtD / 2 - sqrtE1 / 2);
+  }
+
+  const E2 = q / (2 * sqrtD) - p / 2 - y;
+  if (E2 >= -1e-10) {
+    const sqrtE2 = Math.sqrt(Math.max(0, E2));
+    roots.push(-b3 / 4 - sqrtD / 2 + sqrtE2 / 2);
+    roots.push(-b3 / 4 - sqrtD / 2 - sqrtE2 / 2);
+  }
+
+  return roots;
+}
+
+function solveCubic(a3: number, a2: number, a1: number, a0: number): number[] {
+  if (Math.abs(a3) < 1e-10) {
+    return solveQuadratic(a2, a1, a0);
+  }
+
+  const p = a2 / a3;
+  const q = a1 / a3;
+  const r = a0 / a3;
+
+  const Q = (3 * q - p * p) / 9;
+  const R = (9 * p * q - 27 * r - 2 * p * p * p) / 54;
+  const D = Q * Q * Q + R * R;
+
+  const roots: number[] = [];
+
+  if (D >= 0) {
+    const sqrtD = Math.sqrt(D);
+    const S = Math.sign(R + sqrtD) * Math.pow(Math.abs(R + sqrtD), 1 / 3);
+    const T = Math.sign(R - sqrtD) * Math.pow(Math.abs(R - sqrtD), 1 / 3);
+    roots.push(-p / 3 + S + T);
+  } else {
+    const theta = Math.acos(R / Math.sqrt(-Q * Q * Q));
+    const sqrtQ = Math.sqrt(-Q);
+    roots.push(2 * sqrtQ * Math.cos(theta / 3) - p / 3);
+    roots.push(2 * sqrtQ * Math.cos((theta + 2 * Math.PI) / 3) - p / 3);
+    roots.push(2 * sqrtQ * Math.cos((theta + 4 * Math.PI) / 3) - p / 3);
+  }
+
+  return roots;
+}
+
+function solveQuadratic(a: number, b: number, c: number): number[] {
+  if (Math.abs(a) < 1e-10) {
+    if (Math.abs(b) < 1e-10) return [];
+    return [-c / b];
+  }
+
+  const discriminant = b * b - 4 * a * c;
+  if (discriminant < -1e-10) return [];
+
+  const sqrtD = Math.sqrt(Math.max(0, discriminant));
+  return [(-b + sqrtD) / (2 * a), (-b - sqrtD) / (2 * a)];
+}
+
+function computePoseFrom3Points(
+  worldPoints: [number, number, number][],
+  cameraPoints: [number, number, number][]
+): { position: [number, number, number]; rotation: [number, number, number, number] } | null {
+  const centroidWorld: [number, number, number] = [0, 0, 0];
+  const centroidCamera: [number, number, number] = [0, 0, 0];
+
+  for (let i = 0; i < 3; i++) {
+    centroidWorld[0] += worldPoints[i][0];
+    centroidWorld[1] += worldPoints[i][1];
+    centroidWorld[2] += worldPoints[i][2];
+    centroidCamera[0] += cameraPoints[i][0];
+    centroidCamera[1] += cameraPoints[i][1];
+    centroidCamera[2] += cameraPoints[i][2];
+  }
+
+  centroidWorld[0] /= 3;
+  centroidWorld[1] /= 3;
+  centroidWorld[2] /= 3;
+  centroidCamera[0] /= 3;
+  centroidCamera[1] /= 3;
+  centroidCamera[2] /= 3;
+
+  const H: number[][] = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+
+  for (let i = 0; i < 3; i++) {
+    const pw_centered = [
+      worldPoints[i][0] - centroidWorld[0],
+      worldPoints[i][1] - centroidWorld[1],
+      worldPoints[i][2] - centroidWorld[2]
+    ];
+    const pc_centered = [
+      cameraPoints[i][0] - centroidCamera[0],
+      cameraPoints[i][1] - centroidCamera[1],
+      cameraPoints[i][2] - centroidCamera[2]
+    ];
+
+    for (let r = 0; r < 3; r++) {
+      for (let c = 0; c < 3; c++) {
+        H[r][c] += pc_centered[r] * pw_centered[c];
+      }
+    }
+  }
+
+  const svd = computeSVD3x3(H);
+  if (!svd) return null;
+
+  let R = matrixMultiply3x3(svd.V, transpose3x3(svd.U));
+
+  if (determinant3x3(R) < 0) {
+    svd.V[0][2] = -svd.V[0][2];
+    svd.V[1][2] = -svd.V[1][2];
+    svd.V[2][2] = -svd.V[2][2];
+    R = matrixMultiply3x3(svd.V, transpose3x3(svd.U));
+  }
+
+  const R_T = transpose3x3(R);
+
+  const R_centroid_world = [
+    R[0][0] * centroidWorld[0] + R[0][1] * centroidWorld[1] + R[0][2] * centroidWorld[2],
+    R[1][0] * centroidWorld[0] + R[1][1] * centroidWorld[1] + R[1][2] * centroidWorld[2],
+    R[2][0] * centroidWorld[0] + R[2][1] * centroidWorld[1] + R[2][2] * centroidWorld[2]
+  ];
+
+  const position: [number, number, number] = [
+    centroidWorld[0] - (R_T[0][0] * (R_centroid_world[0] - centroidCamera[0]) + R_T[0][1] * (R_centroid_world[1] - centroidCamera[1]) + R_T[0][2] * (R_centroid_world[2] - centroidCamera[2])),
+    centroidWorld[1] - (R_T[1][0] * (R_centroid_world[0] - centroidCamera[0]) + R_T[1][1] * (R_centroid_world[1] - centroidCamera[1]) + R_T[1][2] * (R_centroid_world[2] - centroidCamera[2])),
+    centroidWorld[2] - (R_T[2][0] * (R_centroid_world[0] - centroidCamera[0]) + R_T[2][1] * (R_centroid_world[1] - centroidCamera[1]) + R_T[2][2] * (R_centroid_world[2] - centroidCamera[2]))
+  ];
+
+  const quaternion = matrixToQuaternion(R);
+  return { position, rotation: quaternion };
+}
+
+function computeSVD3x3(M: number[][]): { U: number[][]; S: number[]; V: number[][] } | null {
+  const MtM = matrixMultiply3x3(transpose3x3(M), M);
+  const eigenVectors = computeEigenVectors3x3(MtM);
+  if (!eigenVectors) return null;
+
+  const V = eigenVectors;
+
+  const U: number[][] = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+  const S: number[] = [0, 0, 0];
+
+  for (let i = 0; i < 3; i++) {
+    const v = [V[0][i], V[1][i], V[2][i]];
+    const Mv = [
+      M[0][0] * v[0] + M[0][1] * v[1] + M[0][2] * v[2],
+      M[1][0] * v[0] + M[1][1] * v[1] + M[1][2] * v[2],
+      M[2][0] * v[0] + M[2][1] * v[1] + M[2][2] * v[2]
+    ];
+
+    S[i] = Math.sqrt(Mv[0] * Mv[0] + Mv[1] * Mv[1] + Mv[2] * Mv[2]);
+
+    if (S[i] > 1e-10) {
+      U[0][i] = Mv[0] / S[i];
+      U[1][i] = Mv[1] / S[i];
+      U[2][i] = Mv[2] / S[i];
+    } else {
+      U[0][i] = 0;
+      U[1][i] = 0;
+      U[2][i] = 0;
+    }
+  }
+
+  return { U, S, V };
+}
+
+function computeEigenVectors3x3(M: number[][]): number[][] | null {
+  const I = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+  const vectors: number[][] = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+
+  for (let iter = 0; iter < 3; iter++) {
+    let v = [Math.random(), Math.random(), Math.random()];
+
+    for (let i = 0; i < iter; i++) {
+      const proj = v[0] * vectors[i][0] + v[1] * vectors[i][1] + v[2] * vectors[i][2];
+      v[0] -= proj * vectors[i][0];
+      v[1] -= proj * vectors[i][1];
+      v[2] -= proj * vectors[i][2];
+    }
+
+    for (let powerIter = 0; powerIter < 100; powerIter++) {
+      const Av = [
+        M[0][0] * v[0] + M[0][1] * v[1] + M[0][2] * v[2],
+        M[1][0] * v[0] + M[1][1] * v[1] + M[1][2] * v[2],
+        M[2][0] * v[0] + M[2][1] * v[1] + M[2][2] * v[2]
+      ];
+
+      for (let i = 0; i < iter; i++) {
+        const proj = Av[0] * vectors[i][0] + Av[1] * vectors[i][1] + Av[2] * vectors[i][2];
+        Av[0] -= proj * vectors[i][0];
+        Av[1] -= proj * vectors[i][1];
+        Av[2] -= proj * vectors[i][2];
+      }
+
+      const norm = Math.sqrt(Av[0] * Av[0] + Av[1] * Av[1] + Av[2] * Av[2]);
+      if (norm < 1e-10) break;
+
+      v[0] = Av[0] / norm;
+      v[1] = Av[1] / norm;
+      v[2] = Av[2] / norm;
+    }
+
+    const norm = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+    if (norm > 1e-10) {
+      vectors[iter][0] = v[0] / norm;
+      vectors[iter][1] = v[1] / norm;
+      vectors[iter][2] = v[2] / norm;
+    } else {
+      return null;
+    }
+  }
+
+  return vectors;
+}
+
+function transpose3x3(M: number[][]): number[][] {
+  return [
+    [M[0][0], M[1][0], M[2][0]],
+    [M[0][1], M[1][1], M[2][1]],
+    [M[0][2], M[1][2], M[2][2]]
+  ];
+}
+
+function distance3D(a: [number, number, number], b: [number, number, number]): number {
+  const dx = a[0] - b[0];
+  const dy = a[1] - b[1];
+  const dz = a[2] - b[2];
+  return Math.sqrt(dx * dx + dy * dy + dz * dz);
+}
+
+function dot3D(a: [number, number, number], b: [number, number, number]): number {
+  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+
+function computeReprojectionErrorForPose(
+  points3D: [number, number, number][],
+  points2D: [number, number][],
+  K: number[][],
+  pose: { position: [number, number, number]; rotation: [number, number, number, number] }
+): number {
+  const R = quaternionToMatrix(pose.rotation);
+  const C_world = pose.position;
+
+  let totalError = 0;
+
+  for (let i = 0; i < points3D.length; i++) {
+    const P_world = points3D[i];
+
+    const P_rel = [
+      P_world[0] - C_world[0],
+      P_world[1] - C_world[1],
+      P_world[2] - C_world[2]
+    ];
+
+    const P_cam = [
+      R[0][0] * P_rel[0] + R[0][1] * P_rel[1] + R[0][2] * P_rel[2],
+      R[1][0] * P_rel[0] + R[1][1] * P_rel[1] + R[1][2] * P_rel[2],
+      R[2][0] * P_rel[0] + R[2][1] * P_rel[1] + R[2][2] * P_rel[2]
+    ];
+
+    if (P_cam[2] <= 0) {
+      totalError += 10000;
+      continue;
+    }
+
+    const projected = [
+      K[0][0] * P_cam[0] / P_cam[2] + K[0][2],
+      K[1][1] * P_cam[1] / P_cam[2] + K[1][2]
+    ];
+
+    const dx = projected[0] - points2D[i][0];
+    const dy = projected[1] - points2D[i][1];
+    totalError += Math.sqrt(dx * dx + dy * dy);
+  }
+
+  return totalError / points3D.length;
+}
+
+function quaternionToMatrix(q: [number, number, number, number]): number[][] {
+  const [w, x, y, z] = q;
+
+  return [
+    [1 - 2 * y * y - 2 * z * z, 2 * x * y - 2 * z * w, 2 * x * z + 2 * y * w],
+    [2 * x * y + 2 * z * w, 1 - 2 * x * x - 2 * z * z, 2 * y * z - 2 * x * w],
+    [2 * x * z - 2 * y * w, 2 * y * z + 2 * x * w, 1 - 2 * x * x - 2 * y * y]
   ];
 }
 

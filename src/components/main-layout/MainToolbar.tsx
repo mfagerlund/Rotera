@@ -70,6 +70,8 @@ export const MainToolbar: React.FC<MainToolbarProps> = ({
   onVisualFeedbackChange,
   confirm
 }) => {
+  const [excludeImageUrls, setExcludeImageUrls] = React.useState(true)
+
   const handleExport = () => {
     const exportData = onExportOptimization()
     if (!exportData) {
@@ -77,8 +79,17 @@ export const MainToolbar: React.FC<MainToolbarProps> = ({
       return
     }
 
-    // Use the data as-is (viewpoints already serialize without blobs by default)
-    const filteredData = exportData
+    let filteredData = exportData
+
+    if (excludeImageUrls && exportData.viewpoints) {
+      filteredData = {
+        ...exportData,
+        viewpoints: exportData.viewpoints.map((vp: any) => ({
+          ...vp,
+          url: ''
+        }))
+      }
+    }
 
     // Create JSON blob and download
     const json = JSON.stringify(filteredData, null, 2)
@@ -123,10 +134,18 @@ export const MainToolbar: React.FC<MainToolbarProps> = ({
         <button
           className="btn-tool"
           onClick={handleExport}
-          title="Export project data for optimization (without image blobs)"
+          title={excludeImageUrls ? "Export project data without image URLs" : "Export project data with image URLs"}
         >
           <FontAwesomeIcon icon={faFileExport} /> Export
         </button>
+        <label className="toolbar-toggle" title="Exclude image data URLs from export to reduce file size">
+          <input
+            type="checkbox"
+            checked={excludeImageUrls}
+            onChange={(e) => setExcludeImageUrls(e.target.checked)}
+          />
+          Exclude Images
+        </label>
         <button
           className="btn-tool btn-clear-project"
           onClick={handleClearProject}
