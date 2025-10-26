@@ -192,12 +192,10 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
       canvas.style.top = `${controlsHeight}px`
 
       const rect = canvas.getBoundingClientRect()
-      console.log('[WorldView] Controls height:', controlsHeight, 'Canvas rect:', rect.width, 'x', rect.height)
 
       if (rect.width > 0 && rect.height > 0) {
         canvas.width = rect.width
         canvas.height = rect.height
-        console.log('[WorldView] Set canvas resolution to:', canvas.width, 'x', canvas.height)
         render()
       }
     }
@@ -210,7 +208,6 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
     // Observe the grandparent (.workspace-world-view) to avoid resize feedback loop
     const containerToObserve = canvas.parentElement?.parentElement || canvas.parentElement
     if (containerToObserve) {
-      console.log('[WorldView] Observing container:', containerToObserve.className)
       resizeObserver.observe(containerToObserve)
     }
     return () => resizeObserver.disconnect()

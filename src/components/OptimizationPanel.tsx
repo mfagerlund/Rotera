@@ -10,6 +10,7 @@ import { defaultOptimizationSettings } from '../services/optimization'
 import { getEntityKey } from '../utils/entityKeys'
 import { initializeCameraWithPnP } from '../optimization/pnp'
 import { Viewpoint } from '../entities/viewpoint'
+import { WorldPoint } from '../entities/world-point'
 import { projectWorldPointToPixelQuaternion } from '../optimization/camera-projection'
 import { V, Vec3, Vec4 } from 'scalar-autograd'
 
@@ -117,6 +118,67 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
       c => c.getConstraintType() === 'projection_point_camera'
     ).length
 
+    // Check camera initialization requirements
+    // NOTE: We assume ALL cameras will be reset to [0,0,0] when autoInitializeCameras is true
+    // So we check if there are 2+ cameras that will need initialization
+    const camerasNeedingInit = viewpointArray.length
+
+    let initializationError: string | null = null
+    let canInitialize = true
+
+    console.log('[OptimizationPanel] Checking initialization requirements:')
+    console.log(`  Total viewpoints: ${viewpointArray.length}`)
+    console.log(`  Cameras that will need initialization: ${camerasNeedingInit}`)
+
+    if (camerasNeedingInit >= 2) {
+      const worldPointArray = pointArray as WorldPoint[]
+      const lockedPoints = worldPointArray.filter(wp => wp.isFullyLocked())
+
+      let anyCameraCanUsePnP = false
+      if (lockedPoints.length >= 2) {
+        // Check if at least one camera can use PnP: needs 3+ locked points visible
+        for (const vp of viewpointArray) {
+          const vpConcrete = vp as Viewpoint
+          const vpLockedPoints = Array.from(vpConcrete.imagePoints).filter(ip =>
+            (ip.worldPoint as WorldPoint).isFullyLocked()
+          )
+
+          if (vpLockedPoints.length >= 3) {
+            anyCameraCanUsePnP = true
+            break
+          }
+        }
+      }
+
+      console.log(`  Locked points: ${lockedPoints.length}`)
+      console.log(`  Any camera can use PnP: ${anyCameraCanUsePnP}`)
+
+      if (!anyCameraCanUsePnP) {
+        // Fall back to Essential Matrix path: need at least 7 shared correspondences
+        const vp1 = viewpointArray[0] as Viewpoint
+        const vp2 = viewpointArray[1] as Viewpoint
+
+        const sharedWorldPoints = new Set<WorldPoint>()
+        for (const ip1 of vp1.imagePoints) {
+          for (const ip2 of vp2.imagePoints) {
+            if (ip1.worldPoint === ip2.worldPoint) {
+              sharedWorldPoints.add(ip1.worldPoint as WorldPoint)
+            }
+          }
+        }
+
+        console.log(`  Shared correspondences: ${sharedWorldPoints.size}`)
+
+        if (sharedWorldPoints.size < 7) {
+          canInitialize = false
+          initializationError = `Need at least 7 shared point correspondences between "${vp1.name}" and "${vp2.name}" (currently have ${sharedWorldPoints.size}). Add more image points that are visible in both cameras, OR lock at least 3 world point coordinates visible in one camera for PnP initialization.`
+        }
+      }
+    }
+
+    console.log(`  canInitialize: ${canInitialize}`)
+    console.log(`  initializationError: ${initializationError}`)
+
     return {
       pointCount: pointArray.length,
       unlockedPointCount: unlockedPoints.length,
@@ -128,7 +190,9 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
       totalDOF,
       constraintDOF,
       netDOF,
-      canOptimize: (project.constraints.size + lineConstraintCount) > 0 && (unlockedPoints.length > 0 || viewpointArray.length > 0)
+      canOptimize: (project.constraints.size + lineConstraintCount) > 0 && (unlockedPoints.length > 0 || viewpointArray.length > 0) && canInitialize,
+      canInitialize,
+      initializationError
     }
   }, [project])
 
@@ -316,6 +380,9 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
             )}
             {stats.constraintCount === 0 && (
               <li className="requirement-missing">At least 1 constraint or image observation</li>
+            )}
+            {stats.initializationError && (
+              <li className="requirement-missing">{stats.initializationError}</li>
             )}
           </ul>
         </div>

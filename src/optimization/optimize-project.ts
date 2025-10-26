@@ -117,6 +117,16 @@ export function optimizeProject(
     console.log('[optimizeProject] Running initialization pipeline...');
 
     const viewpointArray = Array.from(project.viewpoints);
+
+    if (autoInitializeCameras) {
+      console.log('[optimizeProject] Resetting all camera positions to [0,0,0]');
+      for (const vp of viewpointArray) {
+        const v = vp as Viewpoint;
+        v.position = [0, 0, 0];
+        v.rotation = [1, 0, 0, 0];
+      }
+    }
+
     const uninitializedCameras = viewpointArray.filter(vp => {
       const v = vp as Viewpoint;
       return v.position[0] === 0 && v.position[1] === 0 && v.position[2] === 0;
@@ -129,7 +139,7 @@ export function optimizeProject(
       const lockedPoints = worldPointArray.filter(wp => wp.isFullyLocked());
 
       if (lockedPoints.length >= 2) {
-        console.log(`[optimizeProject] Found ${lockedPoints.length} locked points - using PnP initialization`);
+        console.log(`[optimizeProject] Found ${lockedPoints.length} locked points - attempting PnP initialization`);
 
         for (const wp of lockedPoints) {
           wp.optimizedXyz = [wp.lockedXyz[0]!, wp.lockedXyz[1]!, wp.lockedXyz[2]!];
@@ -144,20 +154,24 @@ export function optimizeProject(
             (ip.worldPoint as WorldPoint).isFullyLocked()
           );
 
-          if (vpLockedPoints.length >= 4) {
+          if (vpLockedPoints.length >= 3) {
             console.log(`[optimizeProject] Initializing ${vpConcrete.name} with PnP (${vpLockedPoints.length} locked points visible)...`);
             const success = initializeCameraWithPnP(vpConcrete, worldPointSet);
             if (success) {
               console.log(`[optimizeProject] ${vpConcrete.name} initialized: pos=[${vpConcrete.position.map(x => x.toFixed(3)).join(', ')}]`);
               camerasInitialized.push(vpConcrete.name);
             } else {
-              console.warn(`[optimizeProject] PnP failed for ${vpConcrete.name}`);
+              const errorMsg = `Cannot initialize ${vpConcrete.name}: PnP failed with ${vpLockedPoints.length} locked points. Check that locked points have valid coordinates and are visible in the image.`;
+              console.error(`[optimizeProject] ${errorMsg}`);
+              throw new Error(errorMsg);
             }
           } else {
-            console.warn(`[optimizeProject] ${vpConcrete.name} has only ${vpLockedPoints.length} locked points visible (need 4+)`);
+            console.log(`[optimizeProject] ${vpConcrete.name} has only ${vpLockedPoints.length} locked points (need 3 for PnP) - will try later with triangulated points`);
           }
         }
-      } else {
+      }
+
+      if (camerasInitialized.length === 0) {
         console.log('[optimizeProject] No locked points - using Essential Matrix initialization');
 
         const vp1 = uninitializedCameras[0] as Viewpoint;

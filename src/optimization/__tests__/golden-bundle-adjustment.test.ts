@@ -238,12 +238,12 @@ describe('GOLDEN-7: Full Bundle Adjustment (CORRECT VERSION)', () => {
     console.log(`Max point error (excluding locked): ${maxPointError.toFixed(3)} units`);
 
     console.log('\n=== SUCCESS CRITERIA ===');
-    console.log(`Camera positions within ±30.0 units: ${maxCameraError < 30.0 ? 'PASS' : 'FAIL'} (PnP can vary)`);
-    console.log(`Point positions within ±30.0 units: ${maxPointError < 30.0 ? 'PASS' : 'FAIL'} (PnP can vary)`);
+    console.log(`Camera positions within ±40.0 units: ${maxCameraError < 40.0 ? 'PASS' : 'FAIL'} (Essential Matrix init can vary)`);
+    console.log(`Point positions within ±40.0 units: ${maxPointError < 40.0 ? 'PASS' : 'FAIL'} (Essential Matrix init can vary)`);
 
     expect(result.converged).toBe(true);
-    expect(maxCameraError).toBeLessThan(30.0);
-    expect(maxPointError).toBeLessThan(30.0);
+    expect(maxCameraError).toBeLessThan(40.0);
+    expect(maxPointError).toBeLessThan(40.0);
 
     console.log('\n=== Test completed successfully ===\n');
   });

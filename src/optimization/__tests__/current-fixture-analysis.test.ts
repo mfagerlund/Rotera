@@ -40,8 +40,8 @@ describe('Current Fixture Analysis', () => {
     });
 
     const result = optimizeProject(project, {
-      autoInitializeCameras: true,
-      autoInitializeWorldPoints: true,
+      autoInitializeCameras: false, // Cameras already initialized in loaded fixture
+      autoInitializeWorldPoints: false, // World points already initialized in loaded fixture
       detectOutliers: true,
       outlierThreshold: 3.0,
       tolerance: 1e-6,
