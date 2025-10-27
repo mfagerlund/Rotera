@@ -1,5 +1,6 @@
 import { Viewpoint } from '../../entities/viewpoint'
 import { WorldPoint } from '../../entities/world-point'
+import { VanishingLineAxis } from '../../entities/vanishing-line'
 
 export interface CanvasPoint {
   x: number
@@ -16,7 +17,7 @@ export interface CanvasOffset extends CanvasPoint {}
 export interface PanVelocity extends CanvasPoint {}
 
 export interface ConstructionPreview {
-  type: 'line' | 'loop-chain'
+  type: 'line' | 'loop-chain' | 'vanishing-line'
   pointA?: WorldPoint
   pointB?: WorldPoint
   showToCursor?: boolean
@@ -26,6 +27,9 @@ export interface ConstructionPreview {
     pointB: WorldPoint
     status: 'new' | 'exists' | 'building'
   }>
+  // For vanishing-line type
+  vanishingLineStart?: ImageCoords
+  vanishingLineAxis?: VanishingLineAxis
 }
 
 import { Line } from '../../entities/line'
@@ -42,6 +46,8 @@ export interface ImageViewerPropsBase {
   isPointCreationActive?: boolean
   activeConstraintType?: string | null
   constructionPreview?: ConstructionPreview | null
+  isVanishingLineActive?: boolean
+  currentVanishingLineAxis?: VanishingLineAxis
 }
 
 export interface ImageViewerRenderState {
@@ -67,6 +73,8 @@ export interface ImageViewerRenderState {
   isPlacementModeActive: boolean
   isPointCreationActive: boolean
   isLoopTraceActive: boolean
+  isVanishingLineActive: boolean
+  currentVanishingLineAxis: VanishingLineAxis | undefined
 }
 
 export type CanvasToImage = (canvasX: number, canvasY: number) => ImageCoords | null

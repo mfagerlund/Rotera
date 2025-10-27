@@ -17,6 +17,7 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
     lastResiduals: number[] = []
     name: string
     lockedXyz: [number | null, number | null, number | null]
+    inferredXyz: [number | null, number | null, number | null]
     optimizedXyz?: [number, number, number]
     color: string
     isVisible: boolean
@@ -27,9 +28,11 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
         color: string,
         isVisible: boolean,
         optimizedXyz?: [number, number, number],
+        inferredXyz?: [number | null, number | null, number | null]
     ) {
         this.name = name
         this.lockedXyz = lockedXyz
+        this.inferredXyz = inferredXyz || [null, null, null]
         this.color = color
         this.isVisible = isVisible
         this.optimizedXyz = optimizedXyz
@@ -49,14 +52,16 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
         lockedXyz: [number | null, number | null, number | null],
         color: string,
         isVisible: boolean,
-        optimizedXyz?: [number, number, number]
+        optimizedXyz?: [number, number, number],
+        inferredXyz?: [number | null, number | null, number | null]
     ): WorldPoint {
         return new WorldPoint(
             name,
             lockedXyz,
             color,
             isVisible,
-            optimizedXyz
+            optimizedXyz,
+            inferredXyz
         )
     }
 
@@ -102,6 +107,30 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
 
     isFullyLocked(): boolean {
         return this.lockedXyz[0] !== null && this.lockedXyz[1] !== null && this.lockedXyz[2] !== null
+    }
+
+    getEffectiveXyz(): [number | null, number | null, number | null] {
+        return [
+            this.lockedXyz[0] ?? this.inferredXyz[0],
+            this.lockedXyz[1] ?? this.inferredXyz[1],
+            this.lockedXyz[2] ?? this.inferredXyz[2]
+        ]
+    }
+
+    isFullyConstrained(): boolean {
+        const effective = this.getEffectiveXyz()
+        return effective.every(v => v !== null)
+    }
+
+    getConstraintStatus(): 'free' | 'partial' | 'inferred' | 'locked' {
+        const effective = this.getEffectiveXyz()
+        const nullCount = effective.filter(v => v === null).length
+
+        if (nullCount === 3) return 'free'
+        if (nullCount === 0) {
+            return this.lockedXyz.every(v => v !== null) ? 'locked' : 'inferred'
+        }
+        return 'partial'
     }
 
     isXLocked(): boolean {
@@ -363,9 +392,11 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
     /**
      * Add this point to the ValueMap for optimization.
      * Locked axes become constants (V.C), unlocked axes become variables (V.W).
+     * Priority: lockedXyz > inferredXyz > optimizedXyz
      */
     addToValueMap(valueMap: ValueMap): Value[] {
         const lockedXyz = this.lockedXyz;
+        const inferredXyz = this.inferredXyz;
         const optimizedXyz = this.optimizedXyz;
 
         const variables: Value[] = []
@@ -373,10 +404,10 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
         const xLocked = this.isXLocked()
         const yLocked = this.isYLocked()
         const zLocked = this.isZLocked()
-        
-        const x = xLocked ? V.C(lockedXyz[0]!) : V.W(optimizedXyz![0])
-        const y = yLocked ? V.C(lockedXyz[1]!) : V.W(optimizedXyz![1])
-        const z = zLocked ? V.C(lockedXyz[2]!) : V.W(optimizedXyz![2])
+
+        const x = xLocked ? V.C(lockedXyz[0]!) : V.W(inferredXyz[0] ?? optimizedXyz![0])
+        const y = yLocked ? V.C(lockedXyz[1]!) : V.W(inferredXyz[1] ?? optimizedXyz![1])
+        const z = zLocked ? V.C(lockedXyz[2]!) : V.W(inferredXyz[2] ?? optimizedXyz![2])
 
         const vec = new Vec3(x, y, z)
         valueMap.points.set(this, vec)
@@ -438,6 +469,7 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
             id,
             name: this.name,
             lockedXyz: [...this.lockedXyz] as [number | null, number | null, number | null],
+            inferredXyz: [...this.inferredXyz] as [number | null, number | null, number | null],
             optimizedXyz: this.optimizedXyz ? [...this.optimizedXyz] as [number, number, number] : undefined,
             color: this.color,
             isVisible: this.isVisible
@@ -450,7 +482,8 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
             dto.lockedXyz,
             dto.color,
             dto.isVisible,
-            dto.optimizedXyz
+            dto.optimizedXyz,
+            dto.inferredXyz
         )
 
         context.registerEntity(point, dto.id)

@@ -1,17 +1,24 @@
 import { Project } from './project/Project'
 import { WorldPoint } from './world-point/WorldPoint'
 import { Line } from './line/Line'
-import { Viewpoint } from './viewpoint/Viewpoint'
 import { ImagePoint } from './imagePoint/ImagePoint'
+import { Viewpoint } from './viewpoint/Viewpoint'
 import { deserializeConstraint } from './constraints/constraint-factory'
 import { SerializationContext } from './serialization/SerializationContext'
 import type { ProjectDto } from './project/ProjectDto'
+import type { VanishingLineDto } from './vanishing-line/VanishingLineDto'
 import type { IImagePoint } from './interfaces'
+import { VanishingLine } from './vanishing-line/VanishingLine'
 
 export class Serialization {
 
   static serialize(project: Project): string {
     const context = new SerializationContext()
+
+    const allVanishingLines: VanishingLine[] = []
+    for (const vp of project.viewpoints) {
+      allVanishingLines.push(...Array.from(vp.vanishingLines))
+    }
 
     const dto: ProjectDto = {
       name: project.name,
@@ -20,6 +27,7 @@ export class Serialization {
       lines: Array.from(project.lines).map(line => line.serialize(context)),
       imagePoints: Array.from(project.imagePoints).map(ip => (ip as ImagePoint).serialize(context)),
       constraints: Array.from(project.constraints).map(c => c.serialize(context)),
+      vanishingLines: allVanishingLines.length > 0 ? allVanishingLines.map(vl => vl.serialize(context)) : undefined,
 
       showPointNames: project.showPointNames,
       autoSave: project.autoSave,
@@ -50,9 +58,12 @@ export class Serialization {
       (dto.worldPoints || []).map(wpDto => WorldPoint.deserialize(wpDto, context))
     )
 
-    const viewpoints = new Set(
-      (dto.viewpoints || []).map(vpDto => Viewpoint.deserialize(vpDto, context))
-    )
+    const viewpointsArray = (dto.viewpoints || []).map(vpDto => Viewpoint.deserialize(vpDto, context))
+    const viewpoints: Set<Viewpoint> = new (Set as any)(viewpointsArray);
+
+    (dto.vanishingLines || []).forEach((vlDto: VanishingLineDto) => {
+      VanishingLine.deserialize(vlDto, context)
+    })
 
     const lines = new Set(
       (dto.lines || []).map(lineDto => Line.deserialize(lineDto, context))

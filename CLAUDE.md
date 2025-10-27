@@ -14,7 +14,23 @@
 - If UI code needs changes to work with entities, prefer to FIX THE UI CODE rather than the entities
 - See `src/entities/README.md` for details
 
-**Current focus: Update UI components to work with the new entity architecture.**
+**Current focus: Implementing vanishing point camera initialization (Phase 1-4)**
+
+### Coordinate Inference System (✓ Implemented - Phase 0)
+
+WorldPoint now automatically infers coordinates from geometric constraints:
+
+**Key Concepts:**
+- `inferredXyz` field auto-populated by constraint propagation
+- `getEffectiveXyz()` returns merged `lockedXyz` + `inferredXyz`
+- `isFullyConstrained()` checks if all 3 axes are known (locked or inferred)
+- Lines propagate coordinates based on direction (vertical, horizontal, x-aligned, z-aligned)
+- Project automatically runs propagation via MobX reactions
+
+**Usage in Optimization:**
+- Use `isFullyConstrained()` instead of `isFullyLocked()` for scale constraints
+- Use `getEffectiveXyz()` instead of `lockedXyz` when initializing points
+- Inference reduces manual coordinate locking needed by users
 
 ## MobX Observable Pattern
 

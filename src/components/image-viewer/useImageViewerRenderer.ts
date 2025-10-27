@@ -127,6 +127,15 @@ export const useImageViewerRenderer = ({
           ctx.stroke()
         }
 
+        const status = wp.getConstraintStatus()
+        const statusColors = {
+          locked: '#2E7D32',
+          inferred: '#2E7D32',
+          partial: '#FF9800',
+          free: '#D32F2F'
+        }
+        const statusColor = statusColors[status]
+
         ctx.fillStyle = wp.color || '#ff6b6b'
         ctx.strokeStyle = isSelected ? '#ffffff' : '#000000'
         ctx.lineWidth = isSelected ? 3 : 1
@@ -135,6 +144,13 @@ export const useImageViewerRenderer = ({
         ctx.arc(x, y, 6, 0, 2 * Math.PI)
         ctx.fill()
         ctx.stroke()
+
+        if (status !== 'free') {
+          ctx.fillStyle = statusColor
+          ctx.beginPath()
+          ctx.arc(x, y, 2.5, 0, 2 * Math.PI)
+          ctx.fill()
+        }
 
         ctx.fillStyle = '#000000'
         ctx.font = '12px Arial'
@@ -481,6 +497,34 @@ export const useImageViewerRenderer = ({
       })
     }
 
+    const renderVanishingLines = () => {
+      Array.from(viewpoint.vanishingLines).forEach(vanishingLine => {
+        const x1 = vanishingLine.p1.u * scale + offset.x
+        const y1 = vanishingLine.p1.v * scale + offset.y
+        const x2 = vanishingLine.p2.u * scale + offset.x
+        const y2 = vanishingLine.p2.v * scale + offset.y
+
+        const color = vanishingLine.getColor()
+
+        ctx.strokeStyle = color
+        ctx.lineWidth = 3
+        ctx.setLineDash([])
+
+        ctx.beginPath()
+        ctx.moveTo(x1, y1)
+        ctx.lineTo(x2, y2)
+        ctx.stroke()
+
+        ctx.fillStyle = color
+        ctx.beginPath()
+        ctx.arc(x1, y1, 4, 0, 2 * Math.PI)
+        ctx.fill()
+        ctx.beginPath()
+        ctx.arc(x2, y2, 4, 0, 2 * Math.PI)
+        ctx.fill()
+      })
+    }
+
     const renderConstructionPreview = () => {
       if (!constructionPreview) {
         return
@@ -547,6 +591,38 @@ export const useImageViewerRenderer = ({
             }
           }
         }
+
+        return
+      }
+
+      // Handle vanishing line preview
+      if (constructionPreview.type === 'vanishing-line') {
+        if (!currentMousePos || !constructionPreview.vanishingLineStart) {
+          return
+        }
+
+        const start = constructionPreview.vanishingLineStart
+        const x1 = start.u * scale + offset.x
+        const y1 = start.v * scale + offset.y
+        const x2 = currentMousePos.x
+        const y2 = currentMousePos.y
+
+        const axis = constructionPreview.vanishingLineAxis || 'x'
+        const color = axis === 'x' ? '#ff0000' : axis === 'y' ? '#00ff00' : '#0000ff'
+
+        ctx.strokeStyle = color
+        ctx.lineWidth = 3
+        ctx.setLineDash([])
+
+        ctx.beginPath()
+        ctx.moveTo(x1, y1)
+        ctx.lineTo(x2, y2)
+        ctx.stroke()
+
+        ctx.fillStyle = color
+        ctx.beginPath()
+        ctx.arc(x1, y1, 4, 0, 2 * Math.PI)
+        ctx.fill()
 
         return
       }
@@ -630,6 +706,7 @@ export const useImageViewerRenderer = ({
       )
 
       renderLines()
+      renderVanishingLines()
       renderWorldPoints()
       renderConstructionPreview()
       renderSelectionOverlay()

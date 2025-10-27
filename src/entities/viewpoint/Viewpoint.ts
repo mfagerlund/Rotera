@@ -8,6 +8,7 @@ import {quaternionNormalizationResidual} from '../../optimization/residuals/quat
 import type { ISerializable } from '../serialization/ISerializable'
 import type { SerializationContext } from '../serialization/SerializationContext'
 import type { ViewpointDto } from './ViewpointDto'
+import type { VanishingLine } from '../vanishing-line'
 import {makeAutoObservable} from 'mobx'
 
 export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint, ISerializable<ViewpointDto> {
@@ -39,6 +40,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
     opacity: number
     color: string
     imagePoints: Set<IImagePoint> = new Set()
+    vanishingLines: Set<VanishingLine> = new Set()
 
     private constructor(
         name: string,
@@ -338,6 +340,41 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
         return Array.from(this.imagePoints).filter(ip => ip.isVisible)
     }
 
+    addVanishingLine(line: VanishingLine): void {
+        this.vanishingLines.add(line)
+    }
+
+    removeVanishingLine(line: VanishingLine): void {
+        this.vanishingLines.delete(line)
+    }
+
+    getVanishingLineCount(): number {
+        return this.vanishingLines.size
+    }
+
+    canInitializeWithVanishingPoints(worldPoints: Set<IWorldPoint>): boolean {
+        if (this.vanishingLines.size < 4) {
+            return false
+        }
+
+        const linesByAxis: Record<string, number> = { x: 0, y: 0, z: 0 }
+        Array.from(this.vanishingLines).forEach(line => {
+            linesByAxis[line.axis]++
+        })
+
+        const axesWithEnoughLines = Object.values(linesByAxis).filter(count => count >= 2).length
+        if (axesWithEnoughLines < 2) {
+            return false
+        }
+
+        const fullyConstrainedPoints = Array.from(worldPoints).filter(wp => {
+            const effectiveXyz = wp.getEffectiveXyz()
+            return effectiveXyz.every((coord: number | null) => coord !== null)
+        })
+
+        return fullyConstrainedPoints.length >= 2
+    }
+
     // ============================================================================
     // Utility methods
     // ============================================================================
@@ -469,6 +506,11 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
     serialize(context: SerializationContext): ViewpointDto {
         const id = context.getEntityId(this) || context.registerEntity(this)
 
+        const vanishingLineIds = Array.from(this.vanishingLines).map(line => {
+            const lineId = context.getEntityId(line) || context.registerEntity(line)
+            return lineId
+        })
+
         return {
             id,
             name: this.name,
@@ -493,7 +535,8 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
             metadata: this.metadata ? { ...this.metadata } : undefined,
             isVisible: this.isVisible,
             opacity: this.opacity,
-            color: this.color
+            color: this.color,
+            vanishingLineIds: vanishingLineIds.length > 0 ? vanishingLineIds : undefined
         }
     }
 

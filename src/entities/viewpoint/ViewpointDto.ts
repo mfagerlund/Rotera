@@ -25,4 +25,5 @@ export interface ViewpointDto extends BaseDto {
   isVisible: boolean
   opacity: number
   color: string
+  vanishingLineIds?: string[]
 }

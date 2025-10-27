@@ -161,6 +161,50 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
           <div className="edit-section">
             <h4>3D Coordinates</h4>
 
+            {/* Constraint Status Indicator */}
+            <div className="form-row" style={{ marginBottom: '12px' }}>
+              <label>Status</label>
+              <div style={{ flex: 1 }}>
+                {(() => {
+                  const status = worldPoint.getConstraintStatus()
+                  const statusConfig = {
+                    locked: { color: '#2E7D32', label: 'Fully Locked', icon: '🔒' },
+                    inferred: { color: '#2E7D32', label: 'Fully Inferred', icon: '🔍' },
+                    partial: { color: '#FF9800', label: 'Partially Constrained', icon: '⚡' },
+                    free: { color: '#D32F2F', label: 'Free', icon: '○' }
+                  }[status]
+
+                  const effective = worldPoint.getEffectiveXyz()
+                  const constrainedAxes = [
+                    effective[0] !== null ? 'X' : null,
+                    effective[1] !== null ? 'Y' : null,
+                    effective[2] !== null ? 'Z' : null
+                  ].filter(Boolean).join(', ')
+
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{
+                        padding: '4px 12px',
+                        borderRadius: '12px',
+                        background: statusConfig.color + '33',
+                        border: `1px solid ${statusConfig.color}`,
+                        color: statusConfig.color,
+                        fontSize: '12px',
+                        fontWeight: 'bold'
+                      }}>
+                        {statusConfig.icon} {statusConfig.label}
+                      </span>
+                      {status === 'partial' && (
+                        <span style={{ fontSize: '11px', color: '#999' }}>
+                          ({constrainedAxes})
+                        </span>
+                      )}
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
+
             <div className="form-row">
               <label>Locked</label>
               <div style={{ display: 'flex', gap: '4px', flex: 1, maxWidth: '300px', alignItems: 'flex-end' }}>
@@ -236,6 +280,26 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
                 </button>
               </div>
             </div>
+
+            {/* Inferred Coordinates (Read-only) */}
+            {worldPoint.inferredXyz.some(v => v !== null) && (
+              <div className="form-row">
+                <label>Inferred</label>
+                <div style={{
+                  flex: 1,
+                  fontFamily: 'monospace',
+                  fontSize: '12px',
+                  color: '#2E7D32',
+                  padding: '4px',
+                  display: 'flex',
+                  gap: '8px'
+                }}>
+                  <span>X: {worldPoint.inferredXyz[0] !== null ? worldPoint.inferredXyz[0].toFixed(3) : 'free'}</span>
+                  <span>Y: {worldPoint.inferredXyz[1] !== null ? worldPoint.inferredXyz[1].toFixed(3) : 'free'}</span>
+                  <span>Z: {worldPoint.inferredXyz[2] !== null ? worldPoint.inferredXyz[2].toFixed(3) : 'free'}</span>
+                </div>
+              </div>
+            )}
 
             {/* Optimized Coordinates (Read-only) */}
             {worldPoint.optimizedXyz && (

@@ -123,8 +123,9 @@ export function triangulateWorldPoint(
   const vp1Concrete = vp1 as Viewpoint;
   const vp2Concrete = vp2 as Viewpoint;
 
-  if (wpConcrete.isFullyLocked()) {
-    wpConcrete.optimizedXyz = [wpConcrete.lockedXyz[0]!, wpConcrete.lockedXyz[1]!, wpConcrete.lockedXyz[2]!];
+  if (wpConcrete.isFullyConstrained()) {
+    const effective = wpConcrete.getEffectiveXyz();
+    wpConcrete.optimizedXyz = [effective[0]!, effective[1]!, effective[2]!];
     return true;
   }
 

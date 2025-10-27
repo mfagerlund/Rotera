@@ -43,19 +43,22 @@ export function findBestViewpointPair(project: Project): ViewpointPair | null {
       );
 
       const fullyLockedSharedPoints = sharedWorldPoints.filter(wp =>
-        (wp as WorldPoint).isFullyLocked()
+        (wp as WorldPoint).isFullyConstrained()
       );
 
       let hasScaleConstraint = false;
       let scaleInfo: ViewpointPair['scaleInfo'] = undefined;
 
       if (fullyLockedSharedPoints.length >= 2) {
-        const wp1 = fullyLockedSharedPoints[0];
-        const wp2 = fullyLockedSharedPoints[1];
-        if (wp1.lockedXyz && wp2.lockedXyz) {
-          const dx = wp2.lockedXyz[0]! - wp1.lockedXyz[0]!;
-          const dy = wp2.lockedXyz[1]! - wp1.lockedXyz[1]!;
-          const dz = wp2.lockedXyz[2]! - wp1.lockedXyz[2]!;
+        const wp1 = fullyLockedSharedPoints[0] as WorldPoint;
+        const wp2 = fullyLockedSharedPoints[1] as WorldPoint;
+        const xyz1 = wp1.getEffectiveXyz();
+        const xyz2 = wp2.getEffectiveXyz();
+
+        if (xyz1.every(v => v !== null) && xyz2.every(v => v !== null)) {
+          const dx = xyz2[0]! - xyz1[0]!;
+          const dy = xyz2[1]! - xyz1[1]!;
+          const dz = xyz2[2]! - xyz1[2]!;
           const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
           if (distance > 0.001) {

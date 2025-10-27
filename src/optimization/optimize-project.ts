@@ -7,6 +7,7 @@ import { WorldPoint } from '../entities/world-point';
 import { ImagePoint } from '../entities/imagePoint';
 import { initializeCamerasWithEssentialMatrix } from './essential-matrix';
 import { initializeWorldPoints as unifiedInitialize } from './unified-initialization';
+import { initializeCameraWithVanishingPoints } from './vanishing-points';
 
 // Global log buffer for export
 export const optimizationLogs: string[] = [];
@@ -136,26 +137,43 @@ export function optimizeProject(
 
     if (uninitializedCameras.length >= 2 && autoInitializeCameras) {
       const worldPointArray = Array.from(project.worldPoints) as WorldPoint[];
-      const lockedPoints = worldPointArray.filter(wp => wp.isFullyLocked());
+      const lockedPoints = worldPointArray.filter(wp => wp.isFullyConstrained());
+      const worldPointSet = new Set<WorldPoint>(worldPointArray);
 
       if (lockedPoints.length >= 2) {
-        console.log(`[optimizeProject] Found ${lockedPoints.length} locked points - attempting PnP initialization`);
+        console.log(`[optimizeProject] Found ${lockedPoints.length} constrained points`);
 
         for (const wp of lockedPoints) {
-          wp.optimizedXyz = [wp.lockedXyz[0]!, wp.lockedXyz[1]!, wp.lockedXyz[2]!];
+          const effective = wp.getEffectiveXyz();
+          wp.optimizedXyz = [effective[0]!, effective[1]!, effective[2]!];
           console.log(`  ${wp.name}: [${wp.optimizedXyz.join(', ')}]`);
         }
 
-        const worldPointSet = new Set<WorldPoint>(worldPointArray);
-
         for (const vp of uninitializedCameras) {
           const vpConcrete = vp as Viewpoint;
+
+          if (vpConcrete.canInitializeWithVanishingPoints(worldPointSet)) {
+            console.log(`[optimizeProject] Checking vanishing point initialization for ${vpConcrete.name}...`);
+            console.log(`  Vanishing lines: ${vpConcrete.getVanishingLineCount()}`);
+
+            const success = initializeCameraWithVanishingPoints(vpConcrete, worldPointSet);
+            if (success) {
+              console.log(`[optimizeProject] ${vpConcrete.name} initialized with vanishing points`);
+              console.log(`  Position: [${vpConcrete.position.map(x => x.toFixed(3)).join(', ')}]`);
+              console.log(`  Focal length: ${vpConcrete.focalLength.toFixed(1)}`);
+              camerasInitialized.push(vpConcrete.name);
+              continue;
+            } else {
+              console.log(`[optimizeProject] Vanishing point initialization failed for ${vpConcrete.name}, falling back to PnP`);
+            }
+          }
+
           const vpLockedPoints = Array.from(vpConcrete.imagePoints).filter(ip =>
-            (ip.worldPoint as WorldPoint).isFullyLocked()
+            (ip.worldPoint as WorldPoint).isFullyConstrained()
           );
 
           if (vpLockedPoints.length >= 3) {
-            console.log(`[optimizeProject] Initializing ${vpConcrete.name} with PnP (${vpLockedPoints.length} locked points visible)...`);
+            console.log(`[optimizeProject] Initializing ${vpConcrete.name} with PnP (${vpLockedPoints.length} constrained points visible)...`);
             const success = initializeCameraWithPnP(vpConcrete, worldPointSet);
             if (success) {
               console.log(`[optimizeProject] ${vpConcrete.name} initialized: pos=[${vpConcrete.position.map(x => x.toFixed(3)).join(', ')}]`);

@@ -3,6 +3,7 @@ import type { LineDto } from '../line/LineDto'
 import type { ViewpointDto } from '../viewpoint/ViewpointDto'
 import type { ImagePointDto } from '../imagePoint/ImagePointDto'
 import type { ConstraintDto } from '../constraints/ConstraintDto'
+import type { VanishingLineDto } from '../vanishing-line/VanishingLineDto'
 import type { MeasurementUnits, Theme, WorkspaceType, VisualFeedbackLevel, ImageSortOrder } from './Project'
 
 export interface ProjectDto {
@@ -12,6 +13,7 @@ export interface ProjectDto {
   viewpoints: ViewpointDto[]
   imagePoints: ImagePointDto[]
   constraints: ConstraintDto[]
+  vanishingLines?: VanishingLineDto[]
 
   showPointNames: boolean
   autoSave: boolean

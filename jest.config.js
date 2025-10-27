@@ -19,7 +19,7 @@ export default {
     '\\.(gif|ttf|eot|svg|png|jpg|jpeg)$': '<rootDir>/src/tests/__mocks__/fileMock.js'
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(ml-levenberg-marquardt|ml-array)/)'
+    'node_modules/(?!(ml-levenberg-marquardt|ml-array|nanoid)/)'
   ],
   collectCoverageFrom: [
     'src/components/**/*.{ts,tsx}',

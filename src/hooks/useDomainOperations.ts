@@ -150,15 +150,15 @@ export function useDomainOperations(
 
   const updateLine = (line: Line, updates: LineUpdates) => {
     if (!project) return
-    if (updates.name !== undefined) line.name = updates.name
-    if (updates.color !== undefined) line.color = updates.color
-    if (updates.isVisible !== undefined) line.isVisible = updates.isVisible
-    if (updates.isConstruction !== undefined) line.isConstruction = updates.isConstruction
-    if (updates.direction !== undefined) line.direction = updates.direction
-    if (updates.targetLength !== undefined) line.targetLength = updates.targetLength
-    if (updates.tolerance !== undefined) line.tolerance = updates.tolerance
-    if (updates.lineStyle !== undefined) line.lineStyle = updates.lineStyle
-    if (updates.thickness !== undefined) line.thickness = updates.thickness
+    if ('name' in updates) line.name = updates.name!
+    if ('color' in updates) line.color = updates.color!
+    if ('isVisible' in updates) line.isVisible = updates.isVisible!
+    if ('isConstruction' in updates) line.isConstruction = updates.isConstruction!
+    if ('direction' in updates) line.direction = updates.direction!
+    if ('targetLength' in updates) line.targetLength = updates.targetLength
+    if ('tolerance' in updates) line.tolerance = updates.tolerance
+    if ('lineStyle' in updates) line.lineStyle = updates.lineStyle!
+    if ('thickness' in updates) line.thickness = updates.thickness!
   }
 
   const deleteLine = (line: Line) => {

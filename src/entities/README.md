@@ -8,22 +8,57 @@ The entity layer has been completely refactored and stabilized. Any changes to e
 
 ## Locked Entity Files
 
-- `WorldPoint.ts` - Stable ✓
+- `WorldPoint.ts` - Stable ✓ (includes coordinate inference system)
 - `Line.ts` - Stable ✓
 - `Viewpoint.ts` - Stable ✓
 - `ImagePoint.ts` - Stable ✓
-- `Project.ts` - Stable ✓
+- `Project.ts` - Stable ✓ (includes automatic inference propagation)
 - `Serialization.ts` - Stable ✓
 
-## Current Work: UI Layer Updates
+## Recent Addition: Coordinate Inference System
 
-**Focus on updating the UI components to work with the new entity architecture.**
+**Implemented: Phase 0 of Vanishing Points Specification**
 
-Do NOT add fields, methods, or IDs to entities to make the UI work. Instead:
-- Update UI code to use the new entity structure
-- Use object references, NOT IDs
-- Call entity methods directly
-- Update any stale component code
+WorldPoint now includes an implicit coordinate inference system that automatically propagates coordinate constraints through geometric relationships:
+
+### New Fields
+- `inferredXyz: [number | null, number | null, number | null]` - Auto-computed from constraints
+- Priority: `lockedXyz` > `inferredXyz` > `optimizedXyz`
+
+### New Methods
+- `getEffectiveXyz()` - Returns merged locked + inferred coordinates
+- `isFullyConstrained()` - True if all 3 axes are known (locked or inferred)
+- `getConstraintStatus()` - Returns 'locked' | 'inferred' | 'partial' | 'free'
+
+### Inference Rules
+Lines propagate coordinates based on direction:
+- **Vertical** (Y-axis): preserves X and Z
+- **Horizontal** (XZ plane): preserves Y
+- **X-aligned**: preserves Y and Z
+- **Z-aligned**: preserves X and Y
+
+### Automatic Propagation
+Project automatically runs `propagateInferences()` when:
+- Point coordinates are locked/unlocked
+- Lines are added/removed/modified
+- Runs via MobX reaction with 100ms debounce
+
+### UI Indicators
+**Status Colors:**
+- 🟢 **Dark Green (#2E7D32)**: Fully constrained (locked or inferred)
+- 🟠 **Orange (#FF9800)**: Partially constrained
+- 🔴 **Red (#D32F2F)**: Free (no constraints)
+
+**Visualization:**
+- WorldView: Points colored by status
+- ImageViewer: Small colored dot in center of each point
+- WorldPointEditor: Status badge + inferred coordinates display
+
+## Current Work: Vanishing Point Camera Initialization
+
+**Next: Phase 1-4 from vanishing points specification**
+
+Focus on implementing VanishingLine entity and camera initialization from vanishing points.
 
 ## Key Architecture Rules
 

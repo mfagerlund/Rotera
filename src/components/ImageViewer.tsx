@@ -41,6 +41,7 @@ interface ImageViewerProps extends ImageViewerPropsBase {
   onZoomSelection?: () => void
   onScaleChange?: (scale: number) => void
   isLoopTraceActive?: boolean
+  onCreateVanishingLine?: (p1: { u: number; v: number }, p2: { u: number; v: number }) => void
 }
 
 export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
@@ -66,7 +67,10 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
   onZoomFit,
   onZoomSelection,
   onScaleChange,
-  isLoopTraceActive = false
+  isLoopTraceActive = false,
+  isVanishingLineActive = false,
+  currentVanishingLineAxis,
+  onCreateVanishingLine
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -97,6 +101,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
   const [isPrecisionDrag, setIsPrecisionDrag] = useState(false)
   const [isPrecisionToggleActive, setIsPrecisionToggleActive] = useState(false)
   const [isDragDropActive, setIsDragDropActive] = useState(false)
+  const [vanishingLineStart, setVanishingLineStart] = useState<ImageCoords | null>(null)
 
   // Load image
   useEffect(() => {
@@ -317,13 +322,19 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     draggedPoint,
     isDragging,
     panVelocity,
-    constructionPreview,
+    constructionPreview: isVanishingLineActive && vanishingLineStart ? {
+      type: 'vanishing-line',
+      vanishingLineStart,
+      vanishingLineAxis: currentVanishingLineAxis
+    } : constructionPreview,
     currentMousePos,
     isPrecisionDrag,
     isDragDropActive,
     isPlacementModeActive: placementModeActive,
     isPointCreationActive,
-    isLoopTraceActive
+    isLoopTraceActive,
+    isVanishingLineActive,
+    currentVanishingLineAxis
   }), [
     constructionPreview,
     currentMousePos,
@@ -340,6 +351,9 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     placementModeActive,
     isPointCreationActive,
     isLoopTraceActive,
+    isVanishingLineActive,
+    vanishingLineStart,
+    currentVanishingLineAxis,
     lineEntities,
     offset,
     panVelocity,
@@ -448,7 +462,20 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     } else if (event.button === 0) {
       // Left click for point interaction
 
-      if (placementMode.active && onCreatePoint) {
+      if (isVanishingLineActive && onCreateVanishingLine) {
+        // Vanishing line mode - two-click interaction
+        const imageCoords = canvasToImageCoords(x, y)
+        if (!imageCoords) return
+
+        if (!vanishingLineStart) {
+          // First click - set start point
+          setVanishingLineStart(imageCoords)
+        } else {
+          // Second click - create vanishing line
+          onCreateVanishingLine(vanishingLineStart, imageCoords)
+          setVanishingLineStart(null)
+        }
+      } else if (placementMode.active && onCreatePoint) {
         // In placement mode, always create/place point regardless of nearby points
         let imageCoords = canvasToImageCoords(x, y)
 

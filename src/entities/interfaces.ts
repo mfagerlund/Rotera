@@ -3,6 +3,7 @@ export interface IWorldPoint {
     hasCoordinates(): boolean
     lockedXyz?: [number | null, number | null, number | null]
     color: string
+    getEffectiveXyz(): [number | null, number | null, number | null]
 }
 
 export interface ILine {

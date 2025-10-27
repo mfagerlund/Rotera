@@ -4,6 +4,20 @@ import type { Project } from '../../../entities/project'
 import type { WorldPoint } from '../../../entities/world-point/WorldPoint'
 import type { ProjectedPoint } from '../types'
 
+function getConstraintStatusColor(point: WorldPoint): string {
+  const status = point.getConstraintStatus()
+  switch (status) {
+    case 'locked':
+      return '#2E7D32'
+    case 'inferred':
+      return '#2E7D32'
+    case 'partial':
+      return '#FF9800'
+    case 'free':
+      return '#D32F2F'
+  }
+}
+
 export function renderWorldPoints(
   ctx: CanvasRenderingContext2D,
   project: Project,
@@ -22,16 +36,15 @@ export function renderWorldPoints(
     const isHovered = hoveredPoint === point
     const radius = isSelected ? 6 : (isHovered ? 5 : 4)
 
-    // Point circle
     ctx.beginPath()
     ctx.arc(projected.x, projected.y, radius, 0, 2 * Math.PI)
 
     if (isSelected) {
-      ctx.fillStyle = '#FFC107'
+      ctx.fillStyle = '#FF5722'
     } else if (isHovered) {
-      ctx.fillStyle = '#FFE082' // Lighter yellow for hover
+      ctx.fillStyle = '#FFE082'
     } else {
-      ctx.fillStyle = point.color || '#2196F3'
+      ctx.fillStyle = getConstraintStatusColor(point)
     }
 
     ctx.fill()
@@ -39,7 +52,6 @@ export function renderWorldPoints(
     ctx.lineWidth = isHovered ? 2 : 1
     ctx.stroke()
 
-    // Point name
     if (project.showPointNames || isHovered) {
       ctx.fillStyle = '#000'
       ctx.font = '12px Arial'
