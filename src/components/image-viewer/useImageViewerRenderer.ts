@@ -498,6 +498,12 @@ export const useImageViewerRenderer = ({
     }
 
     const renderVanishingLines = () => {
+      const linesByAxis: Record<string, Array<{ p1: { u: number; v: number }; p2: { u: number; v: number } }>> = {
+        x: [],
+        y: [],
+        z: []
+      }
+
       Array.from(viewpoint.vanishingLines).forEach(vanishingLine => {
         const x1 = vanishingLine.p1.u * scale + offset.x
         const y1 = vanishingLine.p1.v * scale + offset.y
@@ -522,7 +528,273 @@ export const useImageViewerRenderer = ({
         ctx.beginPath()
         ctx.arc(x2, y2, 4, 0, 2 * Math.PI)
         ctx.fill()
+
+        linesByAxis[vanishingLine.axis].push({ p1: vanishingLine.p1, p2: vanishingLine.p2 })
       })
+
+      const vanishingPoints: Record<string, { u: number; v: number; color: string } | null> = {
+        x: null,
+        y: null,
+        z: null
+      }
+
+      const axisColors = { x: '#ff0000', y: '#00ff00', z: '#0000ff' }
+
+      const vanishingPointAccuracy: Record<string, number> = {}
+
+      Object.keys(linesByAxis).forEach(axis => {
+        const lines = linesByAxis[axis]
+        if (lines.length < 2) return
+
+        const homogeneousLines = lines.map(line => {
+          const p1 = [line.p1.u, line.p1.v, 1]
+          const p2 = [line.p2.u, line.p2.v, 1]
+
+          const a = p1[1] * p2[2] - p1[2] * p2[1]
+          const b = p1[2] * p2[0] - p1[0] * p2[2]
+          const c = p1[0] * p2[1] - p1[1] * p2[0]
+
+          return [a, b, c]
+        })
+
+        const l1 = homogeneousLines[0]
+        const l2 = homogeneousLines[1]
+
+        const vp_x = l1[1] * l2[2] - l1[2] * l2[1]
+        const vp_y = l1[2] * l2[0] - l1[0] * l2[2]
+        const vp_w = l1[0] * l2[1] - l1[1] * l2[0]
+
+        if (Math.abs(vp_w) > 1e-10) {
+          const vpU = vp_x / vp_w
+          const vpV = vp_y / vp_w
+
+          // Compute convergence accuracy - measure angular spread
+          const angles: number[] = []
+          for (let i = 0; i < lines.length; i++) {
+            for (let j = i + 1; j < lines.length; j++) {
+              const l1 = homogeneousLines[i]
+              const l2 = homogeneousLines[j]
+
+              // Compute angle between line directions
+              const dir1 = Math.sqrt(l1[0] * l1[0] + l1[1] * l1[1])
+              const dir2 = Math.sqrt(l2[0] * l2[0] + l2[1] * l2[1])
+              const dot = (l1[0] * l2[0] + l1[1] * l2[1]) / (dir1 * dir2)
+              const angle = Math.abs(Math.acos(Math.max(-1, Math.min(1, dot))))
+              angles.push(angle)
+            }
+          }
+
+          // RMS of angles (lower is better convergence)
+          const rmsAngle = angles.length > 0
+            ? Math.sqrt(angles.reduce((sum, a) => sum + a * a, 0) / angles.length)
+            : 0
+
+          // Convert to degrees and normalize (good < 1 deg, warning < 5 deg, poor >= 5 deg)
+          const rmsDegrees = (rmsAngle * 180) / Math.PI
+          vanishingPointAccuracy[axis] = rmsDegrees
+
+          vanishingPoints[axis] = {
+            u: vpU,
+            v: vpV,
+            color: axisColors[axis as 'x' | 'y' | 'z']
+          }
+        }
+      })
+
+      Object.entries(vanishingPoints).forEach(([axis, vp]) => {
+        if (!vp) return
+
+        const x = vp.u * scale + offset.x
+        const y = vp.v * scale + offset.y
+
+        const accuracy = vanishingPointAccuracy[axis]
+        let accuracyColor = vp.color
+        let accuracyLabel = ''
+
+        if (accuracy !== undefined) {
+          if (accuracy < 1.0) {
+            accuracyColor = '#00ff00' // Green - excellent
+            accuracyLabel = `${accuracy.toFixed(2)}°`
+          } else if (accuracy < 5.0) {
+            accuracyColor = '#ffff00' // Yellow - good
+            accuracyLabel = `${accuracy.toFixed(2)}°`
+          } else {
+            accuracyColor = '#ff0000' // Red - poor
+            accuracyLabel = `${accuracy.toFixed(2)}°`
+          }
+        }
+
+        ctx.strokeStyle = accuracyColor
+        ctx.lineWidth = 2
+        ctx.setLineDash([])
+
+        const crosshairSize = 20
+        ctx.beginPath()
+        ctx.moveTo(x - crosshairSize, y)
+        ctx.lineTo(x + crosshairSize, y)
+        ctx.moveTo(x, y - crosshairSize)
+        ctx.lineTo(x, y + crosshairSize)
+        ctx.stroke()
+
+        ctx.beginPath()
+        ctx.arc(x, y, 8, 0, 2 * Math.PI)
+        ctx.stroke()
+
+        // Draw accuracy label if available
+        if (accuracyLabel) {
+          ctx.font = 'bold 11px Arial'
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'top'
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
+          ctx.fillRect(x - 20, y + 15, 40, 16)
+          ctx.fillStyle = accuracyColor
+          ctx.fillText(accuracyLabel, x, y + 17)
+        }
+      })
+
+      if (vanishingPoints.x && vanishingPoints.y) {
+        const vp1_x = vanishingPoints.x.u * scale + offset.x
+        const vp1_y = vanishingPoints.x.v * scale + offset.y
+        const vp2_x = vanishingPoints.y.u * scale + offset.x
+        const vp2_y = vanishingPoints.y.v * scale + offset.y
+
+        ctx.strokeStyle = 'rgba(255, 255, 0, 0.5)'
+        ctx.lineWidth = 2
+        ctx.setLineDash([10, 5])
+
+        ctx.beginPath()
+        ctx.moveTo(vp1_x, vp1_y)
+        ctx.lineTo(vp2_x, vp2_y)
+        ctx.stroke()
+        ctx.setLineDash([])
+      } else if (vanishingPoints.x && vanishingPoints.z) {
+        const vp1_x = vanishingPoints.x.u * scale + offset.x
+        const vp1_y = vanishingPoints.x.v * scale + offset.y
+        const vp2_x = vanishingPoints.z.u * scale + offset.x
+        const vp2_y = vanishingPoints.z.v * scale + offset.y
+
+        ctx.strokeStyle = 'rgba(255, 0, 255, 0.5)'
+        ctx.lineWidth = 2
+        ctx.setLineDash([10, 5])
+
+        ctx.beginPath()
+        ctx.moveTo(vp1_x, vp1_y)
+        ctx.lineTo(vp2_x, vp2_y)
+        ctx.stroke()
+        ctx.setLineDash([])
+      } else if (vanishingPoints.y && vanishingPoints.z) {
+        const vp1_x = vanishingPoints.y.u * scale + offset.x
+        const vp1_y = vanishingPoints.y.v * scale + offset.y
+        const vp2_x = vanishingPoints.z.u * scale + offset.x
+        const vp2_y = vanishingPoints.z.v * scale + offset.y
+
+        ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)'
+        ctx.lineWidth = 2
+        ctx.setLineDash([10, 5])
+
+        ctx.beginPath()
+        ctx.moveTo(vp1_x, vp1_y)
+        ctx.lineTo(vp2_x, vp2_y)
+        ctx.stroke()
+        ctx.setLineDash([])
+      }
+
+      // Draw perspective grid overlay
+      if (Object.keys(vanishingPoints).filter(k => vanishingPoints[k as 'x' | 'y' | 'z']).length >= 2) {
+        const img = imageRef.current
+        if (!img) return
+
+        // Get principal point (image center)
+        const ppU = img.width / 2
+        const ppV = img.height / 2
+        const pp_x = ppU * scale + offset.x
+        const pp_y = ppV * scale + offset.y
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'
+        ctx.lineWidth = 1
+        ctx.setLineDash([])
+
+        // Draw grid lines radiating from principal point to each vanishing point
+        const gridCount = 8 // Number of grid lines per axis
+
+        Object.entries(vanishingPoints).forEach(([axis, vp]) => {
+          if (!vp) return
+
+          const vp_x = vp.u * scale + offset.x
+          const vp_y = vp.v * scale + offset.y
+
+          // Direction from PP to VP
+          const dx = vp_x - pp_x
+          const dy = vp_y - pp_y
+          const dist = Math.sqrt(dx * dx + dy * dy)
+
+          if (dist < 1) return
+
+          // Perpendicular direction (for spacing lines)
+          const perpX = -dy / dist
+          const perpY = dx / dist
+
+          // Draw parallel lines converging to this VP
+          const spacing = 100 // Spacing at principal point
+
+          for (let i = -gridCount; i <= gridCount; i++) {
+            if (i === 0) continue // Skip center line
+
+            // Start point offset perpendicular to PP-VP direction
+            const startX = pp_x + perpX * spacing * i
+            const startY = pp_y + perpY * spacing * i
+
+            // Draw line from offset start point toward vanishing point
+            // Extend line far beyond to reach canvas edges
+            const lineScale = 10 // Extend line length
+
+            ctx.beginPath()
+            ctx.moveTo(startX, startY)
+            ctx.lineTo(startX + dx * lineScale, startY + dy * lineScale)
+            ctx.stroke()
+          }
+        })
+
+        // Draw orthogonal grid lines between pairs of vanishing points
+        const vpList = Object.entries(vanishingPoints).filter(([_, vp]) => vp !== null) as Array<[string, { u: number; v: number; color: string }]>
+
+        if (vpList.length >= 2) {
+          for (let i = 0; i < vpList.length; i++) {
+            for (let j = i + 1; j < vpList.length; j++) {
+              const vp1 = vpList[i][1]
+              const vp2 = vpList[j][1]
+
+              const vp1_x = vp1.u * scale + offset.x
+              const vp1_y = vp1.v * scale + offset.y
+              const vp2_x = vp2.u * scale + offset.x
+              const vp2_y = vp2.v * scale + offset.y
+
+              ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)'
+
+              // Draw lines from VP1 that converge to VP2
+              const perpCount = 5
+              for (let k = -perpCount; k <= perpCount; k++) {
+                if (k === 0) continue
+
+                // Point on line from PP to VP1
+                const t = k * 0.15 // Parameter along PP-VP1 line
+                const px = pp_x + t * (vp1_x - pp_x)
+                const py = pp_y + t * (vp1_y - pp_y)
+
+                // Draw line from this point toward VP2
+                const dx2 = vp2_x - px
+                const dy2 = vp2_y - py
+                const lineScale = 10
+
+                ctx.beginPath()
+                ctx.moveTo(px, py)
+                ctx.lineTo(px + dx2 * lineScale, py + dy2 * lineScale)
+                ctx.stroke()
+              }
+            }
+          }
+        }
+      }
     }
 
     const renderConstructionPreview = () => {
