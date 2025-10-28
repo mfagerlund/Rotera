@@ -5,10 +5,13 @@ import { ConstructionPreview } from '../image-viewer/types'
 import { Viewpoint } from '../../entities/viewpoint'
 import { WorldPoint } from '../../entities/world-point'
 import { Line as LineEntity } from '../../entities/line'
+import { VanishingLine } from '../../entities/vanishing-line'
 
 interface ImageWorkspaceProps {
   isPointCreationActive: boolean
   isLoopTraceActive: boolean
+  isVanishingLineActive?: boolean
+  currentVanishingLineAxis?: 'x' | 'y' | 'z'
   image: Viewpoint | null
   imageViewerRef: React.RefObject<ImageViewerRef>
   worldPoints: Map<string, WorldPoint>
@@ -29,6 +32,9 @@ interface ImageWorkspaceProps {
   onLineRightClick?: (line: LineEntity) => void
   onEmptySpaceClick?: (shiftKey: boolean) => void
   onRequestAddImage?: () => void
+  onCreateVanishingLine?: (p1: { u: number; v: number }, p2: { u: number; v: number }) => void
+  onVanishingLineClick?: (vanishingLine: VanishingLine, ctrlKey: boolean, shiftKey: boolean) => void
+  selectedVanishingLines?: VanishingLine[]
 }
 
 const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({
@@ -53,7 +59,12 @@ const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({
   onEmptySpaceClick,
   onRequestAddImage,
   isPointCreationActive,
-  isLoopTraceActive
+  isLoopTraceActive,
+  isVanishingLineActive,
+  currentVanishingLineAxis,
+  onCreateVanishingLine,
+  onVanishingLineClick,
+  selectedVanishingLines
 }) => {
   if (!image) {
     return (
@@ -99,6 +110,11 @@ const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({
           onEmptySpaceClick={onEmptySpaceClick}
           isPointCreationActive={isPointCreationActive}
           isLoopTraceActive={isLoopTraceActive}
+          isVanishingLineActive={isVanishingLineActive}
+          currentVanishingLineAxis={currentVanishingLineAxis}
+          onCreateVanishingLine={onCreateVanishingLine}
+          onVanishingLineClick={onVanishingLineClick}
+          selectedVanishingLines={selectedVanishingLines}
         />
       </div>
     </div>

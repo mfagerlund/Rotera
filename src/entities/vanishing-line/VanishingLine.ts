@@ -4,15 +4,18 @@ import type { Viewpoint } from '../viewpoint/Viewpoint';
 import type { ISerializable } from '../serialization/ISerializable';
 import type { SerializationContext } from '../serialization/SerializationContext';
 import type { VanishingLineDto } from './VanishingLineDto';
+import type { ISelectable, SelectableType } from '../../types/selectable';
 
 export type VanishingLineAxis = 'x' | 'y' | 'z';
 
-export class VanishingLine implements ISerializable<VanishingLineDto> {
+export class VanishingLine implements ISerializable<VanishingLineDto>, ISelectable {
   id: string;
   viewpoint: Viewpoint;
   axis: VanishingLineAxis;
   p1: { u: number; v: number };
   p2: { u: number; v: number };
+  isVisible: boolean = true;
+  private selected: boolean = false;
 
   private constructor(
     id: string,
@@ -31,8 +34,11 @@ export class VanishingLine implements ISerializable<VanishingLineDto> {
       axis: observable,
       p1: observable,
       p2: observable,
+      isVisible: observable,
+      selected: observable,
       setEndpoints: action,
       setAxis: action,
+      setSelected: action,
     });
   }
 
@@ -81,6 +87,35 @@ export class VanishingLine implements ISerializable<VanishingLineDto> {
 
   setAxis(axis: VanishingLineAxis): void {
     this.axis = axis;
+  }
+
+  // ISelectable implementation
+  getType(): SelectableType {
+    return 'vanishingLine';
+  }
+
+  getName(): string {
+    return `${this.getAxisName()}-axis Line`;
+  }
+
+  isLocked(): boolean {
+    return false;
+  }
+
+  isSelected(): boolean {
+    return this.selected;
+  }
+
+  setSelected(selected: boolean): void {
+    this.selected = selected;
+  }
+
+  canDelete(): boolean {
+    return true;
+  }
+
+  getDeleteWarning(): string | null {
+    return null;
   }
 
   serialize(context: SerializationContext): VanishingLineDto {

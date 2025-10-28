@@ -14,7 +14,7 @@ import type { ISelectable } from '../../types/selectable'
 import { getEntityKey } from '../../utils/entityKeys'
 import '../../styles/tools.css'
 
-type ToolType = 'select' | 'point' | 'line' | 'plane' | 'circle' | 'loop'
+type ToolType = 'select' | 'point' | 'line' | 'plane' | 'circle' | 'loop' | 'vanishing'
 
 interface LineConstraints {
   name?: string
@@ -30,6 +30,8 @@ interface CreationToolsManagerProps {
   selectedEntities: ISelectable[]
   activeTool: ToolType
   onToolChange: (tool: ToolType) => void
+  currentVanishingLineAxis?: 'x' | 'y' | 'z'
+  onVanishingLineAxisChange?: (axis: 'x' | 'y' | 'z') => void
   allWorldPoints: WorldPoint[]
   existingLines: Map<string, Line>
   onCreatePoint: (imageId: string, u: number, v: number) => void
@@ -51,6 +53,8 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
   selectedEntities,
   activeTool,
   onToolChange,
+  currentVanishingLineAxis = 'x',
+  onVanishingLineAxisChange,
   allWorldPoints,
   existingLines,
   onCreatePoint,
@@ -238,6 +242,16 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
           <span className="tool-label">Loop</span>
           <span className="tool-shortcut">O</span>
         </button>
+
+        <button
+          className={`tool-button ${activeTool === 'vanishing' ? 'active' : ''}`}
+          onClick={() => handleToolActivation('vanishing')}
+          title="Draw vanishing lines for camera initialization"
+        >
+          <span className="tool-icon">📐</span>
+          <span className="tool-label">Vanishing</span>
+          <span className="tool-shortcut">V</span>
+        </button>
       </div>
 
       {/* Active Tool Panel */}
@@ -292,6 +306,75 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
             </div>
             <div className="tool-message">
               Circle creation tool - Coming soon
+            </div>
+          </div>
+        )}
+
+        {activeTool === 'vanishing' && (
+          <div className="vanishing-line-tool">
+            <div className="tool-header">
+              <h4>Vanishing Lines</h4>
+              <button className="btn-cancel" onClick={handleToolCancel}>✕</button>
+            </div>
+            <div className="tool-message">
+              Click two points to draw a vanishing line
+            </div>
+            <div style={{ margin: '10px 0' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '12px' }}>Axis:</label>
+              <div style={{ display: 'flex', gap: '5px' }}>
+                <button
+                  onClick={() => onVanishingLineAxisChange?.('x')}
+                  style={{
+                    backgroundColor: currentVanishingLineAxis === 'x' ? '#ff0000' : '#ccc',
+                    color: 'white',
+                    border: currentVanishingLineAxis === 'x' ? '2px solid white' : '1px solid #999',
+                    padding: '6px 12px',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    flex: 1
+                  }}
+                >
+                  X
+                </button>
+                <button
+                  onClick={() => onVanishingLineAxisChange?.('y')}
+                  style={{
+                    backgroundColor: currentVanishingLineAxis === 'y' ? '#00ff00' : '#ccc',
+                    color: currentVanishingLineAxis === 'y' ? 'black' : 'white',
+                    border: currentVanishingLineAxis === 'y' ? '2px solid black' : '1px solid #999',
+                    padding: '6px 12px',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    flex: 1
+                  }}
+                >
+                  Y
+                </button>
+                <button
+                  onClick={() => onVanishingLineAxisChange?.('z')}
+                  style={{
+                    backgroundColor: currentVanishingLineAxis === 'z' ? '#0000ff' : '#ccc',
+                    color: 'white',
+                    border: currentVanishingLineAxis === 'z' ? '2px solid white' : '1px solid #999',
+                    padding: '6px 12px',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    flex: 1
+                  }}
+                >
+                  Z
+                </button>
+              </div>
+            </div>
+            <div className="tool-help">
+              <div className="help-text">
+                • Draw lines parallel to world axes
+                • Need 2+ lines per axis for vanishing point
+                • Press Esc to cancel
+              </div>
             </div>
           </div>
         )}

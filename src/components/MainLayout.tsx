@@ -18,6 +18,7 @@ import { Line as LineEntity } from '../entities/line'
 import { WorldPoint } from '../entities/world-point'
 import { Viewpoint } from '../entities/viewpoint'
 import { Plane } from '../entities/plane'
+import { VanishingLine } from '../entities/vanishing-line'
 import type { ISelectable } from '../types/selectable'
 import { COMPONENT_OVERLAY_EVENT, isComponentOverlayEnabled, setComponentOverlayEnabled } from '../utils/componentNameOverlay'
 import { useConfirm } from './ConfirmDialog'
@@ -121,6 +122,9 @@ export const MainLayout: React.FC = observer(() => {
 
   // Construction preview state
   const [constructionPreview, setConstructionPreview] = useState<ConstructionPreview | null>(null)
+
+  // Vanishing line state
+  const [currentVanishingLineAxis, setCurrentVanishingLineAxis] = useState<'x' | 'y' | 'z'>('x')
 
   // Derived data from project (convert Sets to Maps for lookup)
   // No useMemo - just rebuild on every render (fast enough for typical dataset sizes)
@@ -256,9 +260,10 @@ export const MainLayout: React.FC = observer(() => {
   const selectedLineEntities = getSelectedByType<LineEntity>('line')
   const selectedPointEntities = getSelectedByType<WorldPoint>('point')
   const selectedPlaneEntities = getSelectedByType('plane')
+  const selectedVanishingLineEntities = getSelectedByType<VanishingLine>('vanishingLine')
 
   // Combined selected entities for components that accept ISelectable[]
-  const selectedEntities = [...selectedPointEntities, ...selectedLineEntities, ...selectedPlaneEntities] as ISelectable[]
+  const selectedEntities = [...selectedPointEntities, ...selectedLineEntities, ...selectedPlaneEntities, ...selectedVanishingLineEntities] as ISelectable[]
 
 
 
@@ -308,6 +313,11 @@ export const MainLayout: React.FC = observer(() => {
     setEditingLine
   })
 
+  // Vanishing line click handler
+  const handleVanishingLineClick = useCallback((vanishingLine: VanishingLine, ctrlKey: boolean, shiftKey: boolean) => {
+    handleEntityClick(vanishingLine, ctrlKey, shiftKey)
+  }, [handleEntityClick])
+
   const handleImageClick = useCallback((u: number, v: number) => {
     if (!project) return
 
@@ -339,6 +349,13 @@ export const MainLayout: React.FC = observer(() => {
       }
     }
   }, [currentImage, moveImagePoint])
+
+  const handleCreateVanishingLine = useCallback((p1: { u: number; v: number }, p2: { u: number; v: number }) => {
+    if (currentViewpoint) {
+      VanishingLine.create(currentViewpoint, currentVanishingLineAxis, p1, p2)
+      setActiveTool('select')
+    }
+  }, [currentViewpoint, currentVanishingLineAxis, setActiveTool])
 
   const handleRequestAddImage = useCallback(() => {
     // TODO: Trigger image add dialog when project update flow lands
@@ -401,8 +418,13 @@ export const MainLayout: React.FC = observer(() => {
       constructionPreview={constructionPreview}
       isPointCreationActive={activeTool === 'point'}
       isLoopTraceActive={activeTool === 'loop'}
+      isVanishingLineActive={activeTool === 'vanishing'}
+      currentVanishingLineAxis={currentVanishingLineAxis}
+      onCreateVanishingLine={handleCreateVanishingLine}
       onPointClick={handleEnhancedPointClick}
       onLineClick={handleEnhancedLineClick}
+      onVanishingLineClick={handleVanishingLineClick}
+      selectedVanishingLines={selectedVanishingLineEntities}
       onCreatePoint={handleImageClick}
       onMovePoint={handleMovePoint}
       onPointHover={setHoveredWorldPoint}
@@ -432,7 +454,11 @@ export const MainLayout: React.FC = observer(() => {
     linesMap,
     worldPointsArray,
     linesArray,
-    handleRequestAddImage
+    handleRequestAddImage,
+    handleVanishingLineClick,
+    selectedVanishingLineEntities,
+    handleCreateVanishingLine,
+    currentVanishingLineAxis
   ])
 
   const renderWorldWorkspace = useCallback(() => {
@@ -646,6 +672,8 @@ export const MainLayout: React.FC = observer(() => {
                 onDeleteLine={handleEditLineDelete}
                 onClearEditingLine={() => setEditingLine(null)}
                 projectConstraints={constraints}
+                currentVanishingLineAxis={currentVanishingLineAxis}
+                onVanishingLineAxisChange={setCurrentVanishingLineAxis}
               />
 
               <ConstraintPropertyPanel

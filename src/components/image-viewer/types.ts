@@ -1,6 +1,6 @@
 import { Viewpoint } from '../../entities/viewpoint'
 import { WorldPoint } from '../../entities/world-point'
-import { VanishingLineAxis } from '../../entities/vanishing-line'
+import { VanishingLine, VanishingLineAxis } from '../../entities/vanishing-line'
 
 export interface CanvasPoint {
   x: number
@@ -58,6 +58,7 @@ export interface ImageViewerRenderState {
   offset: CanvasOffset
   selectedPoints: WorldPoint[]
   selectedLines: Line[]
+  selectedVanishingLines: VanishingLine[]
   hoveredConstraintId: string | null
   hoveredWorldPoint: WorldPoint | null
   hoveredPoint: WorldPoint | null

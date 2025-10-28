@@ -1,6 +1,6 @@
 // Unified selection interface for co-selecting entities like points, lines, planes
 
-export type SelectableType = 'point' | 'line' | 'plane' | 'viewpoint' | 'camera' | 'image' | 'constraint'
+export type SelectableType = 'point' | 'line' | 'plane' | 'viewpoint' | 'camera' | 'image' | 'constraint' | 'vanishingLine'
 
 export interface ISelectable {
   // Core identification
@@ -210,7 +210,8 @@ export function getSelectionStats(selection: EntitySelection): Record<Selectable
     viewpoint: 0,
     camera: 0,
     image: 0,
-    constraint: 0
+    constraint: 0,
+    vanishingLine: 0
   }
 
   for (const item of selection.items) {
