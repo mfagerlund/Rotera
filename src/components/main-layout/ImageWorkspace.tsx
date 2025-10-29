@@ -6,6 +6,7 @@ import { Viewpoint } from '../../entities/viewpoint'
 import { WorldPoint } from '../../entities/world-point'
 import { Line as LineEntity } from '../../entities/line'
 import { VanishingLine } from '../../entities/vanishing-line'
+import { VisibilitySettings } from '../../types/visibility'
 
 interface ImageWorkspaceProps {
   isPointCreationActive: boolean
@@ -35,6 +36,7 @@ interface ImageWorkspaceProps {
   onCreateVanishingLine?: (p1: { u: number; v: number }, p2: { u: number; v: number }) => void
   onVanishingLineClick?: (vanishingLine: VanishingLine, ctrlKey: boolean, shiftKey: boolean) => void
   selectedVanishingLines?: VanishingLine[]
+  visibility?: VisibilitySettings
 }
 
 const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({
@@ -64,7 +66,8 @@ const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({
   currentVanishingLineAxis,
   onCreateVanishingLine,
   onVanishingLineClick,
-  selectedVanishingLines
+  selectedVanishingLines,
+  visibility
 }) => {
   if (!image) {
     return (
@@ -115,6 +118,7 @@ const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({
           onCreateVanishingLine={onCreateVanishingLine}
           onVanishingLineClick={onVanishingLineClick}
           selectedVanishingLines={selectedVanishingLines}
+          visibility={visibility}
         />
       </div>
     </div>

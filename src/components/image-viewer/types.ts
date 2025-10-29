@@ -33,6 +33,7 @@ export interface ConstructionPreview {
 }
 
 import { Line } from '../../entities/line'
+import { VisibilitySettings } from '../../types/visibility'
 
 export interface ImageViewerPropsBase {
   image: Viewpoint
@@ -48,6 +49,7 @@ export interface ImageViewerPropsBase {
   constructionPreview?: ConstructionPreview | null
   isVanishingLineActive?: boolean
   currentVanishingLineAxis?: VanishingLineAxis
+  visibility?: VisibilitySettings
 }
 
 export interface ImageViewerRenderState {
@@ -76,6 +78,9 @@ export interface ImageViewerRenderState {
   isLoopTraceActive: boolean
   isVanishingLineActive: boolean
   currentVanishingLineAxis: VanishingLineAxis | undefined
+  isDraggingVanishingLine: boolean
+  draggedVanishingLine: VanishingLine | null
+  visibility: VisibilitySettings
 }
 
 export type CanvasToImage = (canvasX: number, canvasY: number) => ImageCoords | null

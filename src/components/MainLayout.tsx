@@ -51,7 +51,10 @@ import PlanesManager from './PlanesManager'
 import ImagePointsManager from './ImagePointsManager'
 import ConstraintsManager from './ConstraintsManager'
 import WorldPointEditor from './WorldPointEditor'
+import { VanishingPointQualityWindow } from './VanishingPointQualityWindow'
 import OptimizationPanel from './OptimizationPanel'
+import { VisibilityPanel } from './VisibilityPanel'
+import { VisibilitySettings, DEFAULT_VISIBILITY } from '../types/visibility'
 
 // Styles
 import '../styles/enhanced-workspace.css'
@@ -77,6 +80,7 @@ export const MainLayout: React.FC = observer(() => {
     createLine,
     updateLine,
     deleteLine,
+    deleteVanishingLine,
     addImage,
     renameImage,
     deleteImage,
@@ -117,7 +121,10 @@ export const MainLayout: React.FC = observer(() => {
     setEntityPopup,
     worldPointEditWindow,
     openWorldPointEdit,
-    closeWorldPointEdit
+    closeWorldPointEdit,
+    showVPQualityWindow,
+    openVPQualityWindow,
+    closeVPQualityWindow
   } = useMainLayoutState(Array.isArray(project?.imageSortOrder) ? project.imageSortOrder : undefined)
 
   // Construction preview state
@@ -125,6 +132,20 @@ export const MainLayout: React.FC = observer(() => {
 
   // Vanishing line state
   const [currentVanishingLineAxis, setCurrentVanishingLineAxis] = useState<'x' | 'y' | 'z'>('x')
+
+  // Visibility state
+  const [visibility, setVisibility] = useState<VisibilitySettings>(DEFAULT_VISIBILITY)
+
+  const handleVisibilityChange = useCallback((key: keyof VisibilitySettings, value: boolean) => {
+    setVisibility(prev => ({ ...prev, [key]: value }))
+  }, [])
+
+  // Open VP quality window when vanishing tool is activated
+  useEffect(() => {
+    if (activeTool === 'vanishing') {
+      openVPQualityWindow()
+    }
+  }, [activeTool, openVPQualityWindow])
 
   // Derived data from project (convert Sets to Maps for lookup)
   // No useMemo - just rebuild on every render (fast enough for typical dataset sizes)
@@ -316,7 +337,8 @@ export const MainLayout: React.FC = observer(() => {
   // Vanishing line click handler
   const handleVanishingLineClick = useCallback((vanishingLine: VanishingLine, ctrlKey: boolean, shiftKey: boolean) => {
     handleEntityClick(vanishingLine, ctrlKey, shiftKey)
-  }, [handleEntityClick])
+    openVPQualityWindow()
+  }, [handleEntityClick, openVPQualityWindow])
 
   const handleImageClick = useCallback((u: number, v: number) => {
     if (!project) return
@@ -393,13 +415,17 @@ export const MainLayout: React.FC = observer(() => {
     selectedPointEntities,
     selectedLineEntities,
     selectedPlaneEntities,
+    selectedVanishingLineEntities,
     getSelectedByType: getSelectedByType as any,
     confirm,
     deleteConstraint,
     deleteLine,
     deleteWorldPoint,
+    deleteVanishingLine,
     clearSelection,
-    setEditingLine
+    setEditingLine,
+    currentVanishingLineAxis,
+    setCurrentVanishingLineAxis
   })
 
   // Content for different workspaces
@@ -429,6 +455,7 @@ export const MainLayout: React.FC = observer(() => {
       onMovePoint={handleMovePoint}
       onPointHover={setHoveredWorldPoint}
       onPointRightClick={openWorldPointEdit}
+      visibility={visibility}
       onLineRightClick={handleEditLineOpen}
       onEmptySpaceClick={handleEmptySpaceClick}
       onRequestAddImage={handleRequestAddImage}
@@ -820,8 +847,14 @@ export const MainLayout: React.FC = observer(() => {
               {__WORKTREE_NAME__ === 'main' ? __WORKTREE_NAME__ : __WORKTREE_NAME__.replace('Pictorigo-', '')}
             </div>
 
-            <span style={{ marginLeft: '12px', color: '#888' }}>v0.3-ENHANCED</span>
+            <span style={{ marginLeft: '12px', color: '#888' }}>v0.4-ENHANCED</span>
           </div>
+
+          {/* Visibility Panel */}
+          <VisibilityPanel
+            visibility={visibility}
+            onVisibilityChange={handleVisibilityChange}
+          />
         </div>
       )}
     </WorkspaceManager>
@@ -943,6 +976,14 @@ export const MainLayout: React.FC = observer(() => {
         images={viewpointsMap}
       />
     )}
+
+    {/* Vanishing Point Quality Window */}
+    <VanishingPointQualityWindow
+      isOpen={showVPQualityWindow}
+      onClose={closeVPQualityWindow}
+      currentViewpoint={currentViewpoint}
+    />
+
     {dialog}
   </>
   )

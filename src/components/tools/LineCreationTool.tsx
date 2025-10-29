@@ -30,8 +30,8 @@ interface LineCreationToolProps {
   onCancel: () => void
   onConstructionPreviewChange?: (preview: {
     type: 'line'
-    pointA?: string
-    pointB?: string
+    pointA?: WorldPoint
+    pointB?: WorldPoint
     showToCursor?: boolean
   } | null) => void
   isActive: boolean
@@ -210,15 +210,15 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
       // Both points selected - show complete line preview
       onConstructionPreviewChange({
         type: 'line',
-        pointA: getEntityKey(pointSlot1),
-        pointB: getEntityKey(pointSlot2),
+        pointA: pointSlot1,
+        pointB: pointSlot2,
         showToCursor: false
       })
     } else if (pointSlot1) {
       // Only first point selected - show line to cursor
       onConstructionPreviewChange({
         type: 'line',
-        pointA: getEntityKey(pointSlot1),
+        pointA: pointSlot1,
         showToCursor: true
       })
     } else {

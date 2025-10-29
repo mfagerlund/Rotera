@@ -6,6 +6,8 @@ import {
   ImageViewerRenderState,
   OnMovePoint
 } from './types'
+import { computeVanishingPoint, validateLineQuality } from '../../optimization/vanishing-points'
+import { VanishingLine } from '../../entities/vanishing-line'
 
 interface UseImageViewerRendererParams {
   canvasRef: RefObject<HTMLCanvasElement>
@@ -36,6 +38,7 @@ export const useImageViewerRenderer = ({
     offset,
     selectedPoints,
     selectedLines,
+    selectedVanishingLines,
     hoveredConstraintId: hoveredConstraintIdForEffect,
     hoveredWorldPoint,
     hoveredPoint,
@@ -50,7 +53,10 @@ export const useImageViewerRenderer = ({
     isDragDropActive,
     isPlacementModeActive,
     isPointCreationActive,
-    isLoopTraceActive
+    isLoopTraceActive,
+    isDraggingVanishingLine,
+    draggedVanishingLine,
+    visibility
   } = renderState
 
   const isPlacementInteractionActive = isDraggingPoint || isDragDropActive || isPlacementModeActive || isPointCreationActive || isLoopTraceActive
@@ -67,6 +73,8 @@ export const useImageViewerRenderer = ({
     let animationId: number | undefined
 
     const renderWorldPoints = () => {
+      if (!visibility.worldPoints) return
+
       Array.from(worldPoints.values()).forEach(wp => {
         const imagePoints = viewpoint.getImagePointsForWorldPoint(wp)
         const imagePoint = imagePoints.length > 0 ? imagePoints[0] : null
@@ -402,6 +410,8 @@ export const useImageViewerRenderer = ({
     }
 
     const renderLines = () => {
+      if (!visibility.lines) return
+
       Array.from(lines.entries()).forEach(([lineId, line]) => {
         if (!line.isVisible) {
           return
@@ -498,39 +508,137 @@ export const useImageViewerRenderer = ({
     }
 
     const renderVanishingLines = () => {
-      const linesByAxis: Record<string, Array<{ p1: { u: number; v: number }; p2: { u: number; v: number } }>> = {
+      if (!visibility.vanishingLines && !visibility.vanishingPoints) return
+
+      const linesByAxis: Record<string, Array<VanishingLine>> = {
         x: [],
         y: [],
         z: []
       }
 
       Array.from(viewpoint.vanishingLines).forEach(vanishingLine => {
+        linesByAxis[vanishingLine.axis].push(vanishingLine)
+      })
+
+      if (visibility.vanishingLines) {
+        Array.from(viewpoint.vanishingLines).forEach(vanishingLine => {
         const x1 = vanishingLine.p1.u * scale + offset.x
         const y1 = vanishingLine.p1.v * scale + offset.y
         const x2 = vanishingLine.p2.u * scale + offset.x
         const y2 = vanishingLine.p2.v * scale + offset.y
 
-        const color = vanishingLine.getColor()
+        const isSelected = selectedVanishingLines.some(vl => vl.id === vanishingLine.id)
+        const isBeingDragged = isDraggingVanishingLine && draggedVanishingLine?.id === vanishingLine.id
 
-        ctx.strokeStyle = color
-        ctx.lineWidth = 3
-        ctx.setLineDash([])
+        let color = vanishingLine.getColor()
+        let lineWidth = 3
+        let endpointRadius = 4
 
-        ctx.beginPath()
-        ctx.moveTo(x1, y1)
-        ctx.lineTo(x2, y2)
-        ctx.stroke()
+        if (isSelected) {
+          color = '#FFC107'
+          lineWidth = 5
+          endpointRadius = 6
+        }
 
-        ctx.fillStyle = color
-        ctx.beginPath()
-        ctx.arc(x1, y1, 4, 0, 2 * Math.PI)
-        ctx.fill()
-        ctx.beginPath()
-        ctx.arc(x2, y2, 4, 0, 2 * Math.PI)
-        ctx.fill()
+        if (isBeingDragged) {
+          lineWidth = 1
+          endpointRadius = 3
+        }
 
-        linesByAxis[vanishingLine.axis].push({ p1: vanishingLine.p1, p2: vanishingLine.p2 })
-      })
+        // Draw line
+        if (isBeingDragged) {
+          // Draw dashed black-white pattern for contrast
+          ctx.lineWidth = lineWidth
+          ctx.setLineDash([6, 6])
+
+          // Black dashes
+          ctx.strokeStyle = '#000000'
+          ctx.lineDashOffset = 0
+          ctx.beginPath()
+          ctx.moveTo(x1, y1)
+          ctx.lineTo(x2, y2)
+          ctx.stroke()
+
+          // White dashes
+          ctx.strokeStyle = '#FFFFFF'
+          ctx.lineDashOffset = 6
+          ctx.beginPath()
+          ctx.moveTo(x1, y1)
+          ctx.lineTo(x2, y2)
+          ctx.stroke()
+
+          ctx.setLineDash([])
+        } else {
+          ctx.strokeStyle = color
+          ctx.lineWidth = lineWidth
+          ctx.setLineDash([])
+
+          ctx.beginPath()
+          ctx.moveTo(x1, y1)
+          ctx.lineTo(x2, y2)
+          ctx.stroke()
+        }
+
+        // Draw endpoints
+        ctx.fillStyle = isBeingDragged ? '#FFFFFF' : color
+        if (isBeingDragged) {
+          // White fill with black outline for contrast
+          ctx.strokeStyle = '#000000'
+          ctx.lineWidth = 1
+          ctx.beginPath()
+          ctx.arc(x1, y1, endpointRadius, 0, 2 * Math.PI)
+          ctx.fill()
+          ctx.stroke()
+          ctx.beginPath()
+          ctx.arc(x2, y2, endpointRadius, 0, 2 * Math.PI)
+          ctx.fill()
+          ctx.stroke()
+        } else {
+          ctx.beginPath()
+          ctx.arc(x1, y1, endpointRadius, 0, 2 * Math.PI)
+          ctx.fill()
+          ctx.beginPath()
+          ctx.arc(x2, y2, endpointRadius, 0, 2 * Math.PI)
+          ctx.fill()
+        }
+
+        const qualityIssues = validateLineQuality(vanishingLine, linesByAxis[vanishingLine.axis])
+        if (qualityIssues.length > 0) {
+          const midX = (x1 + x2) / 2
+          const midY = (y1 + y2) / 2
+
+          const hasError = qualityIssues.some(issue => issue.type === 'error')
+          const iconColor = hasError ? '#FF5252' : '#FFC107'
+          const iconSize = 12
+
+          if (isSelected) {
+            ctx.strokeStyle = '#FFC107'
+            ctx.lineWidth = 3
+            ctx.beginPath()
+            ctx.arc(midX, midY, iconSize + 4, 0, 2 * Math.PI)
+            ctx.stroke()
+          }
+
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
+          ctx.beginPath()
+          ctx.arc(midX, midY, iconSize, 0, 2 * Math.PI)
+          ctx.fill()
+
+          ctx.fillStyle = iconColor
+          ctx.beginPath()
+          ctx.arc(midX, midY, iconSize - 2, 0, 2 * Math.PI)
+          ctx.fill()
+
+          ctx.fillStyle = hasError ? '#FFFFFF' : '#000000'
+          ctx.font = 'bold 16px Arial'
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          ctx.fillText('!', midX, midY)
+        }
+        })
+      }
+
+      if (!visibility.vanishingPoints) return
 
       const vanishingPoints: Record<string, { u: number; v: number; color: string } | null> = {
         x: null,
@@ -546,52 +654,53 @@ export const useImageViewerRenderer = ({
         const lines = linesByAxis[axis]
         if (lines.length < 2) return
 
-        const homogeneousLines = lines.map(line => {
-          const p1 = [line.p1.u, line.p1.v, 1]
-          const p2 = [line.p2.u, line.p2.v, 1]
+        const vp = computeVanishingPoint(lines)
+        if (vp) {
+          const vpU = vp.u
+          const vpV = vp.v
 
-          const a = p1[1] * p2[2] - p1[2] * p2[1]
-          const b = p1[2] * p2[0] - p1[0] * p2[2]
-          const c = p1[0] * p2[1] - p1[1] * p2[0]
+          if (lines.length === 2) {
+            vanishingPointAccuracy[axis] = -1
+          } else {
+            const angularErrors: number[] = []
+            for (let i = 0; i < lines.length; i++) {
+              const line = lines[i]
 
-          return [a, b, c]
-        })
+              const lineDir_u = line.p2.u - line.p1.u
+              const lineDir_v = line.p2.v - line.p1.v
+              const lineDirMag = Math.sqrt(lineDir_u * lineDir_u + lineDir_v * lineDir_v)
 
-        const l1 = homogeneousLines[0]
-        const l2 = homogeneousLines[1]
+              if (lineDirMag < 1e-6) continue
 
-        const vp_x = l1[1] * l2[2] - l1[2] * l2[1]
-        const vp_y = l1[2] * l2[0] - l1[0] * l2[2]
-        const vp_w = l1[0] * l2[1] - l1[1] * l2[0]
+              const lineDirNorm_u = lineDir_u / lineDirMag
+              const lineDirNorm_v = lineDir_v / lineDirMag
 
-        if (Math.abs(vp_w) > 1e-10) {
-          const vpU = vp_x / vp_w
-          const vpV = vp_y / vp_w
+              const mid_u = (line.p1.u + line.p2.u) / 2
+              const mid_v = (line.p1.v + line.p2.v) / 2
 
-          // Compute convergence accuracy - measure angular spread
-          const angles: number[] = []
-          for (let i = 0; i < lines.length; i++) {
-            for (let j = i + 1; j < lines.length; j++) {
-              const l1 = homogeneousLines[i]
-              const l2 = homogeneousLines[j]
+              const vpToMid_u = mid_u - vpU
+              const vpToMid_v = mid_v - vpV
+              const vpToMidMag = Math.sqrt(vpToMid_u * vpToMid_u + vpToMid_v * vpToMid_v)
 
-              // Compute angle between line directions
-              const dir1 = Math.sqrt(l1[0] * l1[0] + l1[1] * l1[1])
-              const dir2 = Math.sqrt(l2[0] * l2[0] + l2[1] * l2[1])
-              const dot = (l1[0] * l2[0] + l1[1] * l2[1]) / (dir1 * dir2)
-              const angle = Math.abs(Math.acos(Math.max(-1, Math.min(1, dot))))
-              angles.push(angle)
+              if (vpToMidMag < 1e-6) continue
+
+              const vpToMidNorm_u = vpToMid_u / vpToMidMag
+              const vpToMidNorm_v = vpToMid_v / vpToMidMag
+
+              const dot = Math.abs(lineDirNorm_u * vpToMidNorm_u + lineDirNorm_v * vpToMidNorm_v)
+              const angle = Math.acos(Math.max(0, Math.min(1, dot)))
+              const angleError = Math.min(angle, Math.PI - angle)
+
+              angularErrors.push(angleError)
             }
+
+            const rmsError = angularErrors.length > 0
+              ? Math.sqrt(angularErrors.reduce((sum, e) => sum + e * e, 0) / angularErrors.length)
+              : 0
+
+            const rmsDegrees = (rmsError * 180) / Math.PI
+            vanishingPointAccuracy[axis] = rmsDegrees
           }
-
-          // RMS of angles (lower is better convergence)
-          const rmsAngle = angles.length > 0
-            ? Math.sqrt(angles.reduce((sum, a) => sum + a * a, 0) / angles.length)
-            : 0
-
-          // Convert to degrees and normalize (good < 1 deg, warning < 5 deg, poor >= 5 deg)
-          const rmsDegrees = (rmsAngle * 180) / Math.PI
-          vanishingPointAccuracy[axis] = rmsDegrees
 
           vanishingPoints[axis] = {
             u: vpU,
@@ -608,23 +717,23 @@ export const useImageViewerRenderer = ({
         const y = vp.v * scale + offset.y
 
         const accuracy = vanishingPointAccuracy[axis]
-        let accuracyColor = vp.color
         let accuracyLabel = ''
+        let accuracyLabelColor = vp.color
 
-        if (accuracy !== undefined) {
+        if (accuracy !== undefined && accuracy >= 0) {
           if (accuracy < 1.0) {
-            accuracyColor = '#00ff00' // Green - excellent
+            accuracyLabelColor = '#00ff00'
             accuracyLabel = `${accuracy.toFixed(2)}°`
           } else if (accuracy < 5.0) {
-            accuracyColor = '#ffff00' // Yellow - good
+            accuracyLabelColor = '#ffff00'
             accuracyLabel = `${accuracy.toFixed(2)}°`
           } else {
-            accuracyColor = '#ff0000' // Red - poor
+            accuracyLabelColor = '#ff0000'
             accuracyLabel = `${accuracy.toFixed(2)}°`
           }
         }
 
-        ctx.strokeStyle = accuracyColor
+        ctx.strokeStyle = vp.color
         ctx.lineWidth = 2
         ctx.setLineDash([])
 
@@ -640,14 +749,13 @@ export const useImageViewerRenderer = ({
         ctx.arc(x, y, 8, 0, 2 * Math.PI)
         ctx.stroke()
 
-        // Draw accuracy label if available
         if (accuracyLabel) {
           ctx.font = 'bold 11px Arial'
           ctx.textAlign = 'center'
           ctx.textBaseline = 'top'
           ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
           ctx.fillRect(x - 20, y + 15, 40, 16)
-          ctx.fillStyle = accuracyColor
+          ctx.fillStyle = accuracyLabelColor
           ctx.fillText(accuracyLabel, x, y + 17)
         }
       })
@@ -699,99 +807,219 @@ export const useImageViewerRenderer = ({
         ctx.setLineDash([])
       }
 
-      // Draw perspective grid overlay
       if (Object.keys(vanishingPoints).filter(k => vanishingPoints[k as 'x' | 'y' | 'z']).length >= 2) {
-        const img = imageRef.current
-        if (!img) return
+        const canvasEl = canvasRef.current
+        if (!canvasEl) return
 
-        // Get principal point (image center)
-        const ppU = img.width / 2
-        const ppV = img.height / 2
-        const pp_x = ppU * scale + offset.x
-        const pp_y = ppV * scale + offset.y
-
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'
-        ctx.lineWidth = 1
         ctx.setLineDash([])
 
-        // Draw grid lines radiating from principal point to each vanishing point
-        const gridCount = 8 // Number of grid lines per axis
+        const canvasWidth = canvasEl.width
+        const canvasHeight = canvasEl.height
 
-        Object.entries(vanishingPoints).forEach(([axis, vp]) => {
-          if (!vp) return
-
-          const vp_x = vp.u * scale + offset.x
-          const vp_y = vp.v * scale + offset.y
-
-          // Direction from PP to VP
-          const dx = vp_x - pp_x
-          const dy = vp_y - pp_y
+        const drawLineToVP = (x: number, y: number, vpX: number, vpY: number) => {
+          const dx = vpX - x
+          const dy = vpY - y
           const dist = Math.sqrt(dx * dx + dy * dy)
-
           if (dist < 1) return
 
-          // Perpendicular direction (for spacing lines)
-          const perpX = -dy / dist
-          const perpY = dx / dist
+          const dirX = dx / dist
+          const dirY = dy / dist
+          const extendLength = Math.max(canvasWidth, canvasHeight) * 3
 
-          // Draw parallel lines converging to this VP
-          const spacing = 100 // Spacing at principal point
+          const endX = x + dirX * extendLength
+          const endY = y + dirY * extendLength
 
-          for (let i = -gridCount; i <= gridCount; i++) {
-            if (i === 0) continue // Skip center line
+          // Draw dark outline first for visibility on light backgrounds
+          ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)'
+          ctx.lineWidth = 2
+          ctx.beginPath()
+          ctx.moveTo(x, y)
+          ctx.lineTo(endX, endY)
+          ctx.stroke()
 
-            // Start point offset perpendicular to PP-VP direction
-            const startX = pp_x + perpX * spacing * i
-            const startY = pp_y + perpY * spacing * i
+          // Draw lighter line on top for visibility on dark backgrounds
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'
+          ctx.lineWidth = 1
+          ctx.beginPath()
+          ctx.moveTo(x, y)
+          ctx.lineTo(endX, endY)
+          ctx.stroke()
+        }
 
-            // Draw line from offset start point toward vanishing point
-            // Extend line far beyond to reach canvas edges
-            const lineScale = 10 // Extend line length
+        // Draw perspective-correct grid using homography
+        type Pt = { x: number; y: number }
+        type HLine = [number, number, number]
+        type HMat = number[][]
 
+        const toH = (p: Pt): [number, number, number] => [p.x, p.y, 1]
+        const cross3 = (a: [number,number,number], b: [number,number,number]): [number,number,number] => [
+          a[1]*b[2]-a[2]*b[1],
+          a[2]*b[0]-a[0]*b[2],
+          a[0]*b[1]-a[1]*b[0]
+        ]
+        const lineThrough = (p: Pt, q: Pt): HLine => cross3(toH(p), toH(q))
+        const interLL = (l1: HLine, l2: HLine): Pt | null => {
+          const p = cross3(l1, l2)
+          if (Math.abs(p[2]) < 1e-9) return null
+          return { x: p[0]/p[2], y: p[1]/p[2] }
+        }
+
+        const solve2 = (A: number[][], b: number[]): [number,number] => {
+          const [a,b1] = A[0], [c,d] = A[1]
+          const det = a*d - b1*c
+          if (Math.abs(det) < 1e-12) return [0,0]
+          const x = ( d*b[0] - b1*b[1]) / det
+          const y = (-c*b[0] + a *b[1]) / det
+          return [x,y]
+        }
+
+        const homographyUnitToQuad = (P00: Pt, P10: Pt, P01: Pt, P11: Pt): HMat => {
+          const M = [
+            [P10.x - P00.x, P01.x - P00.x, P00.x],
+            [P10.y - P00.y, P01.y - P00.y, P00.y],
+            [0,             0,             1    ],
+          ]
+          const vx = (P10.x + P01.x) - (P11.x + P00.x)
+          const vy = (P10.y + P01.y) - (P11.y + P00.y)
+          const [h31, h32] = solve2(
+            [[P10.x - P00.x, P01.x - P00.x],
+             [P10.y - P00.y, P01.y - P00.y]],
+            [vx, vy]
+          )
+          return [
+            [M[0][0] + M[0][2]*h31, M[0][1] + M[0][2]*h32, M[0][2]],
+            [M[1][0] + M[1][2]*h31, M[1][1] + M[1][2]*h32, M[1][2]],
+            [h31,                   h32,                   1      ],
+          ]
+        }
+
+        const mapUV = (H: HMat, u: number, v: number): Pt => {
+          const x = H[0][0]*u + H[0][1]*v + H[0][2]
+          const y = H[1][0]*u + H[1][1]*v + H[1][2]
+          const w = H[2][0]*u + H[2][1]*v + H[2][2]
+          return { x: x/w, y: y/w }
+        }
+
+        const drawPerspectiveGrid = (
+          linesX: Array<{p1:{u:number;v:number};p2:{u:number;v:number}}>,
+          linesY: typeof linesX,
+          vpX: {u:number;v:number},
+          vpY: {u:number;v:number},
+          nx = 10,
+          ny = 10
+        ) => {
+          if (linesX.length < 2 || linesY.length < 2) return
+
+          const vpX_pix = {x: vpX.u * scale + offset.x, y: vpX.v * scale + offset.y}
+          const vpY_pix = {x: vpY.u * scale + offset.x, y: vpY.v * scale + offset.y}
+
+          // Get angle range for each axis
+          const getAngleRange = (vp: {x:number;y:number}, lines: typeof linesX) => {
+            const angles = lines.map(L => {
+              const mid_u = (L.p1.u + L.p2.u) / 2
+              const mid_v = (L.p1.v + L.p2.v) / 2
+              const mid_x = mid_u * scale + offset.x
+              const mid_y = mid_v * scale + offset.y
+              return Math.atan2(mid_y - vp.y, mid_x - vp.x)
+            }).sort((a,b) => a - b)
+
+            let minAngle = angles[0]
+            let maxAngle = angles[angles.length - 1]
+
+            // Handle wrap-around
+            const directSpan = maxAngle - minAngle
+            if (directSpan > Math.PI) {
+              const temp = minAngle
+              minAngle = maxAngle
+              maxAngle = temp + 2 * Math.PI
+            }
+
+            return { minAngle, maxAngle }
+          }
+
+          const rangeX = getAngleRange(vpX_pix, linesX)
+          const rangeY = getAngleRange(vpY_pix, linesY)
+
+          ctx.save()
+          ctx.beginPath()
+          ctx.rect(0, 0, canvasWidth, canvasHeight)
+          ctx.clip()
+
+          const extendLen = Math.max(canvasWidth, canvasHeight) * 3
+
+          // Draw X-axis lines (radiating from vpX)
+          for (let i = 0; i <= nx; i++) {
+            const t = i / nx
+            let angle = rangeX.minAngle + t * (rangeX.maxAngle - rangeX.minAngle)
+            while (angle > Math.PI) angle -= 2 * Math.PI
+            while (angle < -Math.PI) angle += 2 * Math.PI
+
+            const dx = Math.cos(angle)
+            const dy = Math.sin(angle)
+
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)'
+            ctx.lineWidth = 2
             ctx.beginPath()
-            ctx.moveTo(startX, startY)
-            ctx.lineTo(startX + dx * lineScale, startY + dy * lineScale)
+            ctx.moveTo(vpX_pix.x - dx * extendLen, vpX_pix.y - dy * extendLen)
+            ctx.lineTo(vpX_pix.x + dx * extendLen, vpX_pix.y + dy * extendLen)
+            ctx.stroke()
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'
+            ctx.lineWidth = 1
+            ctx.beginPath()
+            ctx.moveTo(vpX_pix.x - dx * extendLen, vpX_pix.y - dy * extendLen)
+            ctx.lineTo(vpX_pix.x + dx * extendLen, vpX_pix.y + dy * extendLen)
             ctx.stroke()
           }
-        })
 
-        // Draw orthogonal grid lines between pairs of vanishing points
-        const vpList = Object.entries(vanishingPoints).filter(([_, vp]) => vp !== null) as Array<[string, { u: number; v: number; color: string }]>
+          // Draw Y-axis lines (radiating from vpY)
+          for (let j = 0; j <= ny; j++) {
+            const t = j / ny
+            let angle = rangeY.minAngle + t * (rangeY.maxAngle - rangeY.minAngle)
+            while (angle > Math.PI) angle -= 2 * Math.PI
+            while (angle < -Math.PI) angle += 2 * Math.PI
 
-        if (vpList.length >= 2) {
-          for (let i = 0; i < vpList.length; i++) {
-            for (let j = i + 1; j < vpList.length; j++) {
-              const vp1 = vpList[i][1]
-              const vp2 = vpList[j][1]
+            const dx = Math.cos(angle)
+            const dy = Math.sin(angle)
 
-              const vp1_x = vp1.u * scale + offset.x
-              const vp1_y = vp1.v * scale + offset.y
-              const vp2_x = vp2.u * scale + offset.x
-              const vp2_y = vp2.v * scale + offset.y
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)'
+            ctx.lineWidth = 2
+            ctx.beginPath()
+            ctx.moveTo(vpY_pix.x - dx * extendLen, vpY_pix.y - dy * extendLen)
+            ctx.lineTo(vpY_pix.x + dx * extendLen, vpY_pix.y + dy * extendLen)
+            ctx.stroke()
 
-              ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)'
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'
+            ctx.lineWidth = 1
+            ctx.beginPath()
+            ctx.moveTo(vpY_pix.x - dx * extendLen, vpY_pix.y - dy * extendLen)
+            ctx.lineTo(vpY_pix.x + dx * extendLen, vpY_pix.y + dy * extendLen)
+            ctx.stroke()
+          }
 
-              // Draw lines from VP1 that converge to VP2
-              const perpCount = 5
-              for (let k = -perpCount; k <= perpCount; k++) {
-                if (k === 0) continue
+          ctx.restore()
+        }
 
-                // Point on line from PP to VP1
-                const t = k * 0.15 // Parameter along PP-VP1 line
-                const px = pp_x + t * (vp1_x - pp_x)
-                const py = pp_y + t * (vp1_y - pp_y)
+        const linesX = linesByAxis['x']
+        const linesY = linesByAxis['y']
+        const linesZ = linesByAxis['z']
+        const vpX = vanishingPoints['x']
+        const vpY = vanishingPoints['y']
+        const vpZ = vanishingPoints['z']
 
-                // Draw line from this point toward VP2
-                const dx2 = vp2_x - px
-                const dy2 = vp2_y - py
-                const lineScale = 10
-
-                ctx.beginPath()
-                ctx.moveTo(px, py)
-                ctx.lineTo(px + dx2 * lineScale, py + dy2 * lineScale)
-                ctx.stroke()
-              }
-            }
+        // Draw perspective grid if enabled
+        if (visibility.perspectiveGrid) {
+          // Try X+Y grid (vertical plane)
+          if (linesX.length >= 2 && linesY.length >= 2 && vpX && vpY) {
+            drawPerspectiveGrid(linesX, linesY, {u:vpX.u, v:vpX.v}, {u:vpY.u, v:vpY.v}, 10, 10)
+          }
+          // Try X+Z grid (horizontal plane)
+          else if (linesX.length >= 2 && linesZ.length >= 2 && vpX && vpZ) {
+            drawPerspectiveGrid(linesX, linesZ, {u:vpX.u, v:vpX.v}, {u:vpZ.u, v:vpZ.v}, 10, 10)
+          }
+          // Try Y+Z grid (side plane)
+          else if (linesY.length >= 2 && linesZ.length >= 2 && vpY && vpZ) {
+            drawPerspectiveGrid(linesY, linesZ, {u:vpY.u, v:vpY.v}, {u:vpZ.u, v:vpZ.v}, 10, 10)
           }
         }
       }
@@ -882,14 +1110,27 @@ export const useImageViewerRenderer = ({
         const axis = constructionPreview.vanishingLineAxis || 'x'
         const color = axis === 'x' ? '#ff0000' : axis === 'y' ? '#00ff00' : '#0000ff'
 
-        ctx.strokeStyle = color
-        ctx.lineWidth = 3
-        ctx.setLineDash([])
+        // Draw striped pattern for consistency with editing mode
+        ctx.lineWidth = 1
+        ctx.setLineDash([6, 6])
 
+        // Black dashes
+        ctx.strokeStyle = '#000000'
+        ctx.lineDashOffset = 0
         ctx.beginPath()
         ctx.moveTo(x1, y1)
         ctx.lineTo(x2, y2)
         ctx.stroke()
+
+        // White dashes
+        ctx.strokeStyle = '#FFFFFF'
+        ctx.lineDashOffset = 6
+        ctx.beginPath()
+        ctx.moveTo(x1, y1)
+        ctx.lineTo(x2, y2)
+        ctx.stroke()
+
+        ctx.setLineDash([])
 
         ctx.fillStyle = color
         ctx.beginPath()
@@ -1000,12 +1241,14 @@ export const useImageViewerRenderer = ({
     imageRef,
     imageLoaded,
     viewpoint,
+    viewpoint.vanishingLines.size,
     worldPoints,
     lines,
     scale,
     offset,
     selectedPoints,
     selectedLines,
+    selectedVanishingLines,
     hoveredConstraintIdForEffect,
     hoveredWorldPoint,
     hoveredPoint,
@@ -1021,6 +1264,8 @@ export const useImageViewerRenderer = ({
     isPlacementModeActive,
     isPointCreationActive,
     isLoopTraceActive,
+    isDraggingVanishingLine,
+    draggedVanishingLine,
     canvasToImageCoords,
     imageToCanvasCoords,
     precisionCanvasPosRef,

@@ -325,47 +325,59 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
                 <button
                   onClick={() => onVanishingLineAxisChange?.('x')}
                   style={{
-                    backgroundColor: currentVanishingLineAxis === 'x' ? '#ff0000' : '#ccc',
-                    color: 'white',
-                    border: currentVanishingLineAxis === 'x' ? '2px solid white' : '1px solid #999',
-                    padding: '6px 12px',
-                    fontSize: '14px',
-                    fontWeight: 'bold',
+                    backgroundColor: currentVanishingLineAxis === 'x' ? '#333' : '#1a1a1a',
+                    border: currentVanishingLineAxis === 'x' ? '2px solid #ff0000' : '1px solid #555',
+                    padding: '8px',
                     cursor: 'pointer',
-                    flex: 1
+                    flex: 1,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center'
                   }}
                 >
-                  X
+                  <svg width="32" height="24" viewBox="0 0 32 24">
+                    <line x1="10" y1="11" x2="32" y2="4" stroke="#ff0000" strokeWidth="2" />
+                    <line x1="10" y1="13" x2="32" y2="20" stroke="#ff0000" strokeWidth="2" />
+                    <circle cx="6" cy="12" r="3" fill="#ff0000" />
+                  </svg>
                 </button>
                 <button
                   onClick={() => onVanishingLineAxisChange?.('y')}
                   style={{
-                    backgroundColor: currentVanishingLineAxis === 'y' ? '#00ff00' : '#ccc',
-                    color: currentVanishingLineAxis === 'y' ? 'black' : 'white',
-                    border: currentVanishingLineAxis === 'y' ? '2px solid black' : '1px solid #999',
-                    padding: '6px 12px',
-                    fontSize: '14px',
-                    fontWeight: 'bold',
+                    backgroundColor: currentVanishingLineAxis === 'y' ? '#333' : '#1a1a1a',
+                    border: currentVanishingLineAxis === 'y' ? '2px solid #00ff00' : '1px solid #555',
+                    padding: '8px',
                     cursor: 'pointer',
-                    flex: 1
+                    flex: 1,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center'
                   }}
                 >
-                  Y
+                  <svg width="24" height="32" viewBox="0 0 24 32">
+                    <line x1="11" y1="10" x2="4" y2="32" stroke="#00ff00" strokeWidth="2" />
+                    <line x1="13" y1="10" x2="20" y2="32" stroke="#00ff00" strokeWidth="2" />
+                    <circle cx="12" cy="6" r="3" fill="#00ff00" />
+                  </svg>
                 </button>
                 <button
                   onClick={() => onVanishingLineAxisChange?.('z')}
                   style={{
-                    backgroundColor: currentVanishingLineAxis === 'z' ? '#0000ff' : '#ccc',
-                    color: 'white',
-                    border: currentVanishingLineAxis === 'z' ? '2px solid white' : '1px solid #999',
-                    padding: '6px 12px',
-                    fontSize: '14px',
-                    fontWeight: 'bold',
+                    backgroundColor: currentVanishingLineAxis === 'z' ? '#333' : '#1a1a1a',
+                    border: currentVanishingLineAxis === 'z' ? '2px solid #0000ff' : '1px solid #555',
+                    padding: '8px',
                     cursor: 'pointer',
-                    flex: 1
+                    flex: 1,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center'
                   }}
                 >
-                  Z
+                  <svg width="32" height="24" viewBox="0 0 32 24">
+                    <line x1="0" y1="4" x2="22" y2="11" stroke="#0000ff" strokeWidth="2" />
+                    <line x1="0" y1="20" x2="22" y2="13" stroke="#0000ff" strokeWidth="2" />
+                    <circle cx="26" cy="12" r="3" fill="#0000ff" />
+                  </svg>
                 </button>
               </div>
             </div>

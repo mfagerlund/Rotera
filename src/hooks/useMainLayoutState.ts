@@ -4,7 +4,7 @@ import { WorldPoint } from '../entities/world-point'
 import { Line as LineEntity } from '../entities/line'
 import { Viewpoint } from '../entities/viewpoint'
 
-export type ActiveTool = 'select' | 'point' | 'line' | 'plane' | 'circle' | 'loop'
+export type ActiveTool = 'select' | 'point' | 'line' | 'plane' | 'circle' | 'loop' | 'vanishing'
 
 export interface MainLayoutState {
   // Tool state
@@ -50,6 +50,11 @@ export interface MainLayoutState {
   worldPointEditWindow: { isOpen: boolean; worldPoint: WorldPoint | null }
   openWorldPointEdit: (worldPoint: WorldPoint) => void
   closeWorldPointEdit: () => void
+
+  // Vanishing point quality window
+  showVPQualityWindow: boolean
+  openVPQualityWindow: () => void
+  closeVPQualityWindow: () => void
 }
 
 export function useMainLayoutState(projectImageSortOrder?: string[]): MainLayoutState {
@@ -133,6 +138,17 @@ export function useMainLayoutState(projectImageSortOrder?: string[]): MainLayout
     setWorldPointEditWindow({ isOpen: false, worldPoint: null })
   }, [])
 
+  // Vanishing point quality window
+  const [showVPQualityWindow, setShowVPQualityWindow] = useState(false)
+
+  const openVPQualityWindow = useCallback(() => {
+    setShowVPQualityWindow(true)
+  }, [])
+
+  const closeVPQualityWindow = useCallback(() => {
+    setShowVPQualityWindow(false)
+  }, [])
+
   return {
     activeTool,
     setActiveTool,
@@ -153,6 +169,9 @@ export function useMainLayoutState(projectImageSortOrder?: string[]): MainLayout
     setEntityPopup,
     worldPointEditWindow,
     openWorldPointEdit,
-    closeWorldPointEdit
+    closeWorldPointEdit,
+    showVPQualityWindow,
+    openVPQualityWindow,
+    closeVPQualityWindow
   }
 }

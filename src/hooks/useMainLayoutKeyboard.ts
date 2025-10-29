@@ -2,6 +2,7 @@
 import { useEffect } from 'react'
 import { WorldPoint } from '../entities/world-point'
 import { Line as LineEntity } from '../entities/line'
+import { VanishingLine } from '../entities/vanishing-line'
 import { ActiveTool } from './useMainLayoutState'
 
 interface UseMainLayoutKeyboardParams {
@@ -13,13 +14,17 @@ interface UseMainLayoutKeyboardParams {
   selectedPointEntities: WorldPoint[]
   selectedLineEntities: LineEntity[]
   selectedPlaneEntities: any[]
+  selectedVanishingLineEntities: VanishingLine[]
   getSelectedByType: (type: string) => any[]
   confirm: (message: string, options?: any) => Promise<boolean>
   deleteConstraint: (constraint: any) => void
   deleteLine: (line: LineEntity) => void
   deleteWorldPoint: (point: WorldPoint) => void
+  deleteVanishingLine: (vanishingLine: VanishingLine) => void
   clearSelection: () => void
   setEditingLine: (line: LineEntity | null) => void
+  currentVanishingLineAxis: 'x' | 'y' | 'z'
+  setCurrentVanishingLineAxis: (axis: 'x' | 'y' | 'z') => void
 }
 
 export function useMainLayoutKeyboard({
@@ -31,13 +36,17 @@ export function useMainLayoutKeyboard({
   selectedPointEntities,
   selectedLineEntities,
   selectedPlaneEntities,
+  selectedVanishingLineEntities,
   getSelectedByType,
   confirm,
   deleteConstraint,
   deleteLine,
   deleteWorldPoint,
+  deleteVanishingLine,
   clearSelection,
-  setEditingLine
+  setEditingLine,
+  currentVanishingLineAxis,
+  setCurrentVanishingLineAxis
 }: UseMainLayoutKeyboardParams) {
 
   useEffect(() => {
@@ -62,9 +71,10 @@ export function useMainLayoutKeyboard({
         const selectedPoints = selectedPointEntities
         const selectedLines = selectedLineEntities
         const selectedPlanes = selectedPlaneEntities
+        const selectedVanishingLines = selectedVanishingLineEntities
         const selectedConstraints = getSelectedByType('constraint' as any)
 
-        const totalSelected = selectedPoints.length + selectedLines.length + selectedPlanes.length + selectedConstraints.length
+        const totalSelected = selectedPoints.length + selectedLines.length + selectedPlanes.length + selectedVanishingLines.length + selectedConstraints.length
 
         if (totalSelected === 0) return
 
@@ -72,6 +82,7 @@ export function useMainLayoutKeyboard({
         const parts: string[] = []
         if (selectedPoints.length > 0) parts.push(`${selectedPoints.length} point${selectedPoints.length > 1 ? 's' : ''}`)
         if (selectedLines.length > 0) parts.push(`${selectedLines.length} line${selectedLines.length > 1 ? 's' : ''}`)
+        if (selectedVanishingLines.length > 0) parts.push(`${selectedVanishingLines.length} vanishing line${selectedVanishingLines.length > 1 ? 's' : ''}`)
         if (selectedPlanes.length > 0) parts.push(`${selectedPlanes.length} plane${selectedPlanes.length > 1 ? 's' : ''}`)
         if (selectedConstraints.length > 0) parts.push(`${selectedConstraints.length} constraint${selectedConstraints.length > 1 ? 's' : ''}`)
 
@@ -80,6 +91,7 @@ export function useMainLayoutKeyboard({
         if (await confirm(message, { variant: 'danger', confirmLabel: 'Delete', cancelLabel: 'Cancel' })) {
           selectedConstraints.forEach(constraint => deleteConstraint(constraint))
           selectedLineEntities.forEach(line => deleteLine(line))
+          selectedVanishingLineEntities.forEach(vl => deleteVanishingLine(vl))
           selectedPlanes.forEach(id => {
             console.warn('Plane deletion not yet implemented')
           })
@@ -109,6 +121,24 @@ export function useMainLayoutKeyboard({
           case 'o':
             setActiveTool(activeTool === 'loop' ? 'select' : 'loop')
             break
+          case 'v':
+            setActiveTool(activeTool === 'vanishing' ? 'select' : 'vanishing')
+            break
+          case 'x':
+            if (activeTool === 'vanishing') {
+              setCurrentVanishingLineAxis('x')
+            }
+            break
+          case 'y':
+            if (activeTool === 'vanishing') {
+              setCurrentVanishingLineAxis('y')
+            }
+            break
+          case 'z':
+            if (activeTool === 'vanishing') {
+              setCurrentVanishingLineAxis('z')
+            }
+            break
         }
       }
     }
@@ -130,6 +160,8 @@ export function useMainLayoutKeyboard({
     isConfirmDialogOpen,
     cancelPlacementMode,
     setActiveTool,
-    setEditingLine
+    setEditingLine,
+    currentVanishingLineAxis,
+    setCurrentVanishingLineAxis
   ])
 }

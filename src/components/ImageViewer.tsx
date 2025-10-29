@@ -7,6 +7,7 @@ import { useImageViewerRenderer } from './image-viewer/useImageViewerRenderer'
 import { WorldPoint } from '../entities/world-point'
 import { Line as LineEntity } from '../entities/line'
 import { VanishingLine } from '../entities/vanishing-line'
+import { DEFAULT_VISIBILITY } from '../types/visibility'
 import {
   CanvasOffset,
   CanvasPoint,
@@ -75,7 +76,8 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
   currentVanishingLineAxis,
   onCreateVanishingLine,
   onVanishingLineClick,
-  selectedVanishingLines = []
+  selectedVanishingLines = [],
+  visibility = DEFAULT_VISIBILITY
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -94,6 +96,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
   const [dragStartPos, setDragStartPos] = useState<CanvasPoint>({ x: 0, y: 0 })
   const [hoveredPoint, setHoveredPoint] = useState<WorldPoint | null>(null)
   const [hoveredLine, setHoveredLine] = useState<LineEntity | null>(null)
+  const [hoveredVanishingLine, setHoveredVanishingLine] = useState<VanishingLine | null>(null)
   const [panVelocity, setPanVelocity] = useState<PanVelocity>({ x: 0, y: 0 })
   const [lastPanTime, setLastPanTime] = useState(0)
   const [isAltKeyPressed, setIsAltKeyPressed] = useState(false)
@@ -107,6 +110,12 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
   const [isPrecisionToggleActive, setIsPrecisionToggleActive] = useState(false)
   const [isDragDropActive, setIsDragDropActive] = useState(false)
   const [vanishingLineStart, setVanishingLineStart] = useState<ImageCoords | null>(null)
+
+  // Vanishing line drag state
+  const [isDraggingVanishingLine, setIsDraggingVanishingLine] = useState(false)
+  const [draggedVanishingLine, setDraggedVanishingLine] = useState<VanishingLine | null>(null)
+  const [vanishingLineDragMode, setVanishingLineDragMode] = useState<'whole' | 'p1' | 'p2' | null>(null)
+  const vanishingLineDragStartRef = useRef<{ p1: ImageCoords; p2: ImageCoords; mouseU: number; mouseV: number } | null>(null)
 
   // Load image
   useEffect(() => {
@@ -300,6 +309,16 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     return { u: imageX, v: imageY }
   }, [offset.x, offset.y, scale])
 
+  const canvasToImageCoordsUnbounded = useCallback((canvasX: number, canvasY: number): ImageCoords | null => {
+    const img = imageRef.current
+    if (!img) return null
+
+    const imageX = (canvasX - offset.x) / scale
+    const imageY = (canvasY - offset.y) / scale
+
+    return { u: imageX, v: imageY }
+  }, [offset.x, offset.y, scale])
+
   const imageToCanvasCoords = useCallback<ImageToCanvas>((u: number, v: number) => ({
     x: u * scale + offset.x,
     y: v * scale + offset.y
@@ -340,7 +359,10 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     isPointCreationActive,
     isLoopTraceActive,
     isVanishingLineActive,
-    currentVanishingLineAxis
+    currentVanishingLineAxis,
+    isDraggingVanishingLine,
+    draggedVanishingLine,
+    visibility
   }), [
     constructionPreview,
     currentMousePos,
@@ -367,7 +389,10 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     selectedLines,
     selectedPoints,
     selectedVanishingLines,
-    worldPoints
+    worldPoints,
+    isDraggingVanishingLine,
+    draggedVanishingLine,
+    visibility
   ])
 
   useImageViewerRenderer({
@@ -445,19 +470,30 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     return null
   }, [image, lineEntities, offset.x, offset.y, scale])
 
-  // Find nearby vanishing line
-  const findNearbyVanishingLine = useCallback((canvasX: number, canvasY: number, threshold: number = 10): VanishingLine | null => {
+  // Find nearby vanishing line and which part was clicked
+  const findNearbyVanishingLinePart = useCallback((canvasX: number, canvasY: number, endpointThreshold: number = 15, lineThreshold: number = 10): { line: VanishingLine; part: 'p1' | 'p2' | 'whole' } | null => {
     if (!image.vanishingLines) return null
 
     for (const vanishingLine of image.vanishingLines) {
       if (!vanishingLine.isVisible) continue
 
-      // Vanishing lines have p1 and p2 directly in image coordinates
       const x1 = vanishingLine.p1.u * scale + offset.x
       const y1 = vanishingLine.p1.v * scale + offset.y
       const x2 = vanishingLine.p2.u * scale + offset.x
       const y2 = vanishingLine.p2.v * scale + offset.y
 
+      // Check endpoints first (higher priority)
+      const dist1 = Math.sqrt((canvasX - x1) ** 2 + (canvasY - y1) ** 2)
+      if (dist1 <= endpointThreshold) {
+        return { line: vanishingLine, part: 'p1' }
+      }
+
+      const dist2 = Math.sqrt((canvasX - x2) ** 2 + (canvasY - y2) ** 2)
+      if (dist2 <= endpointThreshold) {
+        return { line: vanishingLine, part: 'p2' }
+      }
+
+      // Check line body
       const A = canvasX - x1
       const B = canvasY - y1
       const C = x2 - x1
@@ -466,11 +502,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
       const dot = A * C + B * D
       const lenSq = C * C + D * D
 
-      if (lenSq === 0) {
-        const distance = Math.sqrt(A * A + B * B)
-        if (distance <= threshold) return vanishingLine
-        continue
-      }
+      if (lenSq === 0) continue
 
       let param = dot / lenSq
       param = Math.max(0, Math.min(1, param))
@@ -478,14 +510,21 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
       const closestX = x1 + param * C
       const closestY = y1 + param * D
 
-      const distance = Math.sqrt(
-        Math.pow(canvasX - closestX, 2) + Math.pow(canvasY - closestY, 2)
-      )
+      const distance = Math.sqrt((canvasX - closestX) ** 2 + (canvasY - closestY) ** 2)
 
-      if (distance <= threshold) return vanishingLine
+      if (distance <= lineThreshold) {
+        return { line: vanishingLine, part: 'whole' }
+      }
     }
+
     return null
   }, [image, offset.x, offset.y, scale])
+
+  // Find nearby vanishing line (for backward compatibility)
+  const findNearbyVanishingLine = useCallback((canvasX: number, canvasY: number, threshold: number = 10): VanishingLine | null => {
+    const result = findNearbyVanishingLinePart(canvasX, canvasY, threshold, threshold)
+    return result ? result.line : null
+  }, [findNearbyVanishingLinePart])
 
   // Handle mouse events
   // Handle mouse events
@@ -572,7 +611,24 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
           precisionPointerRef.current = null
           onLineClick(nearbyLine, event.ctrlKey, event.shiftKey)
         } else if (nearbyVanishingLine && onVanishingLineClick) {
-          // Handle vanishing line click
+          // Handle vanishing line click - check which part was clicked for dragging
+          const vanishingLinePart = findNearbyVanishingLinePart(x, y)
+
+          if (vanishingLinePart) {
+            // Set up dragging state (use unbounded coords since vanishing lines can extend outside image)
+            const imageCoords = canvasToImageCoordsUnbounded(x, y)
+            if (imageCoords) {
+              setDraggedVanishingLine(vanishingLinePart.line)
+              setVanishingLineDragMode(vanishingLinePart.part)
+              vanishingLineDragStartRef.current = {
+                p1: { ...vanishingLinePart.line.p1 },
+                p2: { ...vanishingLinePart.line.p2 },
+                mouseU: imageCoords.u,
+                mouseV: imageCoords.v
+              }
+            }
+          }
+
           dragStartImageCoordsRef.current = null
           draggedPointImageCoordsRef.current = null
           precisionPointerRef.current = null
@@ -644,6 +700,43 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
       }))
 
       setLastMousePos({ x, y })
+    } else if (draggedVanishingLine && vanishingLineDragMode && vanishingLineDragStartRef.current) {
+      // Handle vanishing line dragging (use unbounded coords since lines can extend outside image)
+      const imageCoords = canvasToImageCoordsUnbounded(x, y)
+      if (imageCoords) {
+        const dragStart = vanishingLineDragStartRef.current
+        const deltaU = imageCoords.u - dragStart.mouseU
+        const deltaV = imageCoords.v - dragStart.mouseV
+
+        if (!isDraggingVanishingLine) {
+          const dragDistance = Math.sqrt(deltaU * deltaU + deltaV * deltaV)
+          if (dragDistance > 5) {
+            setIsDraggingVanishingLine(true)
+          }
+        }
+
+        if (isDraggingVanishingLine) {
+          if (vanishingLineDragMode === 'whole') {
+            // Move both endpoints
+            draggedVanishingLine.setEndpoints(
+              { u: dragStart.p1.u + deltaU, v: dragStart.p1.v + deltaV },
+              { u: dragStart.p2.u + deltaU, v: dragStart.p2.v + deltaV }
+            )
+          } else if (vanishingLineDragMode === 'p1') {
+            // Move only p1
+            draggedVanishingLine.setEndpoints(
+              { u: dragStart.p1.u + deltaU, v: dragStart.p1.v + deltaV },
+              dragStart.p2
+            )
+          } else if (vanishingLineDragMode === 'p2') {
+            // Move only p2
+            draggedVanishingLine.setEndpoints(
+              dragStart.p1,
+              { u: dragStart.p2.u + deltaU, v: dragStart.p2.v + deltaV }
+            )
+          }
+        }
+      }
     } else if (draggedPoint && onMovePoint) {
       // Check if we should start dragging based on mouse movement distance
       const dragDistance = Math.sqrt(
@@ -747,9 +840,11 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
       // Check for nearby entities to show hover cursor
       const nearbyPoint = findNearbyPoint(x, y)
       const nearbyLine = findNearbyLine(x, y)
+      const nearbyVanishingLine = findNearbyVanishingLine(x, y)
 
       setHoveredPoint(nearbyPoint || null)
       setHoveredLine(nearbyLine || null)
+      setHoveredVanishingLine(nearbyVanishingLine || null)
 
       // Notify parent of hover changes
       if (onPointHover) {
@@ -773,12 +868,21 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     draggedPointImageCoordsRef.current = null
     precisionPointerRef.current = null
     precisionCanvasPosRef.current = null
+
+    // End vanishing line dragging
+    if (isDraggingVanishingLine) {
+      setIsDraggingVanishingLine(false)
+    }
+    setDraggedVanishingLine(null)
+    setVanishingLineDragMode(null)
+    vanishingLineDragStartRef.current = null
   }
 
   const handleMouseLeave = () => {
     setIsDragging(false)
     setHoveredPoint(null)
     setHoveredLine(null)
+    setHoveredVanishingLine(null)
     setPanVelocity({ x: 0, y: 0 })
 
     // Clear hover state
@@ -797,6 +901,14 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     draggedPointImageCoordsRef.current = null
     precisionPointerRef.current = null
     precisionCanvasPosRef.current = null
+
+    // End vanishing line dragging
+    if (isDraggingVanishingLine) {
+      setIsDraggingVanishingLine(false)
+    }
+    setDraggedVanishingLine(null)
+    setVanishingLineDragMode(null)
+    vanishingLineDragStartRef.current = null
   }
 
   const handleContextMenu = (event: React.MouseEvent) => {
@@ -1083,7 +1195,9 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
         data-drop-target={isDragOverTarget}
         style={{
           cursor: isDragging ? 'grabbing' :
+                  isDraggingVanishingLine ? 'grabbing' :
                   isDraggingPoint ? 'move' :
+                  hoveredVanishingLine ? 'grab' :
                   hoveredPoint && onMovePoint ? 'move' :
                   (hoveredPoint || hoveredLine) ? 'pointer' :
                   placementMode.active ? 'copy' :

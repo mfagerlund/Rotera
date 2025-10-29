@@ -35,7 +35,6 @@ export class VanishingLine implements ISerializable<VanishingLineDto>, ISelectab
       p1: observable,
       p2: observable,
       isVisible: observable,
-      selected: observable,
       setEndpoints: action,
       setAxis: action,
       setSelected: action,

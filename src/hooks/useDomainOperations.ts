@@ -8,6 +8,7 @@ import type { OptimizationExportDto } from '../types/optimization-export'
 import { DistanceConstraint } from '../entities/constraints/distance-constraint'
 import { AngleConstraint } from '../entities/constraints/angle-constraint'
 import { Serialization } from '../entities/Serialization'
+import { VanishingLine } from '../entities/vanishing-line'
 
 export interface WorldPointOptions {
   lockedXyz?: [number | null, number | null, number | null]
@@ -55,6 +56,9 @@ export interface DomainOperations {
   createLine: (pointA: WorldPoint, pointB: WorldPoint, options?: LineOptions) => Line
   updateLine: (line: Line, updates: LineUpdates) => void
   deleteLine: (line: Line) => void
+
+  // Vanishing Lines
+  deleteVanishingLine: (vanishingLine: VanishingLine) => void
 
   // Viewpoints (Images)
   addImage: (file: File) => Promise<Viewpoint | undefined>
@@ -165,6 +169,11 @@ export function useDomainOperations(
     if (!project) return
     line.cleanup()
     project.removeLine(line)
+  }
+
+  const deleteVanishingLine = (vanishingLine: VanishingLine) => {
+    if (!project) return
+    vanishingLine.viewpoint.removeVanishingLine(vanishingLine)
   }
 
   const addImage = async (file: File): Promise<Viewpoint | undefined> => {
@@ -314,6 +323,7 @@ export function useDomainOperations(
     createLine,
     updateLine,
     deleteLine,
+    deleteVanishingLine,
     addImage,
     renameImage,
     deleteImage,
