@@ -54,11 +54,20 @@ Project automatically runs `propagateInferences()` when:
 - ImageViewer: Small colored dot in center of each point
 - WorldPointEditor: Status badge + inferred coordinates display
 
-## Current Work: Vanishing Point Camera Initialization
+## Current Work: Optimization System Validation
 
-**Next: Phase 1-4 from vanishing points specification**
+**✅ Completed: Vanishing Point Camera Initialization (Phases 1-4)**
 
-Focus on implementing VanishingLine entity and camera initialization from vanishing points.
+VanishingLine entity and camera initialization from vanishing points have been implemented and thoroughly tested through automated test suite.
+
+**Current Focus: Systematic Testing of Optimization System**
+
+See `scratch/SOLVING-TEST-PROTOCOL.md` for comprehensive test coverage:
+- Phase 1 Complete (4/4 scenarios): Single camera initialization via PnP and VP
+- Phase 2 In Progress (0/3 scenarios): Two-camera systems
+- Phase 3 Pending (3 scenarios): Complex multi-constraint scenarios
+
+**Test Suite:** `src/optimization/__tests__/solving-scenarios.test.ts`
 
 ## Key Architecture Rules
 
