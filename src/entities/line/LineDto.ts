@@ -7,7 +7,6 @@ export interface LineDto extends BaseDto {
   pointAId: string
   pointBId: string
   color: string
-  isVisible: boolean
   isConstruction: boolean
   lineStyle: 'solid' | 'dashed' | 'dotted'
   thickness: number

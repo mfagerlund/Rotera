@@ -56,7 +56,6 @@ export const LinesManager: React.FC<LinesManagerProps> = ({
         ...(line.targetLength ? [`Length: ${line.targetLength}m`] : [])
       ],
       color: line.color,
-      isVisible: line.isVisible,
       isActive: selectedLines.some(l => l === line),
       entity: line  // Pass the actual Line object
     }

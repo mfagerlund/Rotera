@@ -19,7 +19,6 @@ export interface WorldPointOptions {
 export interface LineOptions {
   name?: string
   color?: string
-  isVisible?: boolean
   isConstruction?: boolean
   lineStyle?: 'solid' | 'dashed' | 'dotted'
   thickness?: number
@@ -31,7 +30,6 @@ export interface LineOptions {
 export interface LineUpdates {
   name?: string
   color?: string
-  isVisible?: boolean
   isConstruction?: boolean
   direction?: 'free' | 'horizontal' | 'vertical' | 'x-aligned' | 'z-aligned'
   targetLength?: number
@@ -156,7 +154,6 @@ export function useDomainOperations(
     if (!project) return
     if ('name' in updates) line.name = updates.name!
     if ('color' in updates) line.color = updates.color!
-    if ('isVisible' in updates) line.isVisible = updates.isVisible!
     if ('isConstruction' in updates) line.isConstruction = updates.isConstruction!
     if ('direction' in updates) line.direction = updates.direction!
     if ('targetLength' in updates) line.targetLength = updates.targetLength

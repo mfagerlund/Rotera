@@ -14,7 +14,6 @@ export class VanishingLine implements ISerializable<VanishingLineDto>, ISelectab
   axis: VanishingLineAxis;
   p1: { u: number; v: number };
   p2: { u: number; v: number };
-  isVisible: boolean = true;
   private selected: boolean = false;
 
   private constructor(
@@ -34,7 +33,6 @@ export class VanishingLine implements ISerializable<VanishingLineDto>, ISelectab
       axis: observable,
       p1: observable,
       p2: observable,
-      isVisible: observable,
       setEndpoints: action,
       setAxis: action,
       setSelected: action,

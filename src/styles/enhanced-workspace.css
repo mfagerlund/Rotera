@@ -395,13 +395,12 @@
 
 .visibility-panel__option {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
+  padding: 8px;
   background: var(--surface-2, #242424);
   border: 1px solid var(--border, #333);
   border-radius: 4px;
-  cursor: pointer;
   transition: all 0.2s ease;
   font-size: 12px;
   color: var(--text-primary, #e0e0e0);
@@ -412,12 +411,44 @@
   border-color: var(--primary, #0696d7);
 }
 
-.visibility-panel__option input[type="checkbox"] {
-  cursor: pointer;
-  width: 16px;
-  height: 16px;
+.visibility-panel__label {
+  flex: 1;
+  user-select: none;
 }
 
-.visibility-panel__option span {
-  user-select: none;
+.visibility-panel__controls {
+  display: flex;
+  gap: 8px;
+}
+
+.visibility-panel__icon-toggle {
+  background: transparent;
+  border: 1px solid var(--border, #555);
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  color: var(--text-secondary, #999);
+  transition: all 0.2s ease;
+  font-size: 13px;
+}
+
+.visibility-panel__icon-toggle.active {
+  background: var(--primary, #0696d7);
+  color: white;
+  border-color: var(--primary, #0696d7);
+}
+
+.visibility-panel__icon-toggle.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  color: var(--text-disabled, #666);
+}
+
+.visibility-panel__icon-toggle:hover:not(.disabled) {
+  background: var(--surface-3, #2a2a2a);
+  border-color: var(--primary, #0696d7);
+}
+
+.visibility-panel__icon-toggle.active:hover:not(.disabled) {
+  background: var(--primary-hover, #0578b8);
 }

@@ -33,7 +33,8 @@ export interface ConstructionPreview {
 }
 
 import { Line } from '../../entities/line'
-import { VisibilitySettings } from '../../types/visibility'
+import { VisibilitySettings, LockSettings } from '../../types/visibility'
+import { ToolContext } from '../../types/tool-context'
 
 export interface ImageViewerPropsBase {
   image: Viewpoint
@@ -50,6 +51,8 @@ export interface ImageViewerPropsBase {
   isVanishingLineActive?: boolean
   currentVanishingLineAxis?: VanishingLineAxis
   visibility?: VisibilitySettings
+  locking?: LockSettings
+  toolContext?: ToolContext
 }
 
 export interface ImageViewerRenderState {

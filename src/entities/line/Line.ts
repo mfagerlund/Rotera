@@ -26,7 +26,6 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
   pointA: WorldPoint
   pointB: WorldPoint
   color: string
-  isVisible: boolean
   isConstruction: boolean
   lineStyle: 'solid' | 'dashed' | 'dotted'
   thickness: number
@@ -39,7 +38,6 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
     pointA: WorldPoint,
     pointB: WorldPoint,
     color: string,
-    isVisible: boolean,
     isConstruction: boolean,
     lineStyle: 'solid' | 'dashed' | 'dotted',
     thickness: number,
@@ -51,7 +49,6 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
     this.pointA = pointA
     this.pointB = pointB
     this.color = color
-    this.isVisible = isVisible
     this.isConstruction = isConstruction
     this.lineStyle = lineStyle
     this.thickness = thickness
@@ -71,7 +68,6 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
     pointB: WorldPoint,
     options: {
       color?: string
-      isVisible?: boolean
       isConstruction?: boolean
       lineStyle?: 'solid' | 'dashed' | 'dotted'
       thickness?: number
@@ -85,12 +81,11 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
       pointA,
       pointB,
       options.color || '#ffffff',
-      options.isVisible ?? true,
       options.isConstruction ?? false,
       options.lineStyle || 'solid',
       options.thickness || 1,
       options.direction || 'free',
-      options.targetLength, 
+      options.targetLength,
       options.tolerance
     )
   }
@@ -491,7 +486,6 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
       pointAId,
       pointBId,
       color: this.color,
-      isVisible: this.isVisible,
       isConstruction: this.isConstruction,
       lineStyle: this.lineStyle,
       thickness: this.thickness,
@@ -511,7 +505,6 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
 
     const line = Line.create(dto.name, pointA, pointB, {
       color: dto.color,
-      isVisible: dto.isVisible,
       isConstruction: dto.isConstruction,
       lineStyle: dto.lineStyle,
       thickness: dto.thickness,

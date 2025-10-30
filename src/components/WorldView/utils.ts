@@ -10,8 +10,6 @@ export function findPointAt(
   project3DTo2D: (point: [number, number, number]) => ProjectedPoint
 ): WorldPoint | null {
   for (const point of project.worldPoints) {
-    if (!point.isVisible) continue
-
     const coords = point.optimizedXyz
     if (!coords) continue
 
@@ -32,8 +30,6 @@ export function findLineAt(
   project3DTo2D: (point: [number, number, number]) => ProjectedPoint
 ): Line | null {
   for (const line of project.lines) {
-    if (!line.isVisible) continue
-
     const coordsA = line.pointA.optimizedXyz
     const coordsB = line.pointB.optimizedXyz
     if (!coordsA || !coordsB) continue

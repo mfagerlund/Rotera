@@ -341,9 +341,11 @@ export function canInitializeWithVanishingPoints(
     return false
   }
 
+  // IMPORTANT: Only use LOCKED points (not inferred) for camera position solving
+  // Inferred coordinates depend on line constraints which may not be accurate yet
   const fullyConstrainedPoints = Array.from(worldPoints).filter(wp => {
-    const effectiveXyz = wp.getEffectiveXyz()
-    return effectiveXyz.every(coord => coord !== null)
+    const lockedXyz = wp.lockedXyz
+    return lockedXyz.every(coord => coord !== null)
   })
 
   if (fullyConstrainedPoints.length >= 2) {
@@ -392,35 +394,36 @@ function cross(a: number[], b: number[]): number[] {
 function matrixToQuaternion(R: number[][]): [number, number, number, number] {
   const trace = R[0][0] + R[1][1] + R[2][2]
 
+  let w: number, x: number, y: number, z: number
+
   if (trace > 0) {
     const s = 0.5 / Math.sqrt(trace + 1.0)
-    const w = 0.25 / s
-    const x = (R[2][1] - R[1][2]) * s
-    const y = (R[0][2] - R[2][0]) * s
-    const z = (R[1][0] - R[0][1]) * s
-    return [w, x, y, z]
+    w = 0.25 / s
+    x = (R[2][1] - R[1][2]) * s
+    y = (R[0][2] - R[2][0]) * s
+    z = (R[1][0] - R[0][1]) * s
   } else if (R[0][0] > R[1][1] && R[0][0] > R[2][2]) {
     const s = 2.0 * Math.sqrt(1.0 + R[0][0] - R[1][1] - R[2][2])
-    const w = (R[2][1] - R[1][2]) / s
-    const x = 0.25 * s
-    const y = (R[0][1] + R[1][0]) / s
-    const z = (R[0][2] + R[2][0]) / s
-    return [w, x, y, z]
+    w = (R[2][1] - R[1][2]) / s
+    x = 0.25 * s
+    y = (R[0][1] + R[1][0]) / s
+    z = (R[0][2] + R[2][0]) / s
   } else if (R[1][1] > R[2][2]) {
     const s = 2.0 * Math.sqrt(1.0 + R[1][1] - R[0][0] - R[2][2])
-    const w = (R[0][2] - R[2][0]) / s
-    const x = (R[0][1] + R[1][0]) / s
-    const y = 0.25 * s
-    const z = (R[1][2] + R[2][1]) / s
-    return [w, x, y, z]
+    w = (R[0][2] - R[2][0]) / s
+    x = (R[0][1] + R[1][0]) / s
+    y = 0.25 * s
+    z = (R[1][2] + R[2][1]) / s
   } else {
     const s = 2.0 * Math.sqrt(1.0 + R[2][2] - R[0][0] - R[1][1])
-    const w = (R[1][0] - R[0][1]) / s
-    const x = (R[0][2] + R[2][0]) / s
-    const y = (R[1][2] + R[2][1]) / s
-    const z = 0.25 * s
-    return [w, x, y, z]
+    w = (R[1][0] - R[0][1]) / s
+    x = (R[0][2] + R[2][0]) / s
+    y = (R[1][2] + R[2][1]) / s
+    z = 0.25 * s
   }
+
+  const mag = Math.sqrt(w * w + x * x + y * y + z * z)
+  return [w / mag, x / mag, y / mag, z / mag]
 }
 
 export function computeRotationFromVPs(
@@ -515,8 +518,9 @@ export function computeCameraPosition(
   const b: number[] = []
 
   lockedPoints.forEach(({ worldPoint, imagePoint }) => {
-    const effectiveXyz = worldPoint.getEffectiveXyz()
-    const P = [effectiveXyz[0]!, effectiveXyz[1]!, effectiveXyz[2]!]
+    // Use lockedXyz directly (not getEffectiveXyz which includes inferred coordinates)
+    const lockedXyz = worldPoint.lockedXyz
+    const P = [lockedXyz[0]!, lockedXyz[1]!, lockedXyz[2]!]
 
     const u_norm = (imagePoint.u - principalPoint.u) / focalLength
     const v_norm = (imagePoint.v - principalPoint.v) / focalLength
@@ -735,9 +739,11 @@ export function initializeCameraWithVanishingPoints(
     return false
   }
 
+  // IMPORTANT: Only use LOCKED points (not inferred) for camera position solving
+  // Inferred coordinates depend on line constraints which may not be accurate yet
   const fullyConstrainedPoints = Array.from(worldPoints).filter(wp => {
-    const effectiveXyz = wp.getEffectiveXyz()
-    return effectiveXyz.every(coord => coord !== null)
+    const lockedXyz = wp.lockedXyz
+    return lockedXyz.every(coord => coord !== null)
   })
 
   const lockedPointsData = fullyConstrainedPoints

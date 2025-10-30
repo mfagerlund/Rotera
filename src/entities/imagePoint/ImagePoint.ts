@@ -12,6 +12,8 @@ export class ImagePoint implements ISelectable, IImagePoint, IResidualProvider, 
     selected = false
     lastResiduals: number[] = []
     isOutlier = false
+    reprojectedU?: number
+    reprojectedV?: number
 
     worldPoint: IWorldPoint
     viewpoint: IViewpoint
@@ -146,6 +148,32 @@ export class ImagePoint implements ISelectable, IImagePoint, IResidualProvider, 
     applyOptimizationResult(_valueMap: ValueMap): void {
         const residuals = this.computeResiduals(_valueMap)
         this.lastResiduals = residuals.map(r => r.data)
+
+        const worldPointVec = _valueMap.points.get(this.worldPoint as any)
+        const cameraValues = _valueMap.cameras.get(this.viewpoint as any)
+
+        if (worldPointVec && cameraValues) {
+            const projection = projectWorldPointToPixelQuaternion(
+                worldPointVec,
+                cameraValues.position,
+                cameraValues.rotation,
+                cameraValues.focalLength,
+                cameraValues.aspectRatio,
+                cameraValues.principalPointX,
+                cameraValues.principalPointY,
+                cameraValues.skew,
+                cameraValues.k1,
+                cameraValues.k2,
+                cameraValues.k3,
+                cameraValues.p1,
+                cameraValues.p2
+            )
+
+            if (projection) {
+                this.reprojectedU = projection[0].data
+                this.reprojectedV = projection[1].data
+            }
+        }
     }
 
     getOptimizationInfo() {

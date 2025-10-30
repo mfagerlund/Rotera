@@ -12,8 +12,6 @@ export function renderLines(
   project3DTo2D: (point: [number, number, number]) => ProjectedPoint
 ) {
   project.lines.forEach((line) => {
-    if (!line.isVisible) return
-
     const pointA = line.pointA
     const pointB = line.pointB
     const coordsA = pointA.optimizedXyz

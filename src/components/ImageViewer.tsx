@@ -7,7 +7,8 @@ import { useImageViewerRenderer } from './image-viewer/useImageViewerRenderer'
 import { WorldPoint } from '../entities/world-point'
 import { Line as LineEntity } from '../entities/line'
 import { VanishingLine } from '../entities/vanishing-line'
-import { DEFAULT_VISIBILITY } from '../types/visibility'
+import { DEFAULT_VISIBILITY, DEFAULT_LOCKING, LockSettings, VisibilitySettings } from '../types/visibility'
+import { ToolContext, SELECT_TOOL_CONTEXT } from '../types/tool-context'
 import {
   CanvasOffset,
   CanvasPoint,
@@ -77,7 +78,9 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
   onCreateVanishingLine,
   onVanishingLineClick,
   selectedVanishingLines = [],
-  visibility = DEFAULT_VISIBILITY
+  visibility = DEFAULT_VISIBILITY,
+  locking = DEFAULT_LOCKING,
+  toolContext = SELECT_TOOL_CONTEXT
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -406,8 +409,32 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     onMovePoint
   })
 
-  // Find nearby point
+  const isEntityTypeInteractive = useCallback((entityType: keyof VisibilitySettings): boolean => {
+    if (toolContext.allowedEntityTypes !== null) {
+      if (!toolContext.allowedEntityTypes.has(entityType)) {
+        return false
+      }
+    }
+
+    if (!visibility[entityType]) {
+      return false
+    }
+
+    const lockKey = entityType as keyof LockSettings
+    if (lockKey in locking && locking[lockKey]) {
+      return false
+    }
+
+    return true
+  }, [toolContext, visibility, locking])
+
+  // Find nearby point (checks worldPoints because image points are just visual representations)
+  // NOTE: Locking world points prevents dragging their image points
   const findNearbyPoint = useCallback((canvasX: number, canvasY: number, threshold: number = 15) => {
+    if (!isEntityTypeInteractive('worldPoints')) {
+      return null
+    }
+
     return Array.from(worldPoints.values()).find(wp => {
       const imagePoint = image.getImagePointsForWorldPoint(wp)[0]
       if (!imagePoint) return false
@@ -421,13 +448,15 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
 
       return distance <= threshold
     })
-  }, [image, offset.x, offset.y, scale, worldPoints])
+  }, [isEntityTypeInteractive, image, offset.x, offset.y, scale, worldPoints])
 
   // Find nearby line
   const findNearbyLine = useCallback((canvasX: number, canvasY: number, threshold: number = 10): LineEntity | null => {
-    for (const [lineId, lineEntity] of Array.from(lineEntities.entries())) {
-      if (!lineEntity.isVisible) continue
+    if (!isEntityTypeInteractive('lines')) {
+      return null
+    }
 
+    for (const [lineId, lineEntity] of Array.from(lineEntities.entries())) {
       // lineEntity.pointA and lineEntity.pointB are already WorldPoint entities
       const pointA = lineEntity.pointA
       const pointB = lineEntity.pointB
@@ -468,15 +497,17 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
       if (distance <= threshold) return lineEntity
     }
     return null
-  }, [image, lineEntities, offset.x, offset.y, scale])
+  }, [isEntityTypeInteractive, image, lineEntities, offset.x, offset.y, scale])
 
   // Find nearby vanishing line and which part was clicked
   const findNearbyVanishingLinePart = useCallback((canvasX: number, canvasY: number, endpointThreshold: number = 15, lineThreshold: number = 10): { line: VanishingLine; part: 'p1' | 'p2' | 'whole' } | null => {
+    if (!isEntityTypeInteractive('vanishingLines')) {
+      return null
+    }
+
     if (!image.vanishingLines) return null
 
     for (const vanishingLine of image.vanishingLines) {
-      if (!vanishingLine.isVisible) continue
-
       const x1 = vanishingLine.p1.u * scale + offset.x
       const y1 = vanishingLine.p1.v * scale + offset.y
       const x2 = vanishingLine.p2.u * scale + offset.x
@@ -518,7 +549,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     }
 
     return null
-  }, [image, offset.x, offset.y, scale])
+  }, [isEntityTypeInteractive, image, offset.x, offset.y, scale])
 
   // Find nearby vanishing line (for backward compatibility)
   const findNearbyVanishingLine = useCallback((canvasX: number, canvasY: number, threshold: number = 10): VanishingLine | null => {

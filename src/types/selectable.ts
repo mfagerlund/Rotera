@@ -7,9 +7,6 @@ export interface ISelectable {
   getType(): SelectableType
   getName(): string
 
-  // Direct field access (not methods)
-  isVisible: boolean
-
   // Methods
   isLocked(): boolean
 

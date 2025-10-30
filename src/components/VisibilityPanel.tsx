@@ -1,16 +1,18 @@
 import React, { useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faEye, faChevronUp, faChevronDown } from '@fortawesome/free-solid-svg-icons'
-import { VisibilitySettings } from '../types/visibility'
+import { faEye, faEyeSlash, faLock, faLockOpen, faChevronUp, faChevronDown } from '@fortawesome/free-solid-svg-icons'
+import { ViewSettings, VisibilitySettings, LockSettings } from '../types/visibility'
 
 interface VisibilityPanelProps {
-  visibility: VisibilitySettings
+  viewSettings: ViewSettings
   onVisibilityChange: (key: keyof VisibilitySettings, value: boolean) => void
+  onLockingChange: (key: keyof LockSettings, value: boolean) => void
 }
 
 export const VisibilityPanel: React.FC<VisibilityPanelProps> = ({
-  visibility,
-  onVisibilityChange
+  viewSettings,
+  onVisibilityChange,
+  onLockingChange
 }) => {
   const [isExpanded, setIsExpanded] = useState(false)
 
@@ -18,13 +20,18 @@ export const VisibilityPanel: React.FC<VisibilityPanelProps> = ({
     setIsExpanded(!isExpanded)
   }
 
-  const visibilityOptions: Array<{ key: keyof VisibilitySettings; label: string }> = [
-    { key: 'worldPoints', label: 'World Points' },
-    { key: 'lines', label: 'Lines' },
-    { key: 'planes', label: 'Planes' },
-    { key: 'vanishingLines', label: 'Vanishing Lines' },
-    { key: 'vanishingPoints', label: 'Vanishing Points' },
-    { key: 'perspectiveGrid', label: 'Perspective Grid' }
+  const visibilityOptions: Array<{
+    key: keyof VisibilitySettings
+    label: string
+    supportsLocking: boolean
+  }> = [
+    { key: 'worldPoints', label: 'World Points', supportsLocking: true },
+    { key: 'lines', label: 'Lines', supportsLocking: true },
+    { key: 'planes', label: 'Planes', supportsLocking: true },
+    { key: 'vanishingLines', label: 'Vanishing Lines', supportsLocking: true },
+    { key: 'vanishingPoints', label: 'Vanishing Points', supportsLocking: false },
+    { key: 'perspectiveGrid', label: 'Perspective Grid', supportsLocking: false },
+    { key: 'reprojectionErrors', label: 'Reprojection Errors', supportsLocking: false }
   ]
 
   return (
@@ -42,22 +49,41 @@ export const VisibilityPanel: React.FC<VisibilityPanelProps> = ({
       {isExpanded && (
         <div className="visibility-panel__content">
           <div className="visibility-panel__header">
-            Visibility Controls
+            Visibility & Locking Controls
           </div>
           <div className="visibility-panel__options">
-            {visibilityOptions.map(option => (
-              <label
-                key={option.key}
-                className="visibility-panel__option"
-              >
-                <input
-                  type="checkbox"
-                  checked={visibility[option.key]}
-                  onChange={(e) => onVisibilityChange(option.key, e.target.checked)}
-                />
-                <span>{option.label}</span>
-              </label>
-            ))}
+            {visibilityOptions.map(option => {
+              const isVisible = viewSettings.visibility[option.key]
+              const isLocked = option.supportsLocking
+                ? viewSettings.locking[option.key as keyof LockSettings]
+                : false
+
+              return (
+                <div key={option.key} className="visibility-panel__option">
+                  <span className="visibility-panel__label">{option.label}</span>
+                  <div className="visibility-panel__controls">
+                    <button
+                      className={`visibility-panel__icon-toggle ${isVisible ? 'active' : ''}`}
+                      onClick={() => onVisibilityChange(option.key, !isVisible)}
+                      title={isVisible ? 'Hide' : 'Show'}
+                    >
+                      <FontAwesomeIcon icon={isVisible ? faEye : faEyeSlash} />
+                    </button>
+
+                    {option.supportsLocking && (
+                      <button
+                        className={`visibility-panel__icon-toggle ${isLocked ? 'active' : ''} ${!isVisible ? 'disabled' : ''}`}
+                        onClick={() => !isVisible ? null : onLockingChange(option.key as keyof LockSettings, !isLocked)}
+                        disabled={!isVisible}
+                        title={!isVisible ? 'Auto-locked (hidden)' : isLocked ? 'Unlock' : 'Lock'}
+                      >
+                        <FontAwesomeIcon icon={isLocked || !isVisible ? faLock : faLockOpen} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}

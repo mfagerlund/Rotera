@@ -54,7 +54,8 @@ import WorldPointEditor from './WorldPointEditor'
 import { VanishingPointQualityWindow } from './VanishingPointQualityWindow'
 import OptimizationPanel from './OptimizationPanel'
 import { VisibilityPanel } from './VisibilityPanel'
-import { VisibilitySettings, DEFAULT_VISIBILITY } from '../types/visibility'
+import { ViewSettings, VisibilitySettings, LockSettings, DEFAULT_VIEW_SETTINGS } from '../types/visibility'
+import { ToolContext, SELECT_TOOL_CONTEXT, LINE_TOOL_CONTEXT, VANISHING_LINE_TOOL_CONTEXT, LOOP_TOOL_CONTEXT } from '../types/tool-context'
 
 // Styles
 import '../styles/enhanced-workspace.css'
@@ -133,12 +134,36 @@ export const MainLayout: React.FC = observer(() => {
   // Vanishing line state
   const [currentVanishingLineAxis, setCurrentVanishingLineAxis] = useState<'x' | 'y' | 'z'>('x')
 
-  // Visibility state
-  const [visibility, setVisibility] = useState<VisibilitySettings>(DEFAULT_VISIBILITY)
+  // View settings state (visibility and locking)
+  const [viewSettings, setViewSettings] = useState<ViewSettings>(DEFAULT_VIEW_SETTINGS)
 
   const handleVisibilityChange = useCallback((key: keyof VisibilitySettings, value: boolean) => {
-    setVisibility(prev => ({ ...prev, [key]: value }))
+    setViewSettings(prev => ({
+      ...prev,
+      visibility: {
+        ...prev.visibility,
+        [key]: value
+      }
+    }))
   }, [])
+
+  const handleLockingChange = useCallback((key: keyof LockSettings, value: boolean) => {
+    setViewSettings(prev => ({
+      ...prev,
+      locking: {
+        ...prev.locking,
+        [key]: value
+      }
+    }))
+  }, [])
+
+  // Compute tool context based on active tools
+  const toolContext = useMemo((): ToolContext => {
+    if (activeTool === 'vanishing') return VANISHING_LINE_TOOL_CONTEXT
+    if (activeTool === 'loop') return LOOP_TOOL_CONTEXT
+    if (activeTool === 'point') return LINE_TOOL_CONTEXT
+    return SELECT_TOOL_CONTEXT
+  }, [activeTool])
 
   // Open VP quality window when vanishing tool is activated
   useEffect(() => {
@@ -455,7 +480,9 @@ export const MainLayout: React.FC = observer(() => {
       onMovePoint={handleMovePoint}
       onPointHover={setHoveredWorldPoint}
       onPointRightClick={openWorldPointEdit}
-      visibility={visibility}
+      visibility={viewSettings.visibility}
+      locking={viewSettings.locking}
+      toolContext={toolContext}
       onLineRightClick={handleEditLineOpen}
       onEmptySpaceClick={handleEmptySpaceClick}
       onRequestAddImage={handleRequestAddImage}
@@ -485,7 +512,9 @@ export const MainLayout: React.FC = observer(() => {
     handleVanishingLineClick,
     selectedVanishingLineEntities,
     handleCreateVanishingLine,
-    currentVanishingLineAxis
+    currentVanishingLineAxis,
+    viewSettings,
+    toolContext
   ])
 
   const renderWorldWorkspace = useCallback(() => {
@@ -852,8 +881,9 @@ export const MainLayout: React.FC = observer(() => {
 
           {/* Visibility Panel */}
           <VisibilityPanel
-            visibility={visibility}
+            viewSettings={viewSettings}
             onVisibilityChange={handleVisibilityChange}
+            onLockingChange={handleLockingChange}
           />
         </div>
       )}

@@ -49,7 +49,6 @@ import { LineDirection } from '../../entities/line'
 interface LineConstraints {
   name?: string
   color?: string
-  isVisible?: boolean
   isConstruction?: boolean
   direction?: LineDirection
   targetLength?: number
@@ -86,7 +85,6 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
   // Line properties (for both creation and editing)
   const [lineName, setLineName] = useState<string>('')
   const [lineColor, setLineColor] = useState<string>('#0696d7')
-  const [isVisible, setIsVisible] = useState<boolean>(true)
   const [isConstruction, setIsConstruction] = useState<boolean>(false)
 
   // Track which slot is currently active for highlighting
@@ -104,7 +102,6 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
       setPointSlot2(existingLine.pointB)
       setLineName(existingLine.name || '')
       setLineColor(existingLine.color || '#0696d7')
-      setIsVisible(existingLine.isVisible)
       setIsConstruction(existingLine.isConstruction || false)
 
       // Load direction and targetLength from line properties
@@ -200,7 +197,7 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
       window.removeEventListener('lineToolSave', handleExternalSave)
       window.removeEventListener('lineToolDelete', handleExternalDelete)
     }
-  }, [isActive, pointSlot1, pointSlot2, lineName, lineColor, isVisible, isConstruction, direction, lengthValue, editMode, existingLine, onUpdateLine, onCreateLine, onCancel, existingLines, onDeleteLine, confirm])
+  }, [isActive, pointSlot1, pointSlot2, lineName, lineColor, isConstruction, direction, lengthValue, editMode, existingLine, onUpdateLine, onCreateLine, onCancel, existingLines, onDeleteLine, confirm])
 
   // Update construction preview when slots change
   useEffect(() => {
@@ -277,7 +274,6 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
         const updates = {
           name: lineName,
           color: lineColor,
-          isVisible: isVisible,
           isConstruction: isConstruction,
           direction: direction,
           targetLength: targetLength,
@@ -299,7 +295,6 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
       const constraints: LineConstraints = {
         name: lineName,
         color: lineColor,
-        isVisible: isVisible,
         isConstruction: isConstruction,
         direction: direction,
         targetLength: targetLength,
@@ -378,15 +373,6 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
           </div>
 
           <div style={{display: 'flex', gap: '12px', marginBottom: '6px'}}>
-            <label style={{display: 'flex', alignItems: 'center', fontSize: '12px'}}>
-              <input
-                type="checkbox"
-                checked={isVisible}
-                onChange={(e) => setIsVisible(e.target.checked)}
-                style={{marginRight: '4px'}}
-              />
-              Visible
-            </label>
             <label style={{display: 'flex', alignItems: 'center', fontSize: '12px'}}>
               <input
                 type="checkbox"

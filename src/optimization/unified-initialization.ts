@@ -284,6 +284,10 @@ function step4_propagateThroughLineGraph(
       }
 
       if (otherPoint) {
+        if (line.direction && line.direction !== 'free') {
+          continue
+        }
+
         const distance = line.targetLength ?? sceneScale * 0.2
 
         const direction = randomUnitVector()

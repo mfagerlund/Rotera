@@ -78,7 +78,7 @@ export const useImageViewerRenderer = ({
       Array.from(worldPoints.values()).forEach(wp => {
         const imagePoints = viewpoint.getImagePointsForWorldPoint(wp)
         const imagePoint = imagePoints.length > 0 ? imagePoints[0] : null
-        if (!imagePoint || !wp.isVisible) {
+        if (!imagePoint) {
           return
         }
 
@@ -413,10 +413,6 @@ export const useImageViewerRenderer = ({
       if (!visibility.lines) return
 
       Array.from(lines.entries()).forEach(([lineId, line]) => {
-        if (!line.isVisible) {
-          return
-        }
-
         const pointA = line.pointA
         const pointB = line.pointB
 

@@ -6,7 +6,8 @@ import { Viewpoint } from '../../entities/viewpoint'
 import { WorldPoint } from '../../entities/world-point'
 import { Line as LineEntity } from '../../entities/line'
 import { VanishingLine } from '../../entities/vanishing-line'
-import { VisibilitySettings } from '../../types/visibility'
+import { VisibilitySettings, LockSettings } from '../../types/visibility'
+import { ToolContext } from '../../types/tool-context'
 
 interface ImageWorkspaceProps {
   isPointCreationActive: boolean
@@ -37,6 +38,8 @@ interface ImageWorkspaceProps {
   onVanishingLineClick?: (vanishingLine: VanishingLine, ctrlKey: boolean, shiftKey: boolean) => void
   selectedVanishingLines?: VanishingLine[]
   visibility?: VisibilitySettings
+  locking?: LockSettings
+  toolContext?: ToolContext
 }
 
 const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({
@@ -67,7 +70,9 @@ const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({
   onCreateVanishingLine,
   onVanishingLineClick,
   selectedVanishingLines,
-  visibility
+  visibility,
+  locking,
+  toolContext
 }) => {
   if (!image) {
     return (
@@ -119,6 +124,8 @@ const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({
           onVanishingLineClick={onVanishingLineClick}
           selectedVanishingLines={selectedVanishingLines}
           visibility={visibility}
+          locking={locking}
+          toolContext={toolContext}
         />
       </div>
     </div>
