@@ -138,7 +138,7 @@
       "isConstruction": false,
       "lineStyle": "solid",
       "thickness": 1,
-      "direction": "y-aligned",
+      "direction": "vertical",
       "targetLength": 10
     },
     {

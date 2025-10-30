@@ -13,84 +13,15 @@ import { VanishingLine } from '../../entities/vanishing-line';
 import { Line } from '../../entities/line';
 import * as fs from 'fs';
 import * as path from 'path';
-
-function quaternionFromEuler(rx: number, ry: number, rz: number): [number, number, number, number] {
-  const cx = Math.cos(rx / 2);
-  const sx = Math.sin(rx / 2);
-  const cy = Math.cos(ry / 2);
-  const sy = Math.sin(ry / 2);
-  const cz = Math.cos(rz / 2);
-  const sz = Math.sin(rz / 2);
-
-  const w = cx * cy * cz + sx * sy * sz;
-  const x = sx * cy * cz - cx * sy * sz;
-  const y = cx * sy * cz + sx * cy * sz;
-  const z = cx * cy * sz - sx * sy * cz;
-
-  return [w, x, y, z];
-}
-
-function rotateVectorByQuaternion(
-  point: [number, number, number],
-  quat: [number, number, number, number]
-): [number, number, number] {
-  const [w, x, y, z] = quat;
-  const [px, py, pz] = point;
-
-  const ix = w * px + y * pz - z * py;
-  const iy = w * py + z * px - x * pz;
-  const iz = w * pz + x * py - y * px;
-  const iw = -x * px - y * py - z * pz;
-
-  const rx = ix * w + iw * -x + iy * -z - iz * -y;
-  const ry = iy * w + iw * -y + iz * -x - ix * -z;
-  const rz = iz * w + iw * -z + ix * -y - iy * -x;
-
-  return [rx, ry, rz];
-}
-
-function projectWorldPointToPixel(
-  worldPoint: [number, number, number],
-  cameraPosition: [number, number, number],
-  cameraRotationQuat: [number, number, number, number],
-  focalLength: number,
-  aspectRatio: number,
-  principalPointX: number,
-  principalPointY: number,
-  skew: number = 0
-): [number, number] | null {
-  const translated: [number, number, number] = [
-    worldPoint[0] - cameraPosition[0],
-    worldPoint[1] - cameraPosition[1],
-    worldPoint[2] - cameraPosition[2]
-  ];
-
-  const cameraPoint = rotateVectorByQuaternion(translated, cameraRotationQuat);
-
-  if (cameraPoint[2] < 0.1) {
-    return null;
-  }
-
-  const xNorm = cameraPoint[0] / cameraPoint[2];
-  const yNorm = cameraPoint[1] / cameraPoint[2];
-
-  const fx = focalLength;
-  const fy = focalLength * aspectRatio;
-
-  const u = fx * xNorm + skew * yNorm + principalPointX;
-  const v = fy * yNorm + principalPointY;
-
-  return [u, v];
-}
+import {
+  quaternionFromEuler,
+  projectWorldPointToPixel,
+  StandardCameraParams,
+} from './fixture-generator-helpers';
 
 describe.skip('Generate Fixtures', () => {
   it('should generate Scenario 01: Simple PnP fixture', () => {
-    const imageWidth = 1920;
-    const imageHeight = 1080;
-    const focalLength = 1500;
-    const principalPointX = imageWidth / 2;
-    const principalPointY = imageHeight / 2;
-    const aspectRatio = 1.0;
+    const { imageWidth, imageHeight, focalLength, principalPointX, principalPointY, aspectRatio, skewCoefficient } = StandardCameraParams;
 
     const cameraPosition: [number, number, number] = [0, 0, -20];
     const cameraRotationQuat: [number, number, number, number] = [1, 0, 0, 0];
@@ -120,13 +51,7 @@ describe.skip('Generate Fixtures', () => {
       '',
       imageWidth,
       imageHeight,
-      {
-        focalLength,
-        principalPointX,
-        principalPointY,
-        aspectRatio,
-        skewCoefficient: 0
-      }
+      { focalLength, principalPointX, principalPointY, aspectRatio, skewCoefficient }
     );
 
     viewpoint.position = [0, 0, 0];
@@ -1468,7 +1393,7 @@ describe.skip('Generate Fixtures', () => {
     project.addLine(lineX);
 
     const lineY = Line.create('LineY', worldPoints[0], worldPoints[2], {
-      direction: 'y-aligned',
+      direction: 'vertical',
       targetLength: 10.0,
       color: '#00ff00'
     });
@@ -1498,7 +1423,7 @@ describe.skip('Generate Fixtures', () => {
     console.log(`World points: 4 (2 locked: Origin + PX, 2 unlocked: PY + PZ)`);
     console.log(`Lines with constraints: 3 (all with direction + length)`);
     console.log(`  LineX: Origin <-> PX, x-aligned, target length = 10.0 (both locked)`);
-    console.log(`  LineY: Origin <-> PY, y-aligned, target length = 10.0 (Origin locked, PY unlocked)`);
+    console.log(`  LineY: Origin <-> PY, vertical, target length = 10.0 (Origin locked, PY unlocked)`);
     console.log(`  LineZ: Origin <-> PZ, z-aligned, target length = 10.0 (Origin locked, PZ unlocked)`);
   });
 

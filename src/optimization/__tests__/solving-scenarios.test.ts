@@ -14,36 +14,24 @@ import { optimizeProject } from '../optimize-project';
 import { Viewpoint } from '../../entities/viewpoint';
 import * as fs from 'fs';
 import * as path from 'path';
+import {
+  expectVec3Close,
+  expectQuatClose,
+  expectOptimizationSuccess,
+  expectCamerasInitialized,
+  calculateCameraDistance,
+  expectLineLength,
+  expectLineDirection,
+  expectCameraInitializedAwayFromOrigin,
+  expectWorldPointInitialized,
+  expectConvergedBeforeMaxIterations,
+  Tolerance,
+} from './test-helpers';
 
 function loadFixture(filename: string) {
   const fixturePath = path.join(__dirname, 'fixtures', filename);
   const json = fs.readFileSync(fixturePath, 'utf-8');
   return loadProjectFromJson(json);
-}
-
-function expectVec3Close(actual: number[], expected: number[], tolerance: number, label: string) {
-  expect(actual).toHaveLength(3);
-  expect(actual[0]).toBeCloseTo(expected[0], tolerance);
-  expect(actual[1]).toBeCloseTo(expected[1], tolerance);
-  expect(actual[2]).toBeCloseTo(expected[2], tolerance);
-}
-
-function expectQuatClose(actual: number[], expected: number[], tolerance: number, label: string) {
-  expect(actual).toHaveLength(4);
-
-  let minDist = Infinity;
-
-  for (const sign of [1, -1]) {
-    const dist = Math.sqrt(
-      Math.pow(actual[0] - sign * expected[0], 2) +
-      Math.pow(actual[1] - sign * expected[1], 2) +
-      Math.pow(actual[2] - sign * expected[2], 2) +
-      Math.pow(actual[3] - sign * expected[3], 2)
-    );
-    minDist = Math.min(minDist, dist);
-  }
-
-  expect(minDist).toBeLessThan(tolerance);
 }
 
 describe('Solving Scenarios - Phase 1: Single Camera Initialization', () => {
@@ -64,39 +52,15 @@ describe('Solving Scenarios - Phase 1: Single Camera Initialization', () => {
         verbose: false
       });
 
-      expect(result.error).toBeNull();
-      expect(result.converged).toBe(true);
-      expect(result.iterations).toBeGreaterThanOrEqual(0);
-
-      expect(result.residual).toBeLessThan(0.1);
-
-      expect(result.camerasInitialized).toBeDefined();
-      expect(result.camerasInitialized).toHaveLength(1);
-      expect(result.camerasInitialized![0]).toBe('Camera1');
+      expectOptimizationSuccess(result, 1, 0.1, 2.0);
+      expectCamerasInitialized(result, 'Camera1');
+      expectConvergedBeforeMaxIterations(result, 100);
 
       const camera = Array.from(project.viewpoints)[0] as Viewpoint;
 
-      const groundTruthPosition = [0, 0, -20];
-      const groundTruthRotation = [1, 0, 0, 0];
-
-      expectVec3Close(
-        camera.position,
-        groundTruthPosition,
-        0.5,
-        'Camera position'
-      );
-
-      expectQuatClose(
-        camera.rotation,
-        groundTruthRotation,
-        0.1,
-        'Camera rotation'
-      );
-
-      expect(result.medianReprojectionError).toBeDefined();
-      if (result.medianReprojectionError !== undefined) {
-        expect(result.medianReprojectionError).toBeLessThan(2.0);
-      }
+      expectCameraInitializedAwayFromOrigin(camera, 5.0);
+      expectVec3Close(camera.position, [0, 0, -20], Tolerance.NORMAL);
+      expectQuatClose(camera.rotation, [1, 0, 0, 0], Tolerance.TIGHT);
     });
   });
 
@@ -130,62 +94,25 @@ describe('Solving Scenarios - Phase 1: Single Camera Initialization', () => {
         verbose: false
       });
 
-      expect(result.error).toBeNull();
-      expect(result.converged).toBe(true);
-      expect(result.iterations).toBeGreaterThanOrEqual(0);
-
-      expect(result.residual).toBeLessThan(1.0);
-
-      expect(result.camerasInitialized).toBeDefined();
-      expect(result.camerasInitialized).toHaveLength(1);
-      expect(result.camerasInitialized![0]).toBe('Camera1');
+      expectOptimizationSuccess(result, 1, 1.0, 2.0);
+      expectCamerasInitialized(result, 'Camera1');
+      expectConvergedBeforeMaxIterations(result, 100);
 
       const camera = Array.from(project.viewpoints)[0] as Viewpoint;
 
-      const groundTruthPosition = [0, 5, -25];
-      const groundTruthRotation = [1, 0, 0, 0];
+      expectCameraInitializedAwayFromOrigin(camera, 10.0);
+      expectVec3Close(camera.position, [0, 5, -25], Tolerance.LOOSE);
+      expectQuatClose(camera.rotation, [1, 0, 0, 0], Tolerance.TIGHT);
 
-      expectVec3Close(
-        camera.position,
-        groundTruthPosition,
-        1.0,
-        'Camera position'
-      );
-
-      expectQuatClose(
-        camera.rotation,
-        groundTruthRotation,
-        0.1,
-        'Camera rotation'
-      );
-
-      const groundTruthP4 = [-3, 2, 0];
-      const groundTruthP5 = [3, -2, 0];
-
-      expect(p4.optimizedXyz).toBeDefined();
-      expect(p5.optimizedXyz).toBeDefined();
+      expectWorldPointInitialized(p4);
+      expectWorldPointInitialized(p5);
 
       if (p4.optimizedXyz) {
-        expectVec3Close(
-          p4.optimizedXyz,
-          groundTruthP4,
-          0.5,
-          'P4 position (partially locked, refined by bundle adjustment)'
-        );
+        expectVec3Close(p4.optimizedXyz, [-3, 2, 0], Tolerance.NORMAL);
       }
 
       if (p5.optimizedXyz) {
-        expectVec3Close(
-          p5.optimizedXyz,
-          groundTruthP5,
-          0.5,
-          'P5 position (partially locked, refined by bundle adjustment)'
-        );
-      }
-
-      expect(result.medianReprojectionError).toBeDefined();
-      if (result.medianReprojectionError !== undefined) {
-        expect(result.medianReprojectionError).toBeLessThan(2.0);
+        expectVec3Close(p5.optimizedXyz, [3, -2, 0], Tolerance.NORMAL);
       }
     });
   });
@@ -217,32 +144,14 @@ describe('Solving Scenarios - Phase 1: Single Camera Initialization', () => {
         verbose: false
       });
 
-      expect(result.error).toBeNull();
-      expect(result.converged).toBe(true);
-      expect(result.iterations).toBeGreaterThanOrEqual(0);
-
-      expect(result.residual).toBeLessThan(2.0);
-
-      expect(result.camerasInitialized).toBeDefined();
-      expect(result.camerasInitialized).toHaveLength(1);
-      expect(result.camerasInitialized![0]).toBe('Camera1');
+      expectOptimizationSuccess(result, 1, 2.0, 3.0);
+      expectCamerasInitialized(result, 'Camera1');
+      expectConvergedBeforeMaxIterations(result, 100);
 
       const camera = Array.from(project.viewpoints)[0] as Viewpoint;
 
-      const groundTruthPosition = [10, 8, -15];
-      const groundTruthRotation = [0.9950041652780258, 0.09983341664682815, 0.0, 0.0];
-
-      expectVec3Close(
-        camera.position,
-        groundTruthPosition,
-        2.0,
-        'Camera position'
-      );
-
-      expect(result.medianReprojectionError).toBeDefined();
-      if (result.medianReprojectionError !== undefined) {
-        expect(result.medianReprojectionError).toBeLessThan(3.0);
-      }
+      expectCameraInitializedAwayFromOrigin(camera, 5.0);
+      expectVec3Close(camera.position, [10, 8, -15], Tolerance.POSITION);
     });
   });
 
@@ -277,46 +186,15 @@ describe('Solving Scenarios - Phase 1: Single Camera Initialization', () => {
         verbose: false
       });
 
-      expect(result.error).toBeNull();
-      expect(result.converged).toBe(true);
-      expect(result.iterations).toBeGreaterThanOrEqual(0);
-
-      expect(result.residual).toBeLessThan(2.0);
-
-      expect(result.camerasInitialized).toBeDefined();
-      expect(result.camerasInitialized).toHaveLength(1);
-      expect(result.camerasInitialized![0]).toBe('Camera1');
+      expectOptimizationSuccess(result, 1, 2.0, 3.0);
+      expectCamerasInitialized(result, 'Camera1');
+      expectConvergedBeforeMaxIterations(result, 100);
 
       const camera = Array.from(project.viewpoints)[0] as Viewpoint;
 
-      const groundTruthPosition = [8, 6, -12];
-
-      expectVec3Close(
-        camera.position,
-        groundTruthPosition,
-        2.0,
-        'Camera position'
-      );
-
-      if (origin.optimizedXyz && p10.optimizedXyz) {
-        const dx = p10.optimizedXyz[0] - origin.optimizedXyz[0];
-        const dy = p10.optimizedXyz[1] - origin.optimizedXyz[1];
-        const dz = p10.optimizedXyz[2] - origin.optimizedXyz[2];
-
-        const length = Math.sqrt(dx * dx + dy * dy + dz * dz);
-        const directionX = dx / length;
-        const directionY = dy / length;
-        const directionZ = dz / length;
-
-        expect(Math.abs(directionX)).toBeGreaterThan(0.99);
-        expect(Math.abs(directionY)).toBeLessThan(0.1);
-        expect(Math.abs(directionZ)).toBeLessThan(0.1);
-      }
-
-      expect(result.medianReprojectionError).toBeDefined();
-      if (result.medianReprojectionError !== undefined) {
-        expect(result.medianReprojectionError).toBeLessThan(3.0);
-      }
+      expectCameraInitializedAwayFromOrigin(camera, 5.0);
+      expectVec3Close(camera.position, [8, 6, -12], Tolerance.POSITION);
+      expectLineDirection(origin, p10, 'x-aligned', Tolerance.DIRECTION_TIGHT);
     });
   });
 });
@@ -344,14 +222,9 @@ describe('Solving Scenarios - Phase 2: Two Camera Systems', () => {
         verbose: false
       });
 
-      expect(result.error).toBeNull();
-      expect(result.converged).toBe(true);
-      expect(result.iterations).toBeGreaterThanOrEqual(0);
-
-      expect(result.residual).toBeLessThan(2.0);
-
-      expect(result.camerasInitialized).toBeDefined();
-      expect(result.camerasInitialized).toHaveLength(2);
+      expectOptimizationSuccess(result, 2, 2.0, 3.0);
+      expectCamerasInitialized(result, 'Camera1', 'Camera2');
+      expectConvergedBeforeMaxIterations(result, 100);
 
       const viewpointsArray = Array.from(project.viewpoints) as Viewpoint[];
       const camera1 = viewpointsArray.find(vp => vp.name === 'Camera1')!;
@@ -360,18 +233,15 @@ describe('Solving Scenarios - Phase 2: Two Camera Systems', () => {
       expect(camera1).toBeDefined();
       expect(camera2).toBeDefined();
 
-      const cameraDist = Math.sqrt(
-        Math.pow(camera2.position[0] - camera1.position[0], 2) +
-        Math.pow(camera2.position[1] - camera1.position[1], 2) +
-        Math.pow(camera2.position[2] - camera1.position[2], 2)
-      );
+      expectCameraInitializedAwayFromOrigin(camera1, 0.5);
+      expectCameraInitializedAwayFromOrigin(camera2, 0.5);
 
-      expect(cameraDist).toBeGreaterThan(0.5);
-
-      expect(result.medianReprojectionError).toBeDefined();
-      if (result.medianReprojectionError !== undefined) {
-        expect(result.medianReprojectionError).toBeLessThan(3.0);
+      for (const wp of worldPointsArray) {
+        expectWorldPointInitialized(wp);
       }
+
+      const cameraDist = calculateCameraDistance(camera1, camera2);
+      expect(cameraDist).toBeGreaterThan(0.5);
     });
   });
 
@@ -396,14 +266,9 @@ describe('Solving Scenarios - Phase 2: Two Camera Systems', () => {
         verbose: false
       });
 
-      expect(result.error).toBeNull();
-      expect(result.converged).toBe(true);
-      expect(result.iterations).toBeGreaterThanOrEqual(0);
-
-      expect(result.residual).toBeLessThan(2.0);
-
-      expect(result.camerasInitialized).toBeDefined();
-      expect(result.camerasInitialized).toHaveLength(2);
+      expectOptimizationSuccess(result, 2, 2.0, 3.0);
+      expectCamerasInitialized(result, 'Camera1', 'Camera2');
+      expectConvergedBeforeMaxIterations(result, 100);
 
       const viewpointsArray = Array.from(project.viewpoints) as Viewpoint[];
       const camera1 = viewpointsArray.find(vp => vp.name === 'Camera1')!;
@@ -412,12 +277,15 @@ describe('Solving Scenarios - Phase 2: Two Camera Systems', () => {
       expect(camera1).toBeDefined();
       expect(camera2).toBeDefined();
 
-      const cameraDist = Math.sqrt(
-        Math.pow(camera2.position[0] - camera1.position[0], 2) +
-        Math.pow(camera2.position[1] - camera1.position[1], 2) +
-        Math.pow(camera2.position[2] - camera1.position[2], 2)
-      );
+      expectCameraInitializedAwayFromOrigin(camera1, 1.0);
+      expectCameraInitializedAwayFromOrigin(camera2, 1.0);
 
+      const unlockedPoints = worldPointsArray.filter(wp => !wp.isFullyLocked());
+      for (const wp of unlockedPoints) {
+        expectWorldPointInitialized(wp);
+      }
+
+      const cameraDist = calculateCameraDistance(camera1, camera2);
       expect(cameraDist).toBeGreaterThan(1.0);
 
       const p1 = worldPointsArray.find(wp => wp.name === 'P1')!;
@@ -433,11 +301,6 @@ describe('Solving Scenarios - Phase 2: Two Camera Systems', () => {
       );
 
       expect(distance).toBeCloseTo(10.0, 0.1);
-
-      expect(result.medianReprojectionError).toBeDefined();
-      if (result.medianReprojectionError !== undefined) {
-        expect(result.medianReprojectionError).toBeLessThan(3.0);
-      }
     });
   });
 });
@@ -474,29 +337,20 @@ describe('Solving Scenarios - Phase 3: Complex Constraints', () => {
         verbose: false
       });
 
-      expect(result.error).toBeNull();
-      expect(result.converged).toBe(true);
-      expect(result.iterations).toBeGreaterThanOrEqual(0);
+      expectOptimizationSuccess(result, 2, 2.0, 3.0);
+      expectCamerasInitialized(result, 'Camera1', 'Camera2');
+      expectConvergedBeforeMaxIterations(result, 100);
 
-      expect(result.residual).toBeLessThan(2.0);
+      expectCameraInitializedAwayFromOrigin(camera1, 5.0);
+      expectCameraInitializedAwayFromOrigin(camera2, 5.0);
 
-      expect(result.camerasInitialized).toBeDefined();
-      expect(result.camerasInitialized).toHaveLength(2);
-      expect(result.camerasInitialized).toContain('Camera1');
-      expect(result.camerasInitialized).toContain('Camera2');
-
-      const cameraDist = Math.sqrt(
-        Math.pow(camera2.position[0] - camera1.position[0], 2) +
-        Math.pow(camera2.position[1] - camera1.position[1], 2) +
-        Math.pow(camera2.position[2] - camera1.position[2], 2)
-      );
-
-      expect(cameraDist).toBeGreaterThan(1.0);
-
-      expect(result.medianReprojectionError).toBeDefined();
-      if (result.medianReprojectionError !== undefined) {
-        expect(result.medianReprojectionError).toBeLessThan(3.0);
+      const unlockedPoints = worldPointsArray.filter(wp => !wp.isFullyLocked());
+      for (const wp of unlockedPoints) {
+        expectWorldPointInitialized(wp);
       }
+
+      const cameraDist = calculateCameraDistance(camera1, camera2);
+      expect(cameraDist).toBeGreaterThan(1.0);
     });
   });
 
@@ -527,36 +381,10 @@ describe('Solving Scenarios - Phase 3: Complex Constraints', () => {
         verbose: false
       });
 
-      expect(result.error).toBeNull();
-      expect(result.converged).toBe(true);
-      expect(result.iterations).toBeGreaterThanOrEqual(0);
-
-      expect(result.residual).toBeLessThan(2.0);
-
-      expect(result.camerasInitialized).toBeDefined();
-      expect(result.camerasInitialized).toHaveLength(2);
+      expectOptimizationSuccess(result, 2, 2.0, 3.0);
 
       for (const line of linesArray) {
-        const pointA = line.pointA;
-        const pointB = line.pointB;
-
-        expect(pointA.optimizedXyz).toBeDefined();
-        expect(pointB.optimizedXyz).toBeDefined();
-
-        if (pointA.optimizedXyz && pointB.optimizedXyz) {
-          const actualLength = Math.sqrt(
-            Math.pow(pointB.optimizedXyz[0] - pointA.optimizedXyz[0], 2) +
-            Math.pow(pointB.optimizedXyz[1] - pointA.optimizedXyz[1], 2) +
-            Math.pow(pointB.optimizedXyz[2] - pointA.optimizedXyz[2], 2)
-          );
-
-          expect(actualLength).toBeCloseTo(10.0, 0.1);
-        }
-      }
-
-      expect(result.medianReprojectionError).toBeDefined();
-      if (result.medianReprojectionError !== undefined) {
-        expect(result.medianReprojectionError).toBeLessThan(3.0);
+        expectLineLength(line.pointA, line.pointB, 10.0);
       }
     });
   });
@@ -580,7 +408,7 @@ describe('Solving Scenarios - Phase 3: Complex Constraints', () => {
       const linesArray = Array.from(project.lines);
       for (const line of linesArray) {
         expect(line.targetLength).toBe(10.0);
-        expect(['x-aligned', 'y-aligned', 'z-aligned']).toContain(line.direction);
+        expect(['x-aligned', 'vertical', 'z-aligned']).toContain(line.direction);
       }
 
       const result = optimizeProject(project, {
@@ -592,52 +420,15 @@ describe('Solving Scenarios - Phase 3: Complex Constraints', () => {
         verbose: false
       });
 
-      expect(result.error).toBeNull();
-      expect(result.converged).toBe(true);
-      expect(result.iterations).toBeGreaterThanOrEqual(0);
-
-      expect(result.residual).toBeLessThan(2.0);
-
-      expect(result.camerasInitialized).toBeDefined();
-      expect(result.camerasInitialized).toHaveLength(1);
-      expect(result.camerasInitialized![0]).toBe('Camera1');
+      expectOptimizationSuccess(result, 1, 2.0, 3.0);
+      expectCamerasInitialized(result, 'Camera1');
 
       for (const line of linesArray) {
-        const pointA = line.pointA;
-        const pointB = line.pointB;
+        expectLineLength(line.pointA, line.pointB, 10.0);
 
-        expect(pointA.optimizedXyz).toBeDefined();
-        expect(pointB.optimizedXyz).toBeDefined();
-
-        if (pointA.optimizedXyz && pointB.optimizedXyz) {
-          const actualLength = Math.sqrt(
-            Math.pow(pointB.optimizedXyz[0] - pointA.optimizedXyz[0], 2) +
-            Math.pow(pointB.optimizedXyz[1] - pointA.optimizedXyz[1], 2) +
-            Math.pow(pointB.optimizedXyz[2] - pointA.optimizedXyz[2], 2)
-          );
-
-          expect(actualLength).toBeCloseTo(10.0, 0.1);
-
-          const dx = Math.abs(pointB.optimizedXyz[0] - pointA.optimizedXyz[0]);
-          const dy = Math.abs(pointB.optimizedXyz[1] - pointA.optimizedXyz[1]);
-          const dz = Math.abs(pointB.optimizedXyz[2] - pointA.optimizedXyz[2]);
-
-          if (line.direction === 'x-aligned') {
-            expect(dy).toBeLessThan(0.2);
-            expect(dz).toBeLessThan(0.2);
-          } else if (line.direction === 'y-aligned') {
-            expect(dx).toBeLessThan(0.2);
-            expect(dz).toBeLessThan(0.2);
-          } else if (line.direction === 'z-aligned') {
-            expect(dx).toBeLessThan(0.2);
-            expect(dy).toBeLessThan(0.2);
-          }
+        if (line.direction === 'x-aligned' || line.direction === 'vertical' || line.direction === 'z-aligned') {
+          expectLineDirection(line.pointA, line.pointB, line.direction, Tolerance.DIRECTION);
         }
-      }
-
-      expect(result.medianReprojectionError).toBeDefined();
-      if (result.medianReprojectionError !== undefined) {
-        expect(result.medianReprojectionError).toBeLessThan(3.0);
       }
     });
   });
@@ -667,79 +458,35 @@ describe('Solving Scenarios - Phase 3: Complex Constraints', () => {
         verbose: false
       });
 
-      expect(result.error).toBeNull();
-      expect(result.converged).toBe(true);
-      expect(result.iterations).toBeGreaterThanOrEqual(0);
-
-      expect(result.residual).toBeLessThan(3.0);
-
-      expect(result.camerasInitialized).toBeDefined();
-      expect(result.camerasInitialized).toHaveLength(3);
-      expect(result.camerasInitialized).toContain('Camera1');
-      expect(result.camerasInitialized).toContain('Camera2');
-      expect(result.camerasInitialized).toContain('Camera3');
+      expectOptimizationSuccess(result, 3, 3.0, 10.0);
+      expectCamerasInitialized(result, 'Camera1', 'Camera2', 'Camera3');
 
       const linesArray = Array.from(project.lines);
 
       const line1 = linesArray.find(l => l.name === 'Line1');
       expect(line1).toBeDefined();
-      if (line1 && line1.pointA.optimizedXyz && line1.pointB.optimizedXyz) {
-        const length1 = Math.sqrt(
-          Math.pow(line1.pointB.optimizedXyz[0] - line1.pointA.optimizedXyz[0], 2) +
-          Math.pow(line1.pointB.optimizedXyz[1] - line1.pointA.optimizedXyz[1], 2) +
-          Math.pow(line1.pointB.optimizedXyz[2] - line1.pointA.optimizedXyz[2], 2)
-        );
-        expect(length1).toBeCloseTo(10.0, 0.2);
-
-        const dx = Math.abs(line1.pointB.optimizedXyz[0] - line1.pointA.optimizedXyz[0]);
-        const dy = Math.abs(line1.pointB.optimizedXyz[1] - line1.pointA.optimizedXyz[1]);
-        const dz = Math.abs(line1.pointB.optimizedXyz[2] - line1.pointA.optimizedXyz[2]);
-        expect(dy).toBeLessThan(0.3);
-        expect(dz).toBeLessThan(0.3);
+      if (line1) {
+        expectLineLength(line1.pointA, line1.pointB, 10.0, Tolerance.DIRECTION);
+        expectLineDirection(line1.pointA, line1.pointB, 'x-aligned', Tolerance.DIRECTION_LOOSE);
       }
 
       const line2 = linesArray.find(l => l.name === 'Line2');
       expect(line2).toBeDefined();
-      if (line2 && line2.pointA.optimizedXyz && line2.pointB.optimizedXyz) {
-        const length2 = Math.sqrt(
-          Math.pow(line2.pointB.optimizedXyz[0] - line2.pointA.optimizedXyz[0], 2) +
-          Math.pow(line2.pointB.optimizedXyz[1] - line2.pointA.optimizedXyz[1], 2) +
-          Math.pow(line2.pointB.optimizedXyz[2] - line2.pointA.optimizedXyz[2], 2)
-        );
-        expect(length2).toBeCloseTo(10.0, 0.2);
-
-        const dx = Math.abs(line2.pointB.optimizedXyz[0] - line2.pointA.optimizedXyz[0]);
-        const dy = Math.abs(line2.pointB.optimizedXyz[1] - line2.pointA.optimizedXyz[1]);
-        const dz = Math.abs(line2.pointB.optimizedXyz[2] - line2.pointA.optimizedXyz[2]);
-        expect(dx).toBeLessThan(0.3);
-        expect(dy).toBeLessThan(0.3);
+      if (line2) {
+        expectLineLength(line2.pointA, line2.pointB, 10.0, Tolerance.DIRECTION);
+        expectLineDirection(line2.pointA, line2.pointB, 'z-aligned', Tolerance.DIRECTION_LOOSE);
       }
 
       const line3 = linesArray.find(l => l.name === 'Line3');
       expect(line3).toBeDefined();
-      if (line3 && line3.pointA.optimizedXyz && line3.pointB.optimizedXyz) {
-        const length3 = Math.sqrt(
-          Math.pow(line3.pointB.optimizedXyz[0] - line3.pointA.optimizedXyz[0], 2) +
-          Math.pow(line3.pointB.optimizedXyz[1] - line3.pointA.optimizedXyz[1], 2) +
-          Math.pow(line3.pointB.optimizedXyz[2] - line3.pointA.optimizedXyz[2], 2)
-        );
-        expect(length3).toBeCloseTo(6.0, 0.2);
+      if (line3) {
+        expectLineLength(line3.pointA, line3.pointB, 6.0, Tolerance.DIRECTION);
       }
 
       const line4 = linesArray.find(l => l.name === 'Line4');
       expect(line4).toBeDefined();
-      if (line4 && line4.pointA.optimizedXyz && line4.pointB.optimizedXyz) {
-        const length4 = Math.sqrt(
-          Math.pow(line4.pointB.optimizedXyz[0] - line4.pointA.optimizedXyz[0], 2) +
-          Math.pow(line4.pointB.optimizedXyz[1] - line4.pointA.optimizedXyz[1], 2) +
-          Math.pow(line4.pointB.optimizedXyz[2] - line4.pointA.optimizedXyz[2], 2)
-        );
-        expect(length4).toBeCloseTo(3.0, 0.2);
-      }
-
-      expect(result.medianReprojectionError).toBeDefined();
-      if (result.medianReprojectionError !== undefined) {
-        expect(result.medianReprojectionError).toBeLessThan(10.0);
+      if (line4) {
+        expectLineLength(line4.pointA, line4.pointB, 3.0, Tolerance.DIRECTION);
       }
     });
   });
