@@ -1,0 +1,189 @@
+{
+  "name": "Scenario 02: PnP with Bundle Adjustment",
+  "worldPoints": [
+    {
+      "id": "WorldPoint_0",
+      "name": "P1",
+      "lockedXyz": [
+        -5,
+        -5,
+        0
+      ],
+      "inferredXyz": [
+        null,
+        null,
+        null
+      ],
+      "color": "#ffffff",
+      "isVisible": true
+    },
+    {
+      "id": "WorldPoint_1",
+      "name": "P2",
+      "lockedXyz": [
+        5,
+        -5,
+        0
+      ],
+      "inferredXyz": [
+        null,
+        null,
+        null
+      ],
+      "color": "#ffffff",
+      "isVisible": true
+    },
+    {
+      "id": "WorldPoint_2",
+      "name": "P3",
+      "lockedXyz": [
+        5,
+        5,
+        0
+      ],
+      "inferredXyz": [
+        null,
+        null,
+        null
+      ],
+      "color": "#ffffff",
+      "isVisible": true
+    },
+    {
+      "id": "WorldPoint_3",
+      "name": "P4",
+      "lockedXyz": [
+        null,
+        null,
+        0
+      ],
+      "inferredXyz": [
+        null,
+        null,
+        null
+      ],
+      "color": "#ffffff",
+      "isVisible": true
+    },
+    {
+      "id": "WorldPoint_4",
+      "name": "P5",
+      "lockedXyz": [
+        null,
+        null,
+        0
+      ],
+      "inferredXyz": [
+        null,
+        null,
+        null
+      ],
+      "color": "#ffffff",
+      "isVisible": true
+    }
+  ],
+  "viewpoints": [
+    {
+      "id": "Viewpoint_5",
+      "name": "Camera1",
+      "filename": "scenario-02.jpg",
+      "url": "",
+      "imageWidth": 1920,
+      "imageHeight": 1080,
+      "focalLength": 1500,
+      "principalPointX": 960,
+      "principalPointY": 540,
+      "skewCoefficient": 0,
+      "aspectRatio": 1,
+      "radialDistortion": [
+        0,
+        0,
+        0
+      ],
+      "tangentialDistortion": [
+        0,
+        0
+      ],
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "calibrationAccuracy": 0,
+      "isProcessed": false,
+      "isVisible": true,
+      "opacity": 1,
+      "color": "#ffff00"
+    }
+  ],
+  "lines": [],
+  "imagePoints": [
+    {
+      "id": "ImagePoint_6",
+      "worldPointId": "WorldPoint_0",
+      "viewpointId": "Viewpoint_5",
+      "u": 660,
+      "v": -60,
+      "isVisible": true,
+      "confidence": 1
+    },
+    {
+      "id": "ImagePoint_7",
+      "worldPointId": "WorldPoint_1",
+      "viewpointId": "Viewpoint_5",
+      "u": 1260,
+      "v": -60,
+      "isVisible": true,
+      "confidence": 1
+    },
+    {
+      "id": "ImagePoint_8",
+      "worldPointId": "WorldPoint_2",
+      "viewpointId": "Viewpoint_5",
+      "u": 1260,
+      "v": 540,
+      "isVisible": true,
+      "confidence": 1
+    },
+    {
+      "id": "ImagePoint_9",
+      "worldPointId": "WorldPoint_3",
+      "viewpointId": "Viewpoint_5",
+      "u": 780,
+      "v": 360,
+      "isVisible": true,
+      "confidence": 1
+    },
+    {
+      "id": "ImagePoint_10",
+      "worldPointId": "WorldPoint_4",
+      "viewpointId": "Viewpoint_5",
+      "u": 1140,
+      "v": 119.99999999999994,
+      "isVisible": true,
+      "confidence": 1
+    }
+  ],
+  "constraints": [],
+  "showPointNames": true,
+  "autoSave": true,
+  "theme": "dark",
+  "measurementUnits": "meters",
+  "precisionDigits": 3,
+  "showConstraintGlyphs": true,
+  "showMeasurements": true,
+  "autoOptimize": false,
+  "gridVisible": true,
+  "snapToGrid": false,
+  "defaultWorkspace": "world",
+  "showConstructionGeometry": true,
+  "enableSmartSnapping": true,
+  "constraintPreview": true,
+  "visualFeedbackLevel": "standard"
+}

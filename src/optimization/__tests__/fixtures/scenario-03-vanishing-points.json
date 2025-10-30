@@ -1,0 +1,202 @@
+{
+  "name": "Scenario 03: Vanishing Points Only",
+  "worldPoints": [
+    {
+      "id": "WorldPoint_0",
+      "name": "Origin",
+      "lockedXyz": [
+        0,
+        0,
+        0
+      ],
+      "inferredXyz": [
+        null,
+        null,
+        null
+      ],
+      "color": "#ffffff",
+      "isVisible": true
+    },
+    {
+      "id": "WorldPoint_1",
+      "name": "RefPoint",
+      "lockedXyz": [
+        10,
+        0,
+        0
+      ],
+      "inferredXyz": [
+        null,
+        null,
+        null
+      ],
+      "color": "#ffffff",
+      "isVisible": true
+    }
+  ],
+  "viewpoints": [
+    {
+      "id": "Viewpoint_2",
+      "name": "Camera1",
+      "filename": "scenario-03.jpg",
+      "url": "",
+      "imageWidth": 1920,
+      "imageHeight": 1080,
+      "focalLength": 1500,
+      "principalPointX": 960,
+      "principalPointY": 540,
+      "skewCoefficient": 0,
+      "aspectRatio": 1,
+      "radialDistortion": [
+        0,
+        0,
+        0
+      ],
+      "tangentialDistortion": [
+        0,
+        0
+      ],
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "calibrationAccuracy": 0,
+      "isProcessed": false,
+      "isVisible": true,
+      "opacity": 1,
+      "color": "#ffff00",
+      "vanishingLineIds": [
+        "VanishingLine_3",
+        "VanishingLine_4",
+        "VanishingLine_5",
+        "VanishingLine_6",
+        "VanishingLine_7",
+        "VanishingLine_8"
+      ]
+    }
+  ],
+  "lines": [],
+  "imagePoints": [
+    {
+      "id": "ImagePoint_9",
+      "worldPointId": "WorldPoint_0",
+      "viewpointId": "Viewpoint_2",
+      "u": -915.320479481712,
+      "v": -1319.5476549193568,
+      "isVisible": true,
+      "confidence": 1
+    },
+    {
+      "id": "ImagePoint_10",
+      "worldPointId": "WorldPoint_1",
+      "viewpointId": "Viewpoint_2",
+      "u": 655.9349467369912,
+      "v": -1004.5279554786277,
+      "isVisible": true,
+      "confidence": 1
+    }
+  ],
+  "constraints": [],
+  "vanishingLines": [
+    {
+      "id": "VanishingLine_3",
+      "viewpointId": "Viewpoint_2",
+      "axis": "x",
+      "p1": {
+        "u": -1968.5959670093193,
+        "v": -1530.7179853268917
+      },
+      "p2": {
+        "u": -56.98926786602692,
+        "v": -1147.461540980213
+      }
+    },
+    {
+      "id": "VanishingLine_4",
+      "viewpointId": "Viewpoint_2",
+      "axis": "x",
+      "p1": {
+        "u": -1053.6473362557028,
+        "v": -973.8848560105121
+      },
+      "p2": {
+        "u": 159.51583063531234,
+        "v": -778.7807154591355
+      }
+    },
+    {
+      "id": "VanishingLine_5",
+      "viewpointId": "Viewpoint_2",
+      "axis": "x",
+      "p1": {
+        "u": -4990.505445844534,
+        "v": -3369.836876870182
+      },
+      "p2": {
+        "u": -608.4147685603125,
+        "v": -2086.469491446954
+      }
+    },
+    {
+      "id": "VanishingLine_6",
+      "viewpointId": "Viewpoint_2",
+      "axis": "z",
+      "p1": {
+        "u": -2369.2605466024434,
+        "v": -2602.1621616177977
+      },
+      "p2": {
+        "u": -405.2865256030004,
+        "v": -869.6137388336147
+      }
+    },
+    {
+      "id": "VanishingLine_7",
+      "viewpointId": "Viewpoint_2",
+      "axis": "z",
+      "p1": {
+        "u": -608.4147685603125,
+        "v": -2086.469491446954
+      },
+      "p2": {
+        "u": 159.51583063531234,
+        "v": -778.7807154591355
+      }
+    },
+    {
+      "id": "VanishingLine_8",
+      "viewpointId": "Viewpoint_2",
+      "axis": "z",
+      "p1": {
+        "u": -4990.505445844534,
+        "v": -3369.836876870182
+      },
+      "p2": {
+        "u": -1053.6473362557028,
+        "v": -973.8848560105121
+      }
+    }
+  ],
+  "showPointNames": true,
+  "autoSave": true,
+  "theme": "dark",
+  "measurementUnits": "meters",
+  "precisionDigits": 3,
+  "showConstraintGlyphs": true,
+  "showMeasurements": true,
+  "autoOptimize": false,
+  "gridVisible": true,
+  "snapToGrid": false,
+  "defaultWorkspace": "world",
+  "showConstructionGeometry": true,
+  "enableSmartSnapping": true,
+  "constraintPreview": true,
+  "visualFeedbackLevel": "standard"
+}

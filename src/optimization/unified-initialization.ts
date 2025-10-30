@@ -10,6 +10,7 @@ import * as vec3 from '../utils/vec3'
 export interface InitializationOptions {
   sceneScale?: number
   verbose?: boolean
+  initializedViewpoints?: Set<Viewpoint>
 }
 
 export function initializeWorldPoints(
@@ -18,7 +19,7 @@ export function initializeWorldPoints(
   constraints: Constraint[],
   options: InitializationOptions = {}
 ): void {
-  const { sceneScale = 10.0, verbose = false } = options
+  const { sceneScale = 10.0, verbose = false, initializedViewpoints } = options
 
   const initialized = new Set<WorldPoint>()
 
@@ -30,7 +31,7 @@ export function initializeWorldPoints(
 
   step2_inferFromConstraints(points, lines, initialized, sceneScale, verbose)
 
-  step3_triangulateFromImages(points, initialized, sceneScale, verbose)
+  step3_triangulateFromImages(points, initialized, sceneScale, verbose, initializedViewpoints)
 
   step4_propagateThroughLineGraph(points, lines, initialized, sceneScale, verbose)
 
@@ -155,6 +156,10 @@ function inferPointPosition(
       position = [x0 + targetLength, y0, z0]
       break
 
+    case 'y-aligned':
+      position = [x0, y0 + targetLength, z0]
+      break
+
     case 'z-aligned':
       position = [x0, y0, z0 + targetLength]
       break
@@ -183,7 +188,8 @@ function step3_triangulateFromImages(
   points: WorldPoint[],
   initialized: Set<WorldPoint>,
   fallbackDepth: number,
-  verbose: boolean
+  verbose: boolean,
+  initializedViewpoints?: Set<Viewpoint>
 ): void {
   let triangulatedCount = 0
   let failedCount = 0
@@ -215,8 +221,12 @@ function step3_triangulateFromImages(
         const vp1 = ip1.viewpoint as Viewpoint
         const vp2 = ip2.viewpoint as Viewpoint
 
-        const vp1HasPose = vp1.position[0] !== 0 || vp1.position[1] !== 0 || vp1.position[2] !== 0
-        const vp2HasPose = vp2.position[0] !== 0 || vp2.position[1] !== 0 || vp2.position[2] !== 0
+        const vp1HasPose = initializedViewpoints
+          ? initializedViewpoints.has(vp1)
+          : (vp1.position[0] !== 0 || vp1.position[1] !== 0 || vp1.position[2] !== 0)
+        const vp2HasPose = initializedViewpoints
+          ? initializedViewpoints.has(vp2)
+          : (vp2.position[0] !== 0 || vp2.position[1] !== 0 || vp2.position[2] !== 0)
 
         if (!vp1HasPose || !vp2HasPose) continue
 

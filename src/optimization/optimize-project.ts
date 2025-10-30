@@ -135,18 +135,36 @@ export function optimizeProject(
 
     console.log(`[optimizeProject] Cameras needing initialization: ${uninitializedCameras.length}/${viewpointArray.length}`);
 
-    if (uninitializedCameras.length >= 2 && autoInitializeCameras) {
+    if (uninitializedCameras.length >= 1 && autoInitializeCameras) {
       const worldPointArray = Array.from(project.worldPoints) as WorldPoint[];
       const lockedPoints = worldPointArray.filter(wp => wp.isFullyConstrained());
       const worldPointSet = new Set<WorldPoint>(worldPointArray);
 
-      if (lockedPoints.length >= 2) {
+      if (lockedPoints.length >= 2 || uninitializedCameras.some(vp => (vp as Viewpoint).canInitializeWithVanishingPoints(worldPointSet))) {
         console.log(`[optimizeProject] Found ${lockedPoints.length} constrained points`);
 
-        for (const wp of lockedPoints) {
-          const effective = wp.getEffectiveXyz();
-          wp.optimizedXyz = [effective[0]!, effective[1]!, effective[2]!];
-          console.log(`  ${wp.name}: [${wp.optimizedXyz.join(', ')}]`);
+        const canAnyCameraUsePnP = uninitializedCameras.some(vp => {
+          const vpConcrete = vp as Viewpoint;
+          const vpLockedPoints = Array.from(vpConcrete.imagePoints).filter(ip =>
+            (ip.worldPoint as WorldPoint).isFullyConstrained()
+          );
+          return vpLockedPoints.length >= 3;
+        });
+
+        const canAnyCameraUseVP = uninitializedCameras.some(vp =>
+          (vp as Viewpoint).canInitializeWithVanishingPoints(worldPointSet)
+        );
+
+        const willUseEssentialMatrix = !canAnyCameraUsePnP && !canAnyCameraUseVP;
+
+        if (!willUseEssentialMatrix) {
+          for (const wp of lockedPoints) {
+            const effective = wp.getEffectiveXyz();
+            wp.optimizedXyz = [effective[0]!, effective[1]!, effective[2]!];
+            console.log(`  ${wp.name}: [${wp.optimizedXyz.join(', ')}]`);
+          }
+        } else {
+          console.log(`[optimizeProject] Skipping locked point initialization (will use Essential Matrix with scale resolution)`);
         }
 
         for (const vp of uninitializedCameras) {
@@ -215,10 +233,92 @@ export function optimizeProject(
     const pointArray = Array.from(project.worldPoints);
     const lineArray = Array.from(project.lines);
     const constraintArray = Array.from(project.constraints);
+
+    const initializedViewpointSet = new Set<Viewpoint>();
+    for (const vpName of camerasInitialized) {
+      const vp = Array.from(project.viewpoints).find(v => v.name === vpName);
+      if (vp) {
+        initializedViewpointSet.add(vp as Viewpoint);
+      }
+    }
+
     unifiedInitialize(pointArray, lineArray, constraintArray, {
       sceneScale: 10.0,
-      verbose: true
+      verbose: true,
+      initializedViewpoints: initializedViewpointSet
     });
+
+    const lockedPoints = pointArray.filter(wp => wp.isFullyConstrained());
+    if (lockedPoints.length >= 2) {
+      const triangulatedLockedPoints = lockedPoints.filter(wp => wp.optimizedXyz !== undefined);
+
+      if (triangulatedLockedPoints.length >= 2) {
+        console.log(`[optimizeProject] Computing scale from ${triangulatedLockedPoints.length} locked points...`);
+
+        let sumScale = 0;
+        let count = 0;
+
+        for (let i = 0; i < triangulatedLockedPoints.length; i++) {
+          for (let j = i + 1; j < triangulatedLockedPoints.length; j++) {
+            const wp1 = triangulatedLockedPoints[i];
+            const wp2 = triangulatedLockedPoints[j];
+
+            const tri1 = wp1.optimizedXyz!;
+            const tri2 = wp2.optimizedXyz!;
+            const lock1 = wp1.getEffectiveXyz();
+            const lock2 = wp2.getEffectiveXyz();
+
+            const triDist = Math.sqrt(
+              (tri2[0] - tri1[0]) ** 2 +
+              (tri2[1] - tri1[1]) ** 2 +
+              (tri2[2] - tri1[2]) ** 2
+            );
+
+            const lockDist = Math.sqrt(
+              (lock2[0]! - lock1[0]!) ** 2 +
+              (lock2[1]! - lock1[1]!) ** 2 +
+              (lock2[2]! - lock1[2]!) ** 2
+            );
+
+            if (triDist > 0.01) {
+              const scale = lockDist / triDist;
+              console.log(`  ${wp1.name} <-> ${wp2.name}: triangulated=${triDist.toFixed(3)}, locked=${lockDist.toFixed(3)}, scale=${scale.toFixed(4)}`);
+              console.log(`    ${wp1.name}: tri=[${tri1.map(v => v.toFixed(2)).join(', ')}], lock=[${lock1.map(v => v!.toFixed(2)).join(', ')}]`);
+              console.log(`    ${wp2.name}: tri=[${tri2.map(v => v.toFixed(2)).join(', ')}], lock=[${lock2.map(v => v!.toFixed(2)).join(', ')}]`);
+              sumScale += scale;
+              count++;
+            }
+          }
+        }
+
+        if (count > 0) {
+          const scale = sumScale / count;
+          console.log(`[optimizeProject] Computed scale factor: ${scale.toFixed(4)}`);
+
+          for (const wp of pointArray) {
+            if (wp.optimizedXyz) {
+              wp.optimizedXyz = [
+                wp.optimizedXyz[0] * scale,
+                wp.optimizedXyz[1] * scale,
+                wp.optimizedXyz[2] * scale
+              ];
+            }
+          }
+
+          const viewpointArray = Array.from(project.viewpoints);
+          for (const vp of viewpointArray) {
+            const vpConcrete = vp as Viewpoint;
+            vpConcrete.position = [
+              vpConcrete.position[0] * scale,
+              vpConcrete.position[1] * scale,
+              vpConcrete.position[2] * scale
+            ];
+          }
+
+          console.log('[optimizeProject] Applied scale to all cameras and world points');
+        }
+      }
+    }
   }
 
   if (autoInitializeCameras) {
@@ -226,8 +326,7 @@ export function optimizeProject(
     const worldPointSet = new Set(project.worldPoints);
 
     const stillUninitializedCameras = viewpointArray.filter(vp => {
-      const v = vp as Viewpoint;
-      return v.position[0] === 0 && v.position[1] === 0 && v.position[2] === 0;
+      return !camerasInitialized.includes(vp.name);
     });
 
     for (const vp of stillUninitializedCameras) {
