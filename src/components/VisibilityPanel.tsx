@@ -1,6 +1,6 @@
 import React from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faEye, faEyeSlash, faLock, faLockOpen, faChevronUp, faChevronDown } from '@fortawesome/free-solid-svg-icons'
+import { faEye, faEyeSlash, faLock, faLockOpen, faChevronUp, faChevronDown, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { ViewSettings, VisibilitySettings, LockSettings } from '../types/visibility'
 import { observer } from 'mobx-react-lite'
 
@@ -51,7 +51,14 @@ export const VisibilityPanel: React.FC<VisibilityPanelProps> = observer(({
       {isExpanded && (
         <div className="visibility-panel__content">
           <div className="visibility-panel__header">
-            Visibility & Locking Controls
+            <span>Visibility & Locking Controls</span>
+            <button
+              className="visibility-panel__close"
+              onClick={toggleExpanded}
+              title="Close visibility panel"
+            >
+              <FontAwesomeIcon icon={faXmark} />
+            </button>
           </div>
           <div className="visibility-panel__options">
             {visibilityOptions.map(option => {

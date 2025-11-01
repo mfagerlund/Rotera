@@ -872,7 +872,6 @@ export const MainLayout: React.FC = observer(() => {
             >
               <span className="status-bar__toggle-indicator" aria-hidden="true" />
               <span className="status-bar__toggle-label">Component labels</span>
-              <span className="status-bar__toggle-state">{showComponentNames ? 'ON' : 'OFF'}</span>
             </button>
 
             {/* Worktree Identifier Badge */}

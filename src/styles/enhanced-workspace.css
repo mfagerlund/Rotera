@@ -389,6 +389,23 @@
   margin-bottom: 12px;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--border, #333);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.visibility-panel__close {
+  background: none;
+  border: none;
+  color: var(--text-secondary, #999);
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 14px;
+  transition: color 0.2s ease;
+}
+
+.visibility-panel__close:hover {
+  color: var(--text, #fff);
 }
 
 .visibility-panel__options {

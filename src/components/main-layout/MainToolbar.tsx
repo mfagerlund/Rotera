@@ -174,15 +174,6 @@ export const MainToolbar: React.FC<MainToolbarProps> = ({
           Point Names
         </label>
 
-        <button
-          className="btn-tool"
-          onClick={onToggleComponentOverlay}
-          title="Toggle component overlay"
-        >
-          <FontAwesomeIcon icon={showComponentOverlay ? faToggleOn : faToggleOff} />
-          {' '}Components
-        </button>
-
         <label className="toolbar-label">
           Feedback:
           <select
