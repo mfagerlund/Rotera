@@ -1,24 +1,24 @@
 import { describe, it, expect } from '@jest/globals';
-import { EntityProject } from '../../entities/project';
-import { Viewpoint } from '../../entities/viewpoint';
-import { WorldPoint } from '../../entities/world-point';
-import { VanishingLine } from '../../entities/vanishing-line';
-import { ImagePoint } from '../../entities/imagePoint';
+import { Project } from '../../entities/project/Project';
+import { Viewpoint } from '../../entities/viewpoint/Viewpoint';
+import { WorldPoint } from '../../entities/world-point/WorldPoint';
+import { VanishingLine } from '../../entities/vanishing-line/VanishingLine';
+import { ImagePoint } from '../../entities/imagePoint/ImagePoint';
 import { initializeCameraWithVanishingPoints } from '../vanishing-points';
 
 describe('Vanishing Point Roll Correction', () => {
   it('should initialize camera with Y VP horizontally centered between X and Z VPs', () => {
-    const project = new EntityProject();
+    const project = Project.create('Test Project');
 
     const viewpoint = new Viewpoint(
       'test-view',
       'test.jpg',
       '',
-      1920,
-      1080
+      1100,
+      724
     );
-    viewpoint.principalPointX = 960;
-    viewpoint.principalPointY = 540;
+    viewpoint.principalPointX = 550;
+    viewpoint.principalPointY = 362;
     viewpoint.focalLength = 243.6;
     project.addViewpoint(viewpoint);
 

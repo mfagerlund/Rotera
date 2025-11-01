@@ -9,6 +9,7 @@ import { DistanceConstraint } from '../entities/constraints/distance-constraint'
 import { AngleConstraint } from '../entities/constraints/angle-constraint'
 import { Serialization } from '../entities/Serialization'
 import { VanishingLine } from '../entities/vanishing-line'
+import { ImageUtils } from '../utils/imageUtils'
 
 export interface WorldPointOptions {
   lockedXyz?: [number | null, number | null, number | null]
@@ -176,18 +177,14 @@ export function useDomainOperations(
   const addImage = async (file: File): Promise<Viewpoint | undefined> => {
     if (!project) return
 
-    const reader = new FileReader()
-    const dataUrl = await new Promise<string>((resolve) => {
-      reader.onload = (e) => resolve(e.target?.result as string)
-      reader.readAsDataURL(file)
-    })
+    const imageLoadResult = await ImageUtils.loadImageFile(file)
 
     const viewpoint = Viewpoint.create(
+      imageLoadResult.name,
       file.name,
-      file.name,
-      dataUrl,
-      1920,
-      1080
+      imageLoadResult.url,
+      imageLoadResult.imageWidth,
+      imageLoadResult.imageHeight
     )
 
     project.addViewpoint(viewpoint)

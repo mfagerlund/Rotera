@@ -3,7 +3,7 @@ import { describe, it, expect } from '@jest/globals';
 describe('VP Roll Correction - Standalone', () => {
   it('should compute rotation with Y VP horizontally centered between X and Z VPs', () => {
     const focalLength = 243.6;
-    const principalPoint = { u: 960, v: 540 };
+    const principalPoint = { u: 550, v: 362 };
 
     const xVanishingPoint = { u: 46.25, v: 373.84 };
     const zVanishingPoint = { u: 1055.35, v: 372.86 };
@@ -20,7 +20,15 @@ describe('VP Roll Correction - Standalone', () => {
       1
     ];
 
-    const R = computeRotationFromVanishingDirections(directionX, directionZ);
+    const targetYvpU = (xVanishingPoint.u + zVanishingPoint.u) / 2;
+
+    const R = computeRotationFromVanishingDirections(
+      directionX,
+      directionZ,
+      focalLength,
+      principalPoint,
+      targetYvpU
+    );
 
     const computeVPu = (worldAxisCol: number): number => {
       const dir = [R[0][worldAxisCol], R[1][worldAxisCol], R[2][worldAxisCol]];
@@ -31,8 +39,6 @@ describe('VP Roll Correction - Standalone', () => {
     const xVP = computeVPu(0);
     const yVP = computeVPu(1);
     const zVP = computeVPu(2);
-
-    const targetYvpU = (xVanishingPoint.u + zVanishingPoint.u) / 2;
 
     console.log('\n=== VP Roll Correction Test ===');
     console.log(`Input vanishing points:`);
@@ -55,7 +61,29 @@ describe('VP Roll Correction - Standalone', () => {
 
 function computeRotationFromVanishingDirections(
   directionX: number[],
-  directionZ: number[]
+  directionZ: number[],
+  focalLength: number,
+  principalPoint: { u: number; v: number },
+  targetYvpU: number
 ): number[][] {
-  throw new Error('TODO: Implement this function');
+  const normalize = (v: number[]): number[] => {
+    const len = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+    return [v[0] / len, v[1] / len, v[2] / len];
+  };
+
+  const cross = (a: number[], b: number[]): number[] => [
+    a[1] * b[2] - a[2] * b[1],
+    a[2] * b[0] - a[0] * b[2],
+    a[0] * b[1] - a[1] * b[0]
+  ];
+
+  const rX = normalize(directionX);
+  const rZ = normalize(directionZ);
+  const rY = normalize(cross(rZ, rX));
+
+  return [
+    [rX[0], rY[0], rZ[0]],
+    [rX[1], rY[1], rZ[1]],
+    [rX[2], rY[2], rZ[2]]
+  ];
 }

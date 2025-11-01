@@ -8,6 +8,7 @@ import {
 } from './types'
 import { computeVanishingPoint, validateLineQuality } from '../../optimization/vanishing-points'
 import { VanishingLine } from '../../entities/vanishing-line'
+import { renderLoupe } from './loupe-renderer'
 
 const AXIS_COLORS: Record<'x' | 'y' | 'z', string> = {
   x: '#ff0000',
@@ -65,7 +66,7 @@ export const useImageViewerRenderer = ({
     visibility
   } = renderState
 
-  const isPlacementInteractionActive = isDraggingPoint || isDragDropActive || isPlacementModeActive || isPointCreationActive || isLoopTraceActive
+  const isPlacementInteractionActive = isDraggingPoint || isDragDropActive || isPlacementModeActive || isPointCreationActive || isLoopTraceActive || isDraggingVanishingLine
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -293,7 +294,7 @@ export const useImageViewerRenderer = ({
       ctx.fill()
     }
 
-    const renderLoupe = () => {
+    const renderLoupeHelper = () => {
       if (!isPlacementInteractionActive) {
         return
       }
@@ -310,109 +311,22 @@ export const useImageViewerRenderer = ({
         return
       }
 
-      const imageCoords = canvasToImageCoords(anchor.x, anchor.y)
-      if (!imageCoords) {
-        return
-      }
+      const imageU = (anchor.x - offset.x) / scale
+      const imageV = (anchor.y - offset.y) / scale
 
-      const diameter = 160
-      const radius = diameter / 2
-      const loupeZoom = 3
-      const padding = 24
-      const precisionActive = isPrecisionDrag
-
-      let centerX = anchor.x + padding + radius
-      let centerY = anchor.y + padding + radius
-
-      if (centerX + radius > canvasEl.width) {
-        centerX = anchor.x - padding - radius
-      }
-      if (centerY + radius > canvasEl.height) {
-        centerY = anchor.y - padding - radius
-      }
-
-      const margin = 12 + radius
-      centerX = Math.max(margin, Math.min(centerX, canvasEl.width - margin))
-      centerY = Math.max(margin, Math.min(centerY, canvasEl.height - margin))
-
-      const sourceSize = diameter / loupeZoom
-      const maxSourceX = Math.max(0, imgEl.width - sourceSize)
-      const maxSourceY = Math.max(0, imgEl.height - sourceSize)
-
-      let sourceX = imageCoords.u - sourceSize / 2
-      let sourceY = imageCoords.v - sourceSize / 2
-
-      sourceX = Math.max(0, Math.min(sourceX, maxSourceX))
-      sourceY = Math.max(0, Math.min(sourceY, maxSourceY))
-
-      const drawX = centerX - ((imageCoords.u - sourceX) / sourceSize) * diameter
-      const drawY = centerY - ((imageCoords.v - sourceY) / sourceSize) * diameter
-      const topLeftX = centerX - radius
-      const topLeftY = centerY - radius
-
-      ctx.save()
-
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)'
-      ctx.beginPath()
-      ctx.arc(centerX + 3, centerY + 3, radius + 4, 0, Math.PI * 2)
-      ctx.fill()
-
-      ctx.beginPath()
-      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
-      ctx.clip()
-
-      ctx.fillStyle = '#111111'
-      ctx.fillRect(topLeftX, topLeftY, diameter, diameter)
-
-      ctx.drawImage(imgEl, sourceX, sourceY, sourceSize, sourceSize, drawX, drawY, diameter, diameter)
-
-      ctx.restore()
-
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)'
-      ctx.lineWidth = 3
-      ctx.beginPath()
-      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
-      ctx.stroke()
-
-      const crosshairColor = precisionActive ? 'rgba(6, 150, 215, 0.85)' : 'rgba(255, 255, 255, 0.6)'
-      const crosshairExtent = radius * (precisionActive ? 0.55 : 0.8)
-
-      ctx.strokeStyle = crosshairColor
-      ctx.lineWidth = precisionActive ? 2 : 1
-      ctx.beginPath()
-      ctx.moveTo(centerX - crosshairExtent, centerY)
-      ctx.lineTo(centerX + crosshairExtent, centerY)
-      ctx.moveTo(centerX, centerY - crosshairExtent)
-      ctx.lineTo(centerX, centerY + crosshairExtent)
-      ctx.stroke()
-
-      ctx.beginPath()
-      ctx.arc(centerX, centerY, precisionActive ? 3 : 4, 0, Math.PI * 2)
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)'
-      ctx.fill()
-      ctx.strokeStyle = precisionActive ? 'rgba(6, 150, 215, 0.8)' : 'rgba(0, 0, 0, 0.6)'
-      ctx.lineWidth = 1
-      ctx.stroke()
-
-      if (precisionActive) {
-        ctx.font = '12px Arial'
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.55)'
-        ctx.lineWidth = 3
-        ctx.strokeText('Precision', centerX, centerY + radius - 18)
-        ctx.fillText('Precision', centerX, centerY + radius - 18)
-      } else {
-        ctx.font = '11px Arial'
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.55)'
-        ctx.lineWidth = 3
-        ctx.strokeText('Tap Shift for precision', centerX, centerY + radius - 18)
-        ctx.fillText('Tap Shift for precision', centerX, centerY + radius - 18)
-      }
+      renderLoupe({
+        ctx,
+        canvasEl,
+        imgEl,
+        anchorX: anchor.x,
+        anchorY: anchor.y,
+        imageU,
+        imageV,
+        scale,
+        offsetX: offset.x,
+        offsetY: offset.y,
+        precisionActive: isPrecisionDrag
+      })
     }
 
     const renderLines = () => {
@@ -806,6 +720,32 @@ export const useImageViewerRenderer = ({
         ctx.stroke()
         ctx.setLineDash([])
       }
+
+      const ppX = viewpoint.principalPointX * scale + offset.x
+      const ppY = viewpoint.principalPointY * scale + offset.y
+
+      ctx.strokeStyle = '#FFFFFF'
+      ctx.lineWidth = 2
+      ctx.setLineDash([])
+
+      const ppSize = 12
+      ctx.beginPath()
+      ctx.arc(ppX, ppY, ppSize, 0, 2 * Math.PI)
+      ctx.stroke()
+
+      ctx.strokeStyle = '#FF00FF'
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.arc(ppX, ppY, ppSize - 3, 0, 2 * Math.PI)
+      ctx.stroke()
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
+      ctx.fillRect(ppX - 25, ppY - ppSize - 20, 50, 14)
+      ctx.fillStyle = '#FF00FF'
+      ctx.font = 'bold 10px Arial'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText('PP', ppX, ppY - ppSize - 13)
 
       if (Object.keys(vanishingPoints).filter(k => vanishingPoints[k as 'x' | 'y' | 'z']).length >= 2) {
         const canvasEl = canvasRef.current
@@ -1442,7 +1382,7 @@ export const useImageViewerRenderer = ({
       renderConstructionPreview()
       renderSelectionOverlay()
       renderPanFeedback()
-      renderLoupe()
+      renderLoupeHelper()
 
       animationId = requestAnimationFrame(render)
     }
