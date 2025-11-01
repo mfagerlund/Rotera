@@ -49,7 +49,6 @@ interface RightPanelProps {
   constraints: any[]
   selectedWorldPoints: WorldPoint[]
   hoveredWorldPoint: WorldPoint | null
-  currentImageId: string | null
   placementMode: { active: boolean; worldPoint: WorldPoint | null }
   onSelectWorldPoint: (worldPoint: WorldPoint, ctrlKey: boolean, shiftKey: boolean) => void
   onHighlightWorldPoint: (worldPoint: WorldPoint | null) => void
@@ -101,7 +100,6 @@ export const RightPanel: React.FC<RightPanelProps> = observer(({
   constraints,
   selectedWorldPoints,
   hoveredWorldPoint,
-  currentImageId,
   placementMode,
   onSelectWorldPoint,
   onHighlightWorldPoint,
@@ -161,7 +159,7 @@ export const RightPanel: React.FC<RightPanelProps> = observer(({
         constraints={constraints}
         selectedWorldPoints={selectedWorldPoints}
         hoveredWorldPoint={hoveredWorldPoint}
-        currentImageId={currentImageId}
+        currentViewpoint={currentViewpoint ?? null}
         placementMode={placementMode}
         onSelectWorldPoint={onSelectWorldPoint}
         onHighlightWorldPoint={onHighlightWorldPoint}

@@ -18,7 +18,7 @@ interface WorldPointPanelProps {
   constraints: Constraint[]
   selectedWorldPoints: WorldPoint[]
   hoveredWorldPoint?: WorldPoint | null
-  currentImageId: string | null
+  currentViewpoint: Viewpoint | null
   placementMode: { active: boolean; worldPoint: WorldPoint | null }
   onSelectWorldPoint: (worldPoint: WorldPoint, ctrlKey: boolean, shiftKey: boolean) => void
   onRenameWorldPoint: (worldPoint: WorldPoint, newName: string) => void
@@ -36,7 +36,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
   constraints,
   selectedWorldPoints,
   hoveredWorldPoint,
-  currentImageId,
+  currentViewpoint,
   placementMode,
   onSelectWorldPoint,
   onRenameWorldPoint,
@@ -211,7 +211,6 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
 
   const getContextMenuItems = (worldPoint: WorldPoint): ContextMenuItem[] => {
     const items: ContextMenuItem[] = []
-    const currentViewpoint = currentImageId ? viewpoints.get(currentImageId) : null
     const isMissingFromImage = currentViewpoint && !isWorldPointInImage(worldPoint, currentViewpoint)
 
     // Edit (full properties)
@@ -294,7 +293,6 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
 
   // Check if world point is missing from current image
   const isWorldPointMissingFromImage = (wp: WorldPoint): boolean => {
-    const currentViewpoint = currentImageId ? viewpoints.get(currentImageId) : null
     if (!currentViewpoint) return false
     return !isWorldPointInImage(wp, currentViewpoint)
   }
