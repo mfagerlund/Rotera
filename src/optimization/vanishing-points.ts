@@ -487,8 +487,15 @@ export function computeRotationFromVPs(
     [d_x[1], d_y[1], d_z[1]],
     [d_x[2], d_y[2], d_z[2]]
   ]
+  const quaternion = matrixToQuaternion(R)
 
-  return matrixToQuaternion(R)
+  console.log('[VP Debug] Computed rotation matrix from vanishing points:')
+  console.log(`[ ${R[0].map(v => v.toFixed(6)).join(', ')} ]`)
+  console.log(`[ ${R[1].map(v => v.toFixed(6)).join(', ')} ]`)
+  console.log(`[ ${R[2].map(v => v.toFixed(6)).join(', ')} ]`)
+  console.log('[VP Debug] Quaternion:', quaternion.map(v => Number(v.toFixed(6))))
+
+  return quaternion
 }
 
 export function computeCameraPosition(
@@ -783,6 +790,40 @@ export function initializeCameraWithVanishingPoints(
   viewpoint.rotation = rotation
   viewpoint.position = position
   viewpoint.focalLength = focalLength
+
+  const basis = {
+    x: [1, 0, 0] as [number, number, number],
+    y: [0, 1, 0] as [number, number, number],
+    z: [0, 0, 1] as [number, number, number]
+  }
+
+  const rotationMatrix = [
+    [1 - 2 * (rotation[2] * rotation[2] + rotation[3] * rotation[3]), 2 * (rotation[1] * rotation[2] - rotation[3] * rotation[0]), 2 * (rotation[1] * rotation[3] + rotation[2] * rotation[0])],
+    [2 * (rotation[1] * rotation[2] + rotation[3] * rotation[0]), 1 - 2 * (rotation[1] * rotation[1] + rotation[3] * rotation[3]), 2 * (rotation[2] * rotation[3] - rotation[1] * rotation[0])],
+    [2 * (rotation[1] * rotation[3] - rotation[2] * rotation[0]), 2 * (rotation[2] * rotation[3] + rotation[1] * rotation[0]), 1 - 2 * (rotation[1] * rotation[1] + rotation[2] * rotation[2])]
+  ]
+
+  const cameraVps: Record<string, { u: number; v: number }> = {}
+  Object.entries(basis).forEach(([axis, dir]) => {
+    const camDir = [
+      rotationMatrix[0][0] * dir[0] + rotationMatrix[0][1] * dir[1] + rotationMatrix[0][2] * dir[2],
+      rotationMatrix[1][0] * dir[0] + rotationMatrix[1][1] * dir[1] + rotationMatrix[1][2] * dir[2],
+      rotationMatrix[2][0] * dir[0] + rotationMatrix[2][1] * dir[1] + rotationMatrix[2][2] * dir[2]
+    ]
+
+    if (Math.abs(camDir[2]) < 1e-6) {
+      return
+    }
+
+    const u = principalPoint.u + focalLength * (camDir[0] / camDir[2])
+    const v = principalPoint.v - focalLength * (camDir[1] / camDir[2])
+    cameraVps[axis] = { u, v }
+  })
+
+  console.log('[initializeCameraWithVanishingPoints] Camera predicted vanishing points:')
+  Object.entries(cameraVps).forEach(([axis, vp]) => {
+    console.log(`  ${axis.toUpperCase()} axis -> VP at (${vp.u.toFixed(2)}, ${vp.v.toFixed(2)})`)
+  })
 
   console.log(
     `[initializeCameraWithVanishingPoints] Success! Position: [${position.map(p => p.toFixed(2)).join(', ')}], ` +
