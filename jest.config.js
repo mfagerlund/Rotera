@@ -8,7 +8,9 @@ export default {
   ],
   testPathIgnorePatterns: [
     '/node_modules/',
-    '/src/wip/'
+    '/src/wip/',
+    'test-helpers.ts',
+    'fixture-generator-helpers.ts'
   ],
   transform: {
     '^.+\\.(ts|tsx)$': 'ts-jest',
