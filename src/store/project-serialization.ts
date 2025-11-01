@@ -26,7 +26,6 @@ export function enableAutoSave(project: Project, intervalMs: number = 30000): vo
 
   autoSaveTimeout = setInterval(() => {
     saveToLocalStorage(project)
-    console.log('Auto-saved project')
   }, intervalMs)
 }
 

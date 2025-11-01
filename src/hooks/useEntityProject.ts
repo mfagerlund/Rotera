@@ -27,7 +27,6 @@ export const useEntityProject = () => {
     try {
       const loaded = loadFromLocalStorage(STORAGE_KEY)
       if (loaded) {
-        console.log('Loaded project from localStorage')
         setEntityProject(loaded)
         // Set current image to first viewpoint if available
         const firstViewpoint = Array.from(loaded.viewpoints)[0]
@@ -35,7 +34,6 @@ export const useEntityProject = () => {
           setCurrentViewpoint(firstViewpoint)
         }
       } else {
-        console.log('Creating new empty project')
         const newProj = newProject()
         setEntityProject(newProj)
         saveToLocalStorage(newProj, STORAGE_KEY)

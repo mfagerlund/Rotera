@@ -624,7 +624,6 @@ export const MainLayout: React.FC = observer(() => {
                 constraints={constraints as any}
                 selectedWorldPoints={selectedPointEntities}
                 hoveredWorldPoint={hoveredWorldPoint}
-                currentImageId={currentViewpoint ? getEntityKey(currentViewpoint) : null}
                 placementMode={placementMode}
                 onSelectWorldPoint={(worldPoint: WorldPoint, ctrlKey: boolean, shiftKey: boolean) => {
                   handleEntityClick(worldPoint, ctrlKey, shiftKey)
@@ -750,7 +749,6 @@ export const MainLayout: React.FC = observer(() => {
         onSelectConstraint={(constraint) => {}}
         project={project}
         onOptimizationComplete={(success, message) => {
-          console.log(`Optimization ${success ? 'succeeded' : 'failed'}: ${message}`)
           saveProject()
         }}
         worldPointEditWindow={worldPointEditWindow}

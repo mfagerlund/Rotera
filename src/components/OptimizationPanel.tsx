@@ -126,10 +126,6 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
     let initializationError: string | null = null
     let canInitialize = true
 
-    console.log('[OptimizationPanel] Checking initialization requirements:')
-    console.log(`  Total viewpoints: ${viewpointArray.length}`)
-    console.log(`  Cameras that will need initialization: ${camerasNeedingInit}`)
-
     if (camerasNeedingInit >= 2) {
       const worldPointArray = pointArray as WorldPoint[]
       const lockedPoints = worldPointArray.filter(wp => wp.isFullyLocked())
@@ -150,9 +146,6 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
         }
       }
 
-      console.log(`  Locked points: ${lockedPoints.length}`)
-      console.log(`  Any camera can use PnP: ${anyCameraCanUsePnP}`)
-
       // Check if any camera can use vanishing point initialization
       let anyCameraCanUseVanishingPoints = false
       if (!anyCameraCanUsePnP) {
@@ -160,13 +153,10 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
           const vpConcrete = vp as Viewpoint
           if (vpConcrete.canInitializeWithVanishingPoints(new Set(worldPointArray))) {
             anyCameraCanUseVanishingPoints = true
-            console.log(`  ${vpConcrete.name} can use vanishing point initialization`)
             break
           }
         }
       }
-
-      console.log(`  Any camera can use vanishing points: ${anyCameraCanUseVanishingPoints}`)
 
       if (!anyCameraCanUsePnP && !anyCameraCanUseVanishingPoints) {
         // Fall back to Essential Matrix path: need at least 7 shared correspondences
@@ -182,17 +172,12 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
           }
         }
 
-        console.log(`  Shared correspondences: ${sharedWorldPoints.size}`)
-
         if (sharedWorldPoints.size < 7) {
           canInitialize = false
           initializationError = `Need at least 7 shared point correspondences between "${vp1.name}" and "${vp2.name}" (currently have ${sharedWorldPoints.size}). Add more image points that are visible in both cameras, OR lock at least 3 world point coordinates visible in one camera for PnP initialization, OR use vanishing point initialization (2+ axes with 2+ lines each, 2+ locked points visible).`
         }
       }
     }
-
-    console.log(`  canInitialize: ${canInitialize}`)
-    console.log(`  initializationError: ${initializationError}`)
 
     return {
       pointCount: pointArray.length,
@@ -224,8 +209,6 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
     setPnpResults([])
 
     try {
-      console.log('Running optimization with entities...')
-
       const pointEntities = Array.from(project.worldPoints.values())
       const lineEntities = Array.from(project.lines.values())
       const viewpointEntities = Array.from(project.viewpoints.values())
@@ -242,8 +225,6 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
           verbose: settings.verbose
         }
       )
-
-      console.log('Optimization result:', solverResult)
 
       const result = {
         converged: solverResult.converged,

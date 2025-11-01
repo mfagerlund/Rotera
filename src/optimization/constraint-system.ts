@@ -177,8 +177,6 @@ export class ConstraintSystem {
       return residuals;
     };
 
-    console.log(`[ConstraintSystem] ${variables.length} variables, ${this.constraints.size} constraints`);
-
     // If no variables to optimize, check if constraints are satisfied
     if (variables.length === 0) {
       const residuals = residualFn([]);
@@ -198,41 +196,29 @@ export class ConstraintSystem {
 
     // Test residual function before optimization
     try {
-      console.log('[ConstraintSystem] Testing residual function...');
-
       const allResiduals: Value[] = [];
 
-      console.log(`[ConstraintSystem] Computing line residuals (${this.lines.size} lines)...`);
       for (const line of this.lines) {
         const lineResiduals = line.computeResiduals(valueMap);
-        console.log(`  ${line.name || 'Line'}: ${lineResiduals.length} residuals = [${lineResiduals.map(r => r.data.toFixed(4)).join(', ')}]`);
         allResiduals.push(...lineResiduals);
       }
 
-      console.log(`[ConstraintSystem] Computing camera residuals (${this.cameras.size} cameras)...`);
       for (const camera of this.cameras) {
         if ('computeResiduals' in camera && typeof camera.computeResiduals === 'function') {
           const cameraResiduals = (camera as any).computeResiduals(valueMap);
-          console.log(`  ${camera.name}: ${cameraResiduals.length} residuals = [${cameraResiduals.map((r: Value) => r.data.toFixed(4)).join(', ')}]`);
           allResiduals.push(...cameraResiduals);
         }
       }
 
-      console.log(`[ConstraintSystem] Computing image point reprojections (${this.imagePoints.size} image points)...`);
       for (const imagePoint of this.imagePoints) {
         const reprojectionResiduals = imagePoint.computeResiduals(valueMap);
-        console.log(`  ${imagePoint.getName()}: ${reprojectionResiduals.length} residuals = [${reprojectionResiduals.map(r => r.data.toFixed(4)).join(', ')}]`);
         allResiduals.push(...reprojectionResiduals);
       }
 
-      console.log(`[ConstraintSystem] Computing constraint residuals (${this.constraints.size} constraints)...`);
       for (const constraint of this.constraints) {
         const constraintResiduals = constraint.computeResiduals(valueMap);
-        console.log(`  ${constraint.getName()}: ${constraintResiduals.length} residuals = [${constraintResiduals.map(r => r.data.toFixed(4)).join(', ')}]`);
         allResiduals.push(...constraintResiduals);
       }
-
-      console.log(`[ConstraintSystem] Total residuals: ${allResiduals.length}`);
 
       const hasNaN = allResiduals.some(r => isNaN(r.data));
       const hasInfinity = allResiduals.some(r => !isFinite(r.data));
@@ -261,7 +247,6 @@ export class ConstraintSystem {
 
     try {
       // Solve using Levenberg-Marquardt
-      console.log('[ConstraintSystem] Starting nonlinearLeastSquares...');
       const result = nonlinearLeastSquares(variables, residualFn, {
         costTolerance: this.tolerance,
         maxIterations: this.maxIterations,
@@ -397,9 +382,7 @@ export class ConstraintSystem {
       }
     }
 
-    if (!hasViolations) {
-      console.log('[ConstraintSystem] ✓ All entities have symmetric push/pop residuals');
-    }
+    // All entities have symmetric push/pop residuals
   }
 
   /**

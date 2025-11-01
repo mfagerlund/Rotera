@@ -100,7 +100,6 @@ export const ImagePointsManager: React.FC<ImagePointsManagerProps> = ({
           onClick={(e) => {
             e.stopPropagation()
             // TODO: Focus on this image point in the image viewer
-            console.log('Focus on image point:', entity.id)
           }}
           title="Focus in image viewer"
         >

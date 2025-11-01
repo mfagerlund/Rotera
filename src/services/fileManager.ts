@@ -58,8 +58,6 @@ export class FileManagerService {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
-
-      console.log('Project saved to file:', filename)
     } catch (error) {
       console.error('Error saving project to file:', error)
       throw new Error('Failed to save project to file')
@@ -140,8 +138,6 @@ export class FileManagerService {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
-
-      console.log('Project data exported:', filename)
     } catch (error) {
       console.error('Error exporting project data:', error)
       throw new Error('Failed to export project data')
@@ -320,7 +316,6 @@ export class FileManagerService {
           savedAt: new Date().toISOString()
         }
         localStorage.setItem('pictorigo_autosave', JSON.stringify(autoSaveData))
-        console.log('Auto-saved project to localStorage')
       } catch (error) {
         console.warn('Failed to auto-save project:', error)
       }
@@ -358,7 +353,6 @@ export class FileManagerService {
   static clearAutoSave(): void {
     try {
       localStorage.removeItem('pictorigo_autosave')
-      console.log('Auto-save data cleared')
     } catch (error) {
       console.warn('Failed to clear auto-save data:', error)
     }

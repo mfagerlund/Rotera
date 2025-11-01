@@ -477,37 +477,25 @@ export function useImageViewerEvents({
   }, [dragState, imageViewerState, pointDragState, precisionDragState, vanishingLineDragState, precisionMode, onPointHover, onMousePositionChange])
 
   const handleContextMenu = useCallback((event: React.MouseEvent) => {
-    console.log('=== ImageViewer: handleContextMenu triggered ===')
-    console.log('Event button:', event.button, 'Event type:', event.type)
-    console.log('onPointRightClick defined:', !!onPointRightClick)
-    console.log('onLineClick defined:', !!onLineClick)
-
     event.preventDefault()
     event.stopPropagation()
 
     const canvas = canvasRef.current
     if (!canvas) {
-      console.log('No canvas ref')
       return
     }
 
     const rect = canvas.getBoundingClientRect()
     const x = event.clientX - rect.left
     const y = event.clientY - rect.top
-    console.log('Click position:', x, y)
 
     const nearbyPoint = selectionManager.findNearbyPoint(x, y)
     const nearbyLine = selectionManager.findNearbyLine(x, y)
-    console.log('Nearby point:', nearbyPoint?.getName(), 'Nearby line:', nearbyLine)
 
     if (nearbyPoint && onPointRightClick) {
-      console.log('✓ Calling onPointRightClick for point:', nearbyPoint.getName())
       onPointRightClick(nearbyPoint)
     } else if (nearbyLine && onLineRightClick) {
-      console.log('✓ Calling onLineRightClick for line:', nearbyLine)
       onLineRightClick(nearbyLine)
-    } else {
-      console.log('× No nearby entity found (empty space)')
     }
   }, [canvasRef, selectionManager, onPointRightClick, onLineClick, onLineRightClick])
 

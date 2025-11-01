@@ -292,7 +292,6 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
               onClick={(e) => {
                 e.stopPropagation()
                 // TODO: Focus on constraint entities
-                console.log('Focus on constraint entities:', entity.id)
               }}
               title="Focus on constraint entities"
             >

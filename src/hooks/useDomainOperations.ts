@@ -347,9 +347,7 @@ export function useDomainOperations(
       }
     }
 
-    if (removedCount > 0) {
-      console.log(`Removed ${removedCount} duplicate image points`)
-    }
+    // Removed duplicates if any
 
     return removedCount
   }
