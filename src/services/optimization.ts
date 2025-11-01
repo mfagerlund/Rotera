@@ -448,7 +448,7 @@ export const defaultOptimizationSettings = {
   maxIterations: 200,  // Sufficient for bundle adjustment with good initialization
   tolerance: 1e-6,
   damping: 0.1,
-  verbose: true  // Enable verbose logging to see progress
+  verbose: false
 }
 
 // Validation function

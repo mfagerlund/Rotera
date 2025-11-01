@@ -10,6 +10,6 @@ export function initializeWorldPoints(
 ): void {
   unifiedInitialize(points, lines, constraints, {
     sceneScale: 10.0,
-    verbose: true
+    verbose: false
   })
 }

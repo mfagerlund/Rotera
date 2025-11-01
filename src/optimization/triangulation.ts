@@ -39,7 +39,7 @@ export function triangulateRayRay(
   const vp2Concrete = vp2 as Viewpoint;
 
   const ray1_cam_x = (ip1.u - vp1Concrete.principalPointX) / vp1Concrete.focalLength;
-  const ray1_cam_y = (ip1.v - vp1Concrete.principalPointY) / vp1Concrete.focalLength;
+  const ray1_cam_y = (vp1Concrete.principalPointY - ip1.v) / vp1Concrete.focalLength;
   const ray1_cam_z = 1.0;
   const ray1_cam_norm = Math.sqrt(ray1_cam_x * ray1_cam_x + ray1_cam_y * ray1_cam_y + ray1_cam_z * ray1_cam_z);
   const ray1_cam = [ray1_cam_x / ray1_cam_norm, ray1_cam_y / ray1_cam_norm, ray1_cam_z / ray1_cam_norm];
@@ -51,7 +51,7 @@ export function triangulateRayRay(
   const d1_z = ray1_world[2];
 
   const ray2_cam_x = (ip2.u - vp2Concrete.principalPointX) / vp2Concrete.focalLength;
-  const ray2_cam_y = (ip2.v - vp2Concrete.principalPointY) / vp2Concrete.focalLength;
+  const ray2_cam_y = (vp2Concrete.principalPointY - ip2.v) / vp2Concrete.focalLength;
   const ray2_cam_z = 1.0;
   const ray2_cam_norm = Math.sqrt(ray2_cam_x * ray2_cam_x + ray2_cam_y * ray2_cam_y + ray2_cam_z * ray2_cam_z);
   const ray2_cam = [ray2_cam_x / ray2_cam_norm, ray2_cam_y / ray2_cam_norm, ray2_cam_z / ray2_cam_norm];

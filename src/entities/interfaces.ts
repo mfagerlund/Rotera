@@ -22,6 +22,8 @@ export interface IImagePoint {
     isVisible: boolean
     confidence: number
     isOutlier: boolean
+    reprojectedU?: number
+    reprojectedV?: number
 }
 
 export interface IViewpoint {

@@ -134,15 +134,15 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
     }
 
     isXLocked(): boolean {
-        return this.lockedXyz[0] !== null
+        return this.lockedXyz[0] !== null || this.inferredXyz[0] !== null
     }
 
     isYLocked(): boolean {
-        return this.lockedXyz[1] !== null
+        return this.lockedXyz[1] !== null || this.inferredXyz[1] !== null
     }
 
     isZLocked(): boolean {
-        return this.lockedXyz[2] !== null
+        return this.lockedXyz[2] !== null || this.inferredXyz[2] !== null
     }
 
     isSelected(): boolean {
@@ -405,9 +405,13 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
         const yLocked = this.isYLocked()
         const zLocked = this.isZLocked()
 
-        const x = xLocked ? V.C(lockedXyz[0]!) : V.W(inferredXyz[0] ?? optimizedXyz![0])
-        const y = yLocked ? V.C(lockedXyz[1]!) : V.W(inferredXyz[1] ?? optimizedXyz![1])
-        const z = zLocked ? V.C(lockedXyz[2]!) : V.W(inferredXyz[2] ?? optimizedXyz![2])
+        const xValue = lockedXyz[0] ?? inferredXyz[0]
+        const yValue = lockedXyz[1] ?? inferredXyz[1]
+        const zValue = lockedXyz[2] ?? inferredXyz[2]
+
+        const x = xLocked ? V.C(xValue!) : V.W(optimizedXyz![0])
+        const y = yLocked ? V.C(yValue!) : V.W(optimizedXyz![1])
+        const z = zLocked ? V.C(zValue!) : V.W(optimizedXyz![2])
 
         const vec = new Vec3(x, y, z)
         valueMap.points.set(this, vec)
@@ -436,10 +440,14 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
         const yLocked = this.isYLocked()
         const zLocked = this.isZLocked()
 
+        const xValue = this.lockedXyz[0] ?? this.inferredXyz[0]
+        const yValue = this.lockedXyz[1] ?? this.inferredXyz[1]
+        const zValue = this.lockedXyz[2] ?? this.inferredXyz[2]
+
         const xyz: [number, number, number] = [
-            xLocked ? this.lockedXyz[0]! : vec.x.data,
-            yLocked ? this.lockedXyz[1]! : vec.y.data,
-            zLocked ? this.lockedXyz[2]! : vec.z.data
+            xLocked ? xValue! : vec.x.data,
+            yLocked ? yValue! : vec.y.data,
+            zLocked ? zValue! : vec.z.data
         ]
 
         const residuals = this.computeResiduals(valueMap)

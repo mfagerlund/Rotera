@@ -536,6 +536,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
             isVisible: this.isVisible,
             opacity: this.opacity,
             color: this.color,
+            isPoseLocked: this.isPoseLocked,
             vanishingLineIds: vanishingLineIds.length > 0 ? vanishingLineIds : undefined
         }
     }
@@ -568,6 +569,11 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
         )
 
         context.registerEntity(viewpoint, dto.id)
+
+        if (dto.isPoseLocked !== undefined) {
+            viewpoint.isPoseLocked = dto.isPoseLocked
+        }
+
         return viewpoint
     }
 }

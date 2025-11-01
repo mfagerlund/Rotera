@@ -9,6 +9,7 @@ import type { ProjectDto } from './project/ProjectDto'
 import type { VanishingLineDto } from './vanishing-line/VanishingLineDto'
 import type { IImagePoint } from './interfaces'
 import { VanishingLine } from './vanishing-line/VanishingLine'
+import { DEFAULT_VIEW_SETTINGS } from '../types/visibility'
 
 export class Serialization {
 
@@ -44,6 +45,7 @@ export class Serialization {
       enableSmartSnapping: project.enableSmartSnapping,
       constraintPreview: project.constraintPreview,
       visualFeedbackLevel: project.visualFeedbackLevel,
+      viewSettings: project.viewSettings,
       imageSortOrder: project.imageSortOrder
     }
 
@@ -99,6 +101,7 @@ export class Serialization {
       dto.enableSmartSnapping,
       dto.constraintPreview,
       dto.visualFeedbackLevel,
+      dto.viewSettings || DEFAULT_VIEW_SETTINGS,
       dto.imageSortOrder
     )
   }

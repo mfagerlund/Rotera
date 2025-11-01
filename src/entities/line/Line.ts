@@ -177,7 +177,7 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
 
         switch (this.direction) {
           case 'horizontal':
-            if (Math.abs(dy) > tol || Math.abs(dz) > tol) {
+            if (Math.abs(dy) > tol) {
               violations.push('Line is not horizontal')
             }
             break
@@ -408,7 +408,7 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
 
     switch (this.direction) {
       case 'horizontal':
-        residuals.push(direction.y, direction.z)
+        residuals.push(direction.y)
         break
 
       case 'vertical':

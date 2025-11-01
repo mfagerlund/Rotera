@@ -176,7 +176,8 @@ export function optimizeProject(
 
             const success = initializeCameraWithVanishingPoints(vpConcrete, worldPointSet);
             if (success) {
-              console.log(`[optimizeProject] ${vpConcrete.name} initialized with vanishing points`);
+              vpConcrete.setPoseLocked(true);
+              console.log(`[optimizeProject] ${vpConcrete.name} initialized with vanishing points (pose locked)`);
               console.log(`  Position: [${vpConcrete.position.map(x => x.toFixed(3)).join(', ')}]`);
               console.log(`  Focal length: ${vpConcrete.focalLength.toFixed(1)}`);
               camerasInitialized.push(vpConcrete.name);
@@ -244,7 +245,7 @@ export function optimizeProject(
 
     unifiedInitialize(pointArray, lineArray, constraintArray, {
       sceneScale: 10.0,
-      verbose: true,
+      verbose: false,
       initializedViewpoints: initializedViewpointSet
     });
 

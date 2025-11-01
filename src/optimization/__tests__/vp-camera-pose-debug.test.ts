@@ -156,7 +156,7 @@ describe('VP Camera Pose Debug', () => {
 
       // Compute normalized image coordinates
       const u_norm = (imagePoint.u - principalPoint.u) / focalLength;
-      const v_norm = (imagePoint.v - principalPoint.v) / focalLength;
+      const v_norm = (principalPoint.v - imagePoint.v) / focalLength;
 
       // Ray in camera space
       const ray_cam = [u_norm, v_norm, 1];

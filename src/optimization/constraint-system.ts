@@ -138,7 +138,7 @@ export class ConstraintSystem {
       // This prioritizes geometric accuracy (line lengths, angles) over exact pixel matches.
       // If cameras are unlocked, they may drift to satisfy geometry, causing high reprojection errors.
       // Solution: Lock cameras if you trust their initial PnP positions, or increase this weight.
-      const reprojectionWeight = hasGeometricConstraints ? 0.0001 : 1.0;
+      const reprojectionWeight = 1.0;
 
       // INTRINSIC LINE CONSTRAINTS (direction, length)
       for (const line of this.lines) {

@@ -67,7 +67,7 @@ export function initializeFromImagePairs(
 
   initializeWorldPoints(pointsArray, linesArray, constraintsArray, {
     sceneScale: scaleBaseline,
-    verbose: true
+    verbose: false
   });
 
   const triangulatedCount = pointsArray.filter(p => p.optimizedXyz !== null && p.optimizedXyz !== undefined).length;

@@ -76,6 +76,39 @@ class WorldPoint {
 }
 ```
 
+## 🚨 CRITICAL: NEVER Use Spread Operator on Project or Entities
+
+**DO NOT EVER DO THIS:**
+```typescript
+setProject({ ...project } as Project)  // ❌ DESTROYS ALL CLASS METHODS!
+const newPoint = { ...worldPoint }      // ❌ DESTROYS ALL CLASS METHODS!
+```
+
+**WHY THIS IS CATASTROPHIC:**
+- The spread operator `{ ...obj }` creates a **plain JavaScript object**
+- It **LOSES ALL CLASS METHODS** - only copies data fields
+- Result: `project.removeLine is not a function` and similar runtime errors
+- This breaks MobX reactivity and the entire entity system
+
+**WHAT TO DO INSTEAD:**
+```typescript
+// With MobX, you don't need to "update" the project reference at all!
+// Just mutate the entity directly:
+project.addWorldPoint(point)   // ✓ MobX detects this automatically
+worldPoint.name = "New Name"   // ✓ MobX detects this automatically
+
+// NO setProject() call needed - MobX handles UI updates
+```
+
+**IF YOU MUST trigger a re-render (rare):**
+```typescript
+// Force re-render without breaking the class:
+project.propagateInferences()  // ✓ Calls an action method
+// MobX will detect the change and update UI
+```
+
+**Remember:** Entities are **CLASS INSTANCES**, not plain objects. Treat them with respect.
+
 ## CRITICAL: Object References, NOT IDs
 
 **ALWAYS use full object references. NEVER use IDs at runtime.**

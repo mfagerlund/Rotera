@@ -1,7 +1,8 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faEye, faEyeSlash, faLock, faLockOpen, faChevronUp, faChevronDown } from '@fortawesome/free-solid-svg-icons'
 import { ViewSettings, VisibilitySettings, LockSettings } from '../types/visibility'
+import { observer } from 'mobx-react-lite'
 
 interface VisibilityPanelProps {
   viewSettings: ViewSettings
@@ -9,15 +10,15 @@ interface VisibilityPanelProps {
   onLockingChange: (key: keyof LockSettings, value: boolean) => void
 }
 
-export const VisibilityPanel: React.FC<VisibilityPanelProps> = ({
+export const VisibilityPanel: React.FC<VisibilityPanelProps> = observer(({
   viewSettings,
   onVisibilityChange,
   onLockingChange
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false)
+  const isExpanded = viewSettings.isExpanded ?? false
 
   const toggleExpanded = () => {
-    setIsExpanded(!isExpanded)
+    viewSettings.isExpanded = !isExpanded
   }
 
   const visibilityOptions: Array<{
@@ -31,7 +32,8 @@ export const VisibilityPanel: React.FC<VisibilityPanelProps> = ({
     { key: 'vanishingLines', label: 'Vanishing Lines', supportsLocking: true },
     { key: 'vanishingPoints', label: 'Vanishing Points', supportsLocking: false },
     { key: 'perspectiveGrid', label: 'Perspective Grid', supportsLocking: false },
-    { key: 'reprojectionErrors', label: 'Reprojection Errors', supportsLocking: false }
+    { key: 'reprojectionErrors', label: 'Reprojection Errors', supportsLocking: false },
+    { key: 'cameraVanishingGeometry', label: 'Camera VPs & Horizon', supportsLocking: false }
   ]
 
   return (
@@ -89,4 +91,4 @@ export const VisibilityPanel: React.FC<VisibilityPanelProps> = ({
       )}
     </div>
   )
-}
+})

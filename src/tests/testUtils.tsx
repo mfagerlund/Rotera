@@ -7,6 +7,7 @@ import { Viewpoint } from '../entities/viewpoint/Viewpoint'
 import { ImagePoint } from '../entities/imagePoint/ImagePoint'
 import { DistanceConstraint } from '../entities/constraints/distance-constraint'
 import { ParallelLinesConstraint } from '../entities/constraints/parallel-lines-constraint'
+import { DEFAULT_VIEW_SETTINGS } from '../types/visibility'
 // Mock ConstraintRepository no longer needed - constraints use object references
 // Kept for backwards compatibility with existing tests
 class MockConstraintRepository {}
@@ -29,7 +30,8 @@ const mockSettings: ProjectSettings = {
   showConstructionGeometry: false,
   enableSmartSnapping: true,
   constraintPreview: true,
-  visualFeedbackLevel: 'standard'
+  visualFeedbackLevel: 'standard',
+  viewSettings: DEFAULT_VIEW_SETTINGS
 }
 
 // Mock world points for testing

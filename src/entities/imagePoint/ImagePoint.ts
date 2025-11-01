@@ -172,6 +172,12 @@ export class ImagePoint implements ISelectable, IImagePoint, IResidualProvider, 
             if (projection) {
                 this.reprojectedU = projection[0].data
                 this.reprojectedV = projection[1].data
+
+                console.log(`[Reprojection] ${this.worldPoint.getName()}:`)
+                console.log(`  World XYZ: [${worldPointVec.x.data.toFixed(3)}, ${worldPointVec.y.data.toFixed(3)}, ${worldPointVec.z.data.toFixed(3)}]`)
+                console.log(`  Observed UV: [${this.u.toFixed(1)}, ${this.v.toFixed(1)}]`)
+                console.log(`  Reprojected UV: [${this.reprojectedU.toFixed(1)}, ${this.reprojectedV.toFixed(1)}]`)
+                console.log(`  Residual: [${residuals[0].data.toFixed(2)}, ${residuals[1].data.toFixed(2)}]`)
             }
         }
     }

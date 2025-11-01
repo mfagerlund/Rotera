@@ -5,6 +5,7 @@ import type { ImagePointDto } from '../imagePoint/ImagePointDto'
 import type { ConstraintDto } from '../constraints/ConstraintDto'
 import type { VanishingLineDto } from '../vanishing-line/VanishingLineDto'
 import type { MeasurementUnits, Theme, WorkspaceType, VisualFeedbackLevel, ImageSortOrder } from './Project'
+import type { ViewSettings } from '../../types/visibility'
 
 export interface ProjectDto {
   name: string
@@ -30,5 +31,6 @@ export interface ProjectDto {
   enableSmartSnapping: boolean
   constraintPreview: boolean
   visualFeedbackLevel: VisualFeedbackLevel
+  viewSettings?: ViewSettings
   imageSortOrder?: ImageSortOrder
 }

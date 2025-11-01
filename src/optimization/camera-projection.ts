@@ -207,7 +207,7 @@ export function cameraToPixelCoordinates(
   const fy = V.mul(focalLength, aspectRatio);
 
   const u = V.add(V.add(V.mul(fx, x_distorted), V.mul(skew, y_distorted)), principalPointX);
-  const v = V.add(V.mul(fy, y_distorted), principalPointY);
+  const v = V.add(principalPointY, V.neg(V.mul(fy, y_distorted)));
 
   return [u, v];
 }

@@ -6,6 +6,7 @@ export interface VisibilitySettings {
   vanishingPoints: boolean
   perspectiveGrid: boolean
   reprojectionErrors: boolean
+  cameraVanishingGeometry: boolean
 }
 
 export interface LockSettings {
@@ -18,6 +19,7 @@ export interface LockSettings {
 export interface ViewSettings {
   visibility: VisibilitySettings
   locking: LockSettings
+  isExpanded?: boolean
 }
 
 export const DEFAULT_VISIBILITY: VisibilitySettings = {
@@ -27,7 +29,8 @@ export const DEFAULT_VISIBILITY: VisibilitySettings = {
   vanishingLines: true,
   vanishingPoints: true,
   perspectiveGrid: false,
-  reprojectionErrors: false
+  reprojectionErrors: false,
+  cameraVanishingGeometry: false
 }
 
 export const DEFAULT_LOCKING: LockSettings = {
@@ -39,5 +42,6 @@ export const DEFAULT_LOCKING: LockSettings = {
 
 export const DEFAULT_VIEW_SETTINGS: ViewSettings = {
   visibility: DEFAULT_VISIBILITY,
-  locking: DEFAULT_LOCKING
+  locking: DEFAULT_LOCKING,
+  isExpanded: false
 }

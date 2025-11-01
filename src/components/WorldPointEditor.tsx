@@ -289,10 +289,12 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
                   flex: 1,
                   fontFamily: 'monospace',
                   fontSize: '12px',
-                  color: '#2E7D32',
+                  color: '#9c9',
                   padding: '4px',
                   display: 'flex',
-                  gap: '8px'
+                  gap: '8px',
+                  fontWeight: 'bold',
+                  textShadow: '0 0 3px rgba(0,0,0,0.8)'
                 }}>
                   <span>X: {worldPoint.inferredXyz[0] !== null ? worldPoint.inferredXyz[0].toFixed(3) : 'free'}</span>
                   <span>Y: {worldPoint.inferredXyz[1] !== null ? worldPoint.inferredXyz[1].toFixed(3) : 'free'}</span>
@@ -324,36 +326,90 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
           <div className="edit-section">
             <h4>Image Points ({imagePointsList.length})</h4>
 
-            <div className="status-grid" style={{
-              maxHeight: '150px',
+            <div style={{
+              maxHeight: '200px',
               overflowY: 'auto',
               border: '1px solid var(--border)',
-              borderRadius: 'var(--border-radius)',
-              padding: '4px'
+              borderRadius: 'var(--border-radius)'
             }}>
               {imagePointsList.length === 0 ? (
-                <div style={{ color: '#888', fontStyle: 'italic', fontSize: '12px', padding: '4px' }}>
+                <div style={{ color: '#888', fontStyle: 'italic', fontSize: '12px', padding: '8px' }}>
                   No image points
                 </div>
               ) : (
-                imagePointsList.map((ip, idx) => {
-                  const viewpoint = ip.viewpoint as Viewpoint
-                  return (
-                    <div
-                      key={idx}
-                      className="status-item"
-                      style={{
-                        padding: '4px',
-                        borderBottom: idx < imagePointsList.length - 1 ? '1px solid var(--border)' : 'none'
-                      }}
-                    >
-                      <label>{viewpoint.name}</label>
-                      <span style={{ fontFamily: 'monospace', fontSize: '11px' }}>
-                        ({ip.u.toFixed(1)}, {ip.v.toFixed(1)})
-                      </span>
-                    </div>
-                  )
-                })
+                <table style={{
+                  width: '100%',
+                  fontSize: '11px',
+                  borderCollapse: 'collapse'
+                }}>
+                  <thead style={{
+                    position: 'sticky',
+                    top: 0,
+                    background: '#2a2a2a',
+                    borderBottom: '1px solid var(--border)'
+                  }}>
+                    <tr>
+                      <th style={{ padding: '6px 8px', textAlign: 'left', fontWeight: '600' }}>Image</th>
+                      <th style={{ padding: '6px 8px', textAlign: 'right', fontWeight: '600' }}>U</th>
+                      <th style={{ padding: '6px 8px', textAlign: 'right', fontWeight: '600' }}>V</th>
+                      <th style={{ padding: '6px 8px', textAlign: 'right', fontWeight: '600' }}>Repr. U</th>
+                      <th style={{ padding: '6px 8px', textAlign: 'right', fontWeight: '600' }}>Repr. V</th>
+                      <th style={{ padding: '6px 8px', textAlign: 'right', fontWeight: '600' }}>Error</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {imagePointsList.map((ip, idx) => {
+                      const viewpoint = ip.viewpoint as Viewpoint
+                      const hasReprojection = ip.reprojectedU !== undefined && ip.reprojectedV !== undefined
+                      const errorU = hasReprojection ? ip.reprojectedU! - ip.u : 0
+                      const errorV = hasReprojection ? ip.reprojectedV! - ip.v : 0
+                      const totalError = hasReprojection ? Math.sqrt(errorU * errorU + errorV * errorV) : 0
+
+                      return (
+                        <tr
+                          key={idx}
+                          style={{
+                            borderBottom: idx < imagePointsList.length - 1 ? '1px solid #333' : 'none'
+                          }}
+                        >
+                          <td style={{ padding: '4px 8px', color: '#ccc' }}>{viewpoint.name}</td>
+                          <td style={{ padding: '4px 8px', textAlign: 'right', fontFamily: 'monospace' }}>
+                            {ip.u.toFixed(1)}
+                          </td>
+                          <td style={{ padding: '4px 8px', textAlign: 'right', fontFamily: 'monospace' }}>
+                            {ip.v.toFixed(1)}
+                          </td>
+                          <td style={{
+                            padding: '4px 8px',
+                            textAlign: 'right',
+                            fontFamily: 'monospace',
+                            color: hasReprojection ? '#9c9' : '#666'
+                          }}>
+                            {hasReprojection ? ip.reprojectedU!.toFixed(1) : '-'}
+                          </td>
+                          <td style={{
+                            padding: '4px 8px',
+                            textAlign: 'right',
+                            fontFamily: 'monospace',
+                            color: hasReprojection ? '#9c9' : '#666'
+                          }}>
+                            {hasReprojection ? ip.reprojectedV!.toFixed(1) : '-'}
+                          </td>
+                          <td style={{
+                            padding: '4px 8px',
+                            textAlign: 'right',
+                            fontFamily: 'monospace',
+                            color: hasReprojection
+                              ? (totalError > 10 ? '#f66' : totalError > 5 ? '#fa3' : '#9c9')
+                              : '#666'
+                          }}>
+                            {hasReprojection ? totalError.toFixed(1) : '-'}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
               )}
             </div>
           </div>

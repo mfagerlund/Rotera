@@ -134,28 +134,17 @@ export const MainLayout: React.FC = observer(() => {
   // Vanishing line state
   const [currentVanishingLineAxis, setCurrentVanishingLineAxis] = useState<'x' | 'y' | 'z'>('x')
 
-  // View settings state (visibility and locking)
-  const [viewSettings, setViewSettings] = useState<ViewSettings>(DEFAULT_VIEW_SETTINGS)
-
   const handleVisibilityChange = useCallback((key: keyof VisibilitySettings, value: boolean) => {
-    setViewSettings(prev => ({
-      ...prev,
-      visibility: {
-        ...prev.visibility,
-        [key]: value
-      }
-    }))
-  }, [])
+    if (project) {
+      project.viewSettings.visibility[key] = value
+    }
+  }, [project])
 
   const handleLockingChange = useCallback((key: keyof LockSettings, value: boolean) => {
-    setViewSettings(prev => ({
-      ...prev,
-      locking: {
-        ...prev.locking,
-        [key]: value
-      }
-    }))
-  }, [])
+    if (project) {
+      project.viewSettings.locking[key] = value
+    }
+  }, [project])
 
   // Compute tool context based on active tools
   const toolContext = useMemo((): ToolContext => {
@@ -480,8 +469,8 @@ export const MainLayout: React.FC = observer(() => {
       onMovePoint={handleMovePoint}
       onPointHover={setHoveredWorldPoint}
       onPointRightClick={openWorldPointEdit}
-      visibility={viewSettings.visibility}
-      locking={viewSettings.locking}
+      visibility={project?.viewSettings.visibility || DEFAULT_VIEW_SETTINGS.visibility}
+      locking={project?.viewSettings.locking || DEFAULT_VIEW_SETTINGS.locking}
       toolContext={toolContext}
       onLineRightClick={handleEditLineOpen}
       onEmptySpaceClick={handleEmptySpaceClick}
@@ -513,7 +502,7 @@ export const MainLayout: React.FC = observer(() => {
     selectedVanishingLineEntities,
     handleCreateVanishingLine,
     currentVanishingLineAxis,
-    viewSettings,
+    project,
     toolContext
   ])
 
@@ -880,11 +869,13 @@ export const MainLayout: React.FC = observer(() => {
           </div>
 
           {/* Visibility Panel */}
-          <VisibilityPanel
-            viewSettings={viewSettings}
-            onVisibilityChange={handleVisibilityChange}
-            onLockingChange={handleLockingChange}
-          />
+          {project && (
+            <VisibilityPanel
+              viewSettings={project.viewSettings}
+              onVisibilityChange={handleVisibilityChange}
+              onLockingChange={handleLockingChange}
+            />
+          )}
         </div>
       )}
     </WorkspaceManager>
@@ -907,7 +898,8 @@ export const MainLayout: React.FC = observer(() => {
         Array.from(project?.lines || []).forEach(line => deleteLine(line))
       }}
       onUpdateLine={(updatedLine) => {
-        // TODO: Implement line update through enhanced project
+        // Line is already updated via MobX, just trigger save
+        saveProject()
       }}
       onToggleLineVisibility={(line) => {
         // TODO: Implement line visibility toggle
@@ -985,7 +977,6 @@ export const MainLayout: React.FC = observer(() => {
             onOptimizationComplete={(success, message) => {
               console.log(`Optimization ${success ? 'succeeded' : 'failed'}: ${message}`)
               saveProject()
-              setProject({ ...project } as Project)
             }}
           />
         )}

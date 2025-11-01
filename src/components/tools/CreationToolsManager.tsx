@@ -89,8 +89,8 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
 
   const handleLinePreviewChange = useCallback((linePreview: {
     type: 'line'
-    pointA?: string
-    pointB?: string
+    pointA?: WorldPoint
+    pointB?: WorldPoint
     showToCursor?: boolean
   } | null) => {
     if (!onConstructionPreviewChange) return

@@ -450,7 +450,7 @@ export function computeRotationFromVPs(
     const u = vp.u - principalPoint.u
     const v = vp.v - principalPoint.v
 
-    const dir = normalize([u / focalLength, v / focalLength, 1])
+    const dir = normalize([u / focalLength, -v / focalLength, 1])
     directions[axis] = dir
   })
 
@@ -473,6 +473,13 @@ export function computeRotationFromVPs(
     d_x = normalize(d_x)
   } else {
     return null
+  }
+
+  // Ensure the resulting basis keeps world Y pointing "up" in camera coordinates.
+  // Camera coordinates use +Y for up, so enforce a positive Y component for d_y by flipping X/Y if needed.
+  if (d_y[1] < 0) {
+    d_x = d_x.map(v => -v)
+    d_y = d_y.map(v => -v)
   }
 
   const R = [
@@ -523,7 +530,7 @@ export function computeCameraPosition(
     const P = [lockedXyz[0]!, lockedXyz[1]!, lockedXyz[2]!]
 
     const u_norm = (imagePoint.u - principalPoint.u) / focalLength
-    const v_norm = (imagePoint.v - principalPoint.v) / focalLength
+    const v_norm = (principalPoint.v - imagePoint.v) / focalLength
 
     const ray = [u_norm, v_norm, 1]
     const ray_world = [

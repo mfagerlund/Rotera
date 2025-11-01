@@ -5,6 +5,7 @@ import type {IImagePoint} from '../interfaces'
 import type {Constraint} from '../constraints'
 import {makeAutoObservable, reaction} from 'mobx'
 import { propagateCoordinateInferences, type InferenceConflict } from '../world-point/coordinate-inference'
+import { ViewSettings, DEFAULT_VIEW_SETTINGS } from '../../types/visibility'
 
 export type MeasurementUnits = 'meters' | 'feet' | 'inches'
 export type Theme = 'dark' | 'light'
@@ -28,7 +29,8 @@ export type ProjectSettings = Pick<Project,
     'enableSmartSnapping' |
     'constraintPreview' |
     'visualFeedbackLevel' |
-    'imageSortOrder'
+    'imageSortOrder' |
+    'viewSettings'
 >
 
 export class Project {
@@ -56,6 +58,7 @@ export class Project {
     constraintPreview: boolean
     visualFeedbackLevel: VisualFeedbackLevel
     imageSortOrder?: ImageSortOrder
+    viewSettings: ViewSettings
 
     private constructor(
         name: string,
@@ -79,6 +82,7 @@ export class Project {
         enableSmartSnapping: boolean,
         constraintPreview: boolean,
         visualFeedbackLevel: VisualFeedbackLevel,
+        viewSettings: ViewSettings,
         imageSortOrder?: ImageSortOrder
     ) {
         this.name = name
@@ -102,6 +106,7 @@ export class Project {
         this.enableSmartSnapping = enableSmartSnapping
         this.constraintPreview = constraintPreview
         this.visualFeedbackLevel = visualFeedbackLevel
+        this.viewSettings = viewSettings
         this.imageSortOrder = imageSortOrder
 
         makeAutoObservable(this, {}, { autoBind: true })
@@ -149,7 +154,8 @@ export class Project {
             true,
             true,
             true,
-            'standard'
+            'standard',
+            DEFAULT_VIEW_SETTINGS
         )
     }
 
@@ -175,6 +181,7 @@ export class Project {
         enableSmartSnapping: boolean,
         constraintPreview: boolean,
         visualFeedbackLevel: VisualFeedbackLevel,
+        viewSettings: ViewSettings,
         imageSortOrder?: ImageSortOrder
     ): Project {
         return new Project(
@@ -199,6 +206,7 @@ export class Project {
             enableSmartSnapping,
             constraintPreview,
             visualFeedbackLevel,
+            viewSettings,
             imageSortOrder
         )
     }
