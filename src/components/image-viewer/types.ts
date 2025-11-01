@@ -12,9 +12,9 @@ export interface ImageCoords {
   v: number
 }
 
-export interface CanvasOffset extends CanvasPoint {}
+export type CanvasOffset = CanvasPoint
 
-export interface PanVelocity extends CanvasPoint {}
+export type PanVelocity = CanvasPoint
 
 export interface ConstructionPreview {
   type: 'line' | 'loop-chain' | 'vanishing-line'
