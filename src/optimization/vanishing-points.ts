@@ -455,12 +455,15 @@ export function computeRotationFromVPs(
   })
 
   let d_x: number[], d_y: number[], d_z: number[]
+  let derivedYAxis = false
 
-  if (directions.x && directions.z) {
+
+  if (directions.x && directions.z && !directions.y) {
     d_x = directions.x
     d_z = directions.z
     d_y = cross(d_z, d_x)
     d_y = normalize(d_y)
+    derivedYAxis = true
   } else if (directions.x && directions.y) {
     d_x = directions.x
     d_y = directions.y
@@ -482,11 +485,64 @@ export function computeRotationFromVPs(
     d_y = d_y.map(v => -v)
   }
 
-  const R = [
+  let R = [
     [d_x[0], d_y[0], d_z[0]],
     [d_x[1], d_y[1], d_z[1]],
     [d_x[2], d_y[2], d_z[2]]
   ]
+
+  if (derivedYAxis) {
+    const targetU = (directions.x[0] / directions.x[2] + directions.z[0] / directions.z[2]) / 2
+    const currentU = R[0][1] / R[2][1]
+
+    if (Math.abs(R[2][1]) > 1e-6 && Math.abs(currentU - targetU) > 0.01) {
+      let bestRoll = 0
+      let bestError = Math.abs(currentU - targetU)
+
+      for (let roll = -Math.PI; roll <= Math.PI; roll += 0.05) {
+        const c = Math.cos(roll)
+        const s = Math.sin(roll)
+
+        const newYx = R[0][1] * c - R[0][0] * s
+        const newYz = R[2][1] * c - R[2][0] * s
+
+        if (Math.abs(newYz) > 1e-6) {
+          const testU = newYx / newYz
+          const error = Math.abs(testU - targetU)
+          if (error < bestError) {
+            bestError = error
+            bestRoll = roll
+          }
+        }
+      }
+
+      if (Math.abs(bestRoll) > 0.001) {
+        const c = Math.cos(bestRoll)
+        const s = Math.sin(bestRoll)
+
+        R = [
+          [
+            R[0][0] * c + R[0][1] * s,
+            R[0][1] * c - R[0][0] * s,
+            R[0][2]
+          ],
+          [
+            R[1][0] * c + R[1][1] * s,
+            R[1][1] * c - R[1][0] * s,
+            R[1][2]
+          ],
+          [
+            R[2][0] * c + R[2][1] * s,
+            R[2][1] * c - R[2][0] * s,
+            R[2][2]
+          ]
+        ]
+
+        console.log('[VP Debug] Applied roll correction:', bestRoll, 'radians')
+      }
+    }
+  }
+
   const quaternion = matrixToQuaternion(R)
 
   console.log('[VP Debug] Computed rotation matrix from vanishing points:')
@@ -516,7 +572,7 @@ export function computeCameraPosition(
   const qy = rotation[2]
   const qz = rotation[3]
 
-  const R = [
+  let R = [
     [1 - 2 * (qy * qy + qz * qz), 2 * (qx * qy - qw * qz), 2 * (qx * qz + qw * qy)],
     [2 * (qx * qy + qw * qz), 1 - 2 * (qx * qx + qz * qz), 2 * (qy * qz - qw * qx)],
     [2 * (qx * qz - qw * qy), 2 * (qy * qz + qw * qx), 1 - 2 * (qx * qx + qy * qy)]
@@ -824,6 +880,8 @@ export function initializeCameraWithVanishingPoints(
   Object.entries(cameraVps).forEach(([axis, vp]) => {
     console.log(`  ${axis.toUpperCase()} axis -> VP at (${vp.u.toFixed(2)}, ${vp.v.toFixed(2)})`)
   })
+
+  ;(viewpoint as any).__initialCameraVps = cameraVps
 
   console.log(
     `[initializeCameraWithVanishingPoints] Success! Position: [${position.map(p => p.toFixed(2)).join(', ')}], ` +

@@ -134,6 +134,9 @@ export const MainLayout: React.FC = observer(() => {
   // Vanishing line state
   const [currentVanishingLineAxis, setCurrentVanishingLineAxis] = useState<'x' | 'y' | 'z'>('x')
 
+  // Mouse position tracking
+  const [mousePosition, setMousePosition] = useState<{ u: number; v: number } | null>(null)
+
   const handleVisibilityChange = useCallback((key: keyof VisibilitySettings, value: boolean) => {
     if (project) {
       project.viewSettings.visibility[key] = value
@@ -397,6 +400,10 @@ export const MainLayout: React.FC = observer(() => {
     // TODO: Trigger image add dialog when project update flow lands
   }, [])
 
+  const handleMousePositionChange = useCallback((position: { u: number; v: number } | null) => {
+    setMousePosition(position)
+  }, [])
+
   // Workspace data for status display
   const imageInfo = {
     currentImage: currentImage?.name,
@@ -475,6 +482,7 @@ export const MainLayout: React.FC = observer(() => {
       onLineRightClick={handleEditLineOpen}
       onEmptySpaceClick={handleEmptySpaceClick}
       onRequestAddImage={handleRequestAddImage}
+      onMousePositionChange={handleMousePositionChange}
     />
   ), [
     activeConstraintType,
@@ -503,7 +511,8 @@ export const MainLayout: React.FC = observer(() => {
     handleCreateVanishingLine,
     currentVanishingLineAxis,
     project,
-    toolContext
+    toolContext,
+    handleMousePositionChange
   ])
 
   const renderWorldWorkspace = useCallback(() => {
@@ -828,6 +837,12 @@ export const MainLayout: React.FC = observer(() => {
               <span>Lines: {project?.lines.size || 0}</span>
               <span>Planes: {0}</span>
               <span>Constraints: {project?.constraints.size || 0}</span>
+              {/* Mouse position */}
+              {mousePosition && (
+                <span style={{ color: '#4a9eff', fontWeight: 'bold' }}>
+                  Mouse: ({mousePosition.u.toFixed(1)}, {mousePosition.v.toFixed(1)})
+                </span>
+              )}
               {/* Enhanced selection stats */}
               {selection.count > 0 && (
                 <span style={{ color: '#0696d7', fontWeight: 'bold' }}>
@@ -866,16 +881,16 @@ export const MainLayout: React.FC = observer(() => {
             </div>
 
             <span style={{ marginLeft: '12px', color: '#888' }}>v0.4-ENHANCED</span>
-          </div>
 
-          {/* Visibility Panel */}
-          {project && (
-            <VisibilityPanel
-              viewSettings={project.viewSettings}
-              onVisibilityChange={handleVisibilityChange}
-              onLockingChange={handleLockingChange}
-            />
-          )}
+            {/* Visibility Panel - integrated into footer */}
+            {project && (
+              <VisibilityPanel
+                viewSettings={project.viewSettings}
+                onVisibilityChange={handleVisibilityChange}
+                onLockingChange={handleLockingChange}
+              />
+            )}
+          </div>
         </div>
       )}
     </WorkspaceManager>

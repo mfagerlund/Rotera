@@ -47,6 +47,7 @@ interface ImageViewerProps extends ImageViewerPropsBase {
   onCreateVanishingLine?: (p1: { u: number; v: number }, p2: { u: number; v: number }) => void
   onVanishingLineClick?: (vanishingLine: VanishingLine, ctrlKey: boolean, shiftKey: boolean) => void
   selectedVanishingLines?: VanishingLine[]
+  onMousePositionChange?: (position: { u: number; v: number } | null) => void
 }
 
 export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
@@ -80,7 +81,8 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
   selectedVanishingLines = [],
   visibility = DEFAULT_VISIBILITY,
   locking = DEFAULT_LOCKING,
-  toolContext = SELECT_TOOL_CONTEXT
+  toolContext = SELECT_TOOL_CONTEXT,
+  onMousePositionChange
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -708,6 +710,12 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     // Always track current mouse position for construction preview
     setCurrentMousePos({ x, y })
 
+    // Notify parent of mouse position in image coordinates (unbounded - works outside image too)
+    if (onMousePositionChange) {
+      const imageCoords = canvasToImageCoordsUnbounded(x, y)
+      onMousePositionChange(imageCoords)
+    }
+
     if (isDragging) {
       setIsPrecisionDrag(false)
       // Handle viewport panning
@@ -919,6 +927,11 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     // Clear hover state
     if (onPointHover) {
       onPointHover(null)
+    }
+
+    // Clear mouse position
+    if (onMousePositionChange) {
+      onMousePositionChange(null)
     }
 
     // End point dragging

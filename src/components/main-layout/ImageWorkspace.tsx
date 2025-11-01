@@ -40,6 +40,7 @@ interface ImageWorkspaceProps {
   visibility?: VisibilitySettings
   locking?: LockSettings
   toolContext?: ToolContext
+  onMousePositionChange?: (position: { u: number; v: number } | null) => void
 }
 
 const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({
@@ -72,7 +73,8 @@ const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({
   selectedVanishingLines,
   visibility,
   locking,
-  toolContext
+  toolContext,
+  onMousePositionChange
 }) => {
   if (!image) {
     return (
@@ -126,6 +128,7 @@ const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({
           visibility={visibility}
           locking={locking}
           toolContext={toolContext}
+          onMousePositionChange={onMousePositionChange}
         />
       </div>
     </div>
