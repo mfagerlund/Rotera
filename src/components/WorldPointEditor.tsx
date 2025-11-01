@@ -5,7 +5,7 @@ import { Viewpoint } from '../entities/viewpoint'
 import FloatingWindow from './FloatingWindow'
 import { useConfirm } from './ConfirmDialog'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faCircleDot } from '@fortawesome/free-solid-svg-icons'
+import { faCircleDot, faTrash } from '@fortawesome/free-solid-svg-icons'
 
 type ProjectImage = Viewpoint
 
@@ -15,6 +15,7 @@ interface WorldPointEditorProps {
   worldPoint: WorldPoint
   onUpdateWorldPoint: (updatedPoint: WorldPoint) => void
   onDeleteWorldPoint?: (worldPoint: WorldPoint) => void
+  onDeleteImagePoint?: (imagePoint: any) => void
   images: Map<string, ProjectImage>
 }
 
@@ -24,6 +25,7 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
   worldPoint,
   onUpdateWorldPoint,
   onDeleteWorldPoint,
+  onDeleteImagePoint,
   images
 }) => {
   const { confirm, dialog } = useConfirm()
@@ -94,6 +96,24 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
     if (await confirm(`Are you sure you want to delete world point "${worldPoint.name}"?`)) {
       onDeleteWorldPoint?.(worldPoint)
       onClose()
+    }
+  }
+
+  const handleDeleteImagePoint = async (imagePoint: typeof worldPoint.imagePoints extends Set<infer T> ? T : never) => {
+    if (await confirm(`Remove image point from "${(imagePoint.viewpoint as Viewpoint).name}"?`)) {
+      // Remove from WorldPoint
+      worldPoint.removeImagePoint(imagePoint)
+
+      // Remove from Viewpoint
+      const viewpoint = imagePoint.viewpoint as Viewpoint
+      viewpoint.removeImagePoint(imagePoint)
+
+      // Remove from Project (if callback provided)
+      if (onDeleteImagePoint) {
+        onDeleteImagePoint(imagePoint)
+      }
+
+      handleChange()
     }
   }
 
@@ -355,6 +375,7 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
                       <th style={{ padding: '6px 8px', textAlign: 'right', fontWeight: '600' }}>Repr. U</th>
                       <th style={{ padding: '6px 8px', textAlign: 'right', fontWeight: '600' }}>Repr. V</th>
                       <th style={{ padding: '6px 8px', textAlign: 'right', fontWeight: '600' }}>Error</th>
+                      <th style={{ padding: '6px 8px', textAlign: 'center', fontWeight: '600', width: '40px' }}></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -404,6 +425,24 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
                               : '#666'
                           }}>
                             {hasReprojection ? totalError.toFixed(1) : '-'}
+                          </td>
+                          <td style={{ padding: '4px 8px', textAlign: 'center' }}>
+                            <button
+                              onClick={() => handleDeleteImagePoint(ip)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#888',
+                                cursor: 'pointer',
+                                padding: '2px 4px',
+                                fontSize: '11px'
+                              }}
+                              onMouseEnter={(e) => { e.currentTarget.style.color = '#f66' }}
+                              onMouseLeave={(e) => { e.currentTarget.style.color = '#888' }}
+                              title="Remove image point"
+                            >
+                              <FontAwesomeIcon icon={faTrash} />
+                            </button>
                           </td>
                         </tr>
                       )

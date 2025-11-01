@@ -19,9 +19,9 @@ import {
   ImageViewerRenderState,
   PanVelocity
 } from './image-viewer/types'
+import { usePrecisionMode } from '../hooks/usePrecisionMode'
 
 const PRECISION_DRAG_RATIO = 0.12
-const SHIFT_TAP_THRESHOLD_MS = 250
 
 export interface ImageViewerRef {
   zoomFit: () => void
@@ -121,6 +121,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
   const [draggedVanishingLine, setDraggedVanishingLine] = useState<VanishingLine | null>(null)
   const [vanishingLineDragMode, setVanishingLineDragMode] = useState<'whole' | 'p1' | 'p2' | null>(null)
   const vanishingLineDragStartRef = useRef<{ p1: ImageCoords; p2: ImageCoords; mouseU: number; mouseV: number } | null>(null)
+  const vanishingLineAccumulatedDeltaRef = useRef<{ u: number; v: number }>({ u: 0, v: 0 })
 
   // Load image
   useEffect(() => {
@@ -329,8 +330,11 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     y: v * scale + offset.y
   }), [offset.x, offset.y, scale])
 
+  // Precision mode hook
+  const precisionMode = usePrecisionMode(imageToCanvasCoords)
+
   const placementModeActive = placementMode?.active ?? false
-  const creationContextActive = placementModeActive || isPointCreationActive || isLoopTraceActive
+  const creationContextActive = placementModeActive || isPointCreationActive || isLoopTraceActive || isVanishingLineActive
   const isPlacementInteractionActive = isDraggingPoint || isDragDropActive || creationContextActive
 
   // Use lineEntities directly - no need to convert!
@@ -408,6 +412,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     canvasToImageCoords,
     imageToCanvasCoords,
     precisionCanvasPosRef,
+    draggedPointImageCoordsRef,
     onMovePoint
   })
 
@@ -585,8 +590,13 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
 
       if (isVanishingLineActive && onCreateVanishingLine) {
         // Vanishing line mode - two-click interaction
-        const imageCoords = canvasToImageCoords(x, y)
+        let imageCoords = canvasToImageCoordsUnbounded(x, y)
         if (!imageCoords) return
+
+        // Use precision coords if active
+        if (isPrecisionToggleActive && draggedPointImageCoordsRef.current) {
+          imageCoords = draggedPointImageCoordsRef.current
+        }
 
         if (!vanishingLineStart) {
           // First click - set start point
@@ -631,6 +641,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
           precisionPointerRef.current = null
           setIsPrecisionDrag(false)
           setIsPrecisionToggleActive(false)
+          precisionMode.resetPrecision(true)
           setDragStartPos({ x, y })
           setDraggedPoint(nearbyPoint)
           // Don't start dragging immediately - wait for mouse movement
@@ -651,6 +662,21 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
             // Set up dragging state (use unbounded coords since vanishing lines can extend outside image)
             const imageCoords = canvasToImageCoordsUnbounded(x, y)
             if (imageCoords) {
+              // Determine which endpoint we're dragging
+              let draggedEndpoint: ImageCoords
+              if (vanishingLinePart.part === 'p1' || vanishingLinePart.part === 'whole') {
+                draggedEndpoint = { u: vanishingLinePart.line.p1.u, v: vanishingLinePart.line.p1.v }
+              } else {
+                draggedEndpoint = { u: vanishingLinePart.line.p2.u, v: vanishingLinePart.line.p2.v }
+              }
+
+              dragStartImageCoordsRef.current = draggedEndpoint
+              draggedPointImageCoordsRef.current = draggedEndpoint
+              precisionPointerRef.current = null
+              setIsPrecisionDrag(false)
+              setIsPrecisionToggleActive(false)
+              precisionMode.resetPrecision(true)
+              setDragStartPos({ x, y })
               setDraggedVanishingLine(vanishingLinePart.line)
               setVanishingLineDragMode(vanishingLinePart.part)
               vanishingLineDragStartRef.current = {
@@ -661,10 +687,6 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
               }
             }
           }
-
-          dragStartImageCoordsRef.current = null
-          draggedPointImageCoordsRef.current = null
-          precisionPointerRef.current = null
           onVanishingLineClick(nearbyVanishingLine, event.ctrlKey, event.shiftKey)
         } else {
           // Click on empty space
@@ -744,36 +766,61 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
       const imageCoords = canvasToImageCoordsUnbounded(x, y)
       if (imageCoords) {
         const dragStart = vanishingLineDragStartRef.current
-        const deltaU = imageCoords.u - dragStart.mouseU
-        const deltaV = imageCoords.v - dragStart.mouseV
+        const precState = precisionMode.getPrecisionState()
 
         if (!isDraggingVanishingLine) {
-          const dragDistance = Math.sqrt(deltaU * deltaU + deltaV * deltaV)
+          const dragDistance = Math.sqrt(
+            Math.pow(x - dragStartPos.x, 2) + Math.pow(y - dragStartPos.y, 2)
+          )
           if (dragDistance > 5) {
             setIsDraggingVanishingLine(true)
+            precisionMode.resetPrecision(false)
           }
         }
 
         if (isDraggingVanishingLine) {
+          const deltaU = imageCoords.u - dragStart.mouseU
+          const deltaV = imageCoords.v - dragStart.mouseV
+
+          let newP1: ImageCoords
+          let newP2: ImageCoords
+
           if (vanishingLineDragMode === 'whole') {
-            // Move both endpoints
-            draggedVanishingLine.setEndpoints(
-              { u: dragStart.p1.u + deltaU, v: dragStart.p1.v + deltaV },
-              { u: dragStart.p2.u + deltaU, v: dragStart.p2.v + deltaV }
-            )
+            newP1 = { u: dragStart.p1.u + deltaU, v: dragStart.p1.v + deltaV }
+            newP2 = { u: dragStart.p2.u + deltaU, v: dragStart.p2.v + deltaV }
           } else if (vanishingLineDragMode === 'p1') {
-            // Move only p1
-            draggedVanishingLine.setEndpoints(
-              { u: dragStart.p1.u + deltaU, v: dragStart.p1.v + deltaV },
-              dragStart.p2
-            )
-          } else if (vanishingLineDragMode === 'p2') {
-            // Move only p2
-            draggedVanishingLine.setEndpoints(
-              dragStart.p1,
-              { u: dragStart.p2.u + deltaU, v: dragStart.p2.v + deltaV }
-            )
+            newP1 = { u: dragStart.p1.u + deltaU, v: dragStart.p1.v + deltaV }
+            newP2 = dragStart.p2
+          } else {
+            newP1 = dragStart.p1
+            newP2 = { u: dragStart.p2.u + deltaU, v: dragStart.p2.v + deltaV }
           }
+
+          if (precState.isPrecisionActive) {
+            setIsPrecisionDrag(true)
+            const baseCoords = draggedPointImageCoordsRef.current || dragStartImageCoordsRef.current || imageCoords
+            const targetCoords = precisionMode.applyPrecisionToImageDelta(imageCoords, baseCoords)
+
+            const precDeltaU = targetCoords.u - (draggedPointImageCoordsRef.current?.u || newP1.u)
+            const precDeltaV = targetCoords.v - (draggedPointImageCoordsRef.current?.v || newP1.v)
+
+            if (vanishingLineDragMode === 'whole') {
+              newP1 = { u: newP1.u + precDeltaU, v: newP1.v + precDeltaV }
+              newP2 = { u: newP2.u + precDeltaU, v: newP2.v + precDeltaV }
+            } else if (vanishingLineDragMode === 'p1') {
+              newP1 = targetCoords
+            } else {
+              newP2 = targetCoords
+            }
+
+            draggedPointImageCoordsRef.current = (vanishingLineDragMode === 'p2') ? newP2 : newP1
+            precisionCanvasPosRef.current = precState.precisionCanvasPos
+          } else {
+            setIsPrecisionDrag(false)
+            draggedPointImageCoordsRef.current = (vanishingLineDragMode === 'p2') ? newP2 : newP1
+          }
+
+          draggedVanishingLine.setEndpoints(newP1, newP2)
         }
       }
     } else if (draggedPoint && onMovePoint) {
@@ -785,50 +832,28 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
       if (!isDraggingPoint && dragDistance > 5) {
         // Start dragging when mouse moves more than 5 pixels
         setIsDraggingPoint(true)
+        precisionMode.resetPrecision(false)
       }
 
       if (isDraggingPoint) {
         // Handle point dragging - update point position in real-time
         const imageCoords = canvasToImageCoords(x, y)
         if (imageCoords) {
-          const precisionActive = event.shiftKey || isPrecisionToggleActive
+          const precState = precisionMode.getPrecisionState()
 
-          if (precisionActive) {
+          if (precState.isPrecisionActive) {
             setIsPrecisionDrag(true)
-            const previousPointer = precisionPointerRef.current || imageCoords
-            const deltaU = imageCoords.u - previousPointer.u
-            const deltaV = imageCoords.v - previousPointer.v
-            precisionPointerRef.current = imageCoords
-
             const baseCoords = draggedPointImageCoordsRef.current || dragStartImageCoordsRef.current || imageCoords
-            const targetCoords = {
-              u: baseCoords.u + deltaU * PRECISION_DRAG_RATIO,
-              v: baseCoords.v + deltaV * PRECISION_DRAG_RATIO
-            }
-
+            const targetCoords = precisionMode.applyPrecisionToImageDelta(imageCoords, baseCoords)
             onMovePoint(draggedPoint, targetCoords.u, targetCoords.v)
             draggedPointImageCoordsRef.current = targetCoords
-            precisionCanvasPosRef.current = imageToCanvasCoords(targetCoords.u, targetCoords.v)
+            precisionCanvasPosRef.current = precState.precisionCanvasPos
           } else {
-            if (precisionPointerRef.current) {
-              precisionPointerRef.current = null
-            }
-            if (precisionCanvasPosRef.current) {
-              precisionCanvasPosRef.current = null
-            }
-            if (isPrecisionDrag) {
-              setIsPrecisionDrag(false)
-            }
+            setIsPrecisionDrag(false)
             onMovePoint(draggedPoint, imageCoords.u, imageCoords.v)
             draggedPointImageCoordsRef.current = imageCoords
           }
         } else {
-          if (precisionPointerRef.current) {
-            precisionPointerRef.current = null
-          }
-          if (precisionCanvasPosRef.current) {
-            precisionCanvasPosRef.current = null
-          }
           setIsPrecisionDrag(false)
         }
       } else {
@@ -842,27 +867,19 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
       }
     } else {
       // Handle precision mode in placement contexts (without dragging)
-      if (isPlacementInteractionActive && isPrecisionToggleActive) {
+      const precState = precisionMode.getPrecisionState()
+      if (isPlacementInteractionActive && precState.isPrecisionActive) {
         setIsPrecisionDrag(true)
-        const imageCoords = canvasToImageCoords(x, y)
+        const imageCoords = canvasToImageCoordsUnbounded(x, y)
         if (imageCoords) {
-          const previousPointer = precisionPointerRef.current || imageCoords
-          const deltaU = imageCoords.u - previousPointer.u
-          const deltaV = imageCoords.v - previousPointer.v
-          precisionPointerRef.current = imageCoords
-
           const baseCoords = draggedPointImageCoordsRef.current || imageCoords
-          const targetCoords = {
-            u: baseCoords.u + deltaU * PRECISION_DRAG_RATIO,
-            v: baseCoords.v + deltaV * PRECISION_DRAG_RATIO
-          }
-
+          const targetCoords = precisionMode.applyPrecisionToImageDelta(imageCoords, baseCoords)
           draggedPointImageCoordsRef.current = targetCoords
-          precisionCanvasPosRef.current = imageToCanvasCoords(targetCoords.u, targetCoords.v)
+          precisionCanvasPosRef.current = precState.precisionCanvasPos
         }
       } else {
         // Only clear if precision is NOT supposed to be active
-        if (!isPrecisionToggleActive) {
+        if (!precState.isPrecisionActive) {
           if (precisionCanvasPosRef.current) {
             precisionCanvasPosRef.current = null
           }
@@ -901,7 +918,6 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
       setIsDraggingPoint(false)
     }
     setIsPrecisionDrag(false)
-    setIsPrecisionToggleActive(false)
     setDraggedPoint(null)
     dragStartImageCoordsRef.current = null
     draggedPointImageCoordsRef.current = null
@@ -915,6 +931,12 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     setDraggedVanishingLine(null)
     setVanishingLineDragMode(null)
     vanishingLineDragStartRef.current = null
+    vanishingLineAccumulatedDeltaRef.current = { u: 0, v: 0 }
+
+    // Reset precision mode (clears everything including toggle state)
+    precisionMode.resetPrecision(true)
+    setIsPrecisionToggleActive(false)
+    setIsPrecisionDrag(false)
   }
 
   const handleMouseLeave = () => {
@@ -945,6 +967,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     draggedPointImageCoordsRef.current = null
     precisionPointerRef.current = null
     precisionCanvasPosRef.current = null
+    precisionMode.resetPrecision(true)
 
     // End vanishing line dragging
     if (isDraggingVanishingLine) {
@@ -1107,38 +1130,27 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     }
 
     const handleShiftKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Shift' && !event.repeat) {
-        shiftPressStartTimeRef.current = Date.now()
-      }
+      precisionMode.handleShiftKey(event)
     }
 
     const handleShiftKeyUp = (event: KeyboardEvent) => {
-      if (event.key !== 'Shift') {
-        return
-      }
-
-      const pressStarted = shiftPressStartTimeRef.current
-      shiftPressStartTimeRef.current = null
-
-      if (!pressStarted) {
-        return
-      }
-
-      const pressDuration = Date.now() - pressStarted
-      const hasActivePlacement = Boolean(draggedPoint || isPlacementInteractionActive)
-
-      if (pressDuration <= SHIFT_TAP_THRESHOLD_MS && hasActivePlacement) {
-        setIsPrecisionToggleActive(prev => {
-          const next = !prev
-          if (!next) {
-            setIsPrecisionDrag(false)
-            precisionPointerRef.current = null
-            precisionCanvasPosRef.current = null
-          } else if (isPlacementInteractionActive) {
-            setIsPrecisionDrag(true)
-          }
-          return next
-        })
+      const wasActive = precisionMode.getPrecisionState().isPrecisionToggled
+      precisionMode.handleShiftKey(event)
+      const precState = precisionMode.getPrecisionState()
+      if (precState.isPrecisionToggled) {
+        // Toggled ON - reset precision pointer so delta starts from current position
+        if (!wasActive) {
+          precisionMode.resetPrecision(false)
+        }
+        setIsPrecisionDrag(true)
+        setIsPrecisionToggleActive(true)
+      } else {
+        // Toggled OFF - also reset precision pointer
+        if (wasActive) {
+          precisionMode.resetPrecision(false)
+        }
+        setIsPrecisionDrag(false)
+        setIsPrecisionToggleActive(false)
       }
     }
 
@@ -1239,10 +1251,10 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
         data-drop-target={isDragOverTarget}
         style={{
           cursor: isDragging ? 'grabbing' :
-                  isDraggingVanishingLine ? 'grabbing' :
-                  isDraggingPoint ? 'move' :
+                  isDraggingVanishingLine ? 'none' :
+                  isDraggingPoint ? 'none' :
                   hoveredVanishingLine ? 'grab' :
-                  hoveredPoint && onMovePoint ? 'move' :
+                  hoveredPoint && onMovePoint ? 'grab' :
                   (hoveredPoint || hoveredLine) ? 'pointer' :
                   placementMode.active ? 'copy' :
                   isAltKeyPressed ? 'grab' : 'crosshair',

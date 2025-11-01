@@ -100,8 +100,8 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
     }
     onConstructionPreviewChange({
       type: 'line',
-      pointA: undefined,
-      pointB: undefined,
+      pointA: linePreview.pointA,
+      pointB: linePreview.pointB,
       showToCursor: linePreview.showToCursor
     })
   }, [onConstructionPreviewChange])

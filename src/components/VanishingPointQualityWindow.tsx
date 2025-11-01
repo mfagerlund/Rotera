@@ -85,6 +85,7 @@ export const VanishingPointQualityWindow: React.FC<VanishingPointQualityWindowPr
       onClose={onClose}
       initialPosition={{ x: window.innerWidth - 320, y: 100 }}
       width={280}
+      storageKey="vp-quality"
     >
       <div style={{ padding: '10px' }}>
         {(['x', 'y', 'z'] as const).map(axis => {

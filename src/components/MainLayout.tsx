@@ -95,7 +95,8 @@ export const MainLayout: React.FC = observer(() => {
     deleteConstraint,
     toggleConstraint,
     clearProject,
-    exportOptimizationDto
+    exportOptimizationDto,
+    removeDuplicateImagePoints
   } = useDomainOperations(project, setProject)
 
   // Confirm dialog
@@ -163,6 +164,16 @@ export const MainLayout: React.FC = observer(() => {
       openVPQualityWindow()
     }
   }, [activeTool, openVPQualityWindow])
+
+  // Expose cleanup function to console for debugging
+  useEffect(() => {
+    if (project) {
+      (window as any).removeDuplicateImagePoints = removeDuplicateImagePoints
+    }
+    return () => {
+      delete (window as any).removeDuplicateImagePoints
+    }
+  }, [project, removeDuplicateImagePoints])
 
   // Derived data from project (convert Sets to Maps for lookup)
   // No useMemo - just rebuild on every render (fast enough for typical dataset sizes)
@@ -985,6 +996,7 @@ export const MainLayout: React.FC = observer(() => {
         onClose={() => setEntityPopup('showOptimizationPanel', false)}
         width={500}
         height={600}
+        storageKey="optimization-panel"
       >
         {project && (
           <OptimizationPanel
@@ -1008,6 +1020,11 @@ export const MainLayout: React.FC = observer(() => {
         onDeleteWorldPoint={(worldPoint) => {
           deleteWorldPoint(worldPoint)
           closeWorldPointEdit()
+        }}
+        onDeleteImagePoint={(imagePoint) => {
+          if (project) {
+            project.removeImagePoint(imagePoint)
+          }
         }}
         images={viewpointsMap}
       />

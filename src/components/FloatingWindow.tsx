@@ -64,14 +64,27 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
   const [isPositioned, setIsPositioned] = useState(false)
   const windowId = useRef(`window-${Date.now()}-${Math.random()}`)
 
-  // Load saved position from localStorage
+  // Load saved position from localStorage with viewport bounds checking
   useEffect(() => {
     if (storageKey && isOpen) {
       const savedPosition = localStorage.getItem(`floating-window-${storageKey}`)
       if (savedPosition) {
         try {
           const parsed = JSON.parse(savedPosition)
-          setPosition(parsed)
+
+          // Validate and constrain position to viewport bounds
+          const viewport = {
+            width: window.innerWidth,
+            height: window.innerHeight
+          }
+
+          // Ensure window is within viewport (allow at least 100px visible)
+          const constrainedPosition = {
+            x: Math.max(0, Math.min(parsed.x, viewport.width - 100)),
+            y: Math.max(0, Math.min(parsed.y, viewport.height - 100))
+          }
+
+          setPosition(constrainedPosition)
         } catch (e) {
           console.warn('Failed to parse saved window position:', e)
         }

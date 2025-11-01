@@ -24,6 +24,7 @@ interface UseImageViewerRendererParams {
   canvasToImageCoords: CanvasToImage
   imageToCanvasCoords: ImageToCanvas
   precisionCanvasPosRef: MutableRefObject<{ x: number; y: number } | null>
+  draggedPointImageCoordsRef: MutableRefObject<{ u: number; v: number } | null>
   onMovePoint: OnMovePoint
 }
 
@@ -35,6 +36,7 @@ export const useImageViewerRenderer = ({
   canvasToImageCoords,
   imageToCanvasCoords,
   precisionCanvasPosRef,
+  draggedPointImageCoordsRef,
   onMovePoint
 }: UseImageViewerRendererParams) => {
   const {
@@ -61,12 +63,13 @@ export const useImageViewerRenderer = ({
     isPlacementModeActive,
     isPointCreationActive,
     isLoopTraceActive,
+    isVanishingLineActive,
     isDraggingVanishingLine,
     draggedVanishingLine,
     visibility
   } = renderState
 
-  const isPlacementInteractionActive = isDraggingPoint || isDragDropActive || isPlacementModeActive || isPointCreationActive || isLoopTraceActive || isDraggingVanishingLine
+  const isPlacementInteractionActive = isDraggingPoint || isDragDropActive || isPlacementModeActive || isPointCreationActive || isLoopTraceActive || isVanishingLineActive || isDraggingVanishingLine
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -96,16 +99,6 @@ export const useImageViewerRenderer = ({
         const isBeingDragged = isDraggingPoint && draggedPoint === wp
         const isHovered = hoveredPoint === wp
         const isGloballyHovered = hoveredWorldPoint === wp
-
-        if (isBeingDragged) {
-          ctx.strokeStyle = 'rgba(255, 140, 0, 0.8)'
-          ctx.lineWidth = 2
-          ctx.setLineDash([4, 4])
-          ctx.beginPath()
-          ctx.arc(x, y, 18, 0, 2 * Math.PI)
-          ctx.stroke()
-          ctx.setLineDash([])
-        }
 
         if (isHovered && onMovePoint && !isBeingDragged) {
           ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)'
@@ -305,21 +298,30 @@ export const useImageViewerRenderer = ({
         return
       }
 
-      const anchor = isPrecisionDrag && precisionCanvasPosRef.current ? precisionCanvasPosRef.current : currentMousePos
-
-      if (!anchor) {
+      if (!currentMousePos) {
         return
       }
 
-      const imageU = (anchor.x - offset.x) / scale
-      const imageV = (anchor.y - offset.y) / scale
+      let imageU: number
+      let imageV: number
+
+      if (draggedPointImageCoordsRef.current) {
+        imageU = draggedPointImageCoordsRef.current.u
+        imageV = draggedPointImageCoordsRef.current.v
+      } else if (isPrecisionDrag && precisionCanvasPosRef.current) {
+        imageU = (precisionCanvasPosRef.current.x - offset.x) / scale
+        imageV = (precisionCanvasPosRef.current.y - offset.y) / scale
+      } else {
+        imageU = (currentMousePos.x - offset.x) / scale
+        imageV = (currentMousePos.y - offset.y) / scale
+      }
 
       renderLoupe({
         ctx,
         canvasEl,
         imgEl,
-        anchorX: anchor.x,
-        anchorY: anchor.y,
+        anchorX: currentMousePos.x,
+        anchorY: currentMousePos.y,
         imageU,
         imageV,
         scale,
@@ -456,67 +458,22 @@ export const useImageViewerRenderer = ({
           endpointRadius = 6
         }
 
-        if (isBeingDragged) {
-          lineWidth = 1
-          endpointRadius = 3
-        }
+        ctx.strokeStyle = color
+        ctx.lineWidth = lineWidth
+        ctx.setLineDash([])
 
-        // Draw line
-        if (isBeingDragged) {
-          // Draw dashed black-white pattern for contrast
-          ctx.lineWidth = lineWidth
-          ctx.setLineDash([6, 6])
+        ctx.beginPath()
+        ctx.moveTo(x1, y1)
+        ctx.lineTo(x2, y2)
+        ctx.stroke()
 
-          // Black dashes
-          ctx.strokeStyle = '#000000'
-          ctx.lineDashOffset = 0
-          ctx.beginPath()
-          ctx.moveTo(x1, y1)
-          ctx.lineTo(x2, y2)
-          ctx.stroke()
-
-          // White dashes
-          ctx.strokeStyle = '#FFFFFF'
-          ctx.lineDashOffset = 6
-          ctx.beginPath()
-          ctx.moveTo(x1, y1)
-          ctx.lineTo(x2, y2)
-          ctx.stroke()
-
-          ctx.setLineDash([])
-        } else {
-          ctx.strokeStyle = color
-          ctx.lineWidth = lineWidth
-          ctx.setLineDash([])
-
-          ctx.beginPath()
-          ctx.moveTo(x1, y1)
-          ctx.lineTo(x2, y2)
-          ctx.stroke()
-        }
-
-        // Draw endpoints
-        ctx.fillStyle = isBeingDragged ? '#FFFFFF' : color
-        if (isBeingDragged) {
-          // White fill with black outline for contrast
-          ctx.strokeStyle = '#000000'
-          ctx.lineWidth = 1
-          ctx.beginPath()
-          ctx.arc(x1, y1, endpointRadius, 0, 2 * Math.PI)
-          ctx.fill()
-          ctx.stroke()
-          ctx.beginPath()
-          ctx.arc(x2, y2, endpointRadius, 0, 2 * Math.PI)
-          ctx.fill()
-          ctx.stroke()
-        } else {
-          ctx.beginPath()
-          ctx.arc(x1, y1, endpointRadius, 0, 2 * Math.PI)
-          ctx.fill()
-          ctx.beginPath()
-          ctx.arc(x2, y2, endpointRadius, 0, 2 * Math.PI)
-          ctx.fill()
-        }
+        ctx.fillStyle = color
+        ctx.beginPath()
+        ctx.arc(x1, y1, endpointRadius, 0, 2 * Math.PI)
+        ctx.fill()
+        ctx.beginPath()
+        ctx.arc(x2, y2, endpointRadius, 0, 2 * Math.PI)
+        ctx.fill()
 
         const qualityIssues = validateLineQuality(vanishingLine, linesByAxis[vanishingLine.axis])
         if (qualityIssues.length > 0) {
@@ -1422,11 +1379,13 @@ export const useImageViewerRenderer = ({
     isPlacementModeActive,
     isPointCreationActive,
     isLoopTraceActive,
+    isVanishingLineActive,
     isDraggingVanishingLine,
     draggedVanishingLine,
     canvasToImageCoords,
     imageToCanvasCoords,
     precisionCanvasPosRef,
+    draggedPointImageCoordsRef,
     onMovePoint
   ])
 }

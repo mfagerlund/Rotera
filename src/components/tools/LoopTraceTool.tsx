@@ -52,6 +52,7 @@ export const LoopTraceTool: React.FC<LoopTraceToolProps> = ({
   const [namePrefix, setNamePrefix] = useState('')
   const [closedLoop, setClosedLoop] = useState(false)
   const prevSegmentsRef = useRef<any[]>([])
+  const prevSelectedPointsCountRef = useRef(0)
   const prevIsActiveRef = useRef(isActive)
 
   const {
@@ -77,7 +78,7 @@ export const LoopTraceTool: React.FC<LoopTraceToolProps> = ({
   useEffect(() => {
     if (!isActive || !onConstructionPreviewChange) return
 
-    // Check if segments actually changed
+    // Check if segments or selected points actually changed
     const segmentsChanged =
       segments.length !== prevSegmentsRef.current.length ||
       segments.some((seg, i) => {
@@ -85,9 +86,12 @@ export const LoopTraceTool: React.FC<LoopTraceToolProps> = ({
         return !prev || seg.pointA !== prev.pointA || seg.pointB !== prev.pointB
       })
 
-    if (!segmentsChanged) return
+    const selectedPointsChanged = selectedPoints.length !== prevSelectedPointsCountRef.current
+
+    if (!segmentsChanged && !selectedPointsChanged) return
 
     prevSegmentsRef.current = segments
+    prevSelectedPointsCountRef.current = selectedPoints.length
 
     if (segments.length > 0) {
       // Segments already contain entity references
@@ -95,10 +99,17 @@ export const LoopTraceTool: React.FC<LoopTraceToolProps> = ({
         type: 'loop-chain',
         segments: segments
       })
+    } else if (selectedPoints.length === 1) {
+      // Only first point selected - show line to cursor
+      onConstructionPreviewChange({
+        type: 'line',
+        pointA: selectedPoints[0],
+        showToCursor: true
+      })
     } else {
       onConstructionPreviewChange(null)
     }
-  }, [isActive, segments, onConstructionPreviewChange])
+  }, [isActive, segments, selectedPoints, onConstructionPreviewChange])
 
   // Clear preview when tool is deactivated
   useEffect(() => {

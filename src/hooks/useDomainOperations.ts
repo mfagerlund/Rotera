@@ -80,6 +80,7 @@ export interface DomainOperations {
   // Project
   clearProject: () => void
   exportOptimizationDto: () => any | null  // Returns ProjectDto (full serialization)
+  removeDuplicateImagePoints: () => number  // Returns number of duplicates removed
 }
 
 function cleanupConstraintReferences(constraint: Constraint): void {
@@ -224,6 +225,16 @@ export function useDomainOperations(
       project.addWorldPoint(worldPoint)
     }
 
+    // Check if this world point already has an image point on this viewpoint
+    const existingImagePoints = viewpoint.getImagePointsForWorldPoint(worldPoint)
+    if (existingImagePoints.length > 0) {
+      console.warn(`WorldPoint "${worldPoint.name}" already has an image point on viewpoint "${viewpoint.name}". Moving existing point instead.`)
+      // Move the existing point to the new location
+      const existingImagePoint = existingImagePoints[0] as ImagePoint
+      moveImagePoint(existingImagePoint, u, v)
+      return
+    }
+
     const imagePoint = ImagePoint.create(
       worldPoint,
       viewpoint,
@@ -310,6 +321,39 @@ export function useDomainOperations(
     return JSON.parse(json) as any as OptimizationExportDto
   }
 
+  const removeDuplicateImagePoints = (): number => {
+    if (!project) return 0
+
+    let removedCount = 0
+
+    // For each viewpoint, check each world point
+    for (const viewpoint of project.viewpoints) {
+      for (const worldPoint of project.worldPoints) {
+        const imagePoints = viewpoint.getImagePointsForWorldPoint(worldPoint)
+
+        // If there are multiple image points for this world point on this viewpoint
+        if (imagePoints.length > 1) {
+          console.warn(`Found ${imagePoints.length} image points for WorldPoint "${worldPoint.name}" on Viewpoint "${viewpoint.name}". Keeping only the first one.`)
+
+          // Keep the first one, remove the rest
+          for (let i = 1; i < imagePoints.length; i++) {
+            const duplicateImagePoint = imagePoints[i] as ImagePoint
+            viewpoint.removeImagePoint(duplicateImagePoint)
+            worldPoint.removeImagePoint(duplicateImagePoint)
+            project.removeImagePoint(duplicateImagePoint)
+            removedCount++
+          }
+        }
+      }
+    }
+
+    if (removedCount > 0) {
+      console.log(`Removed ${removedCount} duplicate image points`)
+    }
+
+    return removedCount
+  }
+
   return {
     createWorldPoint,
     renameWorldPoint,
@@ -331,6 +375,7 @@ export function useDomainOperations(
     deleteConstraint,
     toggleConstraint,
     clearProject,
-    exportOptimizationDto
+    exportOptimizationDto,
+    removeDuplicateImagePoints
   }
 }
