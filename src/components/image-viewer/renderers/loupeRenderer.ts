@@ -59,6 +59,8 @@ export function renderLoupeHelper(params: RenderParams): void {
     imageV = (currentMousePos.y - offset.y) / scale
   }
 
+  (window as any).__loupePos = { u: imageU, v: imageV }
+
   renderLoupe({
     ctx,
     canvasEl: canvas,

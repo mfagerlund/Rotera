@@ -98,9 +98,19 @@ export function useImageViewerEvents({
         let imageCoords = transform.canvasToImageCoordsUnbounded(x, y)
         if (!imageCoords) return
 
-        if (precisionDragState.isPrecisionToggleActive && pointDragState.draggedPointImageCoordsRef.current) {
+        const lp = (window as any).__loupePos
+        const match = lp ? Math.abs(imageCoords.u - lp.u) < 2 && Math.abs(imageCoords.v - lp.v) < 2 : null
+        console.log('[VL CLICK]', match ? 'OK' : 'MISMATCH',
+          '| click:', `(${imageCoords.u.toFixed(1)}, ${imageCoords.v.toFixed(1)})`,
+          '| loupe:', lp ? `(${lp.u.toFixed(1)}, ${lp.v.toFixed(1)})` : 'N/A',
+          '| precisionToggle:', precisionDragState.isPrecisionToggleActive,
+          '| draggedRef:', pointDragState.draggedPointImageCoordsRef.current ? `(${pointDragState.draggedPointImageCoordsRef.current.u.toFixed(1)}, ${pointDragState.draggedPointImageCoordsRef.current.v.toFixed(1)})` : 'null')
+
+        if (pointDragState.draggedPointImageCoordsRef.current) {
           imageCoords = pointDragState.draggedPointImageCoordsRef.current
         }
+
+        console.log('[VL PLACED] at:', `(${imageCoords.u.toFixed(1)}, ${imageCoords.v.toFixed(1)})`, vanishingLineDragState.vanishingLineStart ? 'END POINT' : 'START POINT')
 
         if (!vanishingLineDragState.vanishingLineStart) {
           vanishingLineDragState.setVanishingLineStart(imageCoords)
@@ -111,10 +121,8 @@ export function useImageViewerEvents({
       } else if (placementMode.active && onCreatePoint) {
         let imageCoords = transform.canvasToImageCoords(x, y)
 
-        const savedPrecisionCoords = precisionDragState.isPrecisionToggleActive ? pointDragState.draggedPointImageCoordsRef.current : null
-
-        if (precisionDragState.isPrecisionToggleActive && savedPrecisionCoords) {
-          imageCoords = savedPrecisionCoords
+        if (pointDragState.draggedPointImageCoordsRef.current) {
+          imageCoords = pointDragState.draggedPointImageCoordsRef.current
         }
 
         if (imageCoords) {
@@ -180,7 +188,7 @@ export function useImageViewerEvents({
           }
           onVanishingLineClick(nearbyVanishingLine, event.ctrlKey, event.shiftKey)
         } else {
-          const savedPrecisionCoords = precisionDragState.isPrecisionToggleActive ? pointDragState.draggedPointImageCoordsRef.current : null
+          const savedDraggedRef = pointDragState.draggedPointImageCoordsRef.current
 
           pointDragState.dragStartImageCoordsRef.current = null
           pointDragState.draggedPointImageCoordsRef.current = null
@@ -193,8 +201,8 @@ export function useImageViewerEvents({
           if (onCreatePoint) {
             let imageCoords = transform.canvasToImageCoords(x, y)
 
-            if (precisionDragState.isPrecisionToggleActive && savedPrecisionCoords) {
-              imageCoords = savedPrecisionCoords
+            if (savedDraggedRef) {
+              imageCoords = savedDraggedRef
             }
 
             if (imageCoords) {
