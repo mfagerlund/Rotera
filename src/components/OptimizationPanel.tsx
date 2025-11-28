@@ -228,6 +228,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
 
       const result = {
         converged: solverResult.converged,
+        error: solverResult.error,
         totalError: solverResult.residual,
         pointAccuracy: solverResult.residual / Math.max(1, pointEntities.length),
         iterations: solverResult.iterations,
@@ -245,7 +246,16 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
 
     } catch (error) {
       console.error('Optimization failed:', error)
-      onOptimizationComplete(false, error instanceof Error ? error.message : 'Optimization failed')
+      const errorMessage = error instanceof Error ? error.message : 'Optimization failed'
+      setResults({
+        converged: false,
+        error: errorMessage,
+        totalError: Infinity,
+        pointAccuracy: 0,
+        iterations: 0,
+        outliers: []
+      })
+      onOptimizationComplete(false, errorMessage)
     } finally {
       setIsOptimizing(false)
     }
@@ -434,7 +444,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
         <div className={`optimization-results ${results.converged ? 'success' : 'error'}`}>
           <div className="results-header">
             <span className="results-status">
-              {results.converged ? '✅' : '❌'} {results.converged ? 'Optimization converged' : 'Optimization failed to converge'}
+              {results.converged ? '✅ Optimization converged' : `❌ ${results.error || 'Optimization failed'}`}
             </span>
           </div>
           {results.converged && (

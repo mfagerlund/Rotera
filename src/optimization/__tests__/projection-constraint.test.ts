@@ -53,12 +53,12 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
 
       // If camera were at origin with zero rotation, points would project to:
       // p1 [0,0,10] -> [960, 540] (center)
-      // p2 [2,0,10] -> [960 + 1000*(2/10), 540] = [1160, 540]
-      // p3 [0,2,10] -> [960, 540 + 1000*(2/10)] = [960, 740]
+      // p2 [2,0,10] -> u = 960 + 1000*(2/10) = 1160, v = 540
+      // p3 [0,2,10] -> u = 960, v = 540 - 1000*(2/10) = 340 (Y-flip: v = pp_y - fy*y/z)
 
       const ip1 = ImagePoint.create(p1, camera, 960, 540);
       const ip2 = ImagePoint.create(p2, camera, 1160, 540);
-      const ip3 = ImagePoint.create(p3, camera, 960, 740);
+      const ip3 = ImagePoint.create(p3, camera, 960, 340);
 
       project.addWorldPoint(p1);
       project.addWorldPoint(p2);

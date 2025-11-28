@@ -1,6 +1,7 @@
 import type {ISelectable, SelectableType} from '../../types/selectable'
 import type {IValueMapContributor, ValueMap} from '../../optimization/IOptimizable'
-import type {IWorldPoint, ILine, IConstraint, IImagePoint} from '../interfaces'
+import type {IWorldPoint, ILine, IConstraint} from '../interfaces'
+import type {ImagePoint} from '../imagePoint'
 import {V, Value, Vec3} from 'scalar-autograd'
 import * as vec3 from '../../utils/vec3'
 import type { ISerializable } from '../serialization/ISerializable'
@@ -13,7 +14,7 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
     selected = false
     connectedLines: Set<ILine> = new Set()
     referencingConstraints: Set<IConstraint> = new Set()
-    imagePoints: Set<IImagePoint> = new Set()
+    imagePoints: Set<ImagePoint> = new Set()
     lastResiduals: number[] = []
     name: string
     lockedXyz: [number | null, number | null, number | null]
@@ -192,11 +193,11 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
         this.referencingConstraints.delete(constraint)
     }
 
-    addImagePoint(imagePoint: IImagePoint): void {
+    addImagePoint(imagePoint: ImagePoint): void {
         this.imagePoints.add(imagePoint)
     }
 
-    removeImagePoint(imagePoint: IImagePoint): void {
+    removeImagePoint(imagePoint: ImagePoint): void {
         this.imagePoints.delete(imagePoint)
     }
 

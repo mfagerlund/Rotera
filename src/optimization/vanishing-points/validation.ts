@@ -147,21 +147,24 @@ export function validateLineQuality(
     });
   }
 
-  const otherLines = allLinesForAxis.filter(l => l.id !== line.id);
+  // Only check parallel lines when there are exactly 2 lines on axis.
+  // With 3+ lines, overdetermined least-squares handles parallel pairs well.
+  if (allLinesForAxis.length === 2) {
+    const otherLines = allLinesForAxis.filter(l => l.id !== line.id);
+    if (otherLines.length > 0) {
+      const minAngle = Math.min(...otherLines.map(other => computeAngleBetweenLines(line, other)));
 
-  if (otherLines.length > 0) {
-    const minAngle = Math.min(...otherLines.map(other => computeAngleBetweenLines(line, other)));
-
-    if (minAngle < 5) {
-      issues.push({
-        type: 'error',
-        message: `Line nearly parallel to another (${minAngle.toFixed(1)}°). Lines should spread out.`
-      });
-    } else if (minAngle < 15) {
-      issues.push({
-        type: 'warning',
-        message: `Line close to parallel with another (${minAngle.toFixed(1)}°). More spread recommended.`
-      });
+      if (minAngle < 2) {
+        issues.push({
+          type: 'error',
+          message: `Line nearly parallel to another (${minAngle.toFixed(1)}°). Lines should spread out.`
+        });
+      } else if (minAngle < 5) {
+        issues.push({
+          type: 'warning',
+          message: `Line close to parallel with another (${minAngle.toFixed(1)}°). More spread recommended.`
+        });
+      }
     }
   }
 

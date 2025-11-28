@@ -1,6 +1,7 @@
 import type {ISelectable, SelectableType} from '../../types/selectable'
 import type {IValueMapContributor, ValueMap, CameraValues} from '../../optimization/IOptimizable'
-import type {IWorldPoint, IImagePoint, IViewpoint} from '../interfaces'
+import type {IWorldPoint, IViewpoint} from '../interfaces'
+import type {ImagePoint} from '../imagePoint'
 import {V, Value, Vec3} from 'scalar-autograd'
 import {Vec4} from 'scalar-autograd'
 import {Quaternion} from '../../optimization/Quaternion'
@@ -39,7 +40,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
     isVisible: boolean
     opacity: number
     color: string
-    imagePoints: Set<IImagePoint> = new Set()
+    imagePoints: Set<ImagePoint> = new Set()
     vanishingLines: Set<VanishingLine> = new Set()
 
     private constructor(
@@ -320,11 +321,11 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
         const quat = Quaternion.fromEuler(roll, pitch, yaw)
         this.rotation = quat.toArray()
     }
-    addImagePoint(imagePoint: IImagePoint): void {
+    addImagePoint(imagePoint: ImagePoint): void {
         this.imagePoints.add(imagePoint)
     }
 
-    removeImagePoint(imagePoint: IImagePoint): void {
+    removeImagePoint(imagePoint: ImagePoint): void {
         this.imagePoints.delete(imagePoint)
     }
 
@@ -332,11 +333,11 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
         return this.imagePoints.size
     }
 
-    getImagePointsForWorldPoint(worldPoint: IWorldPoint): IImagePoint[] {
+    getImagePointsForWorldPoint(worldPoint: IWorldPoint): ImagePoint[] {
         return Array.from(this.imagePoints).filter(ip => ip.worldPoint === worldPoint)
     }
 
-    getVisibleImagePoints(): IImagePoint[] {
+    getVisibleImagePoints(): ImagePoint[] {
         return Array.from(this.imagePoints).filter(ip => ip.isVisible)
     }
 

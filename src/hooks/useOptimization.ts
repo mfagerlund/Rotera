@@ -133,17 +133,21 @@ export const useOptimization = () => {
           constraints: new Set(constraints),
         } as any;
 
-        const result = await new Promise<OptimizeProjectResult>((resolve) => {
+        const result = await new Promise<OptimizeProjectResult>((resolve, reject) => {
           setTimeout(() => {
-            const solverResult = optimizeProject(project, {
-              tolerance: options.tolerance ?? 1e-6,
-              maxIterations: options.maxIterations ?? 100,
-              damping: options.damping ?? 1e-3,
-              verbose: options.verbose ?? false,
-              autoInitializeCameras: true,
-              autoInitializeWorldPoints: true,
-            });
-            resolve(solverResult);
+            try {
+              const solverResult = optimizeProject(project, {
+                tolerance: options.tolerance ?? 1e-6,
+                maxIterations: options.maxIterations ?? 100,
+                damping: options.damping ?? 1e-3,
+                verbose: options.verbose ?? false,
+                autoInitializeCameras: true,
+                autoInitializeWorldPoints: true,
+              });
+              resolve(solverResult);
+            } catch (error) {
+              reject(error);
+            }
           }, 0);
         });
 

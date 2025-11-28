@@ -74,8 +74,10 @@ export function projectWorldPointToPixel(
   const fx = focalLength;
   const fy = focalLength * aspectRatio;
 
+  // NOTE: v uses subtraction because image Y increases downward
+  // This matches the optimizer's camera-projection.ts formula
   const u = fx * xNorm + skew * yNorm + principalPointX;
-  const v = fy * yNorm + principalPointY;
+  const v = principalPointY - fy * yNorm;
 
   return [u, v];
 }

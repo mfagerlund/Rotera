@@ -406,21 +406,26 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
 
     const direction = vecB.sub(vecA)
 
+    // Scale direction residuals to be comparable to pixel-level reprojection errors
+    // A 1-meter offset from the constraint direction should be weighted similarly to ~100 pixels
+    const GEOMETRIC_SCALE = 100.0
+    const geoScale = V.C(GEOMETRIC_SCALE)
+
     switch (this.direction) {
       case 'horizontal':
-        residuals.push(direction.y)
+        residuals.push(V.mul(direction.y, geoScale))
         break
 
       case 'vertical':
-        residuals.push(direction.x, direction.z)
+        residuals.push(V.mul(direction.x, geoScale), V.mul(direction.z, geoScale))
         break
 
       case 'x-aligned':
-        residuals.push(direction.y, direction.z)
+        residuals.push(V.mul(direction.y, geoScale), V.mul(direction.z, geoScale))
         break
 
       case 'z-aligned':
-        residuals.push(direction.x, direction.y)
+        residuals.push(V.mul(direction.x, geoScale), V.mul(direction.y, geoScale))
         break
 
       case 'free':
@@ -430,7 +435,7 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
     if (this.hasFixedLength() && this.targetLength !== undefined) {
       const dist = direction.magnitude
       const targetLength = this.targetLength
-      const lengthResidual = V.sub(dist, V.C(targetLength))
+      const lengthResidual = V.mul(V.sub(dist, V.C(targetLength)), geoScale)
       residuals.push(lengthResidual)
     }
 

@@ -1,5 +1,7 @@
 import type {ISelectable, SelectableType} from '../../types/selectable'
-import type {IWorldPoint, IImagePoint, IViewpoint} from '../interfaces'
+import type {IImagePoint} from '../interfaces'
+import type { WorldPoint } from '../world-point'
+import type { Viewpoint } from '../viewpoint'
 import type { ISerializable } from '../serialization/ISerializable'
 import type { SerializationContext } from '../serialization/SerializationContext'
 import type { ImagePointDto } from './ImagePointDto'
@@ -15,16 +17,16 @@ export class ImagePoint implements ISelectable, IImagePoint, IResidualProvider, 
     reprojectedU?: number
     reprojectedV?: number
 
-    worldPoint: IWorldPoint
-    viewpoint: IViewpoint
+    worldPoint: WorldPoint
+    viewpoint: Viewpoint
     u: number
     v: number
     isVisible: boolean
     confidence: number
 
     public constructor(
-        worldPoint: IWorldPoint,
-        viewpoint: IViewpoint,
+        worldPoint: WorldPoint,
+        viewpoint: Viewpoint,
         u: number,
         v: number,
         isVisible: boolean,
@@ -41,8 +43,8 @@ export class ImagePoint implements ISelectable, IImagePoint, IResidualProvider, 
     }
 
     static create(
-        worldPoint: IWorldPoint,
-        viewpoint: IViewpoint,
+        worldPoint: WorldPoint,
+        viewpoint: Viewpoint,
         u: number,
         v: number,
         options: {
@@ -107,12 +109,12 @@ export class ImagePoint implements ISelectable, IImagePoint, IResidualProvider, 
     }
 
     computeResiduals(valueMap: ValueMap): Value[] {
-        const worldPointVec = valueMap.points.get(this.worldPoint as any)
+        const worldPointVec = valueMap.points.get(this.worldPoint)
         if (!worldPointVec) {
             return []
         }
 
-        const cameraValues = valueMap.cameras.get(this.viewpoint as any)
+        const cameraValues = valueMap.cameras.get(this.viewpoint)
         if (!cameraValues) {
             return []
         }
@@ -149,8 +151,8 @@ export class ImagePoint implements ISelectable, IImagePoint, IResidualProvider, 
         const residuals = this.computeResiduals(_valueMap)
         this.lastResiduals = residuals.map(r => r.data)
 
-        const worldPointVec = _valueMap.points.get(this.worldPoint as any)
-        const cameraValues = _valueMap.cameras.get(this.viewpoint as any)
+        const worldPointVec = _valueMap.points.get(this.worldPoint)
+        const cameraValues = _valueMap.cameras.get(this.viewpoint)
 
         if (worldPointVec && cameraValues) {
             const projection = projectWorldPointToPixelQuaternion(
@@ -214,8 +216,8 @@ export class ImagePoint implements ISelectable, IImagePoint, IResidualProvider, 
     }
 
     static deserialize(dto: ImagePointDto, context: SerializationContext): ImagePoint {
-        const worldPoint = context.getEntity<IWorldPoint>(dto.worldPointId)
-        const viewpoint = context.getEntity<IViewpoint>(dto.viewpointId)
+        const worldPoint = context.getEntity<WorldPoint>(dto.worldPointId)
+        const viewpoint = context.getEntity<Viewpoint>(dto.viewpointId)
 
         if (!worldPoint || !viewpoint) {
             throw new Error(
@@ -231,12 +233,8 @@ export class ImagePoint implements ISelectable, IImagePoint, IResidualProvider, 
 
         context.registerEntity(imagePoint, dto.id)
 
-        if ('addImagePoint' in worldPoint && typeof worldPoint.addImagePoint === 'function') {
-            worldPoint.addImagePoint(imagePoint)
-        }
-        if ('addImagePoint' in viewpoint && typeof viewpoint.addImagePoint === 'function') {
-            viewpoint.addImagePoint(imagePoint)
-        }
+        worldPoint.addImagePoint(imagePoint)
+        viewpoint.addImagePoint(imagePoint)
 
         return imagePoint
     }

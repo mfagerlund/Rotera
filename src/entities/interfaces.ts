@@ -15,8 +15,8 @@ export interface IConstraint {
 }
 
 export interface IImagePoint {
-    worldPoint: IWorldPoint
-    viewpoint: IViewpoint
+    worldPoint: IWorldPoint  // Use interfaces here to avoid circular imports
+    viewpoint: IViewpoint    // Concrete class has concrete types
     u: number
     v: number
     isVisible: boolean

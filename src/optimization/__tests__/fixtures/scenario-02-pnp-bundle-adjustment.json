@@ -129,7 +129,7 @@
       "worldPointId": "WorldPoint_0",
       "viewpointId": "Viewpoint_5",
       "u": 660,
-      "v": -60,
+      "v": 1140,
       "isVisible": true,
       "confidence": 1
     },
@@ -138,7 +138,7 @@
       "worldPointId": "WorldPoint_1",
       "viewpointId": "Viewpoint_5",
       "u": 1260,
-      "v": -60,
+      "v": 1140,
       "isVisible": true,
       "confidence": 1
     },
@@ -156,7 +156,7 @@
       "worldPointId": "WorldPoint_3",
       "viewpointId": "Viewpoint_5",
       "u": 780,
-      "v": 360,
+      "v": 720,
       "isVisible": true,
       "confidence": 1
     },
@@ -165,7 +165,7 @@
       "worldPointId": "WorldPoint_4",
       "viewpointId": "Viewpoint_5",
       "u": 1140,
-      "v": 119.99999999999994,
+      "v": 960,
       "isVisible": true,
       "confidence": 1
     }

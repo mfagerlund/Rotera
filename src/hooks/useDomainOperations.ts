@@ -68,6 +68,7 @@ export interface DomainOperations {
   // Image Points
   addImagePointToWorldPoint: (worldPoint: WorldPoint, viewpoint: Viewpoint, u: number, v: number) => void
   moveImagePoint: (imagePoint: ImagePoint, u: number, v: number) => void
+  deleteImagePointFromViewpoint: (worldPoint: WorldPoint, viewpoint: Viewpoint) => boolean
   getSelectedPointsInImage: (viewpoint: Viewpoint) => WorldPoint[]
   copyPointsFromImageToImage: (fromViewpoint: Viewpoint, toViewpoint: Viewpoint) => void
 
@@ -200,12 +201,22 @@ export function useDomainOperations(
   const deleteImage = (viewpoint: Viewpoint) => {
     if (!project) return
 
+    const affectedWorldPoints = new Set<WorldPoint>()
+
     Array.from(viewpoint.imagePoints).forEach(imagePoint => {
-      (imagePoint.worldPoint as WorldPoint).removeImagePoint(imagePoint)
+      const wp = imagePoint.worldPoint as WorldPoint
+      affectedWorldPoints.add(wp)
+      wp.removeImagePoint(imagePoint)
       project.removeImagePoint(imagePoint)
     })
 
     project.removeViewpoint(viewpoint)
+
+    affectedWorldPoints.forEach(wp => {
+      if (wp.imagePoints.size === 0) {
+        deleteWorldPoint(wp)
+      }
+    })
   }
 
   const getImagePointCount = (viewpoint: Viewpoint): number => {
@@ -254,6 +265,21 @@ export function useDomainOperations(
   const moveImagePoint = (imagePoint: ImagePoint, u: number, v: number) => {
     if (!project) return
     imagePoint.setPosition(u, v)
+  }
+
+  const deleteImagePointFromViewpoint = (worldPoint: WorldPoint, viewpoint: Viewpoint): boolean => {
+    if (!project) return false
+
+    const imagePoints = viewpoint.getImagePointsForWorldPoint(worldPoint)
+    if (imagePoints.length === 0) return false
+
+    const imagePoint = imagePoints[0] as ImagePoint
+
+    viewpoint.removeImagePoint(imagePoint)
+    worldPoint.removeImagePoint(imagePoint)
+    project.removeImagePoint(imagePoint)
+
+    return true
   }
 
   const getSelectedPointsInImage = (viewpoint: Viewpoint): WorldPoint[] => {
@@ -366,6 +392,7 @@ export function useDomainOperations(
     getImagePointCount,
     addImagePointToWorldPoint,
     moveImagePoint,
+    deleteImagePointFromViewpoint,
     getSelectedPointsInImage,
     copyPointsFromImageToImage,
     addConstraint,

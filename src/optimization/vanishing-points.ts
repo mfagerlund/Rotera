@@ -384,53 +384,13 @@ export function estimatePrincipalPoint(
   imageWidth: number,
   imageHeight: number
 ): { u: number; v: number } | null {
+  // For most cameras, the principal point is very close to the image center.
+  // Estimating PP from vanishing points is unreliable and can produce wildly wrong values.
+  // Just use the image center - it's simple, robust, and almost always correct.
   const vps = Object.values(vanishingPoints).filter(vp => vp !== undefined) as VanishingPoint[]
 
   if (vps.length < 2) {
     return null
-  }
-
-  const vp1 = vps[0]
-  const vp2 = vps[1]
-  const vp3 = vps[2]
-
-  if (vps.length === 3 && vp3) {
-    const u1 = vp1.u
-    const v1 = vp1.v
-    const u2 = vp2.u
-    const v2 = vp2.v
-    const u3 = vp3.u
-    const v3 = vp3.v
-
-    const A = u1 * u2 - u1 * u3 - u2 * u3
-    const B = v1 * v2 + v1 * v3 + v2 * v3
-    const C = u1 * u2 + u1 * u3 + u2 * u3
-    const D = v1 * v2 - v1 * v3 - v2 * v3
-
-    const denom = A + D
-    if (Math.abs(denom) < 1e-6) {
-      return null
-    }
-
-    const u0 = -(u1 * u2 * u3 + v1 * v2 * v3) / denom
-    const v0 = (B * u1 + C * v1) / denom
-
-    if (u0 < 0 || u0 > imageWidth || v0 < 0 || v0 > imageHeight) {
-      return { u: imageWidth / 2, v: imageHeight / 2 }
-    }
-
-    return { u: u0, v: v0 }
-  }
-
-  if (vanishingPoints.x && vanishingPoints.z && !vanishingPoints.y) {
-    const xVP = vanishingPoints.x
-    const zVP = vanishingPoints.z
-
-    const midU = (xVP.u + zVP.u) / 2
-
-    const v0 = imageHeight / 2
-
-    return { u: midU, v: v0 }
   }
 
   return { u: imageWidth / 2, v: imageHeight / 2 }
@@ -776,21 +736,24 @@ export function validateLineQuality(
     })
   }
 
-  const otherLines = allLinesForAxis.filter(l => l.id !== line.id)
+  // Only check parallel lines when there are exactly 2 lines on axis.
+  // With 3+ lines, overdetermined least-squares handles parallel pairs well.
+  if (allLinesForAxis.length === 2) {
+    const otherLines = allLinesForAxis.filter(l => l.id !== line.id)
+    if (otherLines.length > 0) {
+      const minAngle = Math.min(...otherLines.map(other => computeAngleBetweenLines(line, other)))
 
-  if (otherLines.length > 0) {
-    const minAngle = Math.min(...otherLines.map(other => computeAngleBetweenLines(line, other)))
-
-    if (minAngle < 5) {
-      issues.push({
-        type: 'error',
-        message: `Line nearly parallel to another (${minAngle.toFixed(1)}°). Lines should spread out.`
-      })
-    } else if (minAngle < 15) {
-      issues.push({
-        type: 'warning',
-        message: `Line close to parallel with another (${minAngle.toFixed(1)}°). More spread recommended.`
-      })
+      if (minAngle < 2) {
+        issues.push({
+          type: 'error',
+          message: `Line nearly parallel to another (${minAngle.toFixed(1)}°). Lines should spread out.`
+        })
+      } else if (minAngle < 5) {
+        issues.push({
+          type: 'warning',
+          message: `Line close to parallel with another (${minAngle.toFixed(1)}°). More spread recommended.`
+        })
+      }
     }
   }
 

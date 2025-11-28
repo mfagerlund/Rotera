@@ -1,7 +1,7 @@
 import type {WorldPoint} from '../world-point'
 import type {Line} from '../line'
 import type {Viewpoint} from '../viewpoint'
-import type {IImagePoint} from '../interfaces'
+import type {ImagePoint} from '../imagePoint'
 import type {Constraint} from '../constraints'
 import {makeAutoObservable, reaction} from 'mobx'
 import { propagateCoordinateInferences, type InferenceConflict } from '../world-point/coordinate-inference'
@@ -38,7 +38,7 @@ export class Project {
     worldPoints: Set<WorldPoint>
     lines: Set<Line>
     viewpoints: Set<Viewpoint>
-    imagePoints: Set<IImagePoint>
+    imagePoints: Set<ImagePoint>
     constraints: Set<Constraint>
     inferenceConflicts: InferenceConflict[] = []
 
@@ -65,7 +65,7 @@ export class Project {
         worldPoints: Set<WorldPoint>,
         lines: Set<Line>,
         viewpoints: Set<Viewpoint>,
-        imagePoints: Set<IImagePoint>,
+        imagePoints: Set<ImagePoint>,
         constraints: Set<Constraint>,
         showPointNames: boolean,
         autoSave: boolean,
@@ -138,7 +138,7 @@ export class Project {
             new Set<WorldPoint>(),
             new Set<Line>(),
             new Set<Viewpoint>(),
-            new Set<IImagePoint>(),
+            new Set<ImagePoint>(),
             new Set<Constraint>(),
             true,
             true,
@@ -164,7 +164,7 @@ export class Project {
         worldPoints: Set<WorldPoint>,
         lines: Set<Line>,
         viewpoints: Set<Viewpoint>,
-        imagePoints: Set<IImagePoint>,
+        imagePoints: Set<ImagePoint>,
         constraints: Set<Constraint>,
         showPointNames: boolean,
         autoSave: boolean,
@@ -236,11 +236,11 @@ export class Project {
         this.viewpoints.delete(viewpoint)
     }
 
-    addImagePoint(imagePoint: IImagePoint): void {
+    addImagePoint(imagePoint: ImagePoint): void {
         this.imagePoints.add(imagePoint)
     }
 
-    removeImagePoint(imagePoint: IImagePoint): void {
+    removeImagePoint(imagePoint: ImagePoint): void {
         this.imagePoints.delete(imagePoint)
     }
 

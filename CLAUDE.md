@@ -1,7 +1,19 @@
 - Before we're done with a task, run `bash check.sh`
 - This project should currently have NO backward compability and NO legacy code. Keep it CLEAN.
 - NEVER create multiple objects, classes, interfaces, or types that serve the same or similar purposes. Each concept gets ONE representation.
-- gogo means "Start executing and don't stop until finished. Beep when done."s
+- gogo means "Start executing and don't stop until finished. Beep when done."
+
+## Abbreviations
+
+| Abbr | Full Name | Entity Class |
+|------|-----------|--------------|
+| WP | WorldPoint | `WorldPoint` |
+| VP | ViewPoint (camera view/image) | `Viewpoint` |
+| IP | ImagePoint | `ImagePoint` |
+| VL | VanishingLine | `VanishingLine` |
+| VLP | VanishingLinePoint | `VanishingLinePoint` |
+| DC | DistanceConstraint | `DistanceConstraint` |
+| AC | AngleConstraint | `AngleConstraint` |
 
 ## ENTITY LAYER - BE VERY CAREFUL
 

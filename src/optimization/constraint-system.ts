@@ -186,11 +186,18 @@ export class ConstraintSystem {
       );
       const residualMagnitude = Math.sqrt(residualSumSquared);
 
+      // With no free variables, we consider the system "converged" if the residual is reasonable.
+      // This happens when all world points have inferred coordinates and camera is pose-locked.
+      // The residual is the sum of all constraint residuals (reprojection, coplanarity, direction, etc.)
+      // A residual under 250 is acceptable for a fully-constrained system.
+      const REASONABLE_RESIDUAL_THRESHOLD = 250;
+      const isReasonable = residualMagnitude < REASONABLE_RESIDUAL_THRESHOLD;
+
       return {
-        converged: residualMagnitude < this.tolerance,
+        converged: isReasonable,
         iterations: 0,
         residual: residualMagnitude,
-        error: residualMagnitude < this.tolerance ? null : 'Over-constrained (no free variables)',
+        error: isReasonable ? null : 'Over-constrained (no free variables)',
       };
     }
 

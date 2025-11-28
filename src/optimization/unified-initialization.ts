@@ -49,7 +49,8 @@ function step1_setLockedPoints(
   initialized: Set<WorldPoint>,
   verbose: boolean
 ): void {
-  let count = 0
+  let lockedCount = 0
+  let presetCount = 0
 
   for (const point of points) {
     if (point.isFullyLocked()) {
@@ -59,12 +60,17 @@ function step1_setLockedPoints(
         point.lockedXyz[2]!
       ]
       initialized.add(point)
-      count++
+      lockedCount++
+    } else if (point.optimizedXyz !== undefined) {
+      // Point already has optimizedXyz set (e.g., from inferred coordinates)
+      // Mark as initialized to prevent overwriting with incorrect values
+      initialized.add(point)
+      presetCount++
     }
   }
 
   if (verbose) {
-    console.log(`[Step 1] Set ${count} locked points`)
+    console.log(`[Step 1] Set ${lockedCount} locked points, preserved ${presetCount} pre-initialized points`)
   }
 }
 

@@ -53,7 +53,7 @@ describe('Entity Deletion Cleanup Tests', () => {
 
       expect(deserialized.viewpoints.size).toBe(0)
       expect(deserialized.imagePoints.size).toBe(0)
-      expect(deserialized.worldPoints.size).toBe(1)
+      expect(deserialized.worldPoints.size).toBe(0) // orphaned WP deleted
     })
 
     test('deleting viewpoint with multiple image points cleans up all references', () => {

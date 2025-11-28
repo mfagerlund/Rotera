@@ -60,6 +60,7 @@ export const MainLayout: React.FC = observer(() => {
     getImagePointCount,
     addImagePointToWorldPoint,
     moveImagePoint,
+    deleteImagePointFromViewpoint,
     getSelectedPointsInImage,
     copyPointsFromImageToImage,
     addConstraint,
@@ -354,11 +355,13 @@ export const MainLayout: React.FC = observer(() => {
     deleteConstraint,
     deleteLine,
     deleteWorldPoint,
+    deleteImagePointFromViewpoint,
     deleteVanishingLine,
     clearSelection,
     setEditingLine,
     currentVanishingLineAxis,
-    setCurrentVanishingLineAxis
+    setCurrentVanishingLineAxis,
+    currentViewpoint: currentViewpoint || null
   })
 
   const renderImageWorkspace = useCallback(() => (

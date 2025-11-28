@@ -118,10 +118,11 @@ describe('Intrinsic Constraints', () => {
 
       expect(result.converged).toBe(true);
 
-      // Line should now be horizontal (dy = 0, dz = 0)
+      // Line should now be horizontal (dy = 0, in the XZ plane)
+      // Note: "horizontal" only constrains dy=0, NOT dz=0
       const dir = line.getDirection()!;
       expect(Math.abs(dir[1])).toBeLessThan(1e-4); // dy ≈ 0
-      expect(Math.abs(dir[2])).toBeLessThan(1e-4); // dz ≈ 0
+      // dz can be anything - "horizontal" just means in the XZ plane
     });
   });
 
@@ -255,10 +256,10 @@ describe('Intrinsic Constraints', () => {
 
       expect(result.converged).toBe(true);
 
-      // Check direction
+      // Check direction - horizontal means dy=0 (in XZ plane)
       const dir = line.getDirection()!;
       expect(Math.abs(dir[1])).toBeLessThan(1e-4); // dy ≈ 0 (horizontal)
-      expect(Math.abs(dir[2])).toBeLessThan(1e-4); // dz ≈ 0 (horizontal)
+      // dz can be anything - "horizontal" just means in the XZ plane
 
       // Check length
       const length = line.length()!;

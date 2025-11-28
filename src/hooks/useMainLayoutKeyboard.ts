@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { WorldPoint } from '../entities/world-point'
 import { Line as LineEntity } from '../entities/line'
 import { VanishingLine } from '../entities/vanishing-line'
+import { Viewpoint } from '../entities/viewpoint'
 import { ActiveTool } from './useMainLayoutState'
 
 interface UseMainLayoutKeyboardParams {
@@ -20,11 +21,13 @@ interface UseMainLayoutKeyboardParams {
   deleteConstraint: (constraint: any) => void
   deleteLine: (line: LineEntity) => void
   deleteWorldPoint: (point: WorldPoint) => void
+  deleteImagePointFromViewpoint: (worldPoint: WorldPoint, viewpoint: Viewpoint) => boolean
   deleteVanishingLine: (vanishingLine: VanishingLine) => void
   clearSelection: () => void
   setEditingLine: (line: LineEntity | null) => void
   currentVanishingLineAxis: 'x' | 'y' | 'z'
   setCurrentVanishingLineAxis: (axis: 'x' | 'y' | 'z') => void
+  currentViewpoint: Viewpoint | null
 }
 
 export function useMainLayoutKeyboard({
@@ -42,11 +45,13 @@ export function useMainLayoutKeyboard({
   deleteConstraint,
   deleteLine,
   deleteWorldPoint,
+  deleteImagePointFromViewpoint,
   deleteVanishingLine,
   clearSelection,
   setEditingLine,
   currentVanishingLineAxis,
-  setCurrentVanishingLineAxis
+  setCurrentVanishingLineAxis,
+  currentViewpoint
 }: UseMainLayoutKeyboardParams) {
 
   useEffect(() => {
@@ -78,9 +83,20 @@ export function useMainLayoutKeyboard({
 
         if (totalSelected === 0) return
 
+        // When we have a current viewpoint and selected points, delete image points from that viewpoint
+        // (not the world points themselves, unless it's their last image point)
+        const hasPointsInCurrentView = currentViewpoint && selectedPoints.length > 0 &&
+          selectedPoints.some(point => currentViewpoint.getImagePointsForWorldPoint(point).length > 0)
+
         // Build message
         const parts: string[] = []
-        if (selectedPoints.length > 0) parts.push(`${selectedPoints.length} point${selectedPoints.length > 1 ? 's' : ''}`)
+        if (selectedPoints.length > 0) {
+          if (hasPointsInCurrentView) {
+            parts.push(`${selectedPoints.length} image point${selectedPoints.length > 1 ? 's' : ''} from current view`)
+          } else {
+            parts.push(`${selectedPoints.length} world point${selectedPoints.length > 1 ? 's' : ''}`)
+          }
+        }
         if (selectedLines.length > 0) parts.push(`${selectedLines.length} line${selectedLines.length > 1 ? 's' : ''}`)
         if (selectedVanishingLines.length > 0) parts.push(`${selectedVanishingLines.length} vanishing line${selectedVanishingLines.length > 1 ? 's' : ''}`)
         if (selectedPlanes.length > 0) parts.push(`${selectedPlanes.length} plane${selectedPlanes.length > 1 ? 's' : ''}`)
@@ -95,7 +111,17 @@ export function useMainLayoutKeyboard({
           selectedPlanes.forEach(id => {
             console.warn('Plane deletion not yet implemented')
           })
-          selectedPointEntities.forEach(point => deleteWorldPoint(point))
+
+          // Delete image points from current viewpoint (not world points)
+          if (hasPointsInCurrentView && currentViewpoint) {
+            selectedPointEntities.forEach(point => {
+              deleteImagePointFromViewpoint(point, currentViewpoint)
+            })
+          } else {
+            // Fallback: delete world points if no current viewpoint
+            selectedPointEntities.forEach(point => deleteWorldPoint(point))
+          }
+
           clearSelection()
         }
         return
@@ -151,17 +177,21 @@ export function useMainLayoutKeyboard({
     selectedPointEntities,
     selectedLineEntities,
     selectedPlaneEntities,
+    selectedVanishingLineEntities,
     getSelectedByType,
     confirm,
     deleteConstraint,
     deleteLine,
     deleteWorldPoint,
+    deleteImagePointFromViewpoint,
+    deleteVanishingLine,
     clearSelection,
     isConfirmDialogOpen,
     cancelPlacementMode,
     setActiveTool,
     setEditingLine,
     currentVanishingLineAxis,
-    setCurrentVanishingLineAxis
+    setCurrentVanishingLineAxis,
+    currentViewpoint
   ])
 }

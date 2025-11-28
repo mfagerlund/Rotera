@@ -7,7 +7,6 @@ import { deserializeConstraint } from './constraints/constraint-factory'
 import { SerializationContext } from './serialization/SerializationContext'
 import type { ProjectDto } from './project/ProjectDto'
 import type { VanishingLineDto } from './vanishing-line/VanishingLineDto'
-import type { IImagePoint } from './interfaces'
 import { VanishingLine } from './vanishing-line/VanishingLine'
 import { DEFAULT_VIEW_SETTINGS } from '../types/visibility'
 
@@ -71,7 +70,7 @@ export class Serialization {
       (dto.lines || []).map(lineDto => Line.deserialize(lineDto, context))
     )
 
-    const imagePoints = new Set<IImagePoint>(
+    const imagePoints = new Set<ImagePoint>(
       (dto.imagePoints || []).map(ipDto => ImagePoint.deserialize(ipDto, context))
     )
 

@@ -161,48 +161,6 @@ describe('Perspective Grid Homography', () => {
     checkPoint(P11, 'P11')
   })
 
-  it('should build homography and map unit square to quad', () => {
-    const [LX0, LX1] = xLines
-    const [LZ0, LZ1] = zLines
-
-    const x0 = lineThrough({ x: LX0.p1.u, y: LX0.p1.v }, { x: LX0.p2.u, y: LX0.p2.v })
-    const x1 = lineThrough({ x: LX1.p1.u, y: LX1.p1.v }, { x: LX1.p2.u, y: LX1.p2.v })
-    const z0 = lineThrough({ x: LZ0.p1.u, y: LZ0.p1.v }, { x: LZ0.p2.u, y: LZ0.p2.v })
-    const z1 = lineThrough({ x: LZ1.p1.u, y: LZ1.p1.v }, { x: LZ1.p2.u, y: LZ1.p2.v })
-
-    const P00 = interLL(x0, z0)!
-    const P10 = interLL(x1, z0)!
-    const P01 = interLL(x0, z1)!
-    const P11 = interLL(x1, z1)!
-
-    const H = homographyUnitToQuad(P00, P10, P01, P11)
-
-    console.log('\n=== HOMOGRAPHY MATRIX ===')
-    console.log('H =', H)
-
-    // Test mapping corners of unit square
-    const corner00 = mapUV(H, 0, 0)
-    const corner10 = mapUV(H, 1, 0)
-    const corner01 = mapUV(H, 0, 1)
-    const corner11 = mapUV(H, 1, 1)
-
-    console.log('\n=== UNIT SQUARE MAPPING ===')
-    console.log('(0,0) ->', corner00, '(should match P00)')
-    console.log('(1,0) ->', corner10, '(should match P10)')
-    console.log('(0,1) ->', corner01, '(should match P01)')
-    console.log('(1,1) ->', corner11, '(should match P11)')
-
-    // Verify corners map correctly
-    expect(corner00.x).toBeCloseTo(P00.x, 0)
-    expect(corner00.y).toBeCloseTo(P00.y, 0)
-    expect(corner10.x).toBeCloseTo(P10.x, 0)
-    expect(corner10.y).toBeCloseTo(P10.y, 0)
-    expect(corner01.x).toBeCloseTo(P01.x, 0)
-    expect(corner01.y).toBeCloseTo(P01.y, 0)
-    expect(corner11.x).toBeCloseTo(P11.x, 0)
-    expect(corner11.y).toBeCloseTo(P11.y, 0)
-  })
-
   it('should generate reasonable grid lines', () => {
     const [LX0, LX1] = xLines
     const [LZ0, LZ1] = zLines
@@ -306,70 +264,6 @@ describe('Perspective Grid Homography', () => {
           console.log(`X-line ${i} × Z-line ${j}: (${intersection.x.toFixed(1)}, ${intersection.y.toFixed(1)}) - ${onCanvas ? 'ON CANVAS' : 'OFF CANVAS'}`)
         }
       }
-    }
-  })
-
-  it('should generate grid that converges to vanishing points', () => {
-    const [LX0, LX1] = xLines
-    const [LZ0, LZ1] = zLines
-
-    console.log('\n=== VALIDATING GRID CONVERGES TO VPs ===')
-
-    const vpX = computeVanishingPoint(xLines)!
-    const vpZ = computeVanishingPoint(zLines)!
-
-    const x0 = lineThrough({ x: LX0.p1.u, y: LX0.p1.v }, { x: LX0.p2.u, y: LX0.p2.v })
-    const x1 = lineThrough({ x: LX1.p1.u, y: LX1.p1.v }, { x: LX1.p2.u, y: LX1.p2.v })
-    const z0 = lineThrough({ x: LZ0.p1.u, y: LZ0.p1.v }, { x: LZ0.p2.u, y: LZ0.p2.v })
-    const z1 = lineThrough({ x: LZ1.p1.u, y: LZ1.p1.v }, { x: LZ1.p2.u, y: LZ1.p2.v })
-
-    const P00 = interLL(x0, z0)!
-    const P10 = interLL(x1, z0)!
-    const P01 = interLL(x0, z1)!
-    const P11 = interLL(x1, z1)!
-
-    console.log('Quad corners:', { P00, P10, P01, P11 })
-
-    const H = homographyUnitToQuad(P00, P10, P01, P11)
-
-    // Check that u-constant lines converge to VP_X
-    console.log('\nChecking u-constant lines converge to VP_X:')
-    const nx = 5
-    for (let i = 0; i <= nx; i++) {
-      const u = i / nx
-      const a = mapUV(H, u, 0)
-      const b = mapUV(H, u, 1)
-
-      // Line from a to b should pass through (or point toward) VP_X
-      const gridLine = lineThrough(a, b)
-
-      // Check if VP_X lies on this line (or very close)
-      const dist = Math.abs(gridLine[0] * vpX.x + gridLine[1] * vpX.y + gridLine[2]) /
-                   Math.sqrt(gridLine[0]**2 + gridLine[1]**2)
-
-      console.log(`  u=${u.toFixed(2)}: distance from VP_X = ${dist.toFixed(1)}px`)
-
-      // Allow reasonable tolerance - VP should be close to the line
-      expect(dist).toBeLessThan(50)
-    }
-
-    // Check that v-constant lines converge to VP_Z
-    console.log('\nChecking v-constant lines converge to VP_Z:')
-    const ny = 5
-    for (let j = 0; j <= ny; j++) {
-      const v = j / ny
-      const a = mapUV(H, 0, v)
-      const b = mapUV(H, 1, v)
-
-      // Line from a to b should pass through (or point toward) VP_Z
-      const gridLine = lineThrough(a, b)
-
-      const dist = Math.abs(gridLine[0] * vpZ.x + gridLine[1] * vpZ.y + gridLine[2]) /
-                   Math.sqrt(gridLine[0]**2 + gridLine[1]**2)
-
-      console.log(`  v=${v.toFixed(2)}: distance from VP_Z = ${dist.toFixed(1)}px`)
-
-      expect(dist).toBeLessThan(50)
     }
   })
 

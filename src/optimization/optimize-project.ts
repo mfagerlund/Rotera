@@ -176,8 +176,10 @@ export function optimizeProject(
 
             const success = initializeCameraWithVanishingPoints(vpConcrete, worldPointSet);
             if (success) {
-              vpConcrete.setPoseLocked(true);
-              console.log(`[optimizeProject] ${vpConcrete.name} initialized with vanishing points (pose locked)`);
+              // DON'T lock pose after VP initialization - let the optimizer refine it
+              // The VP initialization gives a good starting point, but may not be perfect
+              // vpConcrete.setPoseLocked(true);
+              console.log(`[optimizeProject] ${vpConcrete.name} initialized with vanishing points (pose NOT locked - will be refined)`);
               console.log(`  Position: [${vpConcrete.position.map(x => x.toFixed(3)).join(', ')}]`);
               console.log(`  Focal length: ${vpConcrete.focalLength.toFixed(1)}`);
               camerasInitialized.push(vpConcrete.name);
@@ -209,6 +211,12 @@ export function optimizeProject(
       }
 
       if (camerasInitialized.length === 0) {
+        if (uninitializedCameras.length < 2) {
+          const errorMsg = `Cannot initialize: need at least 2 cameras for Essential Matrix initialization, but only ${uninitializedCameras.length} available. Lock at least 3 world points with known coordinates to use PnP initialization instead.`;
+          console.error(`[optimizeProject] ${errorMsg}`);
+          throw new Error(errorMsg);
+        }
+
         console.log('[optimizeProject] No locked points - using Essential Matrix initialization');
 
         const vp1 = uninitializedCameras[0] as Viewpoint;
