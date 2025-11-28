@@ -29,6 +29,93 @@ export interface ValidationResult {
   }
 }
 
+/**
+ * Check if a world point is in front of the camera (positive Z in camera space)
+ */
+function isPointInFrontOfCamera(
+  worldPoint: [number, number, number],
+  cameraPosition: [number, number, number],
+  rotation: [number, number, number, number]
+): boolean {
+  const [qw, qx, qy, qz] = rotation
+  // Third row of rotation matrix (camera Z axis in world coordinates)
+  const R2 = [
+    2 * (qx * qz - qw * qy),
+    2 * (qy * qz + qw * qx),
+    1 - 2 * (qx * qx + qy * qy)
+  ]
+
+  const dx = worldPoint[0] - cameraPosition[0]
+  const dy = worldPoint[1] - cameraPosition[1]
+  const dz = worldPoint[2] - cameraPosition[2]
+
+  const camZ = R2[0] * dx + R2[1] * dy + R2[2] * dz
+  return camZ > 0
+}
+
+/**
+ * Flip rotation matrix axes by applying sign changes, then convert back to quaternion
+ */
+function flipRotationAxes(
+  rotation: [number, number, number, number],
+  flipX: boolean,
+  flipY: boolean,
+  flipZ: boolean
+): [number, number, number, number] {
+  const [qw, qx, qy, qz] = rotation
+
+  // Build rotation matrix
+  const R = [
+    [1 - 2 * (qy * qy + qz * qz), 2 * (qx * qy - qw * qz), 2 * (qx * qz + qw * qy)],
+    [2 * (qx * qy + qw * qz), 1 - 2 * (qx * qx + qz * qz), 2 * (qy * qz - qw * qx)],
+    [2 * (qx * qz - qw * qy), 2 * (qy * qz + qw * qx), 1 - 2 * (qx * qx + qy * qy)]
+  ]
+
+  // Flip columns (which represent world axes in camera frame)
+  if (flipX) {
+    R[0][0] = -R[0][0]; R[1][0] = -R[1][0]; R[2][0] = -R[2][0]
+  }
+  if (flipY) {
+    R[0][1] = -R[0][1]; R[1][1] = -R[1][1]; R[2][1] = -R[2][1]
+  }
+  if (flipZ) {
+    R[0][2] = -R[0][2]; R[1][2] = -R[1][2]; R[2][2] = -R[2][2]
+  }
+
+  // Convert back to quaternion
+  const trace = R[0][0] + R[1][1] + R[2][2]
+  let w: number, x: number, y: number, z: number
+
+  if (trace > 0) {
+    const s = 0.5 / Math.sqrt(trace + 1.0)
+    w = 0.25 / s
+    x = (R[2][1] - R[1][2]) * s
+    y = (R[0][2] - R[2][0]) * s
+    z = (R[1][0] - R[0][1]) * s
+  } else if (R[0][0] > R[1][1] && R[0][0] > R[2][2]) {
+    const s = 2.0 * Math.sqrt(1.0 + R[0][0] - R[1][1] - R[2][2])
+    w = (R[2][1] - R[1][2]) / s
+    x = 0.25 * s
+    y = (R[0][1] + R[1][0]) / s
+    z = (R[0][2] + R[2][0]) / s
+  } else if (R[1][1] > R[2][2]) {
+    const s = 2.0 * Math.sqrt(1.0 + R[1][1] - R[0][0] - R[2][2])
+    w = (R[0][2] - R[2][0]) / s
+    x = (R[0][1] + R[1][0]) / s
+    y = 0.25 * s
+    z = (R[1][2] + R[2][1]) / s
+  } else {
+    const s = 2.0 * Math.sqrt(1.0 + R[2][2] - R[0][0] - R[1][1])
+    w = (R[1][0] - R[0][1]) / s
+    x = (R[0][2] + R[2][0]) / s
+    y = (R[1][2] + R[2][1]) / s
+    z = 0.25 * s
+  }
+
+  const mag = Math.sqrt(w * w + x * x + y * y + z * z)
+  return [w / mag, x / mag, y / mag, z / mag]
+}
+
 export function computeVanishingPoint(
   lines: VanishingLine[]
 ): { u: number; v: number } | null {
@@ -838,8 +925,8 @@ export function initializeCameraWithVanishingPoints(
     console.log(`[initializeCameraWithVanishingPoints] Using existing focal length: ${focalLength.toFixed(1)}`)
   }
 
-  const rotation = computeRotationFromVPs(vps, focalLength, principalPoint)
-  if (!rotation) {
+  const baseRotation = computeRotationFromVPs(vps, focalLength, principalPoint)
+  if (!baseRotation) {
     console.log('[initializeCameraWithVanishingPoints] Failed to compute rotation')
     return false
   }
@@ -872,11 +959,71 @@ export function initializeCameraWithVanishingPoints(
     return false
   }
 
-  const position = computeCameraPosition(rotation, focalLength, principalPoint, lockedPointsData)
-  if (!position) {
-    console.log('[initializeCameraWithVanishingPoints] Failed to compute camera position')
+  // Try all 8 sign combinations for axis orientations
+  // The vanishing point directions are ambiguous in sign - we need to find the combination
+  // where all locked world points are IN FRONT of the camera (positive Z in camera space)
+  const signCombinations: [boolean, boolean, boolean][] = [
+    [false, false, false],
+    [true, false, false],
+    [false, true, false],
+    [false, false, true],
+    [true, true, false],
+    [true, false, true],
+    [false, true, true],
+    [true, true, true],
+  ]
+
+  let bestRotation: [number, number, number, number] | null = null
+  let bestPosition: [number, number, number] | null = null
+  let bestScore = -Infinity
+
+  for (const [flipX, flipY, flipZ] of signCombinations) {
+    const rotation = flipRotationAxes(baseRotation, flipX, flipY, flipZ)
+    const position = computeCameraPosition(rotation, focalLength, principalPoint, lockedPointsData)
+
+    if (!position) {
+      continue
+    }
+
+    // Count how many points are in front of the camera
+    let pointsInFront = 0
+    for (const { worldPoint } of lockedPointsData) {
+      const pos: [number, number, number] = [
+        worldPoint.lockedXyz[0]!,
+        worldPoint.lockedXyz[1]!,
+        worldPoint.lockedXyz[2]!
+      ]
+      if (isPointInFrontOfCamera(pos, position, rotation)) {
+        pointsInFront++
+      }
+    }
+
+    const score = pointsInFront
+
+    if (score > bestScore) {
+      bestScore = score
+      bestRotation = rotation
+      bestPosition = position
+    }
+
+    // If all points are in front, we found the solution
+    if (pointsInFront === lockedPointsData.length) {
+      console.log(`[VP Init] Found valid orientation: flip [${flipX}, ${flipY}, ${flipZ}]`)
+      break
+    }
+  }
+
+  if (!bestRotation || !bestPosition) {
+    console.log('[initializeCameraWithVanishingPoints] Failed to find valid camera orientation')
     return false
   }
+
+  if (bestScore < lockedPointsData.length) {
+    console.log(`[initializeCameraWithVanishingPoints] WARNING: Only ${bestScore}/${lockedPointsData.length} points are in front of camera`)
+  }
+
+  const rotation = bestRotation
+  const position = bestPosition
 
   viewpoint.rotation = rotation
   viewpoint.position = position
