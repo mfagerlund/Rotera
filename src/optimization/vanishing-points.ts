@@ -895,6 +895,12 @@ export function initializeCameraWithVanishingPoints(
   const vps = validation.vanishingPoints
   const vpArray = Object.values(vps).filter(vp => vp !== undefined) as VanishingPoint[]
 
+  // Log observed VPs from vanishing lines
+  console.log('[VP Init] Observed vanishing points from lines:')
+  if (vps.x) console.log(`  X axis: (${vps.x.u.toFixed(2)}, ${vps.x.v.toFixed(2)})`)
+  if (vps.y) console.log(`  Y axis: (${vps.y.u.toFixed(2)}, ${vps.y.v.toFixed(2)})`)
+  if (vps.z) console.log(`  Z axis: (${vps.z.u.toFixed(2)}, ${vps.z.v.toFixed(2)})`)
+
   if (vpArray.length < 2) {
     console.log('[initializeCameraWithVanishingPoints] Not enough vanishing points')
     return false
@@ -976,6 +982,7 @@ export function initializeCameraWithVanishingPoints(
   let bestRotation: [number, number, number, number] | null = null
   let bestPosition: [number, number, number] | null = null
   let bestScore = -Infinity
+  let bestPointsInFront = 0
 
   for (const [flipX, flipY, flipZ] of signCombinations) {
     const rotation = flipRotationAxes(baseRotation, flipX, flipY, flipZ)
@@ -998,18 +1005,55 @@ export function initializeCameraWithVanishingPoints(
       }
     }
 
-    const score = pointsInFront
+    // Compute reprojection error for locked points - this is the definitive quality measure
+    // Lower error = better initialization
+    let totalReprojError = 0
+    const rotationMatrix = [
+      [1 - 2 * (rotation[2] * rotation[2] + rotation[3] * rotation[3]), 2 * (rotation[1] * rotation[2] - rotation[3] * rotation[0]), 2 * (rotation[1] * rotation[3] + rotation[2] * rotation[0])],
+      [2 * (rotation[1] * rotation[2] + rotation[3] * rotation[0]), 1 - 2 * (rotation[1] * rotation[1] + rotation[3] * rotation[3]), 2 * (rotation[2] * rotation[3] - rotation[1] * rotation[0])],
+      [2 * (rotation[1] * rotation[3] - rotation[2] * rotation[0]), 2 * (rotation[2] * rotation[3] + rotation[1] * rotation[0]), 1 - 2 * (rotation[1] * rotation[1] + rotation[2] * rotation[2])]
+    ]
+
+    for (const { worldPoint, imagePoint } of lockedPointsData) {
+      const wp = [
+        worldPoint.lockedXyz[0]!,
+        worldPoint.lockedXyz[1]!,
+        worldPoint.lockedXyz[2]!
+      ]
+
+      // Transform world point to camera space using R (world→camera)
+      const rel = [wp[0] - position[0], wp[1] - position[1], wp[2] - position[2]]
+      const camSpace = [
+        rotationMatrix[0][0] * rel[0] + rotationMatrix[0][1] * rel[1] + rotationMatrix[0][2] * rel[2],
+        rotationMatrix[1][0] * rel[0] + rotationMatrix[1][1] * rel[1] + rotationMatrix[1][2] * rel[2],
+        rotationMatrix[2][0] * rel[0] + rotationMatrix[2][1] * rel[1] + rotationMatrix[2][2] * rel[2]
+      ]
+
+      if (camSpace[2] <= 0) {
+        totalReprojError += 10000 // Huge penalty for behind camera
+        continue
+      }
+
+      // Project to image
+      const projU = principalPoint.u + focalLength * (camSpace[0] / camSpace[2])
+      const projV = principalPoint.v - focalLength * (camSpace[1] / camSpace[2])
+
+      // Reprojection error
+      const du = projU - imagePoint.u
+      const dv = projV - imagePoint.v
+      const err = Math.sqrt(du * du + dv * dv)
+      totalReprojError += err
+    }
+
+    // Score: points in front is primary (required), reprojection error is secondary (lower is better)
+    // Use negative reproj error so higher score = better
+    const score = pointsInFront * 1000000 - totalReprojError
 
     if (score > bestScore) {
       bestScore = score
       bestRotation = rotation
       bestPosition = position
-    }
-
-    // If all points are in front, we found the solution
-    if (pointsInFront === lockedPointsData.length) {
-      console.log(`[VP Init] Found valid orientation: flip [${flipX}, ${flipY}, ${flipZ}]`)
-      break
+      bestPointsInFront = pointsInFront
     }
   }
 
@@ -1018,8 +1062,8 @@ export function initializeCameraWithVanishingPoints(
     return false
   }
 
-  if (bestScore < lockedPointsData.length) {
-    console.log(`[initializeCameraWithVanishingPoints] WARNING: Only ${bestScore}/${lockedPointsData.length} points are in front of camera`)
+  if (bestPointsInFront < lockedPointsData.length) {
+    console.log(`[initializeCameraWithVanishingPoints] WARNING: Only ${bestPointsInFront}/${lockedPointsData.length} points are in front of camera`)
   }
 
   const rotation = bestRotation
