@@ -534,7 +534,13 @@ function matrixToQuaternion(R: number[][]): [number, number, number, number] {
   return [w / mag, x / mag, y / mag, z / mag]
 }
 
-export function computeRotationFromVPs(
+/**
+ * Compute rotation(s) from vanishing points.
+ * When Y is derived from X and Z via cross product, returns TWO rotations:
+ * one for Y = Z × X and one for Y = X × Z (opposite direction).
+ * This allows exploring all 8 valid orientations when combined with even-flip sign combos.
+ */
+export function computeRotationsFromVPs(
   vanishingPoints: {
     x?: VanishingPoint
     y?: VanishingPoint
@@ -542,7 +548,7 @@ export function computeRotationFromVPs(
   },
   focalLength: number,
   principalPoint: { u: number; v: number }
-): [number, number, number, number] | null {
+): Array<[number, number, number, number]> | null {
   const availableAxes = Object.keys(vanishingPoints).filter(
     axis => vanishingPoints[axis as VanishingLineAxis] !== undefined
   ) as VanishingLineAxis[]
@@ -564,13 +570,16 @@ export function computeRotationFromVPs(
 
   let d_x: number[], d_y: number[], d_z: number[]
   let derivedYAxis = false
-
+  let d_y_alt: number[] | null = null  // Alternate Y direction for when Y is derived
 
   if (directions.x && directions.z && !directions.y) {
     d_x = directions.x
     d_z = directions.z
-    d_y = cross(d_z, d_x)
+    d_y = cross(d_z, d_x)  // Y = Z × X (right-hand rule)
     d_y = normalize(d_y)
+    // Also compute the opposite direction: Y = X × Z = -(Z × X)
+    d_y_alt = cross(d_x, d_z)
+    d_y_alt = normalize(d_y_alt)
     derivedYAxis = true
   } else if (directions.x && directions.y) {
     d_x = directions.x
@@ -657,7 +666,33 @@ export function computeRotationFromVPs(
   console.log(`[ ${R[2].map(v => v.toFixed(6)).join(', ')} ]`)
   console.log('[VP Debug] Quaternion:', quaternion.map(v => Number(v.toFixed(6))))
 
-  return quaternion
+  // If Y was derived, also build the alternate rotation with opposite Y direction
+  if (d_y_alt) {
+    const R_alt = [
+      [d_x[0], d_y_alt[0], d_z[0]],
+      [d_x[1], d_y_alt[1], d_z[1]],
+      [d_x[2], d_y_alt[2], d_z[2]]
+    ]
+    const quaternion_alt = matrixToQuaternion(R_alt)
+    console.log('[VP Debug] Also returning alternate rotation with Y = X × Z')
+    return [quaternion, quaternion_alt]
+  }
+
+  return [quaternion]
+}
+
+// Backwards compatibility wrapper
+export function computeRotationFromVPs(
+  vanishingPoints: {
+    x?: VanishingPoint
+    y?: VanishingPoint
+    z?: VanishingPoint
+  },
+  focalLength: number,
+  principalPoint: { u: number; v: number }
+): [number, number, number, number] | null {
+  const rotations = computeRotationsFromVPs(vanishingPoints, focalLength, principalPoint)
+  return rotations ? rotations[0] : null
 }
 
 export function computeCameraPosition(
@@ -929,11 +964,12 @@ export function initializeCameraWithVanishingPoints(
     console.log(`[initializeCameraWithVanishingPoints] Using existing focal length: ${focalLength.toFixed(1)}`)
   }
 
-  const baseRotation = computeRotationFromVPs(vps, focalLength, principalPoint)
-  if (!baseRotation) {
+  const baseRotations = computeRotationsFromVPs(vps, focalLength, principalPoint)
+  if (!baseRotations || baseRotations.length === 0) {
     console.log('[initializeCameraWithVanishingPoints] Failed to compute rotation')
     return false
   }
+  console.log(`[initializeCameraWithVanishingPoints] Trying ${baseRotations.length} base rotation(s)`)
 
   // For POSITION SOLVING: Only use FULLY LOCKED points
   // Inferred coordinates depend on line constraints which may not be accurate yet
@@ -995,6 +1031,9 @@ export function initializeCameraWithVanishingPoints(
   // - [T,T,F]: 2 flips - flip X and Y (180° around Z)
   // - [T,F,T]: 2 flips - flip X and Z (180° around Y)
   // - [F,T,T]: 2 flips - flip Y and Z (180° around X)
+  //
+  // When Y is derived from X and Z, we have TWO base rotations (for Y = Z×X and Y = X×Z),
+  // so we try 4 combinations on each, giving 8 total orientations.
   const signCombinations: [boolean, boolean, boolean][] = [
     [false, false, false],  // 0 flips - valid rotation
     [true, true, false],    // 2 flips - valid rotation
@@ -1008,11 +1047,16 @@ export function initializeCameraWithVanishingPoints(
   let bestPointsInFront = 0
   let bestReprojError = Infinity
 
+  for (let baseIdx = 0; baseIdx < baseRotations.length; baseIdx++) {
+    const baseRotation = baseRotations[baseIdx]
+    const baseLabel = baseIdx === 0 ? 'Y=Z×X' : 'Y=X×Z'
+
   for (const [flipX, flipY, flipZ] of signCombinations) {
     const rotation = flipRotationAxes(baseRotation, flipX, flipY, flipZ)
     const position = computeCameraPosition(rotation, focalLength, principalPoint, lockedPointsData)
 
     if (!position) {
+      console.log(`  [Sign combo ${flipX},${flipY},${flipZ}] No valid position`)
       continue
     }
 
@@ -1063,6 +1107,8 @@ export function initializeCameraWithVanishingPoints(
     // Score: points in front is primary (required), reprojection error is secondary (lower is better)
     // Use negative reproj error so higher score = better
     const score = pointsInFront * 1000000 - totalReprojError
+    const avgError = totalReprojError / effectivePointsData.length
+    console.log(`  [${baseLabel} ${flipX},${flipY},${flipZ}] pointsInFront=${pointsInFront}/${effectivePointsData.length}, avgError=${avgError.toFixed(1)} px`)
 
     if (score > bestScore) {
       bestScore = score
@@ -1072,6 +1118,7 @@ export function initializeCameraWithVanishingPoints(
       bestReprojError = totalReprojError / effectivePointsData.length
     }
   }
+  } // end of baseRotations loop
 
   if (!bestRotation || !bestPosition) {
     console.log('[initializeCameraWithVanishingPoints] Failed to find valid camera orientation')
