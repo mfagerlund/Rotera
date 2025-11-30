@@ -77,6 +77,24 @@ describe('Coordinate Sign Invariance', () => {
     expect(result.residual).toBeLessThan(1.0);
   });
 
+  // SKIPPED: This test uses an invalid fixture that was created without proper
+  // scene reflection. The vanishing lines were not updated to match the new
+  // coordinate system, making the configuration geometrically impossible.
+  // See horizon-sign-invariance.test.ts for tests with properly reflected fixtures.
+  it.skip('should solve the positive Z fixture with low error', () => {
+    const { result, camera } = runOptimization('coordinate-sign-posZ.json');
+
+    console.log('\n=== POSITIVE Z FIXTURE RESULTS ===');
+    console.log(`Converged: ${result.converged}`);
+    console.log(`Iterations: ${result.iterations}`);
+    console.log(`Residual: ${result.residual.toFixed(6)}`);
+    console.log(`Camera position: [${camera.position.map(p => p.toFixed(2)).join(', ')}]`);
+
+    expect(result.converged).toBe(true);
+    // Residual should be low (< 1 means sub-pixel accuracy)
+    expect(result.residual).toBeLessThan(1.0);
+  });
+
   it('should produce similar quality results for both coordinate systems', () => {
     const good = runOptimization('coordinate-sign-good.json');
     const reflected = runOptimization('coordinate-sign-reflected.json');

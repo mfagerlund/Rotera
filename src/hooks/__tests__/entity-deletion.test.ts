@@ -38,6 +38,23 @@ describe('Entity Deletion Cleanup Tests', () => {
       expect(wp2.imagePoints.size).toBe(0)
     })
 
+    test('deleting viewpoint removes orphaned world points from project state', () => {
+      const wp = ops.createWorldPoint('WP', [0, 0, 0])
+
+      const vp = Viewpoint.create('VP1', 'vp1.jpg', 'url1', 1920, 1080)
+      project.addViewpoint(vp)
+
+      ops.addImagePointToWorldPoint(wp, vp, 100, 100)
+
+      expect(project.worldPoints.size).toBe(1)
+      expect(project.imagePoints.size).toBe(1)
+
+      ops.deleteImage(vp)
+
+      expect(project.worldPoints.size).toBe(0)
+      expect(project.imagePoints.size).toBe(0)
+    })
+
     test('deleting viewpoint allows serialization', () => {
       const wp = ops.createWorldPoint('WP', [0, 0, 0])
       const vp = Viewpoint.create('VP', 'vp.jpg', 'url', 1920, 1080)

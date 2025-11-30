@@ -100,6 +100,14 @@ export function useDomainOperations(
   setProject: (project: Project) => void
 ): DomainOperations {
 
+  const maybeDeleteOrphanWorldPoint = (worldPoint: WorldPoint) => {
+    if (!project) return
+    if (worldPoint.imagePoints.size > 0) return
+    if (!project.worldPoints.has(worldPoint)) return
+
+    deleteWorldPoint(worldPoint)
+  }
+
   const createWorldPoint = (name: string, xyz: [number, number, number], options?: WorldPointOptions): WorldPoint => {
     if (!project) throw new Error('No project')
 
@@ -212,11 +220,7 @@ export function useDomainOperations(
 
     project.removeViewpoint(viewpoint)
 
-    affectedWorldPoints.forEach(wp => {
-      if (wp.imagePoints.size === 0) {
-        deleteWorldPoint(wp)
-      }
-    })
+    affectedWorldPoints.forEach(maybeDeleteOrphanWorldPoint)
   }
 
   const getImagePointCount = (viewpoint: Viewpoint): number => {
@@ -278,6 +282,8 @@ export function useDomainOperations(
     viewpoint.removeImagePoint(imagePoint)
     worldPoint.removeImagePoint(imagePoint)
     project.removeImagePoint(imagePoint)
+
+    maybeDeleteOrphanWorldPoint(worldPoint)
 
     return true
   }

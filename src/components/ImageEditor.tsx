@@ -140,6 +140,31 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Camera Pose */}
+          <div className="edit-section">
+            <h4>Camera Pose</h4>
+
+            <div className="status-grid">
+              <div className="status-item">
+                <label>Position</label>
+                <span style={{ fontFamily: 'monospace', fontSize: '11px' }}>
+                  X: {viewpoint.position[0].toFixed(3)}, Y: {viewpoint.position[1].toFixed(3)}, Z: {viewpoint.position[2].toFixed(3)}
+                </span>
+              </div>
+
+              <div className="status-item">
+                <label>Orientation</label>
+                <span style={{ fontFamily: 'monospace', fontSize: '11px' }}>
+                  {(() => {
+                    const [roll, pitch, yaw] = viewpoint.getRotationEuler()
+                    const toDeg = (rad: number) => (rad * 180 / Math.PI).toFixed(1)
+                    return `Roll: ${toDeg(roll)}°, Pitch: ${toDeg(pitch)}°, Yaw: ${toDeg(yaw)}°`
+                  })()}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </FloatingWindow>
     </>
