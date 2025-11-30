@@ -586,12 +586,10 @@ export function computeRotationFromVPs(
     return null
   }
 
-  // Ensure the resulting basis keeps world Y pointing "up" in camera coordinates.
-  // Camera coordinates use +Y for up, so enforce a positive Y component for d_y by flipping X/Y if needed.
-  if (d_y[1] < 0) {
-    d_x = d_x.map(v => -v)
-    d_y = d_y.map(v => -v)
-  }
+  // NOTE: We do NOT force d_y[1] > 0 here. The sign ambiguity is resolved by
+  // trying multiple sign combinations in initializeCameraWithVanishingPoints().
+  // Forcing a specific sign here would bias the base rotation and could cause
+  // failures when the camera orientation doesn't match the assumption.
 
   let R = [
     [d_x[0], d_y[0], d_z[0]],
@@ -965,24 +963,28 @@ export function initializeCameraWithVanishingPoints(
     return false
   }
 
-  // Try all 8 sign combinations for axis orientations
-  // The vanishing point directions are ambiguous in sign - we need to find the combination
-  // where all locked world points are IN FRONT of the camera (positive Z in camera space)
+  // Try sign combinations for axis orientations.
+  // IMPORTANT: Only use EVEN-flip combinations (0 or 2 flips). Odd-flip combinations
+  // produce reflection matrices (det = -1), and matrixToQuaternion gives garbage
+  // for reflections since quaternions can only represent proper rotations.
+  //
+  // The 4 even-flip combinations cover all 4 valid rotational orientations:
+  // - [F,F,F]: 0 flips - original orientation
+  // - [T,T,F]: 2 flips - flip X and Y (180° around Z)
+  // - [T,F,T]: 2 flips - flip X and Z (180° around Y)
+  // - [F,T,T]: 2 flips - flip Y and Z (180° around X)
   const signCombinations: [boolean, boolean, boolean][] = [
-    [false, false, false],
-    [true, false, false],
-    [false, true, false],
-    [false, false, true],
-    [true, true, false],
-    [true, false, true],
-    [false, true, true],
-    [true, true, true],
+    [false, false, false],  // 0 flips - valid rotation
+    [true, true, false],    // 2 flips - valid rotation
+    [true, false, true],    // 2 flips - valid rotation
+    [false, true, true],    // 2 flips - valid rotation
   ]
 
   let bestRotation: [number, number, number, number] | null = null
   let bestPosition: [number, number, number] | null = null
   let bestScore = -Infinity
   let bestPointsInFront = 0
+  let bestReprojError = Infinity
 
   for (const [flipX, flipY, flipZ] of signCombinations) {
     const rotation = flipRotationAxes(baseRotation, flipX, flipY, flipZ)
@@ -1054,6 +1056,7 @@ export function initializeCameraWithVanishingPoints(
       bestRotation = rotation
       bestPosition = position
       bestPointsInFront = pointsInFront
+      bestReprojError = totalReprojError / lockedPointsData.length
     }
   }
 
@@ -1064,6 +1067,15 @@ export function initializeCameraWithVanishingPoints(
 
   if (bestPointsInFront < lockedPointsData.length) {
     console.log(`[initializeCameraWithVanishingPoints] WARNING: Only ${bestPointsInFront}/${lockedPointsData.length} points are in front of camera`)
+  }
+
+  // If the best reprojection error is too high, fail and let PnP try instead.
+  // This handles cases where vanishing lines are inconsistent with pixel observations.
+  const maxAcceptableError = 50 // pixels
+  if (bestReprojError > maxAcceptableError) {
+    console.log(`[initializeCameraWithVanishingPoints] Best reprojection error (${bestReprojError.toFixed(1)} px) exceeds threshold (${maxAcceptableError} px)`)
+    console.log('[initializeCameraWithVanishingPoints] Vanishing lines may be inconsistent with pixel observations - failing to allow PnP fallback')
+    return false
   }
 
   const rotation = bestRotation

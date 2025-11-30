@@ -348,10 +348,6 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
 
   return (
     <div className="optimization-panel">
-      <div className="panel-header">
-        <h3>Bundle Adjustment</h3>
-      </div>
-
       <div className="optimization-stats">
         <div className="stat-item">
           <span className="stat-label">Points:</span>
@@ -546,74 +542,60 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
               {/* World Points */}
               <div className="entity-section">
                 <h5>World Points ({Array.from(project.worldPoints.values()).length})</h5>
-                <div className="entity-list">
-                  {Array.from(project.worldPoints.values())
-                    .filter(p => p.getOptimizationInfo().optimizedXyz !== undefined)
-                    .map(point => {
-                      const info = point.getOptimizationInfo()
-                      return (
-                        <div key={getEntityKey(point)} className="entity-item">
-                          <div className="entity-name">{point.getName()}</div>
-                          <div className="entity-data">
-                            <div className="data-row">
-                              <span className="data-label">Position:</span>
-                              <span className="data-value">
-                                [{info.optimizedXyz?.map(v => formatNumber(v)).join(', ')}]
-                              </span>
-                            </div>
-                            <div className="data-row">
-                              <span className="data-label">RMS Residual:</span>
-                              <span className="data-value">{formatNumber(info.rmsResidual)}</span>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                </div>
+                <table className="entity-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Position</th>
+                      <th>RMS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Array.from(project.worldPoints.values())
+                      .filter(p => p.getOptimizationInfo().optimizedXyz !== undefined)
+                      .map(point => {
+                        const info = point.getOptimizationInfo()
+                        return (
+                          <tr key={getEntityKey(point)}>
+                            <td>{point.getName()}</td>
+                            <td>[{info.optimizedXyz?.map(v => formatNumber(v)).join(', ')}]</td>
+                            <td>{formatNumber(info.rmsResidual)}</td>
+                          </tr>
+                        )
+                      })}
+                  </tbody>
+                </table>
               </div>
 
               {/* Lines */}
               {Array.from(project.lines.values()).length > 0 && (
                 <div className="entity-section">
                   <h5>Lines ({Array.from(project.lines.values()).length})</h5>
-                  <div className="entity-list">
-                    {Array.from(project.lines.values()).map(line => {
-                      const info = line.getOptimizationInfo()
-                      return (
-                        <div key={getEntityKey(line)} className="entity-item">
-                          <div className="entity-name">{line.getName()}</div>
-                          <div className="entity-data">
-                            <div className="data-row">
-                              <span className="data-label">Length:</span>
-                              <span className="data-value">{info.length !== undefined && info.length !== null ? formatNumber(info.length) : 'N/A'}</span>
-                            </div>
-                            {info.targetLength !== undefined && (
-                              <div className="data-row">
-                                <span className="data-label">Target:</span>
-                                <span className="data-value">{formatNumber(info.targetLength)}</span>
-                              </div>
-                            )}
-                            {info.lengthError !== null && info.lengthError !== undefined && (
-                              <div className="data-row">
-                                <span className="data-label">Error:</span>
-                                <span className="data-value">{formatNumber(info.lengthError)}</span>
-                              </div>
-                            )}
-                            {info.direction && info.direction !== 'free' && (
-                              <div className="data-row">
-                                <span className="data-label">Direction:</span>
-                                <span className="data-value">{info.direction}</span>
-                              </div>
-                            )}
-                            <div className="data-row">
-                              <span className="data-label">RMS Residual:</span>
-                              <span className="data-value">{formatNumber(info.rmsResidual)}</span>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
+                  <table className="entity-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Length</th>
+                        <th>Target</th>
+                        <th>Dir</th>
+                        <th>RMS</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Array.from(project.lines.values()).map(line => {
+                        const info = line.getOptimizationInfo()
+                        return (
+                          <tr key={getEntityKey(line)}>
+                            <td>{line.getName()}</td>
+                            <td>{info.length !== undefined && info.length !== null ? formatNumber(info.length) : '-'}</td>
+                            <td>{info.targetLength !== undefined ? formatNumber(info.targetLength) : '-'}</td>
+                            <td>{info.direction && info.direction !== 'free' ? info.direction : '-'}</td>
+                            <td>{formatNumber(info.rmsResidual)}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>

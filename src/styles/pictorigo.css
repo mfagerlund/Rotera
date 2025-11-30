@@ -59,7 +59,7 @@
 /* Entity List Popup Styles */
 .entity-list-popup {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   height: 100%;
   padding: 8px;
 }
@@ -310,7 +310,7 @@
 
 .entity-button {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   gap: 4px;
   padding: 8px 4px;
@@ -531,7 +531,7 @@
 
 .status-item {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 4px;
 }
 
@@ -741,7 +741,7 @@ body {
 /* Main layout */
 .app-layout {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   height: 100vh;
   width: 100vw;
   max-height: 100vh;
@@ -776,7 +776,7 @@ body {
   overflow: visible; /* Changed to visible to allow buttons to extend outside */
   position: relative;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
 }
 
 .viewer-area {
@@ -793,7 +793,7 @@ body {
   flex-shrink: 0;
   overflow: hidden;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   height: var(--content-height);
 }
 
@@ -1141,7 +1141,7 @@ body {
 
 .constraint-btn {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   padding: var(--spacing-xs) var(--spacing-sm);
   border: 1px solid transparent;
@@ -1244,7 +1244,7 @@ body {
   flex: 1;
   min-height: 0;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   overflow: visible; /* Changed to visible to allow buttons to extend outside */
 }
 
@@ -1310,8 +1310,8 @@ body {
 /* Image navigation items */
 .image-list {
   display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
+  flex-direction: row;
+  gap: var(--spacing-sm);
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -1340,7 +1340,7 @@ body {
 
 .image-nav-item {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   position: relative;
   border-radius: var(--border-radius);
   overflow: visible;
@@ -1527,7 +1527,7 @@ body {
   top: 50%;
   transform: translateY(-50%);
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: flex-end;
   gap: 8px;
   z-index: 100;
@@ -1568,7 +1568,7 @@ body {
 
 .image-info-right .image-stats {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 4px;
   font-size: 10px;
   color: white;
@@ -1587,7 +1587,7 @@ body {
 
 .image-info-right .image-actions {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 4px;
 }
 
@@ -1606,7 +1606,7 @@ body {
   bottom: 0;
   background: rgba(255, 140, 0, 0.8);
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
   color: white;
@@ -1783,7 +1783,7 @@ body {
   flex: 1;
   padding: var(--spacing-sm);
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   justify-content: space-between;
 }
 
@@ -1807,7 +1807,7 @@ body {
 
 .image-stats {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 2px;
 }
 
@@ -1859,7 +1859,7 @@ body {
 .empty-images-state,
 .timeline-empty {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
   padding: var(--spacing-xl);
@@ -2297,9 +2297,9 @@ body {
   color: var(--text-muted);
   font-style: italic;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
   animation: float 3s ease-in-out infinite;
 }
 
@@ -2331,7 +2331,7 @@ body {
 
 .no-image-state {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
   height: 100%;
@@ -2352,7 +2352,7 @@ body {
 /* Loading state - Enhanced with personality */
 .loading-state {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
   height: 100vh;
@@ -2495,7 +2495,7 @@ body {
 .achievement-content {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
 }
 
 .achievement-icon {
@@ -2548,7 +2548,7 @@ body {
   margin-bottom: var(--spacing-md);
   overflow: hidden;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   flex: 1;
   min-height: 0;
 }
@@ -2803,7 +2803,7 @@ body {
 
 .world-point-empty {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
   padding: var(--spacing-xl);
@@ -2965,7 +2965,7 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
   max-width: 400px;
   backdrop-filter: blur(4px);
 }
@@ -3040,8 +3040,8 @@ body {
 
 .constraint-form {
   display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
+  flex-direction: row;
+  gap: var(--spacing-sm);
 }
 
 .selected-points-preview,
@@ -3051,7 +3051,7 @@ body {
   border-radius: var(--border-radius);
   padding: var(--spacing-sm);
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: var(--spacing-xs);
 }
 
@@ -3080,7 +3080,7 @@ body {
 
 .line-pairs {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: var(--spacing-xs);
 }
 
@@ -3119,7 +3119,7 @@ body {
 
 .form-field {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: var(--spacing-xs);
 }
 
@@ -3431,7 +3431,7 @@ body {
 
 .point-selector {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: var(--spacing-xs);
 }
 
@@ -3512,8 +3512,8 @@ body {
 
 .scale-controls {
   display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
+  flex-direction: row;
+  gap: var(--spacing-sm);
 }
 
 .scale-presets {
@@ -3541,8 +3541,8 @@ body {
 
 .ground-plane-setup {
   display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
+  flex-direction: row;
+  gap: var(--spacing-sm);
 }
 
 .selected-points {
@@ -3665,8 +3665,8 @@ body {
 
 .optimization-controls {
   display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
+  flex-direction: row;
+  gap: var(--spacing-sm);
 }
 
 .optimization-info {
@@ -3729,6 +3729,7 @@ body {
 }
 
 
+/* Entity Optimization Results Table */.entity-optimization-info {  margin-top: var(--spacing-md);}.entity-optimization-info h4 {  margin: 0 0 var(--spacing-sm) 0;  font-size: 13px;  color: var(--text-secondary);  font-weight: 500;}.entity-section {  margin-bottom: var(--spacing-md);}.entity-section h5 {  margin: 0 0 var(--spacing-xs) 0;  font-size: 12px;  color: var(--text-muted);  font-weight: 500;}.entity-table {  width: 100%;  border-collapse: collapse;  font-size: 11px;  background: var(--surface-1);  border-radius: var(--border-radius);  overflow: hidden;}.entity-table th,.entity-table td {  padding: 4px 8px;  text-align: left;  border-bottom: 1px solid var(--border);}.entity-table th {  background: var(--surface-2);  color: var(--text-secondary);  font-weight: 500;  font-size: 10px;  text-transform: uppercase;  letter-spacing: 0.5px;}.entity-table td {  color: var(--text-primary);  font-family: 'SF Mono', 'Consolas', monospace;}.entity-table tr:last-child td {  border-bottom: none;}.entity-table tr:hover td {  background: var(--surface-2);}
 /* Constraint Editor Modal */
 .constraint-editor-overlay {
   position: fixed;
@@ -3786,7 +3787,7 @@ body {
 .modal-controls {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
 }
 
 .enable-toggle {
@@ -3810,7 +3811,7 @@ body {
 
 .constraint-edit-form {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: var(--spacing-lg);
 }
 
@@ -3834,7 +3835,7 @@ body {
 .corner-assignment {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
 }
 
 .corner-assignment {
@@ -3843,7 +3844,7 @@ body {
 
 .line-points {
   display: flex;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
 }
 
 .line-points .point-field {
@@ -3852,7 +3853,7 @@ body {
 
 .point-field {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: var(--spacing-xs);
 }
 
@@ -3957,7 +3958,7 @@ body {
   border-radius: var(--border-radius);
   padding: var(--spacing-sm);
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: var(--spacing-sm);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   z-index: 10;
@@ -4004,7 +4005,7 @@ body {
 
 .zoom-actions {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: var(--spacing-xs);
 }
 
@@ -4372,9 +4373,9 @@ body {
 
 .empty-state-content {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
 }
 
 .empty-state-content h3 {
@@ -4554,13 +4555,13 @@ body {
 
 .edit-line-content {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: var(--spacing-lg);
 }
 
 .property-section {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: var(--spacing-sm);
 }
 
@@ -4577,7 +4578,7 @@ body {
 
 .property-field {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: var(--spacing-xs);
 }
 
@@ -4628,7 +4629,7 @@ body {
 /* Color Selection */
 .color-selection {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: var(--spacing-sm);
 }
 
