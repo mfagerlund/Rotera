@@ -9,6 +9,7 @@ import FloatingWindow from '../FloatingWindow'
 import { Line, LineDirection } from '../../entities/line'
 import { WorldPoint } from '../../entities/world-point'
 import { Viewpoint } from '../../entities/viewpoint'
+import { VanishingLine } from '../../entities/vanishing-line'
 import { ConstructionPreview } from '../image-viewer/types'
 import type { ISelectable } from '../../types/selectable'
 import { getEntityKey } from '../../utils/entityKeys'
@@ -72,6 +73,7 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
   projectConstraints = {}
 }) => {
   const [toolMessage, setToolMessage] = useState<string>('')
+  const [isRightHandGuideOpen, setIsRightHandGuideOpen] = useState(false)
 
   // Split selected entities by type
   const selectedPoints = useMemo(() =>
@@ -84,6 +86,10 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
   )
   const selectedPlanes = useMemo(() =>
     selectedEntities.filter(e => e.getType() === 'plane'),
+    [selectedEntities]
+  )
+  const selectedVanishingLines = useMemo(() =>
+    selectedEntities.filter(e => e.getType() === 'vanishingLine') as VanishingLine[],
     [selectedEntities]
   )
 
@@ -126,6 +132,13 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
       setToolMessage('')
     }
   }, [activeTool, onToolChange, onClearEditingLine, onConstructionPreviewChange])
+
+  const openRightHandGuide = useCallback(() => setIsRightHandGuideOpen(true), [])
+  const closeRightHandGuide = useCallback(() => setIsRightHandGuideOpen(false), [])
+
+  const handleSelectedVLAxisChange = useCallback((axis: 'x' | 'y' | 'z') => {
+    selectedVanishingLines.forEach(vl => vl.setAxis(axis))
+  }, [selectedVanishingLines])
 
   const handleToolCancel = useCallback(() => {
     if (activeTool === 'loop' && onClearSelection) {
@@ -335,11 +348,7 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
                     alignItems: 'center'
                   }}
                 >
-                  <svg width="32" height="24" viewBox="0 0 32 24">
-                    <line x1="10" y1="11" x2="32" y2="4" stroke="#ff0000" strokeWidth="2" />
-                    <line x1="10" y1="13" x2="32" y2="20" stroke="#ff0000" strokeWidth="2" />
-                    <circle cx="6" cy="12" r="3" fill="#ff0000" />
-                  </svg>
+                  <span style={{ color: '#ff0000', fontSize: '18px', fontWeight: 'bold' }}>X</span>
                 </button>
                 <button
                   onClick={() => onVanishingLineAxisChange?.('y')}
@@ -354,11 +363,7 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
                     alignItems: 'center'
                   }}
                 >
-                  <svg width="24" height="32" viewBox="0 0 24 32">
-                    <line x1="11" y1="10" x2="4" y2="32" stroke="#00ff00" strokeWidth="2" />
-                    <line x1="13" y1="10" x2="20" y2="32" stroke="#00ff00" strokeWidth="2" />
-                    <circle cx="12" cy="6" r="3" fill="#00ff00" />
-                  </svg>
+                  <span style={{ color: '#00ff00', fontSize: '18px', fontWeight: 'bold' }}>Y</span>
                 </button>
                 <button
                   onClick={() => onVanishingLineAxisChange?.('z')}
@@ -373,11 +378,26 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
                     alignItems: 'center'
                   }}
                 >
-                  <svg width="32" height="24" viewBox="0 0 32 24">
-                    <line x1="0" y1="4" x2="22" y2="11" stroke="#0000ff" strokeWidth="2" />
-                    <line x1="0" y1="20" x2="22" y2="13" stroke="#0000ff" strokeWidth="2" />
-                    <circle cx="26" cy="12" r="3" fill="#0000ff" />
-                  </svg>
+                  <span style={{ color: '#0000ff', fontSize: '18px', fontWeight: 'bold' }}>Z</span>
+                </button>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px' }}>
+                <button
+                  type="button"
+                  title="Show right-hand rule guide"
+                  onClick={openRightHandGuide}
+                  style={{
+                    backgroundColor: '#1a1a1a',
+                    border: '1px solid #555',
+                    borderRadius: '4px',
+                    width: '32px',
+                    height: '32px',
+                    color: '#fff',
+                    fontWeight: 'bold',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ?
                 </button>
               </div>
             </div>
@@ -391,6 +411,48 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
           </div>
         )}
       </div>
+
+      {/* Selected Vanishing Lines Panel */}
+      {selectedVanishingLines.length > 0 && activeTool !== 'vanishing' && (
+        <div className="active-tool-panel" style={{ marginTop: '10px' }}>
+          <div className="vanishing-line-tool">
+            <div className="tool-header">
+              <h4>Selected Vanishing {selectedVanishingLines.length === 1 ? 'Line' : 'Lines'}</h4>
+            </div>
+            <div style={{ margin: '10px 0' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '12px' }}>
+                {selectedVanishingLines.length === 1 ? 'Change Axis:' : 'Set All to Axis:'}
+              </label>
+              <div style={{ display: 'flex', gap: '5px' }}>
+                {(['x', 'y', 'z'] as const).map(axis => {
+                  const allSameAxis = selectedVanishingLines.every(vl => vl.axis === axis)
+                  const colors = { x: '#ff0000', y: '#00ff00', z: '#0000ff' }
+                  return (
+                    <button
+                      key={axis}
+                      onClick={() => handleSelectedVLAxisChange(axis)}
+                      style={{
+                        backgroundColor: allSameAxis ? '#333' : '#1a1a1a',
+                        border: allSameAxis ? `2px solid ${colors[axis]}` : '1px solid #555',
+                        padding: '8px',
+                        cursor: 'pointer',
+                        flex: 1,
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <span style={{ color: colors[axis], fontSize: '18px', fontWeight: 'bold' }}>
+                        {axis.toUpperCase()}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Selection Summary */}
       <div className="selection-summary">
@@ -482,6 +544,27 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
           showHeader={false}
           showActionButtons={false}
         />
+      </FloatingWindow>
+
+      {/* Right-hand rule guide */}
+      <FloatingWindow
+        title="Right-Hand Coordinate Guide"
+        isOpen={isRightHandGuideOpen}
+        onClose={closeRightHandGuide}
+        storageKey="right-hand-guide"
+        showOkCancel={false}
+        onCancel={closeRightHandGuide}
+      >
+        <div style={{ textAlign: 'center' }}>
+          <img
+            src="/right-hand.png"
+            alt="Illustration of the right-hand coordinate system"
+            style={{ maxWidth: '100%', borderRadius: '4px' }}
+          />
+          <p style={{ marginTop: '8px', fontSize: '12px', color: '#ccc' }}>
+            Thumb = +X, Index = +Y, Middle = +Z.
+          </p>
+        </div>
       </FloatingWindow>
     </div>
   )

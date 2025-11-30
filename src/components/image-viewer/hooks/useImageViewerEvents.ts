@@ -33,6 +33,7 @@ export interface UseImageViewerEventsParams {
   onCreateVanishingLine?: (p1: { u: number; v: number }, p2: { u: number; v: number }) => void
   onVanishingLineClick?: (vanishingLine: VanishingLine, ctrlKey: boolean, shiftKey: boolean) => void
   onMousePositionChange?: (position: { u: number; v: number } | null) => void
+  onEscapePressed?: () => void
 }
 
 export interface UseImageViewerEventsReturn {
@@ -68,7 +69,8 @@ export function useImageViewerEvents({
   onEmptySpaceClick,
   onCreateVanishingLine,
   onVanishingLineClick,
-  onMousePositionChange
+  onMousePositionChange,
+  onEscapePressed
 }: UseImageViewerEventsParams): UseImageViewerEventsReturn {
 
   const placementModeActive = placementMode?.active ?? false
@@ -522,12 +524,13 @@ export function useImageViewerEvents({
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
-      if (event.target instanceof HTMLElement && event.target !== document.body) return
+
+      // Always call onEscapePressed to deselect tool
+      onEscapePressed?.()
 
       if (vanishingLineDragState.vanishingLineStart) {
         vanishingLineDragState.setVanishingLineStart(null)
         event.preventDefault()
-        return
       }
 
       if (!pointDragState.draggedPoint && !pointDragState.isDraggingPoint) return
@@ -553,7 +556,7 @@ export function useImageViewerEvents({
 
     window.addEventListener('keydown', handleEscape)
     return () => window.removeEventListener('keydown', handleEscape)
-  }, [dragState, pointDragState, precisionDragState, imageViewerState, vanishingLineDragState, onMovePoint])
+  }, [dragState, pointDragState, precisionDragState, imageViewerState, vanishingLineDragState, onMovePoint, onEscapePressed])
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

@@ -189,23 +189,6 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
     }
   }, [isDragging, handleMouseMove, handleMouseUp])
 
-  // ESC key handling
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        if (onCancel) {
-          onCancel()
-        } else {
-          onClose()
-        }
-      }
-    }
-
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown)
-      return () => document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [isOpen, onClose, onCancel])
 
   // Smart initial positioning to center window
   useEffect(() => {
@@ -344,6 +327,28 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
               </button>
             </div>
           )}
+          <button
+            type="button"
+            className="btn-icon"
+            onClick={(e) => {
+              e.stopPropagation()
+              onClose()
+            }}
+            aria-label="Close"
+            style={{
+              width: '28px',
+              height: '28px',
+              border: 'none',
+              background: 'transparent',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            <FontAwesomeIcon icon={faXmark} />
+          </button>
         </div>
 
         <div className="floating-window-content">

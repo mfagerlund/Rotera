@@ -61,11 +61,12 @@ export function useMainLayoutKeyboard({
         return
       }
 
-      // Escape key handling
+      // Escape key handling - always deselect tool, also cancel placement if active
       if (event.key === 'Escape') {
         if (placementMode.active) {
           cancelPlacementMode()
-        } else if (activeTool !== 'select') {
+        }
+        if (activeTool !== 'select') {
           setActiveTool('select')
         }
         return

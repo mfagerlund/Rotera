@@ -397,6 +397,7 @@ export const MainLayout: React.FC = observer(() => {
       onEmptySpaceClick={handleEmptySpaceClick}
       onRequestAddImage={handleRequestAddImage}
       onMousePositionChange={handleMousePositionChange}
+      onEscapePressed={() => setActiveTool('select')}
     />
   ), [
     activeConstraintType,
@@ -424,7 +425,8 @@ export const MainLayout: React.FC = observer(() => {
     currentVanishingLineAxis,
     project,
     toolContext,
-    handleMousePositionChange
+    handleMousePositionChange,
+    setActiveTool
   ])
 
   const renderWorldWorkspace = useCallback(() => {

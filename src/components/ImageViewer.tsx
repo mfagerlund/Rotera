@@ -40,6 +40,7 @@ interface ImageViewerProps extends ImageViewerPropsBase {
   onVanishingLineClick?: (vanishingLine: VanishingLine, ctrlKey: boolean, shiftKey: boolean) => void
   selectedVanishingLines?: VanishingLine[]
   onMousePositionChange?: (position: { u: number; v: number } | null) => void
+  onEscapePressed?: () => void
 }
 
 export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
@@ -74,7 +75,8 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
   visibility = DEFAULT_VISIBILITY,
   locking = DEFAULT_LOCKING,
   toolContext = SELECT_TOOL_CONTEXT,
-  onMousePositionChange
+  onMousePositionChange,
+  onEscapePressed
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -141,7 +143,8 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     onEmptySpaceClick,
     onCreateVanishingLine,
     onVanishingLineClick,
-    onMousePositionChange
+    onMousePositionChange,
+    onEscapePressed
   })
 
   useImperativeHandle(ref, () => ({

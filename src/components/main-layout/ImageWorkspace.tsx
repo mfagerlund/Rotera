@@ -41,6 +41,7 @@ interface ImageWorkspaceProps {
   locking?: LockSettings
   toolContext?: ToolContext
   onMousePositionChange?: (position: { u: number; v: number } | null) => void
+  onEscapePressed?: () => void
 }
 
 const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({
@@ -74,7 +75,8 @@ const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({
   visibility,
   locking,
   toolContext,
-  onMousePositionChange
+  onMousePositionChange,
+  onEscapePressed
 }) => {
   if (!image) {
     return (
@@ -129,6 +131,7 @@ const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({
           locking={locking}
           toolContext={toolContext}
           onMousePositionChange={onMousePositionChange}
+          onEscapePressed={onEscapePressed}
         />
       </div>
     </div>

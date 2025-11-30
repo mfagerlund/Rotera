@@ -37,26 +37,50 @@ export function renderVanishingLines(params: RenderParams): void {
       const isSelected = selectedVanishingLines.some(vl => vl.id === vanishingLine.id)
       const isBeingDragged = isDraggingVanishingLine && draggedVanishingLine?.id === vanishingLine.id
 
-      let color = vanishingLine.getColor()
-      let lineWidth = 3
-      let endpointRadius = 4
+      const axisColor = vanishingLine.getColor()
+      const lineWidth = isSelected ? 4 : 3
+      const endpointRadius = isSelected ? 6 : 4
 
+      ctx.setLineDash([])
+
+      // Draw selection highlight (glow effect) behind the line
       if (isSelected) {
-        color = '#FFC107'
-        lineWidth = 5
-        endpointRadius = 6
+        ctx.strokeStyle = '#FFFFFF'
+        ctx.lineWidth = lineWidth + 4
+        ctx.beginPath()
+        ctx.moveTo(x1, y1)
+        ctx.lineTo(x2, y2)
+        ctx.stroke()
+
+        ctx.strokeStyle = '#FFC107'
+        ctx.lineWidth = lineWidth + 2
+        ctx.beginPath()
+        ctx.moveTo(x1, y1)
+        ctx.lineTo(x2, y2)
+        ctx.stroke()
       }
 
-      ctx.strokeStyle = color
+      // Draw the main line in axis color
+      ctx.strokeStyle = axisColor
       ctx.lineWidth = lineWidth
-      ctx.setLineDash([])
 
       ctx.beginPath()
       ctx.moveTo(x1, y1)
       ctx.lineTo(x2, y2)
       ctx.stroke()
 
-      ctx.fillStyle = color
+      // Draw endpoints with selection ring
+      if (isSelected) {
+        ctx.fillStyle = '#FFFFFF'
+        ctx.beginPath()
+        ctx.arc(x1, y1, endpointRadius + 2, 0, 2 * Math.PI)
+        ctx.fill()
+        ctx.beginPath()
+        ctx.arc(x2, y2, endpointRadius + 2, 0, 2 * Math.PI)
+        ctx.fill()
+      }
+
+      ctx.fillStyle = axisColor
       ctx.beginPath()
       ctx.arc(x1, y1, endpointRadius, 0, 2 * Math.PI)
       ctx.fill()
