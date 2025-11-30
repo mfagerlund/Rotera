@@ -935,14 +935,14 @@ export function initializeCameraWithVanishingPoints(
     return false
   }
 
-  // IMPORTANT: Only use LOCKED points (not inferred) for camera position solving
+  // For POSITION SOLVING: Only use FULLY LOCKED points
   // Inferred coordinates depend on line constraints which may not be accurate yet
-  const fullyConstrainedPoints = Array.from(worldPoints).filter(wp => {
+  const fullyLockedPoints = Array.from(worldPoints).filter(wp => {
     const lockedXyz = wp.lockedXyz
     return lockedXyz.every(coord => coord !== null)
   })
 
-  const lockedPointsData = fullyConstrainedPoints
+  const lockedPointsData = fullyLockedPoints
     .map(wp => {
       const imagePoints = viewpoint.getImagePointsForWorldPoint(wp)
       if (imagePoints.length === 0) {
@@ -962,6 +962,28 @@ export function initializeCameraWithVanishingPoints(
     console.log('[initializeCameraWithVanishingPoints] Not enough locked points with image observations')
     return false
   }
+
+  // For SIGN SELECTION: Also include points with effective coordinates (locked + inferred)
+  // This ensures Y-axis constraints from partially-locked points influence the sign choice
+  const effectivePointsData = Array.from(worldPoints)
+    .filter(wp => wp.isFullyConstrained())
+    .map(wp => {
+      const imagePoints = viewpoint.getImagePointsForWorldPoint(wp)
+      if (imagePoints.length === 0) {
+        return null
+      }
+      const effective = wp.getEffectiveXyz()
+      return {
+        worldPoint: wp,
+        imagePoint: { u: imagePoints[0].u, v: imagePoints[0].v },
+        effectiveXyz: effective as [number, number, number]
+      }
+    })
+    .filter(p => p !== null) as Array<{
+    worldPoint: WorldPoint
+    imagePoint: { u: number; v: number }
+    effectiveXyz: [number, number, number]
+  }>
 
   // Try sign combinations for axis orientations.
   // IMPORTANT: Only use EVEN-flip combinations (0 or 2 flips). Odd-flip combinations
@@ -994,21 +1016,16 @@ export function initializeCameraWithVanishingPoints(
       continue
     }
 
-    // Count how many points are in front of the camera
+    // Count how many points are in front of the camera (using effective coordinates)
     let pointsInFront = 0
-    for (const { worldPoint } of lockedPointsData) {
-      const pos: [number, number, number] = [
-        worldPoint.lockedXyz[0]!,
-        worldPoint.lockedXyz[1]!,
-        worldPoint.lockedXyz[2]!
-      ]
-      if (isPointInFrontOfCamera(pos, position, rotation)) {
+    for (const { effectiveXyz } of effectivePointsData) {
+      if (isPointInFrontOfCamera(effectiveXyz, position, rotation)) {
         pointsInFront++
       }
     }
 
-    // Compute reprojection error for locked points - this is the definitive quality measure
-    // Lower error = better initialization
+    // Compute reprojection error for ALL constrained points (locked + inferred)
+    // This ensures Y-axis constraints from partially-locked points influence sign selection
     let totalReprojError = 0
     const rotationMatrix = [
       [1 - 2 * (rotation[2] * rotation[2] + rotation[3] * rotation[3]), 2 * (rotation[1] * rotation[2] - rotation[3] * rotation[0]), 2 * (rotation[1] * rotation[3] + rotation[2] * rotation[0])],
@@ -1016,12 +1033,8 @@ export function initializeCameraWithVanishingPoints(
       [2 * (rotation[1] * rotation[3] - rotation[2] * rotation[0]), 2 * (rotation[2] * rotation[3] + rotation[1] * rotation[0]), 1 - 2 * (rotation[1] * rotation[1] + rotation[2] * rotation[2])]
     ]
 
-    for (const { worldPoint, imagePoint } of lockedPointsData) {
-      const wp = [
-        worldPoint.lockedXyz[0]!,
-        worldPoint.lockedXyz[1]!,
-        worldPoint.lockedXyz[2]!
-      ]
+    for (const { effectiveXyz, imagePoint } of effectivePointsData) {
+      const wp = effectiveXyz
 
       // Transform world point to camera space using R (world→camera)
       const rel = [wp[0] - position[0], wp[1] - position[1], wp[2] - position[2]]
@@ -1056,7 +1069,7 @@ export function initializeCameraWithVanishingPoints(
       bestRotation = rotation
       bestPosition = position
       bestPointsInFront = pointsInFront
-      bestReprojError = totalReprojError / lockedPointsData.length
+      bestReprojError = totalReprojError / effectivePointsData.length
     }
   }
 
@@ -1065,8 +1078,8 @@ export function initializeCameraWithVanishingPoints(
     return false
   }
 
-  if (bestPointsInFront < lockedPointsData.length) {
-    console.log(`[initializeCameraWithVanishingPoints] WARNING: Only ${bestPointsInFront}/${lockedPointsData.length} points are in front of camera`)
+  if (bestPointsInFront < effectivePointsData.length) {
+    console.log(`[initializeCameraWithVanishingPoints] WARNING: Only ${bestPointsInFront}/${effectivePointsData.length} points are in front of camera`)
   }
 
   // If the best reprojection error is too high, fail and let PnP try instead.
