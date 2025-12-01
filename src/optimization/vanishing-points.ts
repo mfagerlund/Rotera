@@ -1056,7 +1056,6 @@ export function initializeCameraWithVanishingPoints(
     const position = computeCameraPosition(rotation, focalLength, principalPoint, lockedPointsData)
 
     if (!position) {
-      console.log(`  [Sign combo ${flipX},${flipY},${flipZ}] No valid position`)
       continue
     }
 
@@ -1093,11 +1092,10 @@ export function initializeCameraWithVanishingPoints(
         continue
       }
 
-      // Project to image
+      // Project to image using standard camera model: v = pp_v - f * cam_y / cam_z
       const projU = principalPoint.u + focalLength * (camSpace[0] / camSpace[2])
       const projV = principalPoint.v - focalLength * (camSpace[1] / camSpace[2])
 
-      // Reprojection error
       const du = projU - imagePoint.u
       const dv = projV - imagePoint.v
       const err = Math.sqrt(du * du + dv * dv)
