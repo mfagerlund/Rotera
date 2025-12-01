@@ -25,14 +25,25 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
 }, ref) => {
   const selectedSet = useMemo(() => new Set(selectedEntities), [selectedEntities])
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const { viewMatrix, setViewMatrix, resetView, resetRotation, resetPan, zoomFitToProject } = useViewMatrix()
+  const { viewMatrix, setViewMatrix, resetView, resetRotation, resetPan, zoomFitToProject, lookFromCamera: lookFromCameraHook } = useViewMatrix()
   const hasInitializedRef = useRef(false)
+  const [renderTrigger, setRenderTrigger] = useState(0)
 
   const zoomFit = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     zoomFitToProject(project, canvas.width, canvas.height)
   }, [project, zoomFitToProject])
+
+  const lookFromCamera = useCallback((viewpoint: import('../../entities/viewpoint').Viewpoint) => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    lookFromCameraHook(viewpoint, canvas.width, canvas.height)
+  }, [lookFromCameraHook])
+
+  const handleImageLoaded = useCallback(() => {
+    setRenderTrigger(prev => prev + 1)
+  }, [])
   const { dragState, startDrag, updateDrag, endDrag } = useDragState()
   const { hoverState, setHoverState, clearHover } = useHoverState()
   const { project3DTo2D } = useProjection(canvasRef, viewMatrix)
@@ -52,10 +63,10 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
 
     // Render in order: axes, cameras, lines, points
     renderAxes(ctx, project.gridVisible, project3DTo2D)
-    renderCameras(ctx, project, selectedSet, null, project3DTo2D)
+    renderCameras(ctx, project, selectedSet, null, project3DTo2D, handleImageLoaded)
     renderLines(ctx, project, selectedSet, hoverState.hoveredLine, project3DTo2D)
     renderWorldPoints(ctx, project, selectedSet, hoverState.hoveredPoint, project3DTo2D)
-  }, [project, selectedSet, hoverState, project3DTo2D])
+  }, [project, selectedSet, hoverState, project3DTo2D, handleImageLoaded, renderTrigger])
 
   // Handle mouse events
   const handleMouseDown = (event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -184,7 +195,8 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
       // Zoom to selected entities
       // TODO: Implement selection-based zoom
     },
-    resetView
+    resetView,
+    lookFromCamera
   }))
 
   // Re-render when dependencies change
@@ -248,6 +260,27 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
         <button onClick={resetPan}>
           Reset Pan
         </button>
+        {project.viewpoints.size > 0 && (
+          <select
+            onChange={(e) => {
+              const index = parseInt(e.target.value, 10)
+              if (!isNaN(index)) {
+                const viewpointsArray = Array.from(project.viewpoints)
+                const viewpoint = viewpointsArray[index]
+                if (viewpoint) {
+                  lookFromCamera(viewpoint)
+                }
+              }
+            }}
+            defaultValue=""
+            style={{ marginLeft: '8px' }}
+          >
+            <option value="" disabled>View from camera...</option>
+            {Array.from(project.viewpoints).map((vp, index) => (
+              <option key={vp.name} value={index}>{vp.name}</option>
+            ))}
+          </select>
+        )}
         <label>
           <input
             type="checkbox"

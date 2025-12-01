@@ -3,6 +3,33 @@
 import { useState, useCallback } from 'react'
 import type { ViewMatrix } from '../types'
 import type { Project } from '../../../entities/project'
+import type { Viewpoint } from '../../../entities/viewpoint'
+
+// Convert quaternion [w, x, y, z] to Euler angles [x, y, z] in radians
+function quaternionToEuler(q: [number, number, number, number]): { x: number; y: number; z: number } {
+  const [w, x, y, z] = q
+
+  // Roll (x-axis rotation)
+  const sinr_cosp = 2 * (w * x + y * z)
+  const cosr_cosp = 1 - 2 * (x * x + y * y)
+  const roll = Math.atan2(sinr_cosp, cosr_cosp)
+
+  // Pitch (y-axis rotation)
+  const sinp = 2 * (w * y - z * x)
+  let pitch: number
+  if (Math.abs(sinp) >= 1) {
+    pitch = Math.sign(sinp) * Math.PI / 2 // Use 90 degrees if out of range
+  } else {
+    pitch = Math.asin(sinp)
+  }
+
+  // Yaw (z-axis rotation)
+  const siny_cosp = 2 * (w * z + x * y)
+  const cosy_cosp = 1 - 2 * (y * y + z * z)
+  const yaw = Math.atan2(siny_cosp, cosy_cosp)
+
+  return { x: roll, y: pitch, z: yaw }
+}
 
 export function useViewMatrix() {
   const [viewMatrix, setViewMatrix] = useState<ViewMatrix>({
@@ -118,12 +145,44 @@ export function useViewMatrix() {
     }))
   }, [])
 
+  const lookFromCamera = useCallback((viewpoint: Viewpoint, canvasWidth: number, canvasHeight: number) => {
+    // Convert viewpoint quaternion to Euler angles
+    const euler = quaternionToEuler(viewpoint.rotation)
+
+    // The viewpoint looks down +Z in its local space
+    // We need to set up our view to match this orientation
+    // Invert the rotation since we're looking FROM the camera position
+    const rotation = {
+      x: -euler.x,
+      y: -euler.y + Math.PI, // Add PI to flip the view direction
+      z: euler.z
+    }
+
+    // Position the view centered on the camera position
+    const [px, py, pz] = viewpoint.position
+    const scale = 150 // Default scale for camera view
+
+    const canvasCenterX = canvasWidth / 2
+    const canvasCenterY = canvasHeight / 2
+
+    setViewMatrix({
+      scale,
+      rotation,
+      translation: {
+        x: canvasCenterX - px * scale,
+        y: canvasCenterY - py * scale,
+        z: -pz * scale
+      }
+    })
+  }, [])
+
   return {
     viewMatrix,
     setViewMatrix,
     resetView,
     resetRotation,
     resetPan,
-    zoomFitToProject
+    zoomFitToProject,
+    lookFromCamera
   }
 }

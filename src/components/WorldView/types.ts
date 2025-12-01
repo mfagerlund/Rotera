@@ -5,6 +5,7 @@ import type { Line } from '../../entities/line/Line'
 import type { Plane } from '../../entities/plane'
 import type { ISelectable } from '../../types/selectable'
 import type { Project } from '../../entities/project'
+import type { Viewpoint } from '../../entities/viewpoint'
 
 export interface WorldViewProps {
   project: Project
@@ -23,6 +24,7 @@ export interface WorldViewRef {
   zoomFit: () => void
   zoomSelection: () => void
   resetView: () => void
+  lookFromCamera: (viewpoint: Viewpoint) => void
 }
 
 export interface ViewMatrix {
