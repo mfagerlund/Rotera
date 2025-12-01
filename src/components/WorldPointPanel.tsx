@@ -663,20 +663,20 @@ function getConstraintDisplayName(constraint: Constraint): string {
   }
 }
 
-function getConstraintIcon(type: string): string {
-  const icons: Record<string, string> = {
+function getConstraintIcon(type: string): React.ReactNode {
+  const icons: Record<string, React.ReactNode> = {
     distance: '↔',
     angle: '∠',
     perpendicular: '⊥',
     parallel: '∥',
     collinear: '─',
     rectangle: '▭',
-    circle: '<FontAwesomeIcon icon={faCircle} />',
+    circle: <FontAwesomeIcon icon={faCircle} />,
     fixed: '📌',
-    horizontal: '<FontAwesomeIcon icon={faArrowsLeftRight} />',
+    horizontal: <FontAwesomeIcon icon={faArrowsLeftRight} />,
     vertical: '↕'
   }
-  return icons[type] || '<FontAwesomeIcon icon={faGear} />'
+  return icons[type] || <FontAwesomeIcon icon={faGear} />
 }
 
 export default WorldPointPanel

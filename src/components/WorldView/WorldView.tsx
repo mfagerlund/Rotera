@@ -1,5 +1,5 @@
 // 3D World View for geometric primitives and constraints
-import React, { useRef, useEffect, useCallback, useMemo } from 'react'
+import React, { useRef, useEffect, useCallback, useMemo, useState } from 'react'
 import type { WorldViewProps, WorldViewRef } from './types'
 import { useViewMatrix } from './hooks/useViewMatrix'
 import { useDragState } from './hooks/useDragState'
@@ -25,7 +25,14 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
 }, ref) => {
   const selectedSet = useMemo(() => new Set(selectedEntities), [selectedEntities])
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const { viewMatrix, setViewMatrix, resetView, resetRotation, resetPan, zoomFit } = useViewMatrix()
+  const { viewMatrix, setViewMatrix, resetView, resetRotation, resetPan, zoomFitToProject } = useViewMatrix()
+  const hasInitializedRef = useRef(false)
+
+  const zoomFit = useCallback(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    zoomFitToProject(project, canvas.width, canvas.height)
+  }, [project, zoomFitToProject])
   const { dragState, startDrag, updateDrag, endDrag } = useDragState()
   const { hoverState, setHoverState, clearHover } = useHoverState()
   const { project3DTo2D } = useProjection(canvasRef, viewMatrix)
@@ -161,6 +168,15 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
     }
   }
 
+  const handleWheel = (event: React.WheelEvent<HTMLCanvasElement>) => {
+    event.preventDefault()
+    const zoomFactor = event.deltaY > 0 ? 0.9 : 1.1
+    setViewMatrix(prev => ({
+      ...prev,
+      scale: Math.max(10, Math.min(1000, prev.scale * zoomFactor))
+    }))
+  }
+
   // Expose ref methods
   React.useImperativeHandle(ref, () => ({
     zoomFit,
@@ -196,6 +212,13 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
       if (rect.width > 0 && rect.height > 0) {
         canvas.width = rect.width
         canvas.height = rect.height
+
+        // Initial zoom fit on first render
+        if (!hasInitializedRef.current && project.worldPoints.size > 0) {
+          hasInitializedRef.current = true
+          zoomFitToProject(project, canvas.width, canvas.height)
+        }
+
         render()
       }
     }
@@ -211,11 +234,14 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
       resizeObserver.observe(containerToObserve)
     }
     return () => resizeObserver.disconnect()
-  }, [render])
+  }, [render, project, zoomFitToProject])
 
   return (
     <div className="world-view">
       <div className="world-view-controls">
+        <button onClick={zoomFit}>
+          Zoom All
+        </button>
         <button onClick={resetRotation}>
           Reset Rotation
         </button>
@@ -238,6 +264,7 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
+        onWheel={handleWheel}
       />
       <div className="world-view-info">
         <div>Scale: {viewMatrix.scale.toFixed(0)}%</div>

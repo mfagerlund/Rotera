@@ -755,6 +755,9 @@ export const MainLayout: React.FC = observer(() => {
         project={project}
         onOptimizationComplete={(success, message) => {
           saveProject()
+          if (success && worldViewRef.current) {
+            worldViewRef.current.zoomFit()
+          }
         }}
         worldPointEditWindow={worldPointEditWindow}
         onCloseWorldPointEdit={closeWorldPointEdit}

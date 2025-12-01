@@ -216,9 +216,9 @@ export const WorkspaceStatus: React.FC<WorkspaceStatusProps> = ({
             {worldInfo.totalPoints} points, {worldInfo.totalConstraints} constraints
           </span>
           <span className="status-indicator optimization">
-            {worldInfo.optimizationStatus === 'converged' ? '<FontAwesomeIcon icon={faCheck} />' :
-             worldInfo.optimizationStatus === 'failed' ? '<FontAwesomeIcon icon={faCircleXmark} />' :
-             worldInfo.optimizationStatus === 'running' ? '⟳' : '<FontAwesomeIcon icon={faCircle} />'}
+            {worldInfo.optimizationStatus === 'converged' ? <FontAwesomeIcon icon={faCheck} /> :
+             worldInfo.optimizationStatus === 'failed' ? <FontAwesomeIcon icon={faCircleXmark} /> :
+             worldInfo.optimizationStatus === 'running' ? '⟳' : <FontAwesomeIcon icon={faCircle} />}
           </span>
         </div>
       )}
