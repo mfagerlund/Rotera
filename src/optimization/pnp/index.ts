@@ -21,6 +21,7 @@ import type { WorldPoint } from '../../entities/world-point';
 import type { PnPResult } from './types';
 import { solveP3P } from './p3p';
 import { estimatePoseDLT } from './epnp';
+import { log } from '../optimization-logger';
 
 export type { PnPResult };
 export { initializeCameraWithPnP } from './iterative-refinement';
@@ -52,7 +53,7 @@ export function solvePnP(
   const vpConcrete = viewpoint as Viewpoint;
 
   if (correspondences.length < 3) {
-    console.log(`PnP: Need at least 3 correspondences, got ${correspondences.length}`);
+    log(`PnP: Need at least 3 correspondences, got ${correspondences.length}`);
     return null;
   }
 
@@ -62,7 +63,7 @@ export function solvePnP(
   });
 
   if (validCorrespondences.length < 3) {
-    console.log(`PnP: Need at least 3 points with optimizedXyz, got ${validCorrespondences.length}`);
+    log(`PnP: Need at least 3 points with optimizedXyz, got ${validCorrespondences.length}`);
     return null;
   }
 
@@ -84,7 +85,7 @@ export function solvePnP(
   if (validCorrespondences.length === 3 || validCorrespondences.length === 4) {
     pose = solveP3P(points3D, points2D, K);
     if (!pose) {
-      console.log('PnP: P3P estimation failed, falling back to DLT');
+      log('PnP: P3P estimation failed, falling back to DLT');
       if (validCorrespondences.length >= 4) {
         pose = estimatePoseDLT(points3D, points2D, K);
       }
@@ -94,7 +95,7 @@ export function solvePnP(
   }
 
   if (!pose) {
-    console.log('PnP: All estimation methods failed');
+    log('PnP: All estimation methods failed');
     return null;
   }
 

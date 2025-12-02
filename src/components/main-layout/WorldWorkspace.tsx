@@ -15,6 +15,8 @@ interface WorldWorkspaceProps {
   onPointClick: (worldPoint: WorldPoint, ctrlKey: boolean, shiftKey: boolean) => void
   onLineClick: (line: Line, ctrlKey: boolean, shiftKey: boolean) => void
   onPlaneClick: (plane: Plane, ctrlKey: boolean, shiftKey: boolean) => void
+  onPointRightClick?: (worldPoint: WorldPoint) => void
+  onLineRightClick?: (line: Line) => void
 }
 
 const WorldWorkspace: React.FC<WorldWorkspaceProps> = ({
@@ -24,7 +26,9 @@ const WorldWorkspace: React.FC<WorldWorkspaceProps> = ({
   hoveredConstraintId,
   onPointClick,
   onLineClick,
-  onPlaneClick
+  onPlaneClick,
+  onPointRightClick,
+  onLineRightClick
 }) => (
   <div className="workspace-world-view">
     <WorldView
@@ -35,6 +39,8 @@ const WorldWorkspace: React.FC<WorldWorkspaceProps> = ({
       onPointClick={onPointClick}
       onLineClick={onLineClick}
       onPlaneClick={onPlaneClick}
+      onPointRightClick={onPointRightClick}
+      onLineRightClick={onLineRightClick}
     />
   </div>
 )

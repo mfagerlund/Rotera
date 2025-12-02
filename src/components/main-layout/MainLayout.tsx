@@ -443,6 +443,8 @@ export const MainLayout: React.FC = observer(() => {
         onPointClick={handleEnhancedPointClick}
         onLineClick={handleEnhancedLineClick}
         onPlaneClick={handlePlaneClick}
+        onPointRightClick={openWorldPointEdit}
+        onLineRightClick={handleEditLineOpen}
       />
     )
   }, [
@@ -543,6 +545,10 @@ export const MainLayout: React.FC = observer(() => {
                 onImageReorder={handleImageReorder}
                 onWorldPointHover={setHoveredWorldPoint}
                 onWorldPointClick={handleEnhancedPointClick}
+                onViewFromCamera={(viewpoint) => {
+                  workspaceActions.setWorkspace('world')
+                  setTimeout(() => worldViewRef.current?.lookFromCamera(viewpoint), 100)
+                }}
                 onCopyPointsToCurrentImage={(sourceViewpoint) => {
                   if (currentImage) {
                     copyPointsFromImageToImage(sourceViewpoint, currentImage)

@@ -8,6 +8,7 @@
 
 import type { IImagePoint } from '../entities/interfaces';
 import type { Viewpoint } from '../entities/viewpoint';
+import { log } from './optimization-logger';
 
 export interface Correspondence {
   x1: number;
@@ -493,12 +494,12 @@ function jacobiEigenDecomposition9x9(A: number[][]): { eigenvalues: number[], ei
 function decomposeEssentialMatrix(E: number[][]): DecomposedEssentialMatrix[] {
   const svd = svd3x3(E);
 
-  console.log('[decomposeEssentialMatrix] SVD of E:');
-  console.log(`  Singular values: [${svd.S.map(v => v.toFixed(6)).join(', ')}]`);
-  console.log(`  U[0] = [${svd.U[0].map(v => v.toFixed(6)).join(', ')}]`);
-  console.log(`  U[1] = [${svd.U[1].map(v => v.toFixed(6)).join(', ')}]`);
-  console.log(`  U[2] = [${svd.U[2].map(v => v.toFixed(6)).join(', ')}]`);
-  console.log(`  Translation t (3rd column of U) = [${svd.U[0][2].toFixed(6)}, ${svd.U[1][2].toFixed(6)}, ${svd.U[2][2].toFixed(6)}]`);
+  log('[decomposeEssentialMatrix] SVD of E:');
+  log(`  Singular values: [${svd.S.map(v => v.toFixed(6)).join(', ')}]`);
+  log(`  U[0] = [${svd.U[0].map(v => v.toFixed(6)).join(', ')}]`);
+  log(`  U[1] = [${svd.U[1].map(v => v.toFixed(6)).join(', ')}]`);
+  log(`  U[2] = [${svd.U[2].map(v => v.toFixed(6)).join(', ')}]`);
+  log(`  Translation t (3rd column of U) = [${svd.U[0][2].toFixed(6)}, ${svd.U[1][2].toFixed(6)}, ${svd.U[2][2].toFixed(6)}]`);
 
   const W = [
     [0, -1, 0],
@@ -534,8 +535,8 @@ function decomposeEssentialMatrix(E: number[][]): DecomposedEssentialMatrix[] {
   const t1 = [svd.U[0][2], svd.U[1][2], svd.U[2][2]];
   const t2 = [-svd.U[0][2], -svd.U[1][2], -svd.U[2][2]];
 
-  console.log(`  t1 (3rd column of U): [${t1.map(v => v.toFixed(6)).join(', ')}]`);
-  console.log(`  t2 (negated): [${t2.map(v => v.toFixed(6)).join(', ')}]`);
+  log(`  t1 (3rd column of U): [${t1.map(v => v.toFixed(6)).join(', ')}]`);
+  log(`  t2 (negated): [${t2.map(v => v.toFixed(6)).join(', ')}]`);
 
   return [
     { R: R1, t: t1 },
@@ -689,7 +690,7 @@ function checkCheirality(
     const corr = correspondences[i];
     const X = triangulatePoint(corr.x1, corr.y1, corr.x2, corr.y2, R, t);
     if (!X) {
-      if (debug && i < 3) console.log(`    Point ${i}: triangulation failed`);
+      if (debug && i < 3) log(`    Point ${i}: triangulation failed`);
       continue;
     }
 
@@ -703,7 +704,7 @@ function checkCheirality(
     const z2 = X2[2];
 
     if (debug && i < 3) {
-      console.log(`    Point ${i}: z1=${z1.toFixed(2)}, z2=${z2.toFixed(2)} ${z1 > 0 && z2 > 0 ? '✓' : '✗'}`);
+      log(`    Point ${i}: z1=${z1.toFixed(2)}, z2=${z2.toFixed(2)} ${z1 > 0 && z2 > 0 ? '✓' : '✗'}`);
     }
 
     if (z1 > 0 && z2 > 0) {
@@ -721,18 +722,18 @@ function selectCorrectDecomposition(
   let bestSolution = E_solutions[0];
   let maxInFront = 0;
 
-  console.log('[Essential Matrix] Cheirality test for 4 decompositions:');
+  log('[Essential Matrix] Cheirality test for 4 decompositions:');
   for (let i = 0; i < E_solutions.length; i++) {
     const solution = E_solutions[i];
     const debug = i === 0;
     const numInFront = checkCheirality(correspondences, solution.R, solution.t, debug);
-    console.log(`  Solution ${i + 1}: ${numInFront}/${correspondences.length} points in front`);
+    log(`  Solution ${i + 1}: ${numInFront}/${correspondences.length} points in front`);
     if (numInFront > maxInFront) {
       maxInFront = numInFront;
       bestSolution = solution;
     }
   }
-  console.log(`  Selected solution with ${maxInFront} points in front`);
+  log(`  Selected solution with ${maxInFront} points in front`);
 
   return { ...bestSolution, score: maxInFront };
 }
@@ -812,21 +813,21 @@ export function initializeCamerasWithEssentialMatrix(
     };
   }
 
-  console.log(`\n[Essential Matrix] Found ${correspondences.length} correspondences`);
-  console.log('[Essential Matrix] Sample correspondences:');
+  log(`\n[Essential Matrix] Found ${correspondences.length} correspondences`);
+  log('[Essential Matrix] Sample correspondences:');
   for (let i = 0; i < Math.min(3, correspondences.length); i++) {
     const c = correspondences[i];
-    console.log(`  ${i}: cam1=[${c.x1.toFixed(4)}, ${c.y1.toFixed(4)}], cam2=[${c.x2.toFixed(4)}, ${c.y2.toFixed(4)}]`);
+    log(`  ${i}: cam1=[${c.x1.toFixed(4)}, ${c.y1.toFixed(4)}], cam2=[${c.x2.toFixed(4)}, ${c.y2.toFixed(4)}]`);
   }
 
   let allCandidates: number[][][] = [];
 
   if (correspondences.length === 7) {
-    console.log('[Essential Matrix] Using 7-point algorithm');
+    log('[Essential Matrix] Using 7-point algorithm');
     allCandidates = estimateEssentialMatrix7Point(correspondences);
-    console.log(`[Essential Matrix] 7-point produced ${allCandidates.length} candidate(s)`);
+    log(`[Essential Matrix] 7-point produced ${allCandidates.length} candidate(s)`);
   } else {
-    console.log('[Essential Matrix] Using 8-point algorithm');
+    log('[Essential Matrix] Using 8-point algorithm');
     const E = estimateEssentialMatrix8Point(correspondences);
     allCandidates = [E];
   }
@@ -839,13 +840,13 @@ export function initializeCamerasWithEssentialMatrix(
     const E = allCandidates[candidateIdx];
 
     if (allCandidates.length > 1) {
-      console.log(`\n[Essential Matrix] Testing candidate ${candidateIdx + 1}/${allCandidates.length}:`);
+      log(`\n[Essential Matrix] Testing candidate ${candidateIdx + 1}/${allCandidates.length}:`);
     } else {
-      console.log('\n[Essential Matrix] E matrix:');
+      log('\n[Essential Matrix] E matrix:');
     }
-    E.forEach(row => console.log(`  [${row.map(v => v.toFixed(6)).join(', ')}]`));
+    E.forEach(row => log(`  [${row.map(v => v.toFixed(6)).join(', ')}]`));
 
-    console.log('\n[Essential Matrix] Verifying epipolar constraint (x2^T * E * x1 should be ~0):');
+    log('\n[Essential Matrix] Verifying epipolar constraint (x2^T * E * x1 should be ~0):');
     for (let i = 0; i < Math.min(5, correspondences.length); i++) {
       const c = correspondences[i];
       const x1 = [c.x1, c.y1, 1];
@@ -859,15 +860,15 @@ export function initializeCamerasWithEssentialMatrix(
 
       const epipolarError = x2[0] * Ex1[0] + x2[1] * Ex1[1] + x2[2] * Ex1[2];
       if (allCandidates.length === 1 || i < 2) {
-        console.log(`  Point ${i}: error = ${epipolarError.toExponential(4)}`);
+        log(`  Point ${i}: error = ${epipolarError.toExponential(4)}`);
       }
     }
 
     const decompositions = decomposeEssentialMatrix(E);
     if (allCandidates.length > 1) {
-      console.log(`[Essential Matrix] Testing ${decompositions.length} decompositions for candidate ${candidateIdx + 1}...`);
+      log(`[Essential Matrix] Testing ${decompositions.length} decompositions for candidate ${candidateIdx + 1}...`);
     } else {
-      console.log(`\n[Essential Matrix] Testing ${decompositions.length} possible decompositions...`);
+      log(`\n[Essential Matrix] Testing ${decompositions.length} possible decompositions...`);
     }
 
     const candidateDecomp = selectCorrectDecomposition(decompositions, correspondences);
@@ -884,12 +885,12 @@ export function initializeCamerasWithEssentialMatrix(
   }
 
   if (allCandidates.length > 1) {
-    console.log(`\n[Essential Matrix] Best candidate selected with score: ${bestScore}`);
+    log(`\n[Essential Matrix] Best candidate selected with score: ${bestScore}`);
   } else {
-    console.log('[Essential Matrix] Selected best decomposition');
+    log('[Essential Matrix] Selected best decomposition');
   }
 
-  console.log(`\n[Essential Matrix] Translation vector t: [${bestDecomposition.t.map(v => v.toFixed(4)).join(', ')}]`);
+  log(`\n[Essential Matrix] Translation vector t: [${bestDecomposition.t.map(v => v.toFixed(4)).join(', ')}]`);
 
   const tNorm = Math.sqrt(
     bestDecomposition.t[0] * bestDecomposition.t[0] +
@@ -897,10 +898,10 @@ export function initializeCamerasWithEssentialMatrix(
     bestDecomposition.t[2] * bestDecomposition.t[2]
   );
 
-  console.log(`[Essential Matrix] tNorm: ${tNorm}, baselineScale: ${baselineScale}`);
+  log(`[Essential Matrix] tNorm: ${tNorm}, baselineScale: ${baselineScale}`);
 
   if (tNorm < 1e-10) {
-    console.error('[Essential Matrix] ERROR: Translation norm is too small!');
+    log('[Essential Matrix] ERROR: Translation norm is too small!');
     return { success: false, error: 'Translation norm is too small (degenerate configuration)' };
   }
 
@@ -910,7 +911,7 @@ export function initializeCamerasWithEssentialMatrix(
     bestDecomposition.t[2] / tNorm * baselineScale
   ];
 
-  console.log(`[Essential Matrix] tScaled: [${tScaled.map(v => v.toFixed(4)).join(', ')}]`);
+  log(`[Essential Matrix] tScaled: [${tScaled.map(v => v.toFixed(4)).join(', ')}]`);
 
   vp1.position = [0, 0, 0];
   vp1.rotation = [1, 0, 0, 0];
@@ -919,13 +920,13 @@ export function initializeCamerasWithEssentialMatrix(
   vp2.position = [tScaled[0], tScaled[1], tScaled[2]];
   vp2.rotation = [quat[0], quat[1], quat[2], quat[3]];
 
-  console.log('\n[Essential Matrix] Camera poses after initialization:');
-  console.log(`  Camera 1: pos=[${vp1.position.join(', ')}], rot=[${vp1.rotation.join(', ')}]`);
-  console.log(`  Camera 2: pos=[${vp2.position.map(v => v.toFixed(3)).join(', ')}], rot=[${vp2.rotation.map(v => v.toFixed(3)).join(', ')}]`);
-  console.log(`  Rotation matrix R:`);
-  bestDecomposition.R.forEach(row => console.log(`    [${row.map(v => v.toFixed(4)).join(', ')}]`));
-  console.log(`  Translation t (normalized): [${bestDecomposition.t.map(v => v.toFixed(4)).join(', ')}]`);
-  console.log(`  Translation t (scaled): [${tScaled.map(v => v.toFixed(3)).join(', ')}]`);
+  log('\n[Essential Matrix] Camera poses after initialization:');
+  log(`  Camera 1: pos=[${vp1.position.join(', ')}], rot=[${vp1.rotation.join(', ')}]`);
+  log(`  Camera 2: pos=[${vp2.position.map(v => v.toFixed(3)).join(', ')}], rot=[${vp2.rotation.map(v => v.toFixed(3)).join(', ')}]`);
+  log(`  Rotation matrix R:`);
+  bestDecomposition.R.forEach(row => log(`    [${row.map(v => v.toFixed(4)).join(', ')}]`));
+  log(`  Translation t (normalized): [${bestDecomposition.t.map(v => v.toFixed(4)).join(', ')}]`);
+  log(`  Translation t (scaled): [${tScaled.map(v => v.toFixed(3)).join(', ')}]`);
 
   return { success: true };
 }

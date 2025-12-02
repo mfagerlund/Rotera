@@ -5,16 +5,65 @@ import { initializeCameraWithPnP } from './pnp';
 import { Viewpoint } from '../entities/viewpoint';
 import { WorldPoint } from '../entities/world-point';
 import { ImagePoint } from '../entities/imagePoint';
+import { Line } from '../entities/line';
 import { initializeCamerasWithEssentialMatrix } from './essential-matrix';
 import { initializeWorldPoints as unifiedInitialize } from './unified-initialization';
 import { initializeCameraWithVanishingPoints } from './vanishing-points';
+import { log, clearOptimizationLogs, optimizationLogs } from './optimization-logger';
 
-// Global log buffer for export
-export const optimizationLogs: string[] = [];
+// Re-export for backwards compatibility
+export { log, clearOptimizationLogs, optimizationLogs } from './optimization-logger';
 
-function log(message: string) {
-  console.log(message);
-  optimizationLogs.push(message);
+/**
+ * Reset all cached optimization state on project entities.
+ * Call this before each solve to ensure no stale data is reused.
+ */
+export function resetOptimizationState(project: Project) {
+  log('[resetOptimizationState] Clearing all cached optimization state...');
+
+  // Reset world points
+  for (const wp of project.worldPoints) {
+    const point = wp as WorldPoint;
+    point.optimizedXyz = undefined;
+    point.inferredXyz = [null, null, null];
+    point.lastResiduals = [];
+  }
+
+  // Reset viewpoints (cameras)
+  for (const vp of project.viewpoints) {
+    const viewpoint = vp as Viewpoint;
+    viewpoint.position = [0, 0, 0];
+    viewpoint.rotation = [1, 0, 0, 0];
+    viewpoint.lastResiduals = [];
+    // Clear hidden VP cache
+    delete (viewpoint as any).__initialCameraVps;
+  }
+
+  // Reset image points
+  for (const ip of project.imagePoints) {
+    const imagePoint = ip as ImagePoint;
+    imagePoint.lastResiduals = [];
+    imagePoint.isOutlier = false;
+  }
+
+  // Reset lines
+  for (const line of project.lines) {
+    (line as Line).lastResiduals = [];
+  }
+
+  // Reset constraints
+  for (const constraint of project.constraints) {
+    constraint.lastResiduals = [];
+  }
+
+  // Re-run inference propagation to rebuild inferredXyz from constraints
+  // Note: MobX reactions will trigger this automatically when we modify entities,
+  // but we call it explicitly here to ensure it runs before optimization starts
+  if (typeof (project as any).propagateInferences === 'function') {
+    (project as any).propagateInferences();
+  }
+
+  log('[resetOptimizationState] Done - all optimization state cleared');
 }
 
 function detectOutliers(
@@ -71,6 +120,12 @@ export interface OptimizeProjectOptions extends SolverOptions {
   autoInitializeWorldPoints?: boolean;
   detectOutliers?: boolean;
   outlierThreshold?: number;
+  /**
+   * If true, optimize camera intrinsics for all cameras.
+   * If false, keep intrinsics fixed.
+   * If 'auto' (default), optimize intrinsics only for cameras without vanishing lines.
+   */
+  optimizeCameraIntrinsics?: boolean | 'auto';
 }
 
 export interface OptimizeProjectResult extends SolverResult {
@@ -92,35 +147,40 @@ export function optimizeProject(
     maxIterations = 100,
     damping = 1e-3,
     verbose = false,
+    optimizeCameraIntrinsics = 'auto',
   } = options;
 
-  console.log('[optimizeProject] Starting optimization...');
-  console.log(`  World Points: ${project.worldPoints.size}`);
-  console.log(`  Lines: ${project.lines.size}`);
-  console.log(`  Viewpoints: ${project.viewpoints.size}`);
-  console.log(`  Image Points: ${project.imagePoints.size}`);
-  console.log(`  Constraints: ${project.constraints.size}`);
+  // Clear logs and reset all cached state before solving
+  clearOptimizationLogs();
+  resetOptimizationState(project);
+
+  log('[optimizeProject] Starting optimization...');
+  log(`  World Points: ${project.worldPoints.size}`);
+  log(`  Lines: ${project.lines.size}`);
+  log(`  Viewpoints: ${project.viewpoints.size}`);
+  log(`  Image Points: ${project.imagePoints.size}`);
+  log(`  Constraints: ${project.constraints.size}`);
 
   // DEBUG: Check world point initialization
   const wpArray = Array.from(project.worldPoints);
   const wpWithOptimizedXyz = wpArray.filter(p => (p as WorldPoint).optimizedXyz !== null);
-  console.log(`[optimizeProject] World points with optimizedXyz: ${wpWithOptimizedXyz.length}/${wpArray.length}`);
+  log(`[optimizeProject] World points with optimizedXyz: ${wpWithOptimizedXyz.length}/${wpArray.length}`);
 
   // DEBUG: Check camera positions
   Array.from(project.viewpoints).forEach(vp => {
     const v = vp as Viewpoint;
-    console.log(`[optimizeProject] Camera ${v.name} position: [${v.position.join(', ')}], imagePoints: ${v.imagePoints.size}`);
+    log(`[optimizeProject] Camera ${v.name} position: [${v.position.join(', ')}], imagePoints: ${v.imagePoints.size}`);
   });
 
   const camerasInitialized: string[] = [];
 
   if (autoInitializeCameras || autoInitializeWorldPoints) {
-    console.log('[optimizeProject] Running initialization pipeline...');
+    log('[optimizeProject] Running initialization pipeline...');
 
     const viewpointArray = Array.from(project.viewpoints);
 
     if (autoInitializeCameras) {
-      console.log('[optimizeProject] Resetting all camera positions to [0,0,0]');
+      log('[optimizeProject] Resetting all camera positions to [0,0,0]');
       for (const vp of viewpointArray) {
         const v = vp as Viewpoint;
         v.position = [0, 0, 0];
@@ -133,7 +193,7 @@ export function optimizeProject(
       return v.position[0] === 0 && v.position[1] === 0 && v.position[2] === 0;
     });
 
-    console.log(`[optimizeProject] Cameras needing initialization: ${uninitializedCameras.length}/${viewpointArray.length}`);
+    log(`[optimizeProject] Cameras needing initialization: ${uninitializedCameras.length}/${viewpointArray.length}`);
 
     if (uninitializedCameras.length >= 1 && autoInitializeCameras) {
       const worldPointArray = Array.from(project.worldPoints) as WorldPoint[];
@@ -141,7 +201,7 @@ export function optimizeProject(
       const worldPointSet = new Set<WorldPoint>(worldPointArray);
 
       if (lockedPoints.length >= 2 || uninitializedCameras.some(vp => (vp as Viewpoint).canInitializeWithVanishingPoints(worldPointSet))) {
-        console.log(`[optimizeProject] Found ${lockedPoints.length} constrained points`);
+        log(`[optimizeProject] Found ${lockedPoints.length} constrained points`);
 
         const canAnyCameraUsePnP = uninitializedCameras.some(vp => {
           const vpConcrete = vp as Viewpoint;
@@ -161,31 +221,31 @@ export function optimizeProject(
           for (const wp of lockedPoints) {
             const effective = wp.getEffectiveXyz();
             wp.optimizedXyz = [effective[0]!, effective[1]!, effective[2]!];
-            console.log(`  ${wp.name}: [${wp.optimizedXyz.join(', ')}]`);
+            log(`  ${wp.name}: [${wp.optimizedXyz.join(', ')}]`);
           }
         } else {
-          console.log(`[optimizeProject] Skipping locked point initialization (will use Essential Matrix with scale resolution)`);
+          log(`[optimizeProject] Skipping locked point initialization (will use Essential Matrix with scale resolution)`);
         }
 
         for (const vp of uninitializedCameras) {
           const vpConcrete = vp as Viewpoint;
 
           if (vpConcrete.canInitializeWithVanishingPoints(worldPointSet)) {
-            console.log(`[optimizeProject] Checking vanishing point initialization for ${vpConcrete.name}...`);
-            console.log(`  Vanishing lines: ${vpConcrete.getVanishingLineCount()}`);
+            log(`[optimizeProject] Checking vanishing point initialization for ${vpConcrete.name}...`);
+            log(`  Vanishing lines: ${vpConcrete.getVanishingLineCount()}`);
 
             const success = initializeCameraWithVanishingPoints(vpConcrete, worldPointSet);
             if (success) {
               // DON'T lock pose after VP initialization - let the optimizer refine it
               // The VP initialization gives a good starting point, but may not be perfect
               // vpConcrete.setPoseLocked(true);
-              console.log(`[optimizeProject] ${vpConcrete.name} initialized with vanishing points (pose NOT locked - will be refined)`);
-              console.log(`  Position: [${vpConcrete.position.map(x => x.toFixed(3)).join(', ')}]`);
-              console.log(`  Focal length: ${vpConcrete.focalLength.toFixed(1)}`);
+              log(`[optimizeProject] ${vpConcrete.name} initialized with vanishing points (pose NOT locked - will be refined)`);
+              log(`  Position: [${vpConcrete.position.map(x => x.toFixed(3)).join(', ')}]`);
+              log(`  Focal length: ${vpConcrete.focalLength.toFixed(1)}`);
               camerasInitialized.push(vpConcrete.name);
               continue;
             } else {
-              console.log(`[optimizeProject] Vanishing point initialization failed for ${vpConcrete.name}, falling back to PnP`);
+              log(`[optimizeProject] Vanishing point initialization failed for ${vpConcrete.name}, falling back to PnP`);
             }
           }
 
@@ -194,18 +254,18 @@ export function optimizeProject(
           );
 
           if (vpLockedPoints.length >= 3) {
-            console.log(`[optimizeProject] Initializing ${vpConcrete.name} with PnP (${vpLockedPoints.length} constrained points visible)...`);
+            log(`[optimizeProject] Initializing ${vpConcrete.name} with PnP (${vpLockedPoints.length} constrained points visible)...`);
             const success = initializeCameraWithPnP(vpConcrete, worldPointSet);
             if (success) {
-              console.log(`[optimizeProject] ${vpConcrete.name} initialized: pos=[${vpConcrete.position.map(x => x.toFixed(3)).join(', ')}]`);
+              log(`[optimizeProject] ${vpConcrete.name} initialized: pos=[${vpConcrete.position.map(x => x.toFixed(3)).join(', ')}]`);
               camerasInitialized.push(vpConcrete.name);
             } else {
               const errorMsg = `Cannot initialize ${vpConcrete.name}: PnP failed with ${vpLockedPoints.length} locked points. Check that locked points have valid coordinates and are visible in the image.`;
-              console.error(`[optimizeProject] ${errorMsg}`);
+              log(`[optimizeProject] ${errorMsg}`);
               throw new Error(errorMsg);
             }
           } else {
-            console.log(`[optimizeProject] ${vpConcrete.name} has only ${vpLockedPoints.length} locked points (need 3 for PnP) - will try later with triangulated points`);
+            log(`[optimizeProject] ${vpConcrete.name} has only ${vpLockedPoints.length} locked points (need 3 for PnP) - will try later with triangulated points`);
           }
         }
       }
@@ -213,11 +273,11 @@ export function optimizeProject(
       if (camerasInitialized.length === 0) {
         if (uninitializedCameras.length < 2) {
           const errorMsg = `Cannot initialize: need at least 2 cameras for Essential Matrix initialization, but only ${uninitializedCameras.length} available. Lock at least 3 world points with known coordinates to use PnP initialization instead.`;
-          console.error(`[optimizeProject] ${errorMsg}`);
+          log(`[optimizeProject] ${errorMsg}`);
           throw new Error(errorMsg);
         }
 
-        console.log('[optimizeProject] No locked points - using Essential Matrix initialization');
+        log('[optimizeProject] No locked points - using Essential Matrix initialization');
 
         const vp1 = uninitializedCameras[0] as Viewpoint;
         const vp2 = uninitializedCameras[1] as Viewpoint;
@@ -225,13 +285,13 @@ export function optimizeProject(
         const result = initializeCamerasWithEssentialMatrix(vp1, vp2, 10.0);
 
         if (result.success) {
-          console.log('[optimizeProject] Essential Matrix initialization successful');
-          console.log(`  ${vp1.name}: [${vp1.position.map(x => x.toFixed(3)).join(', ')}]`);
-          console.log(`  ${vp2.name}: [${vp2.position.map(x => x.toFixed(3)).join(', ')}]`);
+          log('[optimizeProject] Essential Matrix initialization successful');
+          log(`  ${vp1.name}: [${vp1.position.map(x => x.toFixed(3)).join(', ')}]`);
+          log(`  ${vp2.name}: [${vp2.position.map(x => x.toFixed(3)).join(', ')}]`);
           camerasInitialized.push(vp1.name, vp2.name);
         } else {
           const errorMsg = `Cannot initialize cameras: ${result.error || 'Unknown error'}. Need at least 7 shared point correspondences between two cameras for Essential Matrix initialization. Add more image points or lock some world point coordinates to use PnP instead.`;
-          console.error(`[optimizeProject] ${errorMsg}`);
+          log(`[optimizeProject] ${errorMsg}`);
           throw new Error(errorMsg);
         }
       }
@@ -262,7 +322,7 @@ export function optimizeProject(
       const triangulatedLockedPoints = lockedPoints.filter(wp => wp.optimizedXyz !== undefined);
 
       if (triangulatedLockedPoints.length >= 2) {
-        console.log(`[optimizeProject] Computing scale from ${triangulatedLockedPoints.length} locked points...`);
+        log(`[optimizeProject] Computing scale from ${triangulatedLockedPoints.length} locked points...`);
 
         let sumScale = 0;
         let count = 0;
@@ -291,9 +351,9 @@ export function optimizeProject(
 
             if (triDist > 0.01) {
               const scale = lockDist / triDist;
-              console.log(`  ${wp1.name} <-> ${wp2.name}: triangulated=${triDist.toFixed(3)}, locked=${lockDist.toFixed(3)}, scale=${scale.toFixed(4)}`);
-              console.log(`    ${wp1.name}: tri=[${tri1.map(v => v.toFixed(2)).join(', ')}], lock=[${lock1.map(v => v!.toFixed(2)).join(', ')}]`);
-              console.log(`    ${wp2.name}: tri=[${tri2.map(v => v.toFixed(2)).join(', ')}], lock=[${lock2.map(v => v!.toFixed(2)).join(', ')}]`);
+              log(`  ${wp1.name} <-> ${wp2.name}: triangulated=${triDist.toFixed(3)}, locked=${lockDist.toFixed(3)}, scale=${scale.toFixed(4)}`);
+              log(`    ${wp1.name}: tri=[${tri1.map(v => v.toFixed(2)).join(', ')}], lock=[${lock1.map(v => v!.toFixed(2)).join(', ')}]`);
+              log(`    ${wp2.name}: tri=[${tri2.map(v => v.toFixed(2)).join(', ')}], lock=[${lock2.map(v => v!.toFixed(2)).join(', ')}]`);
               sumScale += scale;
               count++;
             }
@@ -302,7 +362,7 @@ export function optimizeProject(
 
         if (count > 0) {
           const scale = sumScale / count;
-          console.log(`[optimizeProject] Computed scale factor: ${scale.toFixed(4)}`);
+          log(`[optimizeProject] Computed scale factor: ${scale.toFixed(4)}`);
 
           for (const wp of pointArray) {
             if (wp.optimizedXyz) {
@@ -324,7 +384,7 @@ export function optimizeProject(
             ];
           }
 
-          console.log('[optimizeProject] Applied scale to all cameras and world points');
+          log('[optimizeProject] Applied scale to all cameras and world points');
         }
       }
     }
@@ -346,55 +406,64 @@ export function optimizeProject(
       );
 
       if (hasImagePoints && hasTriangulatedPoints) {
-        console.log(`[optimizeProject] Initializing camera ${vpConcrete.name} with PnP...`);
+        log(`[optimizeProject] Initializing camera ${vpConcrete.name} with PnP...`);
         const success = initializeCameraWithPnP(vpConcrete, worldPointSet);
         if (success) {
           camerasInitialized.push(vpConcrete.name);
-          console.log(`[optimizeProject] Camera ${vpConcrete.name} initialized successfully`);
+          log(`[optimizeProject] Camera ${vpConcrete.name} initialized successfully`);
         } else {
-          console.warn(`[optimizeProject] PnP initialization failed for ${vpConcrete.name}`);
+          log(`[optimizeProject] PnP initialization failed for ${vpConcrete.name}`);
         }
       }
     }
   }
+
+  const shouldOptimizeIntrinsics = (vp: Viewpoint) => {
+    if (typeof optimizeCameraIntrinsics === 'boolean') {
+      return optimizeCameraIntrinsics;
+    }
+    // 'auto': optimize intrinsics when no vanishing lines are available to anchor the pose/focal length
+    return (vp as Viewpoint).getVanishingLineCount() === 0;
+  };
 
   const system = new ConstraintSystem({
     tolerance,
     maxIterations,
     damping,
     verbose,
+    optimizeCameraIntrinsics: shouldOptimizeIntrinsics,
   });
 
-  console.log('[optimizeProject] Adding entities to constraint system...');
+  log('[optimizeProject] Adding entities to constraint system...');
 
   project.worldPoints.forEach(p => system.addPoint(p as WorldPoint));
-  console.log(`  Added ${project.worldPoints.size} world points`);
+  log(`  Added ${project.worldPoints.size} world points`);
 
   project.lines.forEach(l => system.addLine(l));
-  console.log(`  Added ${project.lines.size} lines`);
+  log(`  Added ${project.lines.size} lines`);
 
   project.viewpoints.forEach(v => system.addCamera(v as Viewpoint));
-  console.log(`  Added ${project.viewpoints.size} cameras`);
+  log(`  Added ${project.viewpoints.size} cameras`);
 
   project.imagePoints.forEach(ip => system.addImagePoint(ip as ImagePoint));
-  console.log(`  Added ${project.imagePoints.size} image points`);
+  log(`  Added ${project.imagePoints.size} image points`);
 
   project.constraints.forEach(c => system.addConstraint(c));
-  console.log(`  Added ${project.constraints.size} constraints`);
+  log(`  Added ${project.constraints.size} constraints`);
 
-  console.log('[optimizeProject] Running optimization...');
+  log('[optimizeProject] Running optimization...');
   const result = system.solve();
 
-  console.log('[optimizeProject] Optimization complete');
-  console.log(`  Converged: ${result.converged}`);
-  console.log(`  Iterations: ${result.iterations}`);
-  console.log(`  Residual: ${result.residual.toFixed(6)}`);
+  log('[optimizeProject] Optimization complete');
+  log(`  Converged: ${result.converged}`);
+  log(`  Iterations: ${result.iterations}`);
+  log(`  Residual: ${result.residual.toFixed(6)}`);
 
   let outliers: OutlierInfo[] | undefined;
   let medianReprojectionError: number | undefined;
 
   if (shouldDetectOutliers && project.imagePoints.size > 0) {
-    console.log('\n=== OUTLIER DETECTION ===');
+    log('\n=== OUTLIER DETECTION ===');
 
     // Clear all previous outlier flags before re-detecting
     for (const vp of project.viewpoints) {
@@ -407,19 +476,19 @@ export function optimizeProject(
     outliers = detection.outliers;
     medianReprojectionError = detection.medianError;
 
-    console.log(`Median reprojection error: ${medianReprojectionError.toFixed(2)} px`);
-    console.log(`Outlier threshold: ${detection.actualThreshold.toFixed(2)} px (adaptive based on median quality)`);
+    log(`Median reprojection error: ${medianReprojectionError.toFixed(2)} px`);
+    log(`Outlier threshold: ${detection.actualThreshold.toFixed(2)} px (adaptive based on median quality)`);
 
     if (outliers.length > 0) {
-      console.log(`\nFound ${outliers.length} potential outlier image points (error > ${detection.actualThreshold.toFixed(1)} px):`);
+      log(`\nFound ${outliers.length} potential outlier image points (error > ${detection.actualThreshold.toFixed(1)} px):`);
       for (const outlier of outliers) {
-        console.log(`  - ${outlier.worldPointName} @ ${outlier.viewpointName}: ${outlier.error.toFixed(1)} px (median: ${medianReprojectionError.toFixed(1)} px)`);
+        log(`  - ${outlier.worldPointName} @ ${outlier.viewpointName}: ${outlier.error.toFixed(1)} px (median: ${medianReprojectionError.toFixed(1)} px)`);
         outlier.imagePoint.isOutlier = true;
       }
-      console.log('\nThese points may have incorrect manual clicks.');
-      console.log('Consider reviewing or removing them.');
+      log('\nThese points may have incorrect manual clicks.');
+      log('Consider reviewing or removing them.');
     } else {
-      console.log('No outliers detected - all reprojection errors are within acceptable range.');
+      log('No outliers detected - all reprojection errors are within acceptable range.');
     }
   }
 

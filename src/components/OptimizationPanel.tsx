@@ -3,7 +3,7 @@
 
 import React, { useState, useCallback } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faBullseye, faGear, faStop, faCamera } from '@fortawesome/free-solid-svg-icons'
+import { faBullseye, faGear, faStop, faCamera, faClipboard } from '@fortawesome/free-solid-svg-icons'
 import { Project } from '../entities/project'
 import { useOptimization } from '../hooks/useOptimization'
 import { defaultOptimizationSettings } from '../services/optimization'
@@ -13,6 +13,7 @@ import { Viewpoint } from '../entities/viewpoint'
 import { WorldPoint } from '../entities/world-point'
 import { projectWorldPointToPixelQuaternion } from '../optimization/camera-projection'
 import { V, Vec3, Vec4 } from 'scalar-autograd'
+import { optimizationLogs } from '../optimization/optimize-project'
 
 interface OptimizationPanelProps {
   project: Project
@@ -343,7 +344,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
     if (abs >= 0.001) {
       return value.toFixed(6);
     }
-    return '< 0.001';
+    return '0.000';
   }
 
   return (
@@ -405,6 +406,16 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
               onClick={() => setShowAdvanced(!showAdvanced)}
             >
               <FontAwesomeIcon icon={faGear} /> Settings
+            </button>
+            <button
+              className="btn-settings"
+              onClick={() => {
+                const logText = optimizationLogs.join('\n')
+                navigator.clipboard.writeText(logText)
+              }}
+              title="Copy optimization logs to clipboard"
+            >
+              <FontAwesomeIcon icon={faClipboard} />
             </button>
           </>
         ) : (

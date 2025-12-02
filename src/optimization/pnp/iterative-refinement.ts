@@ -13,6 +13,7 @@ import type { IViewpoint, IWorldPoint } from '../../entities/interfaces';
 import type { Viewpoint } from '../../entities/viewpoint';
 import type { WorldPoint } from '../../entities/world-point';
 import { ConstraintSystem } from '../constraint-system';
+import { log } from '../optimization-logger';
 import { projectWorldPointToPixelQuaternion } from '../camera-projection';
 import { V, Vec3, Vec4 } from 'scalar-autograd';
 
@@ -32,7 +33,7 @@ export function initializeCameraWithPnP(
   }
 
   if (visiblePoints.length < 3) {
-    console.log(`PnP: Camera ${vpConcrete.name} has only ${visiblePoints.length} points with optimizedXyz`);
+    log(`PnP: Camera ${vpConcrete.name} has only ${visiblePoints.length} points with optimizedXyz`);
     return false;
   }
 
@@ -46,10 +47,10 @@ export function initializeCameraWithPnP(
   centroid[1] /= visiblePoints.length;
   centroid[2] /= visiblePoints.length;
 
-  console.log(`  Centroid of ${visiblePoints.length} points: [${centroid.map(x => x.toFixed(3)).join(', ')}]`);
-  console.log(`  Sample points (first 5):`);
+  log(`  Centroid of ${visiblePoints.length} points: [${centroid.map(x => x.toFixed(3)).join(', ')}]`);
+  log(`  Sample points (first 5):`);
   for (let i = 0; i < Math.min(5, visiblePoints.length); i++) {
-    console.log(`    [${visiblePoints[i].map(x => x.toFixed(3)).join(', ')}]`);
+    log(`    [${visiblePoints[i].map(x => x.toFixed(3)).join(', ')}]`);
   }
 
   let maxDist = 0;
@@ -62,12 +63,12 @@ export function initializeCameraWithPnP(
   }
 
   const cameraDistance = Math.max(maxDist * 2.5, 10);
-  console.log(`  Max distance from centroid: ${maxDist.toFixed(3)}`);
-  console.log(`  Computed camera distance: ${cameraDistance.toFixed(3)}`);
+  log(`  Max distance from centroid: ${maxDist.toFixed(3)}`);
+  log(`  Computed camera distance: ${cameraDistance.toFixed(3)}`);
 
   vpConcrete.position = [centroid[0], centroid[1], centroid[2] - cameraDistance];
   vpConcrete.rotation = [1, 0, 0, 0];
-  console.log(`  Initial camera position: [${vpConcrete.position.map(x => x.toFixed(3)).join(', ')}]`);
+  log(`  Initial camera position: [${vpConcrete.position.map(x => x.toFixed(3)).join(', ')}]`);
 
   const initialError = computeReprojectionError(vpConcrete);
 
@@ -93,10 +94,10 @@ export function initializeCameraWithPnP(
   const result = system.solve();
   const finalError = computeReprojectionError(vpConcrete);
 
-  console.log(`PnP: Initialized ${vpConcrete.name} using ${visiblePoints.length} points`);
-  console.log(`  Initial reprojection error: ${initialError.toFixed(2)} px`);
-  console.log(`  Final reprojection error: ${finalError.toFixed(2)} px (${result.iterations} iterations)`);
-  console.log(`  Position: [${vpConcrete.position.map(x => x.toFixed(3)).join(', ')}]`);
+  log(`PnP: Initialized ${vpConcrete.name} using ${visiblePoints.length} points`);
+  log(`  Initial reprojection error: ${initialError.toFixed(2)} px`);
+  log(`  Final reprojection error: ${finalError.toFixed(2)} px (${result.iterations} iterations)`);
+  log(`  Position: [${vpConcrete.position.map(x => x.toFixed(3)).join(', ')}]`);
 
   return true;
 }

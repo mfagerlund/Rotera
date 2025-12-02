@@ -6,6 +6,7 @@ import { CoplanarPointsConstraint } from '../entities/constraints/coplanar-point
 import { triangulateRayRay } from './triangulation'
 import type { ImagePoint } from '../entities/imagePoint'
 import * as vec3 from '../utils/vec3'
+import { log } from './optimization-logger'
 
 export interface InitializationOptions {
   sceneScale?: number
@@ -24,7 +25,7 @@ export function initializeWorldPoints(
   const initialized = new Set<WorldPoint>()
 
   if (verbose) {
-    console.log('[Unified Initialization] Starting 6-step initialization...')
+    log('[Unified Initialization] Starting 6-step initialization...')
   }
 
   step1_setLockedPoints(points, initialized, verbose)
@@ -40,7 +41,7 @@ export function initializeWorldPoints(
   step6_randomFallback(points, initialized, sceneScale, verbose)
 
   if (verbose) {
-    console.log(`[Unified Initialization] Complete: ${initialized.size}/${points.length} points initialized`)
+    log(`[Unified Initialization] Complete: ${initialized.size}/${points.length} points initialized`)
   }
 }
 
@@ -70,7 +71,7 @@ function step1_setLockedPoints(
   }
 
   if (verbose) {
-    console.log(`[Step 1] Set ${lockedCount} locked points, preserved ${presetCount} pre-initialized points`)
+    log(`[Step 1] Set ${lockedCount} locked points, preserved ${presetCount} pre-initialized points`)
   }
 }
 
@@ -107,7 +108,7 @@ function step2_inferFromConstraints(
           sceneScale
         )
         if (inferred && verbose) {
-          console.log(`  Inferred ${line.pointB.name} = [${line.pointB.optimizedXyz!.map(x => x.toFixed(3)).join(', ')}] from ${line.pointA.name}=[${line.pointA.optimizedXyz!.map(x => x.toFixed(3)).join(', ')}] via ${line.direction} line (length=${line.targetLength})`)
+          log(`  Inferred ${line.pointB.name} = [${line.pointB.optimizedXyz!.map(x => x.toFixed(3)).join(', ')}] from ${line.pointA.name}=[${line.pointA.optimizedXyz!.map(x => x.toFixed(3)).join(', ')}] via ${line.direction} line (length=${line.targetLength})`)
         }
         if (inferred) {
           initialized.add(line.pointB)
@@ -123,7 +124,7 @@ function step2_inferFromConstraints(
           sceneScale
         )
         if (inferred && verbose) {
-          console.log(`  Inferred ${line.pointA.name} = [${line.pointA.optimizedXyz!.map(x => x.toFixed(3)).join(', ')}] from ${line.pointB.name}=[${line.pointB.optimizedXyz!.map(x => x.toFixed(3)).join(', ')}] via ${line.direction} line (length=${line.targetLength})`)
+          log(`  Inferred ${line.pointA.name} = [${line.pointA.optimizedXyz!.map(x => x.toFixed(3)).join(', ')}] from ${line.pointB.name}=[${line.pointB.optimizedXyz!.map(x => x.toFixed(3)).join(', ')}] via ${line.direction} line (length=${line.targetLength})`)
         }
         if (inferred) {
           initialized.add(line.pointA)
@@ -139,7 +140,7 @@ function step2_inferFromConstraints(
   }
 
   if (verbose) {
-    console.log(`[Step 2] Inferred ${inferredCount} points from constraints`)
+    log(`[Step 2] Inferred ${inferredCount} points from constraints`)
   }
 }
 
@@ -253,9 +254,9 @@ function step3_triangulateFromImages(
 
   if (verbose) {
     if (skippedCount > 0) {
-      console.log(`[Step 3] Triangulated ${triangulatedCount} new points, skipped ${skippedCount} constraint-inferred points, ${failedCount} failed`)
+      log(`[Step 3] Triangulated ${triangulatedCount} new points, skipped ${skippedCount} constraint-inferred points, ${failedCount} failed`)
     } else {
-      console.log(`[Step 3] Triangulated ${triangulatedCount} points from images (${failedCount} failed)`)
+      log(`[Step 3] Triangulated ${triangulatedCount} points from images (${failedCount} failed)`)
     }
   }
 }
@@ -314,7 +315,7 @@ function step4_propagateThroughLineGraph(
   const propagatedCount = initialized.size - startSize
 
   if (verbose) {
-    console.log(`[Step 4] Propagated ${propagatedCount} points through line graph`)
+    log(`[Step 4] Propagated ${propagatedCount} points through line graph`)
   }
 }
 
@@ -358,7 +359,7 @@ function step5_coplanarGroups(
   })
 
   if (verbose) {
-    console.log(`[Step 5] Initialized ${coplanarCount} points in ${groups.length} coplanar groups`)
+    log(`[Step 5] Initialized ${coplanarCount} points in ${groups.length} coplanar groups`)
   }
 }
 
@@ -383,7 +384,7 @@ function step6_randomFallback(
   }
 
   if (verbose) {
-    console.log(`[Step 6] Random fallback for ${randomCount} points`)
+    log(`[Step 6] Random fallback for ${randomCount} points`)
   }
 }
 

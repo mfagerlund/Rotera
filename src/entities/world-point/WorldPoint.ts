@@ -8,6 +8,7 @@ import type { ISerializable } from '../serialization/ISerializable'
 import type { SerializationContext } from '../serialization/SerializationContext'
 import type { WorldPointDto } from './WorldPointDto'
 import {makeAutoObservable} from 'mobx'
+import { projectWorldPointToPixelQuaternion } from '../../optimization/camera-projection'
 
 
 export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributor, IWorldPoint, ISerializable<WorldPointDto> {
@@ -424,8 +425,51 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
         return variables
     }
 
-    computeResiduals(_valueMap: ValueMap): Value[] {
-        return []
+    computeResiduals(valueMap: ValueMap): Value[] {
+        const residuals: Value[] = []
+
+        const worldPointVec = valueMap.points.get(this)
+        if (!worldPointVec) {
+            return residuals
+        }
+
+        // Aggregate reprojection residuals for every observation of this world point
+        for (const imagePoint of this.imagePoints) {
+            if (!imagePoint.isVisible) continue
+
+            const cameraValues = valueMap.cameras.get(imagePoint.viewpoint as any)
+            if (!cameraValues) continue
+
+            const projection = projectWorldPointToPixelQuaternion(
+                worldPointVec,
+                cameraValues.position,
+                cameraValues.rotation,
+                cameraValues.focalLength,
+                cameraValues.aspectRatio,
+                cameraValues.principalPointX,
+                cameraValues.principalPointY,
+                cameraValues.skew,
+                cameraValues.k1,
+                cameraValues.k2,
+                cameraValues.k3,
+                cameraValues.p1,
+                cameraValues.p2
+            )
+
+            if (!projection) {
+                // Behind camera - push large residual to flag the issue
+                residuals.push(V.C(1000), V.C(1000))
+                continue
+            }
+
+            const [projectedU, projectedV] = projection
+            residuals.push(
+                V.sub(projectedU, V.C(imagePoint.u)),
+                V.sub(projectedV, V.C(imagePoint.v))
+            )
+        }
+
+        return residuals
     }
 
     /**

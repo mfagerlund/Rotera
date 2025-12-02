@@ -92,6 +92,31 @@ export function renderCameras(
   project3DTo2D: (point: [number, number, number]) => ProjectedPoint,
   onImageLoaded?: () => void
 ) {
+  // Estimate scene size from world points and camera positions to scale frusta
+  let sceneSize = 1
+  const xs: number[] = []
+  const ys: number[] = []
+  const zs: number[] = []
+  for (const wp of project.worldPoints) {
+    const coords = wp.optimizedXyz ?? wp.getEffectiveXyz()
+    if (!coords) continue
+    const [x, y, z] = coords
+    if (x !== null && y !== null && z !== null) {
+      xs.push(x); ys.push(y); zs.push(z)
+    }
+  }
+  for (const vp of project.viewpoints) {
+    const [x, y, z] = vp.position
+    xs.push(x); ys.push(y); zs.push(z)
+  }
+  if (xs.length > 0) {
+    const spanX = Math.max(...xs) - Math.min(...xs)
+    const spanY = Math.max(...ys) - Math.min(...ys)
+    const spanZ = Math.max(...zs) - Math.min(...zs)
+    sceneSize = Math.max(spanX, spanY, spanZ, 1)
+  }
+  const frustumDepth = Math.max(sceneSize * 0.25, 0.5) // 25% of scene size, min 0.5
+
   project.viewpoints.forEach((viewpoint) => {
     if (!viewpoint.isVisible) return
 
@@ -110,8 +135,8 @@ export function renderCameras(
     const cx = viewpoint.principalPointX
     const cy = viewpoint.principalPointY
 
-    // Place the image plane at Z = 1 in camera space; size will be consistent with intrinsics.
-    const zPlane = 1
+    // Place the image plane at Z = frustumDepth in camera space for visibility
+    const zPlane = frustumDepth
     const pixelCorners: [number, number][] = [
       [0, 0], // top-left pixel
       [viewpoint.imageWidth, 0], // top-right

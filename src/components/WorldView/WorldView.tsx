@@ -22,11 +22,24 @@ export const WorldView = observer(React.forwardRef<WorldViewRef, WorldViewProps>
   onCreatePoint,
   onMovePoint,
   onLineHover,
-  onPointHover
+  onPointHover,
+  onPointRightClick,
+  onLineRightClick
 }, ref) => {
   const selectedSet = useMemo(() => new Set(selectedEntities), [selectedEntities])
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const { viewMatrix, setViewMatrix, resetView, resetRotation, resetPan, zoomFitToProject, lookFromCamera: lookFromCameraHook } = useViewMatrix()
+  const {
+    viewMatrix,
+    setViewMatrix,
+    resetView,
+    resetRotation,
+    resetPan,
+    zoomFitToProject,
+    lookFromCamera: lookFromCameraHook,
+    axisAngleQuat,
+    multiplyQuat,
+    normalizeQuaternion
+  } = useViewMatrix()
   const hasInitializedRef = useRef(false)
   const [renderTrigger, setRenderTrigger] = useState(0)
 
@@ -148,24 +161,27 @@ export const WorldView = observer(React.forwardRef<WorldViewRef, WorldViewProps>
 
     if (dragState.dragType === 'rotate') {
       setViewMatrix(prev => {
-        // If in camera mode, extract euler angles from quaternion first
-        let baseRotation = prev.rotation
+        // If in camera mode, rotate the camera quaternion directly to preserve perspective alignment
         if (prev.cameraQuaternion) {
-          baseRotation = quaternionToViewRotation(prev.cameraQuaternion)
+          const dqPitch = axisAngleQuat([1, 0, 0], deltaY * 0.01)
+          const dqYaw = axisAngleQuat([0, 1, 0], deltaX * 0.01)
+          // Apply pitch then yaw: q' = dqYaw * dqPitch * q
+          const rotated = normalizeQuaternion(multiplyQuat(dqYaw, multiplyQuat(dqPitch, prev.cameraQuaternion)))
+          return {
+            ...prev,
+            rotation: quaternionToViewRotation(rotated),
+            cameraQuaternion: rotated
+          }
         }
 
+        // Orthographic mode: accumulate Euler angles
         return {
           ...prev,
           rotation: {
-            x: baseRotation.x + deltaY * 0.01,
-            y: baseRotation.y + deltaX * 0.01,
-            z: baseRotation.z
-          },
-          // Rotating exits camera mode (orthographic doesn't match perspective anyway)
-          cameraQuaternion: undefined,
-          cameraPosition: undefined,
-          focalLength: undefined,
-          principalPoint: undefined
+            x: prev.rotation.x + deltaY * 0.01,
+            y: prev.rotation.y + deltaX * 0.01,
+            z: prev.rotation.z
+          }
         }
       })
     } else if (dragState.dragType === 'pan') {
@@ -209,6 +225,29 @@ export const WorldView = observer(React.forwardRef<WorldViewRef, WorldViewProps>
       ...prev,
       scale: Math.max(10, Math.min(1000, prev.scale * zoomFactor))
     }))
+  }
+
+  const handleContextMenu = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const rect = canvas.getBoundingClientRect()
+    const x = event.clientX - rect.left
+    const y = event.clientY - rect.top
+
+    const clickedPoint = findPointAt(x, y, project, project3DTo2D)
+    if (clickedPoint && onPointRightClick) {
+      onPointRightClick(clickedPoint)
+      return
+    }
+
+    const clickedLine = findLineAt(x, y, project, project3DTo2D)
+    if (clickedLine && onLineRightClick) {
+      onLineRightClick(clickedLine)
+    }
   }
 
   // Expose ref methods
@@ -323,6 +362,7 @@ export const WorldView = observer(React.forwardRef<WorldViewRef, WorldViewProps>
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
         onWheel={handleWheel}
+        onContextMenu={handleContextMenu}
         onAuxClick={(e) => e.preventDefault()}
       />
       <div className="world-view-info">

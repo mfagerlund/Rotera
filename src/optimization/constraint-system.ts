@@ -17,6 +17,47 @@ import type { Line } from '../entities/line/Line';
 import type { Viewpoint } from '../entities/viewpoint/Viewpoint';
 import type { ImagePoint } from '../entities/imagePoint/ImagePoint';
 import type { Constraint } from '../entities/constraints/base-constraint';
+import type { VanishingLineAxis } from '../entities/vanishing-line';
+import { computeVanishingPoint } from './vanishing-points';
+
+function rotateDirectionByQuaternion(
+  rotation: { w: Value; x: Value; y: Value; z: Value },
+  direction: [number, number, number]
+): { x: Value; y: Value; z: Value } {
+  // Efficient quaternion-vector multiplication: v' = v + 2*q_vec x (q_vec x v + w*v)
+  const vx = V.C(direction[0]);
+  const vy = V.C(direction[1]);
+  const vz = V.C(direction[2]);
+
+  const qx = rotation.x;
+  const qy = rotation.y;
+  const qz = rotation.z;
+  const qw = rotation.w;
+
+  const cross1 = {
+    x: V.sub(V.mul(qy, vz), V.mul(qz, vy)),
+    y: V.sub(V.mul(qz, vx), V.mul(qx, vz)),
+    z: V.sub(V.mul(qx, vy), V.mul(qy, vx)),
+  };
+
+  const t = {
+    x: V.mul(V.C(2), V.add(cross1.x, V.mul(qw, vx))),
+    y: V.mul(V.C(2), V.add(cross1.y, V.mul(qw, vy))),
+    z: V.mul(V.C(2), V.add(cross1.z, V.mul(qw, vz))),
+  };
+
+  const cross2 = {
+    x: V.sub(V.mul(qy, t.z), V.mul(qz, t.y)),
+    y: V.sub(V.mul(qz, t.x), V.mul(qx, t.z)),
+    z: V.sub(V.mul(qx, t.y), V.mul(qy, t.x)),
+  };
+
+  return {
+    x: V.add(vx, cross2.x),
+    y: V.add(vy, cross2.y),
+    z: V.add(vz, cross2.z),
+  };
+}
 
 export interface SolverResult {
   converged: boolean;
@@ -30,6 +71,11 @@ export interface SolverOptions {
   maxIterations?: number;
   damping?: number;
   verbose?: boolean;
+  /**
+   * If true (or function returns true), camera intrinsics are optimized.
+   * If false, intrinsics stay fixed.
+   */
+  optimizeCameraIntrinsics?: boolean | ((camera: Viewpoint) => boolean);
 }
 
 export class ConstraintSystem {
@@ -37,19 +83,21 @@ export class ConstraintSystem {
   private maxIterations: number;
   private damping: number;
   private verbose: boolean;
+  private optimizeCameraIntrinsics: boolean | ((camera: Viewpoint) => boolean);
 
-  // Entities in the system
-  private points: Set<WorldPoint> = new Set();
-  private lines: Set<Line> = new Set();
-  private cameras: Set<Viewpoint> = new Set();
-  private imagePoints: Set<ImagePoint> = new Set();
-  private constraints: Set<Constraint> = new Set();
+    // Entities in the system
+    private points: Set<WorldPoint> = new Set();
+    private lines: Set<Line> = new Set();
+    private cameras: Set<Viewpoint> = new Set();
+    private imagePoints: Set<ImagePoint> = new Set();
+    private constraints: Set<Constraint> = new Set();
 
   constructor(options: SolverOptions = {}) {
     this.tolerance = options.tolerance ?? 1e-6;
     this.maxIterations = options.maxIterations ?? 100;
     this.damping = options.damping ?? 1e-3;
     this.verbose = options.verbose ?? false;
+    this.optimizeCameraIntrinsics = options.optimizeCameraIntrinsics ?? false;
   }
 
   /**
@@ -120,7 +168,15 @@ export class ConstraintSystem {
     // Add cameras (if they implement IValueMapContributor)
     for (const camera of this.cameras) {
       if ('addToValueMap' in camera && typeof camera.addToValueMap === 'function') {
-        const cameraVariables = (camera as any).addToValueMap(valueMap);
+        const optimizeIntrinsics =
+          typeof this.optimizeCameraIntrinsics === 'function'
+            ? this.optimizeCameraIntrinsics(camera)
+            : this.optimizeCameraIntrinsics;
+        const cameraVariables = (camera as any).addToValueMap(valueMap, {
+          optimizePose: !(camera as any).isPoseLocked,
+          optimizeIntrinsics,
+          optimizeDistortion: false,
+        });
         variables.push(...cameraVariables);
       }
     }
@@ -128,6 +184,26 @@ export class ConstraintSystem {
     // 2. Build residual function from all entities
     const residualFn = (vars: Value[]) => {
       const residuals: Value[] = [];
+
+      const vanishingPointCache = new Map<Viewpoint, Map<VanishingLineAxis, { u: number; v: number }>>();
+      const getObservedVanishingPoint = (camera: Viewpoint, axis: VanishingLineAxis) => {
+        if (!vanishingPointCache.has(camera)) {
+          vanishingPointCache.set(camera, new Map());
+        }
+        const cacheForCamera = vanishingPointCache.get(camera)!;
+        if (!cacheForCamera.has(axis)) {
+          const linesForAxis = Array.from((camera as any).vanishingLines ?? []).filter(
+            (l: any) => l.axis === axis
+          );
+          if (linesForAxis.length >= 2) {
+            const vp = computeVanishingPoint(linesForAxis);
+            if (vp) {
+              cacheForCamera.set(axis, vp);
+            }
+          }
+        }
+        return cacheForCamera.get(axis);
+      };
 
       // Determine weighting strategy based on constraints
       const hasGeometricConstraints = this.constraints.size > 0 ||
@@ -151,6 +227,40 @@ export class ConstraintSystem {
         if ('computeResiduals' in camera && typeof camera.computeResiduals === 'function') {
           const cameraResiduals = (camera as any).computeResiduals(valueMap);
           residuals.push(...cameraResiduals);
+        }
+
+        // Vanishing line constraints (if any)
+        const cameraValues = valueMap.cameras.get(camera as any);
+        if (cameraValues && (camera as any).vanishingLines && (camera as any).vanishingLines.size > 0) {
+          const axisDirs: Record<VanishingLineAxis, [number, number, number]> = {
+            x: [1, 0, 0],
+            y: [0, 1, 0],
+            z: [0, 0, 1],
+          };
+
+          (['x', 'y', 'z'] as VanishingLineAxis[]).forEach(axis => {
+            const observedVP = getObservedVanishingPoint(camera, axis);
+            if (!observedVP) return;
+
+            const dir = rotateDirectionByQuaternion(cameraValues.rotation, axisDirs[axis]);
+            const dzSafe = V.add(dir.z, V.C(1e-6));
+
+            const fx = cameraValues.focalLength;
+            const fy = V.mul(cameraValues.focalLength, cameraValues.aspectRatio);
+
+            const uPred = V.add(
+              V.add(V.mul(fx, V.div(dir.x, dzSafe)), V.mul(cameraValues.skew, V.div(dir.y, dzSafe))),
+              cameraValues.principalPointX
+            );
+            const vPred = V.add(
+              cameraValues.principalPointY,
+              V.neg(V.mul(fy, V.div(dir.y, dzSafe)))
+            );
+
+            const vpWeight = V.C(5.0); // emphasize VP residuals to anchor cameras with good vanishing cues
+            residuals.push(V.mul(V.sub(uPred, V.C(observedVP.u)), vpWeight));
+            residuals.push(V.mul(V.sub(vPred, V.C(observedVP.v)), vpWeight));
+          });
         }
       }
 

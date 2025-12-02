@@ -5,68 +5,66 @@ import type { ViewMatrix } from '../types'
 import type { Project } from '../../../entities/project'
 import type { Viewpoint } from '../../../entities/viewpoint'
 
-// Convert quaternion [w, x, y, z] to Euler angles (roll, pitch, yaw) in radians
-// This matches how the camera UI displays orientation
-function quaternionToEuler(q: [number, number, number, number]): { roll: number; pitch: number; yaw: number } {
-  const [w, x, y, z] = q
-
-  // Roll (rotation around forward axis)
-  const sinr_cosp = 2 * (w * x + y * z)
-  const cosr_cosp = 1 - 2 * (x * x + y * y)
-  const roll = Math.atan2(sinr_cosp, cosr_cosp)
-
-  // Pitch (rotation around right axis)
-  const sinp = 2 * (w * y - z * x)
-  let pitch: number
-  if (Math.abs(sinp) >= 1) {
-    pitch = Math.sign(sinp) * Math.PI / 2
-  } else {
-    pitch = Math.asin(sinp)
-  }
-
-  // Yaw (rotation around up axis)
-  const siny_cosp = 2 * (w * z + x * y)
-  const cosy_cosp = 1 - 2 * (y * y + z * z)
-  const yaw = Math.atan2(siny_cosp, cosy_cosp)
-
-  return { roll, pitch, yaw }
-}
-
 // Convert quaternion to rotation matrix
 function quaternionToMatrix(q: [number, number, number, number]): number[][] {
   const [w, x, y, z] = q
   return [
-    [1 - 2*(y*y + z*z), 2*(x*y - w*z), 2*(x*z + w*y)],
-    [2*(x*y + w*z), 1 - 2*(x*x + z*z), 2*(y*z - w*x)],
-    [2*(x*z - w*y), 2*(y*z + w*x), 1 - 2*(x*x + y*y)]
+    [1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y)],
+    [2 * (x * y + w * z), 1 - 2 * (x * x + z * z), 2 * (y * z - w * x)],
+    [2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)]
   ]
 }
 
 // Extract rotation.x, rotation.y, rotation.z from a rotation matrix
-// The projection applies: first rotate around X by rotation.x, then around Y by rotation.y, then Z
-// So the combined matrix is R_z * R_y * R_x
+// The projection applies: rotate around X, then Y, then Z (intrinsic XYZ)
 function matrixToViewRotation(m: number[][]): { x: number; y: number; z: number } {
-  // Extract euler angles matching the projection order
-  // Using standard aerospace/intrinsic XYZ decomposition
-  const y = Math.asin(Math.max(-1, Math.min(1, m[0][2]))) // rotation.y (pitch)
+  // Derived from three.js Euler 'XYZ' extraction to match useProjection order
+  const sy = -m[2][0]
 
-  let x: number, z: number
-  if (Math.abs(m[0][2]) < 0.9999) {
-    x = Math.atan2(-m[1][2], m[2][2]) // rotation.x (roll)
-    z = Math.atan2(-m[0][1], m[0][0]) // rotation.z (yaw)
+  let x: number
+  let y: number
+  let z: number
+
+  if (Math.abs(sy) < 0.9999) {
+    x = Math.atan2(m[2][1], m[2][2])
+    y = Math.asin(sy)
+    z = Math.atan2(m[1][0], m[0][0])
   } else {
     // Gimbal lock
-    x = Math.atan2(m[2][1], m[1][1])
+    y = Math.sign(sy) * Math.PI / 2
+    x = Math.atan2(-m[0][1], -m[0][2])
     z = 0
   }
 
   return { x, y, z }
 }
 
-// Convert camera quaternion to view euler angles
+function normalizeQuaternion(q: [number, number, number, number]): [number, number, number, number] {
+  const [w, x, y, z] = q
+  const mag = Math.sqrt(w * w + x * x + y * y + z * z) || 1
+  return [w / mag, x / mag, y / mag, z / mag]
+}
+
+function multiplyQuat(a: [number, number, number, number], b: [number, number, number, number]): [number, number, number, number] {
+  const [aw, ax, ay, az] = a
+  const [bw, bx, by, bz] = b
+  return [
+    aw * bw - ax * bx - ay * by - az * bz,
+    aw * bx + ax * bw + ay * bz - az * by,
+    aw * by - ax * bz + ay * bw + az * bx,
+    aw * bz + ax * by - ay * bx + az * bw
+  ]
+}
+
+function axisAngleQuat(axis: [number, number, number], angle: number): [number, number, number, number] {
+  const [ax, ay, az] = axis
+  const half = angle / 2
+  const s = Math.sin(half)
+  return [Math.cos(half), ax * s, ay * s, az * s]
+}
+
+// Convert camera quaternion to view euler angles (intrinsic XYZ)
 export function quaternionToViewRotation(q: [number, number, number, number]): { x: number; y: number; z: number } {
-  // The camera quaternion rotates from world to camera space.
-  // For our view rotation we want the same world→camera orientation expressed as Euler angles.
   const m = quaternionToMatrix(q)
   return matrixToViewRotation(m)
 }
@@ -199,7 +197,9 @@ export function useViewMatrix() {
         cameraPosition: undefined,
         cameraQuaternion: undefined,
         focalLength: undefined,
-        principalPoint: undefined
+        principalPoint: undefined,
+        aspectRatio: undefined,
+        skew: undefined
       })
       return
     }
@@ -289,7 +289,7 @@ export function useViewMatrix() {
     // Pass camera parameters directly - projection will use quaternion
     animateTo({
       scale: 100,
-      rotation: { x: 0, y: 0, z: 0 },
+      rotation: quaternionToViewRotation(viewpoint.rotation),
       translation: { x: 0, y: 0, z: 0 },
       cameraPosition: viewpoint.position,
       cameraQuaternion: viewpoint.rotation,
@@ -308,6 +308,10 @@ export function useViewMatrix() {
     resetPan,
     zoomFitToProject,
     lookFromCamera,
-    animateTo
+    animateTo,
+    normalizeQuaternion,
+    multiplyQuat,
+    axisAngleQuat
   }
 }
+

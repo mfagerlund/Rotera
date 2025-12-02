@@ -18,6 +18,8 @@ export interface WorldViewProps {
   onMovePoint?: (point: WorldPoint, x: number, y: number, z: number) => void
   onLineHover?: (line: Line | null) => void
   onPointHover?: (point: WorldPoint | null) => void
+  onPointRightClick?: (worldPoint: WorldPoint) => void
+  onLineRightClick?: (line: Line) => void
 }
 
 export interface WorldViewRef {

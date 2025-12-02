@@ -4,6 +4,8 @@ import { faTrash } from '@fortawesome/free-solid-svg-icons'
 import FloatingWindow from './FloatingWindow'
 import type { Viewpoint } from '../entities/viewpoint'
 import { useConfirm } from './ConfirmDialog'
+import { V, Vec3, Vec4 } from 'scalar-autograd'
+import { projectWorldPointToPixelQuaternion } from '../optimization/camera-projection'
 
 interface ImageEditorProps {
   isOpen: boolean
@@ -23,6 +25,78 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
   const { confirm, dialog } = useConfirm()
   const [editedName, setEditedName] = useState(viewpoint.getName())
   const [hasChanges, setHasChanges] = useState(false)
+
+  const computeSolveLoss = () => {
+    let squaredSum = 0
+    let count = 0
+
+    for (const ip of viewpoint.imagePoints) {
+      if (!ip.isVisible) continue
+
+      let dx: number | null = null
+      let dy: number | null = null
+
+      // Prefer stored residuals from the latest solve
+      if (ip.lastResiduals.length >= 2) {
+        dx = ip.lastResiduals[0]
+        dy = ip.lastResiduals[1]
+      } else {
+        // Fallback: reproject with current pose/point to estimate loss on the fly
+        const wp = ip.worldPoint as any
+        const xyz = wp.optimizedXyz ?? wp.getEffectiveXyz?.()
+        if (xyz && xyz[0] !== null && xyz[1] !== null && xyz[2] !== null) {
+          try {
+            const worldVec = new Vec3(V.C(xyz[0]), V.C(xyz[1]), V.C(xyz[2]))
+            const camPos = new Vec3(
+              V.C(viewpoint.position[0]),
+              V.C(viewpoint.position[1]),
+              V.C(viewpoint.position[2])
+            )
+            const camRot = new Vec4(
+              V.C(viewpoint.rotation[0]),
+              V.C(viewpoint.rotation[1]),
+              V.C(viewpoint.rotation[2]),
+              V.C(viewpoint.rotation[3])
+            )
+
+            const proj = projectWorldPointToPixelQuaternion(
+              worldVec,
+              camPos,
+              camRot,
+              V.C(viewpoint.focalLength),
+              V.C(viewpoint.aspectRatio),
+              V.C(viewpoint.principalPointX),
+              V.C(viewpoint.principalPointY),
+              V.C(viewpoint.skewCoefficient),
+              V.C(viewpoint.radialDistortion[0]),
+              V.C(viewpoint.radialDistortion[1]),
+              V.C(viewpoint.radialDistortion[2]),
+              V.C(viewpoint.tangentialDistortion[0]),
+              V.C(viewpoint.tangentialDistortion[1])
+            )
+
+            if (proj) {
+              dx = proj[0].data - ip.u
+              dy = proj[1].data - ip.v
+            }
+          } catch (err) {
+            // Ignore projection failures in the editor summary
+          }
+        }
+      }
+
+      if (dx !== null && dy !== null) {
+        squaredSum += dx * dx + dy * dy
+        count += 1
+      }
+    }
+
+    return {
+      rms: count > 0 ? Math.sqrt(squaredSum / count) : null,
+      count
+    }
+  }
+  const solveLoss = computeSolveLoss()
 
   // Reset form when viewpoint changes
   useEffect(() => {
@@ -137,6 +211,16 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
               <div className="status-item">
                 <label>Viewpoint Name</label>
                 <span title={viewpoint.getName()}>{viewpoint.getName()}</span>
+              </div>
+
+              <div className="status-item">
+                <label>Solve Loss</label>
+                <span>
+                  {solveLoss.rms !== null
+                    ? `${solveLoss.rms.toFixed(2)} px`
+                    : 'N/A'}
+                  {solveLoss.count > 0 ? ` (${solveLoss.count} pts)` : ''}
+                </span>
               </div>
             </div>
           </div>
