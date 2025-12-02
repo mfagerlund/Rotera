@@ -11,6 +11,7 @@ import { getEntityKey } from '../utils/entityKeys'
 import { initializeCameraWithPnP } from '../optimization/pnp'
 import { Viewpoint } from '../entities/viewpoint'
 import { WorldPoint } from '../entities/world-point'
+import { Line } from '../entities/line'
 import { projectWorldPointToPixelQuaternion } from '../optimization/camera-projection'
 import { V, Vec3, Vec4 } from 'scalar-autograd'
 import { optimizationLogs } from '../optimization/optimize-project'
@@ -18,6 +19,10 @@ import { optimizationLogs } from '../optimization/optimize-project'
 interface OptimizationPanelProps {
   project: Project
   onOptimizationComplete: (success: boolean, message: string) => void
+  onSelectWorldPoint?: (worldPoint: WorldPoint) => void
+  onSelectLine?: (line: Line) => void
+  onHoverWorldPoint?: (worldPoint: WorldPoint | null) => void
+  onHoverLine?: (line: Line | null) => void
 }
 
 function computeCameraReprojectionError(vp: Viewpoint): number {
@@ -80,7 +85,11 @@ function computeCameraReprojectionError(vp: Viewpoint): number {
 
 export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
   project,
-  onOptimizationComplete
+  onOptimizationComplete,
+  onSelectWorldPoint,
+  onSelectLine,
+  onHoverWorldPoint,
+  onHoverLine
 }) => {
   const [isOptimizing, setIsOptimizing] = useState(false)
   const [settings, setSettings] = useState(defaultOptimizationSettings)
@@ -567,7 +576,13 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                       .map(point => {
                         const info = point.getOptimizationInfo()
                         return (
-                          <tr key={getEntityKey(point)}>
+                          <tr
+                            key={getEntityKey(point)}
+                            onClick={() => onSelectWorldPoint?.(point)}
+                            onMouseEnter={() => onHoverWorldPoint?.(point)}
+                            onMouseLeave={() => onHoverWorldPoint?.(null)}
+                            style={{ cursor: onSelectWorldPoint ? 'pointer' : 'default' }}
+                          >
                             <td>{point.getName()}</td>
                             <td>[{info.optimizedXyz?.map(v => formatNumber(v)).join(', ')}]</td>
                             <td>{formatNumber(info.rmsResidual)}</td>
@@ -596,7 +611,13 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                       {Array.from(project.lines.values()).map(line => {
                         const info = line.getOptimizationInfo()
                         return (
-                          <tr key={getEntityKey(line)}>
+                          <tr
+                            key={getEntityKey(line)}
+                            onClick={() => onSelectLine?.(line)}
+                            onMouseEnter={() => onHoverLine?.(line)}
+                            onMouseLeave={() => onHoverLine?.(null)}
+                            style={{ cursor: onSelectLine ? 'pointer' : 'default' }}
+                          >
                             <td>{line.getName()}</td>
                             <td>{info.length !== undefined && info.length !== null ? formatNumber(info.length) : '-'}</td>
                             <td>{info.targetLength !== undefined ? formatNumber(info.targetLength) : '-'}</td>

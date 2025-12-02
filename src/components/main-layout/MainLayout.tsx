@@ -765,6 +765,8 @@ export const MainLayout: React.FC = observer(() => {
             worldViewRef.current.zoomFit()
           }
         }}
+        onSelectWorldPoint={(worldPoint) => handleEntityClick(worldPoint, false, false)}
+        onHoverWorldPoint={setHoveredWorldPoint}
         worldPointEditWindow={worldPointEditWindow}
         onCloseWorldPointEdit={closeWorldPointEdit}
         onUpdateWorldPoint={handleWorldPointUpdate}

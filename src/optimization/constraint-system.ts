@@ -17,14 +17,13 @@ import type { Line } from '../entities/line/Line';
 import type { Viewpoint } from '../entities/viewpoint/Viewpoint';
 import type { ImagePoint } from '../entities/imagePoint/ImagePoint';
 import type { Constraint } from '../entities/constraints/base-constraint';
-import type { VanishingLineAxis } from '../entities/vanishing-line';
+import type { VanishingLine, VanishingLineAxis } from '../entities/vanishing-line';
 import { computeVanishingPoint } from './vanishing-points';
 
 function rotateDirectionByQuaternion(
   rotation: { w: Value; x: Value; y: Value; z: Value },
   direction: [number, number, number]
 ): { x: Value; y: Value; z: Value } {
-  // Efficient quaternion-vector multiplication: v' = v + 2*q_vec x (q_vec x v + w*v)
   const vx = V.C(direction[0]);
   const vy = V.C(direction[1]);
   const vz = V.C(direction[2]);
@@ -85,12 +84,12 @@ export class ConstraintSystem {
   private verbose: boolean;
   private optimizeCameraIntrinsics: boolean | ((camera: Viewpoint) => boolean);
 
-    // Entities in the system
-    private points: Set<WorldPoint> = new Set();
-    private lines: Set<Line> = new Set();
-    private cameras: Set<Viewpoint> = new Set();
-    private imagePoints: Set<ImagePoint> = new Set();
-    private constraints: Set<Constraint> = new Set();
+  // Entities in the system
+  private points: Set<WorldPoint> = new Set();
+  private lines: Set<Line> = new Set();
+  private cameras: Set<Viewpoint> = new Set();
+  private imagePoints: Set<ImagePoint> = new Set();
+  private constraints: Set<Constraint> = new Set();
 
   constructor(options: SolverOptions = {}) {
     this.tolerance = options.tolerance ?? 1e-6;
@@ -185,26 +184,6 @@ export class ConstraintSystem {
     const residualFn = (vars: Value[]) => {
       const residuals: Value[] = [];
 
-      const vanishingPointCache = new Map<Viewpoint, Map<VanishingLineAxis, { u: number; v: number }>>();
-      const getObservedVanishingPoint = (camera: Viewpoint, axis: VanishingLineAxis) => {
-        if (!vanishingPointCache.has(camera)) {
-          vanishingPointCache.set(camera, new Map());
-        }
-        const cacheForCamera = vanishingPointCache.get(camera)!;
-        if (!cacheForCamera.has(axis)) {
-          const linesForAxis = Array.from((camera as any).vanishingLines ?? []).filter(
-            (l: any) => l.axis === axis
-          );
-          if (linesForAxis.length >= 2) {
-            const vp = computeVanishingPoint(linesForAxis);
-            if (vp) {
-              cacheForCamera.set(axis, vp);
-            }
-          }
-        }
-        return cacheForCamera.get(axis);
-      };
-
       // Determine weighting strategy based on constraints
       const hasGeometricConstraints = this.constraints.size > 0 ||
                                        Array.from(this.lines).some(line =>
@@ -229,7 +208,8 @@ export class ConstraintSystem {
           residuals.push(...cameraResiduals);
         }
 
-        // Vanishing line constraints (if any)
+        // VANISHING POINT CONSTRAINTS - use angular error (not pixel error)
+        // This avoids huge residuals from distant vanishing points
         const cameraValues = valueMap.cameras.get(camera as any);
         if (cameraValues && (camera as any).vanishingLines && (camera as any).vanishingLines.size > 0) {
           const axisDirs: Record<VanishingLineAxis, [number, number, number]> = {
@@ -239,27 +219,38 @@ export class ConstraintSystem {
           };
 
           (['x', 'y', 'z'] as VanishingLineAxis[]).forEach(axis => {
-            const observedVP = getObservedVanishingPoint(camera, axis);
+            const linesForAxis = Array.from((camera as any).vanishingLines as Set<VanishingLine>).filter(
+              (l: VanishingLine) => l.axis === axis
+            );
+            if (linesForAxis.length < 2) return;
+
+            const observedVP = computeVanishingPoint(linesForAxis);
             if (!observedVP) return;
 
+            // Get predicted world axis direction in camera frame
             const dir = rotateDirectionByQuaternion(cameraValues.rotation, axisDirs[axis]);
-            const dzSafe = V.add(dir.z, V.C(1e-6));
 
+            // Convert observed VP to normalized camera coordinates (direction)
             const fx = cameraValues.focalLength;
             const fy = V.mul(cameraValues.focalLength, cameraValues.aspectRatio);
+            const obsX = V.div(V.sub(V.C(observedVP.u), cameraValues.principalPointX), fx);
+            const obsY = V.div(V.sub(cameraValues.principalPointY, V.C(observedVP.v)), fy);
+            const obsZ = V.C(1);
 
-            const uPred = V.add(
-              V.add(V.mul(fx, V.div(dir.x, dzSafe)), V.mul(cameraValues.skew, V.div(dir.y, dzSafe))),
-              cameraValues.principalPointX
-            );
-            const vPred = V.add(
-              cameraValues.principalPointY,
-              V.neg(V.mul(fy, V.div(dir.y, dzSafe)))
+            // Normalize both directions
+            const predLen = V.sqrt(V.add(V.add(V.square(dir.x), V.square(dir.y)), V.square(dir.z)));
+            const obsLen = V.sqrt(V.add(V.add(V.square(obsX), V.square(obsY)), V.square(obsZ)));
+
+            // Compute dot product (cosine of angle)
+            const dot = V.div(
+              V.add(V.add(V.mul(dir.x, obsX), V.mul(dir.y, obsY)), V.mul(dir.z, obsZ)),
+              V.mul(predLen, obsLen)
             );
 
-            const vpWeight = V.C(5.0); // emphasize VP residuals to anchor cameras with good vanishing cues
-            residuals.push(V.mul(V.sub(uPred, V.C(observedVP.u)), vpWeight));
-            residuals.push(V.mul(V.sub(vPred, V.C(observedVP.v)), vpWeight));
+            // Angular residual: 1 - cos(angle) is small for aligned directions
+            // Very low weight - just a gentle nudge, not a hard constraint
+            const vpWeight = V.C(0.02);
+            residuals.push(V.mul(V.sub(V.C(1), dot), vpWeight));
           });
         }
       }

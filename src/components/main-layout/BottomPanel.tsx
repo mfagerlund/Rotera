@@ -50,6 +50,9 @@ interface BottomPanelProps {
   onSelectConstraint: (constraint: any) => void
   project: Project | null
   onOptimizationComplete: (success: boolean, message: string) => void
+  onSelectWorldPoint?: (worldPoint: WorldPoint) => void
+  onHoverWorldPoint?: (worldPoint: WorldPoint | null) => void
+  onHoverLine?: (line: LineEntity | null) => void
   worldPointEditWindow: { isOpen: boolean; worldPoint: WorldPoint | null }
   onCloseWorldPointEdit: () => void
   onUpdateWorldPoint: (worldPoint: WorldPoint) => void
@@ -90,6 +93,9 @@ export const BottomPanel: React.FC<BottomPanelProps> = observer(({
   onSelectConstraint,
   project,
   onOptimizationComplete,
+  onSelectWorldPoint,
+  onHoverWorldPoint,
+  onHoverLine,
   worldPointEditWindow,
   onCloseWorldPointEdit,
   onUpdateWorldPoint,
@@ -162,6 +168,10 @@ export const BottomPanel: React.FC<BottomPanelProps> = observer(({
             <OptimizationPanel
               project={project}
               onOptimizationComplete={onOptimizationComplete}
+              onSelectWorldPoint={onSelectWorldPoint}
+              onSelectLine={onSelectLine}
+              onHoverWorldPoint={onHoverWorldPoint}
+              onHoverLine={onHoverLine}
             />
           )}
         </FloatingWindow>
