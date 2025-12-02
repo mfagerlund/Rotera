@@ -39,18 +39,31 @@ export function renderWorldPoints(
     ctx.beginPath()
     ctx.arc(projected.x, projected.y, radius, 0, 2 * Math.PI)
 
-    if (isSelected) {
-      ctx.fillStyle = '#FF5722'
-    } else if (isHovered) {
-      ctx.fillStyle = '#FFE082'
-    } else {
-      ctx.fillStyle = getConstraintStatusColor(point)
-    }
-
+    // Use point's color as fill (like ImageView does)
+    ctx.fillStyle = point.color || '#ff6b6b'
     ctx.fill()
-    ctx.strokeStyle = isHovered ? '#FFB300' : '#000'
-    ctx.lineWidth = isHovered ? 2 : 1
+
+    // Stroke indicates selection/hover state
+    if (isSelected) {
+      ctx.strokeStyle = '#ffffff'
+      ctx.lineWidth = 3
+    } else if (isHovered) {
+      ctx.strokeStyle = '#FFB300'
+      ctx.lineWidth = 2
+    } else {
+      ctx.strokeStyle = '#000000'
+      ctx.lineWidth = 1
+    }
     ctx.stroke()
+
+    // Draw constraint status indicator in center (like ImageView does)
+    const status = point.getConstraintStatus()
+    if (status !== 'free') {
+      ctx.fillStyle = getConstraintStatusColor(point)
+      ctx.beginPath()
+      ctx.arc(projected.x, projected.y, 2, 0, 2 * Math.PI)
+      ctx.fill()
+    }
 
     if (project.showPointNames || isHovered) {
       ctx.fillStyle = '#000'
