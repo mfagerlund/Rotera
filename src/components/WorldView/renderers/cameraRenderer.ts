@@ -40,7 +40,8 @@ function drawTexturedQuad(
   const width = maxX - minX
   const height = maxY - minY
 
-  if (width < 5 || height < 5) {
+  // Skip only if truly degenerate
+  if (width < 1 || height < 1) {
     ctx.restore()
     return
   }
@@ -91,8 +92,6 @@ export function renderCameras(
   project3DTo2D: (point: [number, number, number]) => ProjectedPoint,
   onImageLoaded?: () => void
 ) {
-  const frustumDepth = 0.3
-
   project.viewpoints.forEach((viewpoint) => {
     if (!viewpoint.isVisible) return
 
@@ -100,26 +99,42 @@ export function renderCameras(
     const isHovered = hoveredViewpoint === viewpoint
 
     const pos = viewpoint.position
+    // Stored quaternions rotate world → camera, but to place the frustum in world space
+    // we need the inverse (camera → world) rotation.
     const rot = viewpoint.rotation
+    const rotInverse: [number, number, number, number] = [rot[0], -rot[1], -rot[2], -rot[3]]
 
-    // Calculate frustum size based on aspect ratio
-    const aspect = viewpoint.imageWidth / viewpoint.imageHeight
-    const halfWidth = frustumDepth * 0.5 * aspect
-    const halfHeight = frustumDepth * 0.5
+    // Build image plane corners in camera space using intrinsics.
+    const fx = viewpoint.focalLength
+    const fy = fx * (viewpoint.aspectRatio ?? 1)
+    const cx = viewpoint.principalPointX
+    const cy = viewpoint.principalPointY
 
-    // Define frustum corners in camera local space (looking down -Z in OpenGL convention)
-    // But our camera looks down +Z, so we use positive Z for the frustum
-    const topLeft: [number, number, number] = [-halfWidth, halfHeight, frustumDepth]
-    const topRight: [number, number, number] = [halfWidth, halfHeight, frustumDepth]
-    const bottomLeft: [number, number, number] = [-halfWidth, -halfHeight, frustumDepth]
-    const bottomRight: [number, number, number] = [halfWidth, -halfHeight, frustumDepth]
+    // Place the image plane at Z = 1 in camera space; size will be consistent with intrinsics.
+    const zPlane = 1
+    const pixelCorners: [number, number][] = [
+      [0, 0], // top-left pixel
+      [viewpoint.imageWidth, 0], // top-right
+      [viewpoint.imageWidth, viewpoint.imageHeight], // bottom-right
+      [0, viewpoint.imageHeight] // bottom-left
+    ]
+
+    const [tlCamX, tlCamY] = pixelCorners[0]
+    const [trCamX, trCamY] = pixelCorners[1]
+    const [brCamX, brCamY] = pixelCorners[2]
+    const [blCamX, blCamY] = pixelCorners[3]
+
+    const topLeft: [number, number, number] = [ (tlCamX - cx) / fx * zPlane, -(tlCamY - cy) / fy * zPlane, zPlane ]
+    const topRight: [number, number, number] = [ (trCamX - cx) / fx * zPlane, -(trCamY - cy) / fy * zPlane, zPlane ]
+    const bottomRight: [number, number, number] = [ (brCamX - cx) / fx * zPlane, -(brCamY - cy) / fy * zPlane, zPlane ]
+    const bottomLeft: [number, number, number] = [ (blCamX - cx) / fx * zPlane, -(blCamY - cy) / fy * zPlane, zPlane ]
 
     // Transform to world space
     const apex = pos
-    const tlWorld = addVec3(pos, rotatePoint(topLeft, rot))
-    const trWorld = addVec3(pos, rotatePoint(topRight, rot))
-    const blWorld = addVec3(pos, rotatePoint(bottomLeft, rot))
-    const brWorld = addVec3(pos, rotatePoint(bottomRight, rot))
+    const tlWorld = addVec3(pos, rotatePoint(topLeft, rotInverse))
+    const trWorld = addVec3(pos, rotatePoint(topRight, rotInverse))
+    const blWorld = addVec3(pos, rotatePoint(bottomLeft, rotInverse))
+    const brWorld = addVec3(pos, rotatePoint(bottomRight, rotInverse))
 
     // Project to 2D
     const apexProj = project3DTo2D(apex)
@@ -170,26 +185,6 @@ export function renderCameras(
     ctx.beginPath()
     ctx.moveTo(apexProj.x, apexProj.y)
     ctx.lineTo(tlProj.x, tlProj.y)
-    ctx.stroke()
-
-    ctx.beginPath()
-    ctx.moveTo(apexProj.x, apexProj.y)
-    ctx.lineTo(trProj.x, trProj.y)
-    ctx.stroke()
-
-    ctx.beginPath()
-    ctx.moveTo(apexProj.x, apexProj.y)
-    ctx.lineTo(blProj.x, blProj.y)
-    ctx.stroke()
-
-    ctx.beginPath()
-    ctx.moveTo(apexProj.x, apexProj.y)
-    ctx.lineTo(brProj.x, brProj.y)
-    ctx.stroke()
-
-    // Draw rectangle at far end of frustum
-    ctx.beginPath()
-    ctx.moveTo(tlProj.x, tlProj.y)
     ctx.lineTo(trProj.x, trProj.y)
     ctx.lineTo(brProj.x, brProj.y)
     ctx.lineTo(blProj.x, blProj.y)

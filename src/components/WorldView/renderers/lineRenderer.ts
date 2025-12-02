@@ -68,11 +68,11 @@ export function renderLines(
     let displayText = `${line.name} ${directionGlyph}`
     const targetLength = line.targetLength
     if (targetLength !== undefined) {
-      displayText = `${line.name} ${directionGlyph} ${targetLength.toFixed(1)}m`
+      displayText = `${line.name} ${directionGlyph} ${targetLength.toFixed(1)}`
     } else {
       const calculatedLength = line.length()
       if (calculatedLength !== null) {
-        displayText = `${line.name} ${directionGlyph} ${calculatedLength.toFixed(1)}m`
+        displayText = `${line.name} ${directionGlyph} ${calculatedLength.toFixed(1)}`
       }
     }
 

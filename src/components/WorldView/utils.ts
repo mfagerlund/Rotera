@@ -1,6 +1,7 @@
 import type { Project } from '../../entities/project'
 import type { WorldPoint } from '../../entities/world-point/WorldPoint'
 import type { Line } from '../../entities/line/Line'
+import type { Viewpoint } from '../../entities/viewpoint'
 import type { ProjectedPoint } from './types'
 
 export function findPointAt(
@@ -67,6 +68,25 @@ export function findLineAt(
 
     // Increase hit tolerance for lines (larger buffer for easier clicking)
     if (distance <= 8) return line
+  }
+  return null
+}
+
+export function findCameraAt(
+  x: number,
+  y: number,
+  project: Project,
+  project3DTo2D: (point: [number, number, number]) => ProjectedPoint
+): Viewpoint | null {
+  for (const viewpoint of project.viewpoints) {
+    if (!viewpoint.isVisible) continue
+
+    const projected = project3DTo2D(viewpoint.position)
+    const distance = Math.sqrt(
+      Math.pow(projected.x - x, 2) + Math.pow(projected.y - y, 2)
+    )
+
+    if (distance <= 10) return viewpoint
   }
   return null
 }

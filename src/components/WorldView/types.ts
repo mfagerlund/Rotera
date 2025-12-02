@@ -31,6 +31,13 @@ export interface ViewMatrix {
   scale: number
   rotation: { x: number; y: number; z: number }
   translation: { x: number; y: number; z: number }
+  // Camera parameters for perspective projection (undefined = orthographic)
+  cameraPosition?: [number, number, number]
+  cameraQuaternion?: [number, number, number, number]
+  focalLength?: number
+  principalPoint?: [number, number]
+  aspectRatio?: number
+  skew?: number
 }
 
 export interface DragState {

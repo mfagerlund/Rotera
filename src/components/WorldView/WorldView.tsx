@@ -1,7 +1,8 @@
 // 3D World View for geometric primitives and constraints
 import React, { useRef, useEffect, useCallback, useMemo, useState } from 'react'
+import { observer } from 'mobx-react-lite'
 import type { WorldViewProps, WorldViewRef } from './types'
-import { useViewMatrix } from './hooks/useViewMatrix'
+import { useViewMatrix, quaternionToViewRotation } from './hooks/useViewMatrix'
 import { useDragState } from './hooks/useDragState'
 import { useHoverState } from './hooks/useHoverState'
 import { useProjection } from './hooks/useProjection'
@@ -9,9 +10,9 @@ import { renderWorldPoints } from './renderers/pointRenderer'
 import { renderLines } from './renderers/lineRenderer'
 import { renderAxes } from './renderers/axesRenderer'
 import { renderCameras } from './renderers/cameraRenderer'
-import { findPointAt, findLineAt } from './utils'
+import { findPointAt, findLineAt, findCameraAt } from './utils'
 
-export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
+export const WorldView = observer(React.forwardRef<WorldViewRef, WorldViewProps>(({
   project,
   selectedEntities,
   hoveredConstraintId,
@@ -92,8 +93,16 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
       return
     }
 
-    // Start view manipulation
-    startDrag(x, y, event.shiftKey ? 'pan' : 'rotate')
+    // Check if clicking on a camera - animate to that camera's view
+    const clickedCamera = findCameraAt(x, y, project, project3DTo2D)
+    if (clickedCamera) {
+      lookFromCamera(clickedCamera)
+      return
+    }
+
+    // Start view manipulation (middle mouse button or shift+left = pan, left = rotate)
+    const isPan = event.button === 1 || event.shiftKey
+    startDrag(x, y, isPan ? 'pan' : 'rotate')
   }
 
   const handleMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -138,15 +147,29 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
     const deltaY = y - dragState.lastY
 
     if (dragState.dragType === 'rotate') {
-      setViewMatrix(prev => ({
-        ...prev,
-        rotation: {
-          x: prev.rotation.x + deltaY * 0.01,
-          y: prev.rotation.y + deltaX * 0.01,
-          z: prev.rotation.z
+      setViewMatrix(prev => {
+        // If in camera mode, extract euler angles from quaternion first
+        let baseRotation = prev.rotation
+        if (prev.cameraQuaternion) {
+          baseRotation = quaternionToViewRotation(prev.cameraQuaternion)
         }
-      }))
+
+        return {
+          ...prev,
+          rotation: {
+            x: baseRotation.x + deltaY * 0.01,
+            y: baseRotation.y + deltaX * 0.01,
+            z: baseRotation.z
+          },
+          // Rotating exits camera mode (orthographic doesn't match perspective anyway)
+          cameraQuaternion: undefined,
+          cameraPosition: undefined,
+          focalLength: undefined,
+          principalPoint: undefined
+        }
+      })
     } else if (dragState.dragType === 'pan') {
+      // Pan works in both modes
       setViewMatrix(prev => ({
         ...prev,
         translation: {
@@ -271,8 +294,10 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
                   lookFromCamera(viewpoint)
                 }
               }
+              // Reset to placeholder to allow re-selection
+              e.target.value = ''
             }}
-            defaultValue=""
+            value=""
             style={{ marginLeft: '8px' }}
           >
             <option value="" disabled>View from camera...</option>
@@ -285,7 +310,7 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
           <input
             type="checkbox"
             checked={project.gridVisible}
-            onChange={() => {/* TODO: Update settings */}}
+            onChange={() => { project.gridVisible = !project.gridVisible }}
           />
           Show Axes
         </label>
@@ -298,17 +323,22 @@ export const WorldView = React.forwardRef<WorldViewRef, WorldViewProps>(({
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
         onWheel={handleWheel}
+        onAuxClick={(e) => e.preventDefault()}
       />
       <div className="world-view-info">
-        <div>Scale: {viewMatrix.scale.toFixed(0)}%</div>
-        <div>Rotation: X:{(viewMatrix.rotation.x * 57.3).toFixed(0)}° Y:{(viewMatrix.rotation.y * 57.3).toFixed(0)}°</div>
+        <div className="view-state">
+          {viewMatrix.cameraPosition ? (
+            <>Cam: {viewMatrix.cameraPosition[0].toFixed(1)}, {viewMatrix.cameraPosition[1].toFixed(1)}, {viewMatrix.cameraPosition[2].toFixed(1)} • </>
+          ) : null}
+          View rot.x: {(viewMatrix.rotation.x * 180 / Math.PI).toFixed(1)}° • rot.y: {(viewMatrix.rotation.y * 180 / Math.PI).toFixed(1)}° • rot.z: {(viewMatrix.rotation.z * 180 / Math.PI).toFixed(1)}° • Zoom: {viewMatrix.scale.toFixed(0)}
+        </div>
         <div className="controls-hint">
-          Drag: Rotate • Shift+Drag: Pan • Scroll: Zoom
+          Drag: Rotate • Middle/Shift+Drag: Pan • Scroll: Zoom • Click camera: Focus
         </div>
       </div>
     </div>
   )
-})
+}))
 
 WorldView.displayName = 'WorldView'
 

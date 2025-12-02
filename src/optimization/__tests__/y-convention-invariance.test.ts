@@ -52,11 +52,12 @@ describe('Y Convention Invariance', () => {
     expect(result.residual).toBeLessThan(1.0);
   });
 
-  it('should work with +Y up convention (flip world Y and Z to maintain handedness)', () => {
+  it('should work with +Y up convention (convert from -Y up by flipping Y and Z)', () => {
     const project = loadFixture('coordinate-sign-good.json');
 
-    // Flip Y AND Z world coordinates to convert from -Y up to +Y up while maintaining right-handedness
-    // Flipping only Y would create a left-handed system, which is incompatible with the rotation matrices
+    // To convert from -Y up to +Y up while maintaining RIGHT-HANDEDNESS, flip both Y and Z.
+    // Flipping only Y would create a left-handed system which quaternions cannot represent.
+    // This is the mathematically correct way to change vertical axis convention.
     for (const wp of project.worldPoints) {
       if (wp.lockedXyz[1] !== null) {
         wp.lockedXyz[1] = -wp.lockedXyz[1];
@@ -98,7 +99,7 @@ describe('Y Convention Invariance', () => {
     expect(result.converged).toBe(true);
     expect(result.residual).toBeLessThan(1.0);
     expect(camera.position[1]).toBeGreaterThan(0); // Camera Y should be positive with +Y up
-    expect(camera.position[2]).toBeLessThan(0); // Camera Z should be negative (also flipped)
+    expect(camera.position[2]).toBeLessThan(0); // Camera Z should be negative (Z also flipped)
   });
 
   it('should produce equal quality for both conventions', () => {
@@ -113,7 +114,7 @@ describe('Y Convention Invariance', () => {
       detectOutliers: false,
     });
 
-    // Run +Y convention (flip world Y and Z to maintain handedness)
+    // Run +Y convention (flip both Y and Z to maintain right-handedness)
     const projectPos = loadFixture('coordinate-sign-good.json');
     for (const wp of projectPos.worldPoints) {
       if (wp.lockedXyz[1] !== null) wp.lockedXyz[1] = -wp.lockedXyz[1];
@@ -147,8 +148,9 @@ describe('Y Convention Invariance', () => {
 
     expect(ratio).toBeLessThan(2.0);
 
-    // Camera Y and Z should have opposite signs (since we flipped both)
+    // Camera Y should have opposite signs (Y convention flipped)
     expect(cameraNeg.position[1] * cameraPos.position[1]).toBeLessThan(0);
+    // Camera Z should have opposite signs (Z also flipped to maintain handedness)
     expect(cameraNeg.position[2] * cameraPos.position[2]).toBeLessThan(0);
   });
 });

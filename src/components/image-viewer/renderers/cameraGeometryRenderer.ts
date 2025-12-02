@@ -87,6 +87,104 @@ export function renderCameraVanishingGeometry(params: RenderParams): void {
     ctx.fillText(label, x, y + 6)
   }
 
+  const drawDirectionArrow = (vpX: number, vpY: number, color: string, axisLabel: string) => {
+    const ppX = cx * scale + offset.x
+    const ppY = cy * scale + offset.y
+
+    // Direction from PP toward VP (this is the positive axis direction)
+    const dx = vpX - ppX
+    const dy = vpY - ppY
+    const len = Math.sqrt(dx * dx + dy * dy)
+
+    if (len < 50) return
+
+    const nx = dx / len
+    const ny = dy / len
+
+    // Draw a large arrow starting from near the PP, pointing toward the VP
+    // Position it offset from center so arrows don't overlap
+    const arrowLen = 80
+    const startDist = 60
+    const startX = ppX + nx * startDist
+    const startY = ppY + ny * startDist
+    const endX = startX + nx * arrowLen
+    const endY = startY + ny * arrowLen
+
+    // Draw white outline for contrast
+    ctx.strokeStyle = 'white'
+    ctx.lineWidth = 6
+    ctx.lineCap = 'round'
+    ctx.setLineDash([])
+    ctx.beginPath()
+    ctx.moveTo(startX, startY)
+    ctx.lineTo(endX, endY)
+    ctx.stroke()
+
+    // Draw colored arrow shaft
+    ctx.strokeStyle = color
+    ctx.lineWidth = 4
+    ctx.beginPath()
+    ctx.moveTo(startX, startY)
+    ctx.lineTo(endX, endY)
+    ctx.stroke()
+
+    // Draw arrowhead
+    const headLen = 16
+    const headAngle = Math.PI / 5
+    const angle = Math.atan2(ny, nx)
+
+    // White outline for arrowhead
+    ctx.strokeStyle = 'white'
+    ctx.lineWidth = 6
+    ctx.beginPath()
+    ctx.moveTo(endX, endY)
+    ctx.lineTo(
+      endX - headLen * Math.cos(angle - headAngle),
+      endY - headLen * Math.sin(angle - headAngle)
+    )
+    ctx.moveTo(endX, endY)
+    ctx.lineTo(
+      endX - headLen * Math.cos(angle + headAngle),
+      endY - headLen * Math.sin(angle + headAngle)
+    )
+    ctx.stroke()
+
+    // Colored arrowhead
+    ctx.strokeStyle = color
+    ctx.lineWidth = 4
+    ctx.beginPath()
+    ctx.moveTo(endX, endY)
+    ctx.lineTo(
+      endX - headLen * Math.cos(angle - headAngle),
+      endY - headLen * Math.sin(angle - headAngle)
+    )
+    ctx.moveTo(endX, endY)
+    ctx.lineTo(
+      endX - headLen * Math.cos(angle + headAngle),
+      endY - headLen * Math.sin(angle + headAngle)
+    )
+    ctx.stroke()
+
+    // Draw label with background
+    const labelX = endX + nx * 20
+    const labelY = endY + ny * 20
+    const labelText = `+${axisLabel}`
+
+    ctx.font = 'bold 18px Arial'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+
+    // Draw white outline for text (stroke the text multiple times for thick outline)
+    ctx.strokeStyle = 'white'
+    ctx.lineWidth = 4
+    ctx.lineJoin = 'round'
+    ctx.strokeText(labelText, labelX, labelY)
+
+    // Draw colored text on top
+    ctx.fillStyle = color
+    ctx.fillText(labelText, labelX, labelY)
+  }
+
   const toCanvas = (vp: { u: number; v: number }) => ({
     x: vp.u * scale + offset.x,
     y: vp.v * scale + offset.y
@@ -97,6 +195,15 @@ export function renderCameraVanishingGeometry(params: RenderParams): void {
     if (vp) {
       const { x, y } = toCanvas(vp)
       drawCrosshair(x, y, AXIS_COLORS[axis], `${axis.toUpperCase()}ᶜ`)
+    }
+  })
+
+  // Draw large direction arrows from center toward each VP
+  axes.forEach(axis => {
+    const vp = cameraVps[axis]
+    if (vp) {
+      const { x, y } = toCanvas(vp)
+      drawDirectionArrow(x, y, AXIS_COLORS[axis], axis.toUpperCase())
     }
   })
 

@@ -79,9 +79,9 @@ export function renderLines(params: RenderParams): void {
 
     let displayText = ''
     if (directionGlyph && line.targetLength) {
-      displayText = `${directionGlyph} ${line.targetLength.toFixed(1)}m`
+      displayText = `${directionGlyph} ${line.targetLength.toFixed(1)}`
     } else if (line.targetLength) {
-      displayText = `${line.targetLength.toFixed(1)}m`
+      displayText = `${line.targetLength.toFixed(1)}`
     } else if (directionGlyph) {
       displayText = directionGlyph
     } else {
