@@ -29,6 +29,7 @@ interface ImageWorkspaceProps {
   onLineClick?: (line: LineEntity, ctrlKey: boolean, shiftKey: boolean) => void
   onCreatePoint?: (u: number, v: number) => void
   onMovePoint?: (worldPoint: WorldPoint, u: number, v: number) => void
+  onPlaceWorldPoint?: (worldPoint: WorldPoint, u: number, v: number) => void
   onPointHover?: (worldPoint: WorldPoint | null) => void
   onPointRightClick?: (worldPoint: WorldPoint) => void
   onLineRightClick?: (line: LineEntity) => void
@@ -60,6 +61,7 @@ const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({
   onLineClick,
   onCreatePoint,
   onMovePoint,
+  onPlaceWorldPoint,
   onPointHover,
   onPointRightClick,
   onLineRightClick,
@@ -116,6 +118,7 @@ const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({
           onLineClick={onLineClick}
           onCreatePoint={onCreatePoint}
           onMovePoint={onMovePoint}
+          onPlaceWorldPoint={onPlaceWorldPoint}
           onPointHover={onPointHover}
           onPointRightClick={onPointRightClick}
           onLineRightClick={onLineRightClick}

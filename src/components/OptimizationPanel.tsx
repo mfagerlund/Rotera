@@ -23,6 +23,9 @@ interface OptimizationPanelProps {
   onSelectLine?: (line: Line) => void
   onHoverWorldPoint?: (worldPoint: WorldPoint | null) => void
   onHoverLine?: (line: Line | null) => void
+  isWorldPointSelected?: (worldPoint: WorldPoint) => boolean
+  isLineSelected?: (line: Line) => boolean
+  hoveredWorldPoint?: WorldPoint | null
 }
 
 function computeCameraReprojectionError(vp: Viewpoint): number {
@@ -89,7 +92,10 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
   onSelectWorldPoint,
   onSelectLine,
   onHoverWorldPoint,
-  onHoverLine
+  onHoverLine,
+  isWorldPointSelected,
+  isLineSelected,
+  hoveredWorldPoint
 }) => {
   const [isOptimizing, setIsOptimizing] = useState(false)
   const [settings, setSettings] = useState(defaultOptimizationSettings)
@@ -575,13 +581,19 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                       .filter(p => p.getOptimizationInfo().optimizedXyz !== undefined)
                       .map(point => {
                         const info = point.getOptimizationInfo()
+                        const isSelected = isWorldPointSelected?.(point) ?? false
+                        const isHovered = hoveredWorldPoint === point
                         return (
                           <tr
                             key={getEntityKey(point)}
                             onClick={() => onSelectWorldPoint?.(point)}
                             onMouseEnter={() => onHoverWorldPoint?.(point)}
                             onMouseLeave={() => onHoverWorldPoint?.(null)}
-                            style={{ cursor: onSelectWorldPoint ? 'pointer' : 'default' }}
+                            style={{
+                              cursor: 'pointer',
+                              backgroundColor: isSelected ? '#0696d7' : isHovered ? '#3a3a3a' : undefined,
+                              color: isSelected ? '#fff' : undefined
+                            }}
                           >
                             <td>{point.getName()}</td>
                             <td>[{info.optimizedXyz?.map(v => formatNumber(v)).join(', ')}]</td>
@@ -610,13 +622,18 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                     <tbody>
                       {Array.from(project.lines.values()).map(line => {
                         const info = line.getOptimizationInfo()
+                        const isSelected = isLineSelected?.(line) ?? false
                         return (
                           <tr
                             key={getEntityKey(line)}
                             onClick={() => onSelectLine?.(line)}
                             onMouseEnter={() => onHoverLine?.(line)}
                             onMouseLeave={() => onHoverLine?.(null)}
-                            style={{ cursor: onSelectLine ? 'pointer' : 'default' }}
+                            style={{
+                              cursor: 'pointer',
+                              backgroundColor: isSelected ? '#0696d7' : undefined,
+                              color: isSelected ? '#fff' : undefined
+                            }}
                           >
                             <td>{line.getName()}</td>
                             <td>{info.length !== undefined && info.length !== null ? formatNumber(info.length) : '-'}</td>

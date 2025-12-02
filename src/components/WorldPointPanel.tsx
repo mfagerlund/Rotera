@@ -499,15 +499,12 @@ const EnhancedWorldPointItem: React.FC<EnhancedWorldPointItemProps> = ({
       className={itemClasses}
       draggable={true}
         onDragStart={(e) => {
-          // Set drag data
           e.dataTransfer.setData('application/json', JSON.stringify({
             type: 'world-point',
             worldPointName: worldPoint.getName(),
             action: imagePointCount > 0 ? 'move' : 'place'
           }))
           e.dataTransfer.effectAllowed = 'copy'
-
-          // Visual feedback
           e.currentTarget.style.opacity = '0.5'
         }}
         onDragEnd={(e) => {

@@ -53,6 +53,9 @@ interface BottomPanelProps {
   onSelectWorldPoint?: (worldPoint: WorldPoint) => void
   onHoverWorldPoint?: (worldPoint: WorldPoint | null) => void
   onHoverLine?: (line: LineEntity | null) => void
+  isWorldPointSelected?: (worldPoint: WorldPoint) => boolean
+  isLineSelected?: (line: LineEntity) => boolean
+  hoveredWorldPoint?: WorldPoint | null
   worldPointEditWindow: { isOpen: boolean; worldPoint: WorldPoint | null }
   onCloseWorldPointEdit: () => void
   onUpdateWorldPoint: (worldPoint: WorldPoint) => void
@@ -96,6 +99,9 @@ export const BottomPanel: React.FC<BottomPanelProps> = observer(({
   onSelectWorldPoint,
   onHoverWorldPoint,
   onHoverLine,
+  isWorldPointSelected,
+  isLineSelected,
+  hoveredWorldPoint,
   worldPointEditWindow,
   onCloseWorldPointEdit,
   onUpdateWorldPoint,
@@ -172,6 +178,9 @@ export const BottomPanel: React.FC<BottomPanelProps> = observer(({
               onSelectLine={onSelectLine}
               onHoverWorldPoint={onHoverWorldPoint}
               onHoverLine={onHoverLine}
+              isWorldPointSelected={isWorldPointSelected}
+              isLineSelected={isLineSelected}
+              hoveredWorldPoint={hoveredWorldPoint}
             />
           )}
         </FloatingWindow>

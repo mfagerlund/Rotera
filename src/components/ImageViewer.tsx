@@ -28,6 +28,7 @@ interface ImageViewerProps extends ImageViewerPropsBase {
   onLineClick?: (lineEntity: LineEntity, ctrlKey: boolean, shiftKey: boolean) => void
   onCreatePoint?: (u: number, v: number) => void
   onMovePoint?: (worldPoint: WorldPoint, u: number, v: number) => void
+  onPlaceWorldPoint?: (worldPoint: WorldPoint, u: number, v: number) => void
   onPointHover?: (worldPoint: WorldPoint | null) => void
   onPointRightClick?: (worldPoint: WorldPoint) => void
   onLineRightClick?: (lineEntity: LineEntity) => void
@@ -59,6 +60,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
   onLineClick,
   onCreatePoint,
   onMovePoint,
+  onPlaceWorldPoint,
   onPointHover,
   onPointRightClick,
   onLineRightClick,
@@ -280,9 +282,13 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
         setIsPrecisionToggleActive={precisionDragState.setIsPrecisionToggleActive}
         precisionPointerRef={pointDragState.precisionPointerRef}
         precisionCanvasPosRef={pointDragState.precisionCanvasPosRef}
+        draggedPointImageCoordsRef={pointDragState.draggedPointImageCoordsRef}
         canvasToImageCoords={transform.canvasToImageCoords}
+        getPrecisionState={precisionMode.getPrecisionState}
+        applyPrecisionToImageDelta={precisionMode.applyPrecisionToImageDelta}
         onCreatePoint={onCreatePoint}
         onMovePoint={onMovePoint}
+        onPlaceWorldPoint={onPlaceWorldPoint}
         events={events}
       />
 

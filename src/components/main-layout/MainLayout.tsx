@@ -304,9 +304,18 @@ export const MainLayout: React.FC = observer(() => {
       const imagePoint = currentImage.getImagePointsForWorldPoint(worldPoint)[0]
       if (imagePoint) {
         moveImagePoint(imagePoint as any, u, v)
+      } else {
+        // No ImagePoint on this image - create one
+        addImagePointToWorldPoint(worldPoint, currentImage, u, v)
       }
     }
-  }, [currentImage, moveImagePoint])
+  }, [currentImage, moveImagePoint, addImagePointToWorldPoint])
+
+  const handlePlaceWorldPoint = useCallback((worldPoint: WorldPoint, u: number, v: number) => {
+    if (currentImage) {
+      addImagePointToWorldPoint(worldPoint, currentImage, u, v)
+    }
+  }, [currentImage, addImagePointToWorldPoint])
 
   const handleCreateVanishingLine = useCallback((p1: { u: number; v: number }, p2: { u: number; v: number }) => {
     if (currentViewpoint) {
@@ -388,6 +397,7 @@ export const MainLayout: React.FC = observer(() => {
       selectedVanishingLines={selectedVanishingLineEntities}
       onCreatePoint={handleImageClick}
       onMovePoint={handleMovePoint}
+      onPlaceWorldPoint={handlePlaceWorldPoint}
       onPointHover={setHoveredWorldPoint}
       onPointRightClick={openWorldPointEdit}
       visibility={project?.viewSettings.visibility || DEFAULT_VIEW_SETTINGS.visibility}
@@ -408,6 +418,7 @@ export const MainLayout: React.FC = observer(() => {
     handleEnhancedPointClick,
     handleImageClick,
     handleMovePoint,
+    handlePlaceWorldPoint,
     openWorldPointEdit,
     handleEditLineOpen,
     handleEmptySpaceClick,
@@ -767,6 +778,9 @@ export const MainLayout: React.FC = observer(() => {
         }}
         onSelectWorldPoint={(worldPoint) => handleEntityClick(worldPoint, false, false)}
         onHoverWorldPoint={setHoveredWorldPoint}
+        isWorldPointSelected={(wp) => selection.has(wp)}
+        isLineSelected={(line) => selection.has(line)}
+        hoveredWorldPoint={hoveredWorldPoint}
         worldPointEditWindow={worldPointEditWindow}
         onCloseWorldPointEdit={closeWorldPointEdit}
         onUpdateWorldPoint={handleWorldPointUpdate}
