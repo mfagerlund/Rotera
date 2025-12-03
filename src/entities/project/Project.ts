@@ -3,7 +3,7 @@ import type {Line} from '../line'
 import type {Viewpoint} from '../viewpoint'
 import type {ImagePoint} from '../imagePoint'
 import type {Constraint} from '../constraints'
-import {makeAutoObservable, reaction} from 'mobx'
+import {makeAutoObservable} from 'mobx'
 import { propagateCoordinateInferences, type InferenceConflict } from '../world-point/coordinate-inference'
 import { ViewSettings, DEFAULT_VIEW_SETTINGS } from '../../types/visibility'
 
@@ -110,25 +110,6 @@ export class Project {
         this.imageSortOrder = imageSortOrder
 
         makeAutoObservable(this, {}, { autoBind: true })
-
-        reaction(
-            () => ({
-                points: Array.from(this.worldPoints).map(p => ({
-                    lockedXyz: [...p.lockedXyz],
-                    name: p.name
-                })),
-                lines: Array.from(this.lines).map(l => ({
-                    direction: l.direction,
-                    targetLength: l.targetLength,
-                    pointA: l.pointA.name,
-                    pointB: l.pointB.name
-                }))
-            }),
-            () => {
-                this.propagateInferences()
-            },
-            { delay: 100 }
-        )
     }
 
     static create(name: string): Project {

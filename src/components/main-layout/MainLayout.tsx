@@ -90,6 +90,10 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
 
   const { confirm, dialog, isOpen: isConfirmDialogOpen } = useConfirm()
 
+  const handleOpenWorldPointEdit = useCallback(() => {
+    project?.propagateInferences()
+  }, [project])
+
   const {
     activeTool,
     setActiveTool,
@@ -114,10 +118,6 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
     showVPQualityWindow,
     openVPQualityWindow,
     closeVPQualityWindow
-  const handleOpenWorldPointEdit = useCallback(() => {
-    project?.propagateInferences()
-  }, [project])
-
   } = useMainLayoutState({
     projectImageSortOrder: Array.isArray(project?.imageSortOrder) ? project.imageSortOrder : undefined,
     onOpenWorldPointEdit: handleOpenWorldPointEdit
