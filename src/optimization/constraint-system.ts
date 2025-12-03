@@ -294,6 +294,11 @@ export class ConstraintSystem {
       const REASONABLE_RESIDUAL_THRESHOLD = 250;
       const isReasonable = residualMagnitude < REASONABLE_RESIDUAL_THRESHOLD;
 
+      // Still need to apply optimization results to set optimizedXyz for fully-locked points
+      for (const point of this.points) {
+        point.applyOptimizationResultFromValueMap(valueMap);
+      }
+
       return {
         converged: isReasonable,
         iterations: 0,

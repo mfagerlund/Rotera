@@ -31,10 +31,10 @@ export function resetOptimizationState(project: Project) {
   }
 
   // Reset viewpoints (cameras)
+  // NOTE: Do NOT clear position/rotation here - tests and callers may provide initial values.
+  // The auto-initialization pipeline will overwrite if autoInitializeCameras is true.
   for (const vp of project.viewpoints) {
     const viewpoint = vp as Viewpoint;
-    viewpoint.position = [0, 0, 0];
-    viewpoint.rotation = [1, 0, 0, 0];
     viewpoint.lastResiduals = [];
     // Clear hidden VP cache
     delete (viewpoint as any).__initialCameraVps;

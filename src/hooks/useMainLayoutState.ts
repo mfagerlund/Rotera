@@ -57,7 +57,13 @@ export interface MainLayoutState {
   closeVPQualityWindow: () => void
 }
 
-export function useMainLayoutState(projectImageSortOrder?: string[]): MainLayoutState {
+export interface UseMainLayoutStateOptions {
+  projectImageSortOrder?: string[]
+  onOpenWorldPointEdit?: (worldPoint: WorldPoint) => void
+}
+
+export function useMainLayoutState(options: UseMainLayoutStateOptions = {}): MainLayoutState {
+  const { projectImageSortOrder, onOpenWorldPointEdit } = options
   // Tool state
   const [activeTool, setActiveTool] = useState<ActiveTool>('select')
 
@@ -131,8 +137,9 @@ export function useMainLayoutState(projectImageSortOrder?: string[]): MainLayout
   }>({ isOpen: false, worldPoint: null })
 
   const openWorldPointEdit = useCallback((worldPoint: WorldPoint) => {
+    onOpenWorldPointEdit?.(worldPoint)
     setWorldPointEditWindow({ isOpen: true, worldPoint })
-  }, [])
+  }, [onOpenWorldPointEdit])
 
   const closeWorldPointEdit = useCallback(() => {
     setWorldPointEditWindow({ isOpen: false, worldPoint: null })

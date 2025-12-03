@@ -114,7 +114,14 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
     showVPQualityWindow,
     openVPQualityWindow,
     closeVPQualityWindow
-  } = useMainLayoutState(Array.isArray(project?.imageSortOrder) ? project.imageSortOrder : undefined)
+  const handleOpenWorldPointEdit = useCallback(() => {
+    project?.propagateInferences()
+  }, [project])
+
+  } = useMainLayoutState({
+    projectImageSortOrder: Array.isArray(project?.imageSortOrder) ? project.imageSortOrder : undefined,
+    onOpenWorldPointEdit: handleOpenWorldPointEdit
+  })
 
   const [constructionPreview, setConstructionPreview] = useState<ConstructionPreview | null>(null)
   const [currentVanishingLineAxis, setCurrentVanishingLineAxis] = useState<'x' | 'y' | 'z'>('x')
