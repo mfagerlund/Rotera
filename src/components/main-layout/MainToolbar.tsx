@@ -4,13 +4,12 @@
 import React from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faFolderOpen,
   faFloppyDisk,
   faFileExport,
   faTrash,
-  faToggleOn,
-  faToggleOff,
-  faEye
+  faHome,
+  faPencil,
+  faCheck
 } from '@fortawesome/free-solid-svg-icons'
 import { WorkspaceSwitcher } from '../WorkspaceManager'
 import { ConstraintToolbar } from '../ConstraintToolbar'
@@ -48,6 +47,10 @@ interface MainToolbarProps {
 
   // Confirm dialog
   confirm: (message: string) => Promise<boolean>
+
+  // Navigation
+  onReturnToBrowser?: () => void
+  onSaveProject?: () => Promise<void>
 }
 
 export const MainToolbar: React.FC<MainToolbarProps> = ({
@@ -68,7 +71,9 @@ export const MainToolbar: React.FC<MainToolbarProps> = ({
   onToggleComponentOverlay,
   visualFeedbackLevel,
   onVisualFeedbackChange,
-  confirm
+  confirm,
+  onReturnToBrowser,
+  onSaveProject
 }) => {
   const [excludeImageUrls, setExcludeImageUrls] = React.useState(true)
 
@@ -115,8 +120,89 @@ export const MainToolbar: React.FC<MainToolbarProps> = ({
     }
   }
 
+  const [isSaving, setIsSaving] = React.useState(false)
+  const [isEditingName, setIsEditingName] = React.useState(false)
+  const [editedName, setEditedName] = React.useState(project?.name || '')
+
+  const handleNameSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault()
+    if (project && editedName.trim() && editedName !== project.name) {
+      project.name = editedName.trim()
+    }
+    setIsEditingName(false)
+  }
+
+  const handleSave = async () => {
+    if (!onSaveProject || isSaving) return
+    setIsSaving(true)
+    try {
+      await onSaveProject()
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleReturnToBrowser = async () => {
+    if (!onReturnToBrowser) return
+    if (onSaveProject) {
+      const shouldSave = await confirm('Save project before closing?')
+      if (shouldSave) {
+        await handleSave()
+      }
+    }
+    onReturnToBrowser()
+  }
+
   return (
     <div className="top-toolbar">
+      {onReturnToBrowser && (
+        <button
+          className="btn-tool btn-home"
+          onClick={handleReturnToBrowser}
+          title="Return to project browser"
+        >
+          <FontAwesomeIcon icon={faHome} />
+        </button>
+      )}
+
+      {project && (
+        <div className="toolbar-project-name">
+          {isEditingName ? (
+            <form onSubmit={handleNameSubmit} className="project-name-form">
+              <input
+                type="text"
+                value={editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+                onBlur={handleNameSubmit}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    setIsEditingName(false)
+                    setEditedName(project.name)
+                  }
+                }}
+                autoFocus
+                className="project-name-input"
+              />
+              <button type="submit" className="btn-tool btn-small" title="Save name">
+                <FontAwesomeIcon icon={faCheck} />
+              </button>
+            </form>
+          ) : (
+            <button
+              className="project-name-display"
+              onClick={() => {
+                setEditedName(project.name)
+                setIsEditingName(true)
+              }}
+              title="Click to rename project"
+            >
+              {project.name}
+              <FontAwesomeIcon icon={faPencil} className="edit-icon" />
+            </button>
+          )}
+        </div>
+      )}
+
       <WorkspaceSwitcher
         currentWorkspace={currentWorkspace}
         onWorkspaceChange={onWorkspaceChange}
@@ -125,11 +211,13 @@ export const MainToolbar: React.FC<MainToolbarProps> = ({
       />
 
       <div className="toolbar-section">
-        <button className="btn-tool">
-          <FontAwesomeIcon icon={faFolderOpen} /> Open
-        </button>
-        <button className="btn-tool">
-          <FontAwesomeIcon icon={faFloppyDisk} /> Save
+        <button
+          className="btn-tool"
+          onClick={handleSave}
+          disabled={!onSaveProject || isSaving}
+          title="Save project to browser storage"
+        >
+          <FontAwesomeIcon icon={faFloppyDisk} /> {isSaving ? 'Saving...' : 'Save'}
         </button>
         <button
           className="btn-tool"

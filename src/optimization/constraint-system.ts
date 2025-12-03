@@ -413,6 +413,7 @@ export class ConstraintSystem {
         error: result.success ? null : result.convergenceReason,
       };
     } catch (error) {
+      console.error("[ConstraintSystem] Optimization threw exception:", error);
       return {
         converged: false,
         iterations: 0,

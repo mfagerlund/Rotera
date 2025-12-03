@@ -24,6 +24,9 @@ const ALLOWED_PATHS = [
   /[\\/]wip[\\/]optimizer\.ts$/,
   // WorkspaceManager uses UI config IDs, not entity IDs
   /[\\/]WorkspaceManager\.tsx$/,
+  // Project storage layer uses IDs for IndexedDB keys (database boundary)
+  /[\\/]project-db\.ts$/,
+  /[\\/]ProjectBrowser\.tsx$/,
 ];
 
 const ENTITY_ID_PATTERNS = [

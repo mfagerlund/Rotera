@@ -11,6 +11,7 @@ import type { Constraint } from '../entities/constraints/base-constraint'
 import ContextMenu, { ContextMenuItem } from './ContextMenu'
 import { useConfirm } from './ConfirmDialog'
 import { getEntityKey } from '../utils/entityKeys'
+import { setDraggingWorldPoint, clearDraggingWorldPoint } from '../utils/dragContext'
 
 interface WorldPointPanelProps {
   worldPoints: Map<string, WorldPoint>
@@ -499,17 +500,19 @@ const EnhancedWorldPointItem: React.FC<EnhancedWorldPointItemProps> = ({
       className={itemClasses}
       draggable={true}
         onDragStart={(e) => {
+          const action = imagePointCount > 0 ? 'move' : 'place'
           e.dataTransfer.setData('application/json', JSON.stringify({
             type: 'world-point',
             worldPointName: worldPoint.getName(),
-            action: imagePointCount > 0 ? 'move' : 'place'
+            action
           }))
           e.dataTransfer.effectAllowed = 'copy'
           e.currentTarget.style.opacity = '0.5'
+          setDraggingWorldPoint(worldPoint, action)
         }}
         onDragEnd={(e) => {
-          // Reset visual feedback
           e.currentTarget.style.opacity = '1'
+          clearDraggingWorldPoint()
         }}
         onClick={(e) => {
           if (e.shiftKey) e.preventDefault()

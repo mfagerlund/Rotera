@@ -1,7 +1,8 @@
-import React, { RefObject, useRef } from 'react'
+import React, { RefObject } from 'react'
 import { CanvasPoint, ImageCoords, CanvasToImage } from '../types'
 import { WorldPoint } from '../../../entities/world-point'
 import { UseImageViewerEventsReturn } from '../hooks/useImageViewerEvents'
+import { getDraggingWorldPoint, getDragAction, clearDraggingWorldPoint } from '../../../utils/dragContext'
 
 interface PrecisionState {
   isPrecisionActive: boolean
@@ -138,44 +139,55 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
         setCurrentMousePos(null)
         setIsPrecisionDrag(false)
 
+        // Try dataTransfer first, fall back to drag context
+        let worldPoint: WorldPoint | null = null
+        let action: 'place' | 'move' | null = null
+
         try {
           const data = JSON.parse(e.dataTransfer.getData('application/json'))
           if (data.type === 'world-point' && data.worldPointName) {
-            const worldPoint = Array.from(worldPoints.values()).find(
+            worldPoint = Array.from(worldPoints.values()).find(
               wp => wp.getName() === data.worldPointName
-            )
-            if (worldPoint) {
-              let finalU: number, finalV: number
-              if (precisionImageCoords) {
-                finalU = precisionImageCoords.u
-                finalV = precisionImageCoords.v
-              } else {
-                const rect = canvasRef.current?.getBoundingClientRect()
-                if (rect) {
-                  const x = e.clientX - rect.left
-                  const y = e.clientY - rect.top
-                  const imageCoords = canvasToImageCoords(x, y)
-                  if (imageCoords) {
-                    finalU = imageCoords.u
-                    finalV = imageCoords.v
-                  } else {
-                    return
-                  }
-                } else {
-                  return
-                }
-              }
-              if (data.action === 'place' && onPlaceWorldPoint) {
-                onPlaceWorldPoint(worldPoint, finalU, finalV)
-              } else if (data.action === 'move' && onMovePoint) {
-                onMovePoint(worldPoint, finalU, finalV)
-              }
-            }
+            ) || null
+            action = data.action
           }
-        } catch (error) {
-          console.warn('Failed to parse drop data:', error)
+        } catch {
+          // Fall back to drag context if dataTransfer fails
+          worldPoint = getDraggingWorldPoint()
+          action = getDragAction()
         }
 
+        if (worldPoint) {
+          let finalU: number, finalV: number
+          if (precisionImageCoords) {
+            finalU = precisionImageCoords.u
+            finalV = precisionImageCoords.v
+          } else {
+            const rect = canvasRef.current?.getBoundingClientRect()
+            if (rect) {
+              const x = e.clientX - rect.left
+              const y = e.clientY - rect.top
+              const imageCoords = canvasToImageCoords(x, y)
+              if (imageCoords) {
+                finalU = imageCoords.u
+                finalV = imageCoords.v
+              } else {
+                clearDraggingWorldPoint()
+                return
+              }
+            } else {
+              clearDraggingWorldPoint()
+              return
+            }
+          }
+          if (action === 'place' && onPlaceWorldPoint) {
+            onPlaceWorldPoint(worldPoint, finalU, finalV)
+          } else if (action === 'move' && onMovePoint) {
+            onMovePoint(worldPoint, finalU, finalV)
+          }
+        }
+
+        clearDraggingWorldPoint()
         precisionPointerRef.current = null
         precisionCanvasPosRef.current = null
         draggedPointImageCoordsRef.current = null

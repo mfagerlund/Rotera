@@ -3,75 +3,47 @@
 // ALL runtime work uses entities
 
 import { useState, useEffect } from 'react'
-import { autorun } from 'mobx'
-import { loadFromLocalStorage, saveToLocalStorage, loadProjectFromJson } from '../store/project-serialization'
 import { Project } from '../entities/project'
 import { Viewpoint } from '../entities/viewpoint'
-import { newProject } from '../store/project-store'
-
-const STORAGE_KEY = 'pictorigo-project'
+import { project as globalProject, loadProject as setGlobalProject } from '../store/project-store'
 
 /**
  * Hook that manages entity-based project
- * DTOs are ONLY touched during initial load and final save
- * ALL runtime work uses entities
+ * Uses global project store - the project is set by App.tsx via loadProject()
  */
 export const useEntityProject = () => {
-  const [entityProject, setEntityProject] = useState<Project | null>(null)
+  const [entityProject, setEntityProject] = useState<Project | null>(globalProject)
   const [currentViewpoint, setCurrentViewpoint] = useState<Viewpoint | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Load from localStorage on mount
+  // Sync with global project when it changes
   useEffect(() => {
-    try {
-      const loaded = loadFromLocalStorage(STORAGE_KEY)
-      if (loaded) {
-        setEntityProject(loaded)
-        // Set current image to first viewpoint if available
-        const firstViewpoint = Array.from(loaded.viewpoints)[0]
-        if (firstViewpoint) {
-          setCurrentViewpoint(firstViewpoint)
-        }
-      } else {
-        const newProj = newProject()
-        setEntityProject(newProj)
-        saveToLocalStorage(newProj, STORAGE_KEY)
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load project')
-    } finally {
-      setIsLoading(false)
+    setEntityProject(globalProject)
+    // Set current viewpoint to first if available
+    if (globalProject && globalProject.viewpoints.size > 0) {
+      const firstViewpoint = Array.from(globalProject.viewpoints)[0]
+      setCurrentViewpoint(firstViewpoint)
+    } else {
+      setCurrentViewpoint(null)
     }
   }, [])
 
-  // Auto-save on project changes using MobX autorun
-  useEffect(() => {
-    if (!entityProject || isLoading) return
-
-    const disposer = autorun(() => {
-      const hasChanges =
-        entityProject.worldPoints.size +
-        entityProject.viewpoints.size +
-        entityProject.lines.size +
-        entityProject.imagePoints.size +
-        entityProject.constraints.size
-
-      saveToLocalStorage(entityProject, STORAGE_KEY)
-    })
-
-    return disposer
-  }, [entityProject, isLoading])
+  // Update the local state setter to also update global
+  const handleSetProject = (newProject: Project | null) => {
+    if (newProject) {
+      setGlobalProject(newProject)
+    }
+    setEntityProject(newProject)
+  }
 
   const saveProject = () => {
-    if (entityProject) {
-      saveToLocalStorage(entityProject, STORAGE_KEY)
-    }
+    // No-op for now - IndexedDB save is handled by MainLayout
   }
 
   return {
     project: entityProject,
-    setProject: setEntityProject,
+    setProject: handleSetProject,
     saveProject,
     currentViewpoint,
     setCurrentViewpoint,

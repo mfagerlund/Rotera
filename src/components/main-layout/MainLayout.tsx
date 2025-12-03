@@ -31,11 +31,16 @@ import { BottomPanel } from './BottomPanel'
 import { VisibilityPanel } from '../VisibilityPanel'
 import { VisibilitySettings, LockSettings, DEFAULT_VIEW_SETTINGS } from '../../types/visibility'
 import { ToolContext, SELECT_TOOL_CONTEXT, LINE_TOOL_CONTEXT, VANISHING_LINE_TOOL_CONTEXT, LOOP_TOOL_CONTEXT } from '../../types/tool-context'
+import { ProjectDB } from '../../services/project-db'
 
 import '../../styles/enhanced-workspace.css'
 import '../../styles/tools.css'
 
-export const MainLayout: React.FC = observer(() => {
+interface MainLayoutProps {
+  onReturnToBrowser?: () => void
+}
+
+export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrowser }) => {
   const {
     project,
     setProject,
@@ -71,6 +76,17 @@ export const MainLayout: React.FC = observer(() => {
     exportOptimizationDto,
     removeDuplicateImagePoints
   } = useDomainOperations(project, setProject)
+
+  const handleSaveProject = useCallback(async () => {
+    if (!project) return
+    try {
+      await ProjectDB.saveProject(project)
+      console.log('Project saved to IndexedDB')
+    } catch (error) {
+      console.error('Failed to save project:', error)
+      alert('Failed to save project: ' + (error as Error).message)
+    }
+  }, [project])
 
   const { confirm, dialog, isOpen: isConfirmDialogOpen } = useConfirm()
 
@@ -520,6 +536,8 @@ export const MainLayout: React.FC = observer(() => {
               visualFeedbackLevel={project!.visualFeedbackLevel || 'standard'}
               onVisualFeedbackChange={() => {}}
               confirm={confirm}
+              onReturnToBrowser={onReturnToBrowser}
+              onSaveProject={handleSaveProject}
             />
 
             <div className="content-area">
@@ -565,6 +583,10 @@ export const MainLayout: React.FC = observer(() => {
                     copyPointsFromImageToImage(sourceViewpoint, currentImage)
                   }
                 }}
+                onShowInImageView={(viewpoint) => {
+                  setCurrentViewpoint(viewpoint)
+                  workspaceActions.setWorkspace('image')
+                }}
               />
 
               <div className="viewer-area">
@@ -597,27 +619,9 @@ export const MainLayout: React.FC = observer(() => {
 
                     if (lineEntity) {
                       setConstructionPreview(null)
-                      if (window.navigator.platform.startsWith('Win')) {
-                        try {
-                          fetch('/api/beep', { method: 'POST' }).catch(() => {
-                            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
-                            const oscillator = audioContext.createOscillator()
-                            const gainNode = audioContext.createGain()
-                            oscillator.connect(gainNode)
-                            gainNode.connect(audioContext.destination)
-                            oscillator.frequency.value = 800
-                            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime)
-                            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2)
-                            oscillator.start(audioContext.currentTime)
-                            oscillator.stop(audioContext.currentTime + 0.2)
-                          })
-                        } catch (e) {
-                          // Ignore audio errors
-                        }
-                      }
                     }
                   } catch (error) {
-                    // Ignore audio errors
+                    console.error('Error creating line:', error)
                   }
                 }}
                 onCreateConstraint={addConstraint}

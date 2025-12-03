@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowsUpDown, faCheck, faPencil, faTrash, faCopy, faVideo } from '@fortawesome/free-solid-svg-icons'
+import { faArrowsUpDown, faCheck, faPencil, faTrash, faCopy, faVideo, faImage } from '@fortawesome/free-solid-svg-icons'
 import { faCircle } from '@fortawesome/free-regular-svg-icons'
 import { getEntityKey } from '../../utils/entityKeys'
 import type { ImageNavigationItemProps } from './types'
@@ -35,6 +35,7 @@ export const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
   onWorldPointClick,
   onCopyPointsToCurrentImage,
   onViewFromCamera,
+  onShowInImageView,
   currentViewpoint
 }) => {
   const imgRef = React.useRef<HTMLImageElement>(null)
@@ -104,7 +105,7 @@ export const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
             >
               <FontAwesomeIcon icon={faCopy} />
             </button>
-            {/* View from camera button */}
+            {/* View from camera in WorldView button */}
             <button
               className="btn-image-top-action"
               onClick={(e) => {
@@ -116,6 +117,19 @@ export const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
               title="View from this camera in WorldView"
             >
               <FontAwesomeIcon icon={faVideo} />
+            </button>
+            {/* Show in ImageView button */}
+            <button
+              className="btn-image-top-action"
+              onClick={(e) => {
+                e.stopPropagation()
+                if (onShowInImageView) {
+                  onShowInImageView(image)
+                }
+              }}
+              title="Show in ImageView"
+            >
+              <FontAwesomeIcon icon={faImage} />
             </button>
             <button
               className="btn-image-top-action"

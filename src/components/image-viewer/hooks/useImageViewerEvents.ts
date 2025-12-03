@@ -20,6 +20,7 @@ export interface UseImageViewerEventsParams {
   precisionMode: PrecisionModeHandlers
   placementMode: { active: boolean; worldPoint: WorldPoint | null }
   isPointCreationActive: boolean
+  isLoopTraceActive: boolean
   isVanishingLineActive: boolean
   currentVanishingLineAxis?: VanishingLineAxis
   onPointClick: (worldPoint: WorldPoint, ctrlKey: boolean, shiftKey: boolean) => void
@@ -57,6 +58,7 @@ export function useImageViewerEvents({
   precisionMode,
   placementMode,
   isPointCreationActive,
+  isLoopTraceActive,
   isVanishingLineActive,
   currentVanishingLineAxis,
   onPointClick,
@@ -74,7 +76,7 @@ export function useImageViewerEvents({
 }: UseImageViewerEventsParams): UseImageViewerEventsReturn {
 
   const placementModeActive = placementMode?.active ?? false
-  const creationContextActive = placementModeActive || isPointCreationActive || isVanishingLineActive
+  const creationContextActive = placementModeActive || isPointCreationActive || isLoopTraceActive || isVanishingLineActive
   const isPlacementInteractionActive = pointDragState.isDraggingPoint || precisionDragState.isDragDropActive || creationContextActive
 
   const handleMouseDown = useCallback((event: React.MouseEvent) => {

@@ -411,9 +411,9 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
         const yValue = lockedXyz[1] ?? inferredXyz[1]
         const zValue = lockedXyz[2] ?? inferredXyz[2]
 
-        const x = xLocked ? V.C(xValue!) : V.W(optimizedXyz![0])
-        const y = yLocked ? V.C(yValue!) : V.W(optimizedXyz![1])
-        const z = zLocked ? V.C(zValue!) : V.W(optimizedXyz![2])
+        const x = xLocked ? V.C(xValue!) : V.W(optimizedXyz?.[0] ?? 0)
+        const y = yLocked ? V.C(yValue!) : V.W(optimizedXyz?.[1] ?? 0)
+        const z = zLocked ? V.C(zValue!) : V.W(optimizedXyz?.[2] ?? 0)
 
         const vec = new Vec3(x, y, z)
         valueMap.points.set(this, vec)

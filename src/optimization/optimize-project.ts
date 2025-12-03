@@ -22,9 +22,10 @@ export function resetOptimizationState(project: Project) {
   log('[resetOptimizationState] Clearing all cached optimization state...');
 
   // Reset world points
+  // NOTE: Do NOT clear optimizedXyz here - tests and callers may provide initial values.
+  // The auto-initialization pipeline will overwrite if autoInitializeWorldPoints is true.
   for (const wp of project.worldPoints) {
     const point = wp as WorldPoint;
-    point.optimizedXyz = undefined;
     point.inferredXyz = [null, null, null];
     point.lastResiduals = [];
   }
@@ -115,7 +116,7 @@ export interface OutlierInfo {
   viewpointName: string;
 }
 
-export interface OptimizeProjectOptions extends SolverOptions {
+export interface OptimizeProjectOptions extends Omit<SolverOptions, 'optimizeCameraIntrinsics'> {
   autoInitializeCameras?: boolean;
   autoInitializeWorldPoints?: boolean;
   detectOutliers?: boolean;

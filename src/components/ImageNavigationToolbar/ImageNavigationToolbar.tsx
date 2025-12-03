@@ -32,7 +32,8 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
   onWorldPointHover,
   onWorldPointClick,
   onCopyPointsToCurrentImage,
-  onViewFromCamera
+  onViewFromCamera,
+  onShowInImageView
 }) => {
   const { confirm, dialog } = useConfirm()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -200,6 +201,7 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
                 onWorldPointClick={onWorldPointClick}
                 onCopyPointsToCurrentImage={onCopyPointsToCurrentImage}
                 onViewFromCamera={onViewFromCamera}
+                onShowInImageView={onShowInImageView}
                 currentViewpoint={currentViewpoint}
               />
             ))

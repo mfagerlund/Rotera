@@ -133,6 +133,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
     precisionMode,
     placementMode,
     isPointCreationActive,
+    isLoopTraceActive,
     isVanishingLineActive,
     currentVanishingLineAxis,
     onPointClick,

@@ -5190,3 +5190,72 @@ body {
 }
 
 
+
+/* Project Name in Toolbar */
+.toolbar-project-name {
+  display: flex;
+  align-items: center;
+  margin-right: 8px;
+}
+
+.project-name-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.project-name-display:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.project-name-display .edit-icon {
+  font-size: 10px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.project-name-display:hover .edit-icon {
+  opacity: 0.6;
+}
+
+.project-name-form {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.project-name-input {
+  padding: 6px 10px;
+  background: #1a1a1a;
+  border: 1px solid #0066cc;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  width: 200px;
+}
+
+.project-name-input:focus {
+  outline: none;
+  border-color: #0088ff;
+  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.3);
+}
+
+.btn-small {
+  padding: 4px 8px !important;
+  font-size: 12px !important;
+}
+
+.btn-home {
+  margin-right: 8px;
+}

@@ -29,6 +29,7 @@ interface LeftPanelProps {
   onWorldPointClick: (worldPoint: WorldPoint, ctrlKey: boolean, shiftKey: boolean) => void
   onCopyPointsToCurrentImage: (sourceViewpoint: Viewpoint) => void
   onViewFromCamera: (viewpoint: Viewpoint) => void
+  onShowInImageView: (viewpoint: Viewpoint) => void
 }
 
 export const LeftPanel: React.FC<LeftPanelProps> = observer(({
@@ -53,7 +54,8 @@ export const LeftPanel: React.FC<LeftPanelProps> = observer(({
   onWorldPointHover,
   onWorldPointClick,
   onCopyPointsToCurrentImage,
-  onViewFromCamera
+  onViewFromCamera,
+  onShowInImageView
 }) => {
   return (
     <ResizableSidebar
@@ -83,6 +85,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = observer(({
         onWorldPointClick={onWorldPointClick}
         onCopyPointsToCurrentImage={onCopyPointsToCurrentImage}
         onViewFromCamera={onViewFromCamera}
+        onShowInImageView={onShowInImageView}
       />
     </ResizableSidebar>
   )
