@@ -23,6 +23,7 @@ export const Tolerance = {
 
 /**
  * Assert that a 3D vector is close to expected value within tolerance
+ * Uses absolute difference comparison, not Jest's decimal precision
  */
 export function expectVec3Close(
   actual: number[],
@@ -31,9 +32,12 @@ export function expectVec3Close(
   message?: string
 ): void {
   expect(actual).toHaveLength(3);
-  expect(actual[0]).toBeCloseTo(expected[0], tolerance);
-  expect(actual[1]).toBeCloseTo(expected[1], tolerance);
-  expect(actual[2]).toBeCloseTo(expected[2], tolerance);
+  const diff0 = Math.abs(actual[0] - expected[0]);
+  const diff1 = Math.abs(actual[1] - expected[1]);
+  const diff2 = Math.abs(actual[2] - expected[2]);
+  expect(diff0).toBeLessThanOrEqual(tolerance);
+  expect(diff1).toBeLessThanOrEqual(tolerance);
+  expect(diff2).toBeLessThanOrEqual(tolerance);
 }
 
 /**

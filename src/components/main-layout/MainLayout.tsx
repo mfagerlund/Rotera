@@ -32,6 +32,10 @@ import { VisibilityPanel } from '../VisibilityPanel'
 import { VisibilitySettings, LockSettings, DEFAULT_VIEW_SETTINGS } from '../../types/visibility'
 import { ToolContext, SELECT_TOOL_CONTEXT, LINE_TOOL_CONTEXT, VANISHING_LINE_TOOL_CONTEXT, LOOP_TOOL_CONTEXT } from '../../types/tool-context'
 import { ProjectDB } from '../../services/project-db'
+import { getIsDirty, markClean, markDirty } from '../../store/project-store'
+import { reaction } from 'mobx'
+import { Serialization } from '../../entities/Serialization'
+import { useAutoSave } from '../../hooks/useAutoSave'
 
 import '../../styles/enhanced-workspace.css'
 import '../../styles/tools.css'
@@ -77,10 +81,41 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
     removeDuplicateImagePoints
   } = useDomainOperations(project, setProject)
 
+  // Dirty state tracking
+  const [isDirty, setIsDirtyState] = useState(false)
+
+  // Check dirty state periodically
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIsDirtyState(getIsDirty())
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Task 6: Mark dirty on changes using MobX reaction
+  useEffect(() => {
+    if (!project) return
+
+    const dispose = reaction(
+      () => Serialization.serialize(project),
+      () => {
+        markDirty()
+      },
+      { fireImmediately: false }
+    )
+
+    return () => dispose()
+  }, [project])
+
+  // Task 4: Auto-save
+  useAutoSave(project)
+
   const handleSaveProject = useCallback(async () => {
     if (!project) return
     try {
       await ProjectDB.saveProject(project)
+      markClean()
+      setIsDirtyState(false)
       console.log('Project saved to IndexedDB')
     } catch (error) {
       console.error('Failed to save project:', error)
@@ -545,6 +580,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
               confirm={confirm}
               onReturnToBrowser={onReturnToBrowser}
               onSaveProject={handleSaveProject}
+              isDirty={isDirty}
             />
 
             <div className="content-area">

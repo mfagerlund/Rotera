@@ -51,6 +51,9 @@ interface MainToolbarProps {
   // Navigation
   onReturnToBrowser?: () => void
   onSaveProject?: () => Promise<void>
+
+  // Dirty state
+  isDirty?: boolean
 }
 
 export const MainToolbar: React.FC<MainToolbarProps> = ({
@@ -73,7 +76,8 @@ export const MainToolbar: React.FC<MainToolbarProps> = ({
   onVisualFeedbackChange,
   confirm,
   onReturnToBrowser,
-  onSaveProject
+  onSaveProject,
+  isDirty
 }) => {
   const [excludeImageUrls, setExcludeImageUrls] = React.useState(true)
 
@@ -196,7 +200,7 @@ export const MainToolbar: React.FC<MainToolbarProps> = ({
               }}
               title="Click to rename project"
             >
-              {project.name}
+              {project.name}{isDirty && <span className="dirty-indicator">*</span>}
               <FontAwesomeIcon icon={faPencil} className="edit-icon" />
             </button>
           )}

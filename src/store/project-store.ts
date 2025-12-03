@@ -90,3 +90,24 @@ export function clearProject(): void {
 export function getProjectStats() {
   return project.getStats()
 }
+
+// Dirty state tracking
+let isDirty = false
+let lastSaveTime: Date | null = null
+
+export function markDirty(): void {
+  isDirty = true
+}
+
+export function markClean(): void {
+  isDirty = false
+  lastSaveTime = new Date()
+}
+
+export function getIsDirty(): boolean {
+  return isDirty
+}
+
+export function getLastSaveTime(): Date | null {
+  return lastSaveTime
+}
