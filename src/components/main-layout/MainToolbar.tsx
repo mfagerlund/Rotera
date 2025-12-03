@@ -148,7 +148,7 @@ export const MainToolbar: React.FC<MainToolbarProps> = ({
 
   const handleReturnToBrowser = async () => {
     if (!onReturnToBrowser) return
-    if (onSaveProject) {
+    if (isDirty && onSaveProject) {
       const shouldSave = await confirm('Save project before closing?')
       if (shouldSave) {
         await handleSave()

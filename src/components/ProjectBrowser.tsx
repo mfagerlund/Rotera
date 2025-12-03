@@ -12,10 +12,12 @@ import {
   faArrowUp,
   faSpinner,
   faCamera,
-  faCircle
+  faCircle,
+  faArrowRight
 } from '@fortawesome/free-solid-svg-icons'
 import { ProjectDB, ProjectSummary, Folder } from '../services/project-db'
 import { Project } from '../entities/project'
+import { useConfirm } from './ConfirmDialog'
 
 interface ProjectBrowserProps {
   onOpenProject: (project: Project) => void
@@ -26,6 +28,7 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
   onOpenProject,
   onCreateProject
 }) => {
+  const { confirm, dialog } = useConfirm()
   const [folders, setFolders] = useState<Folder[]>([])
   const [projects, setProjects] = useState<ProjectSummary[]>([])
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null)
@@ -35,16 +38,22 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
   const [editingItem, setEditingItem] = useState<{ type: 'folder' | 'project'; id: string; name: string } | null>(null)
   const [newFolderName, setNewFolderName] = useState('')
   const [isCreatingFolder, setIsCreatingFolder] = useState(false)
+  const [draggedProject, setDraggedProject] = useState<ProjectSummary | null>(null)
+  const [dragOverFolderId, setDragOverFolderId] = useState<string | null | 'root'>(null)
+  const [moveModalProject, setMoveModalProject] = useState<ProjectSummary | null>(null)
+  const [allFolders, setAllFolders] = useState<Folder[]>([])
 
   const loadContents = useCallback(async () => {
     setIsLoading(true)
     try {
-      const [loadedFolders, loadedProjects] = await Promise.all([
+      const [loadedFolders, loadedProjects, loadedAllFolders] = await Promise.all([
         ProjectDB.listFolders(currentFolderId),
-        ProjectDB.listProjects(currentFolderId)
+        ProjectDB.listProjects(currentFolderId),
+        ProjectDB.listAllFolders()
       ])
       setFolders(loadedFolders.sort((a, b) => a.name.localeCompare(b.name)))
       setProjects(loadedProjects.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()))
+      setAllFolders(loadedAllFolders)
     } catch (error) {
       console.error('Failed to load contents:', error)
     } finally {
@@ -138,7 +147,8 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
   }
 
   const handleDeleteFolder = async (folder: Folder) => {
-    if (!confirm(`Delete folder "${folder.name}"? This cannot be undone.`)) return
+    const shouldDelete = await confirm(`Delete folder "${folder.name}"?`, { variant: 'danger' })
+    if (!shouldDelete) return
 
     try {
       await ProjectDB.deleteFolder(folder.id)
@@ -149,7 +159,8 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
   }
 
   const handleDeleteProject = async (project: ProjectSummary) => {
-    if (!confirm(`Delete project "${project.name}"? This cannot be undone.`)) return
+    const shouldDelete = await confirm(`Delete project "${project.name}"?`, { variant: 'danger' })
+    if (!shouldDelete) return
 
     try {
       await ProjectDB.deleteProject(project.id)
@@ -157,6 +168,62 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
     } catch (error) {
       console.error('Failed to delete project:', error)
     }
+  }
+
+  const handleMoveProject = async (projectId: string, targetFolderId: string | null) => {
+    try {
+      await ProjectDB.moveProject(projectId, targetFolderId)
+      loadContents()
+      setMoveModalProject(null)
+    } catch (error) {
+      console.error('Failed to move project:', error)
+    }
+  }
+
+  const handleDragStart = (e: React.DragEvent, project: ProjectSummary) => {
+    setDraggedProject(project)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', project.id)
+  }
+
+  const handleDragEnd = () => {
+    setDraggedProject(null)
+    setDragOverFolderId(null)
+  }
+
+  const handleDragOver = (e: React.DragEvent, folderId: string | null | 'root') => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDragOverFolderId(folderId)
+  }
+
+  const handleDragLeave = () => {
+    setDragOverFolderId(null)
+  }
+
+  const handleDrop = async (e: React.DragEvent, targetFolderId: string | null) => {
+    e.preventDefault()
+    if (draggedProject) {
+      await handleMoveProject(draggedProject.id, targetFolderId)
+    }
+    setDraggedProject(null)
+    setDragOverFolderId(null)
+  }
+
+  const buildFolderPath = (folderId: string | null): string => {
+    if (!folderId) return 'Root'
+    const parts: string[] = []
+    let current = folderId
+    while (current) {
+      const folder = allFolders.find(f => f.id === current)
+      if (folder) {
+        parts.unshift(folder.name)
+        current = folder.parentId!
+      } else {
+        break
+      }
+    }
+    return parts.length > 0 ? parts.join(' / ') : 'Root'
   }
 
   const formatDate = (date: Date) => {
@@ -197,8 +264,11 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
 
       <nav className="project-browser__breadcrumb">
         <button
-          className="project-browser__breadcrumb-item"
+          className={`project-browser__breadcrumb-item ${dragOverFolderId === 'root' ? 'project-browser__breadcrumb-item--drag-over' : ''}`}
           onClick={() => setCurrentFolderId(null)}
+          onDragOver={e => handleDragOver(e, 'root')}
+          onDragLeave={handleDragLeave}
+          onDrop={e => handleDrop(e, null)}
         >
           Projects
         </button>
@@ -260,11 +330,16 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
             {folders.map(folder => (
               <div
                 key={folder.id}
-                className="project-browser__item project-browser__item--folder"
-                onDoubleClick={() => handleOpenFolder(folder.id)}
+                className={`project-browser__item project-browser__item--folder ${
+                  dragOverFolderId === folder.id ? 'project-browser__item--drag-over' : ''
+                }`}
+                onClick={() => !editingItem && handleOpenFolder(folder.id)}
+                onDragOver={e => handleDragOver(e, folder.id)}
+                onDragLeave={handleDragLeave}
+                onDrop={e => handleDrop(e, folder.id)}
               >
                 <FontAwesomeIcon
-                  icon={faFolder}
+                  icon={dragOverFolderId === folder.id ? faFolderOpen : faFolder}
                   className="project-browser__item-icon project-browser__item-icon--folder"
                 />
                 {editingItem?.type === 'folder' && editingItem.id === folder.id ? (
@@ -311,13 +386,24 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
                 key={project.id}
                 className={`project-browser__item project-browser__item--project ${
                   loadingProjectId === project.id ? 'project-browser__item--loading' : ''
-                }`}
-                onDoubleClick={() => handleOpenProject(project)}
+                } ${draggedProject?.id === project.id ? 'project-browser__item--dragging' : ''}`}
+                draggable
+                onDragStart={e => handleDragStart(e, project)}
+                onDragEnd={handleDragEnd}
+                onClick={() => !editingItem && handleOpenProject(project)}
               >
-                <FontAwesomeIcon
-                  icon={faFile}
-                  className="project-browser__item-icon project-browser__item-icon--project"
-                />
+                {project.thumbnailUrl ? (
+                  <img
+                    src={project.thumbnailUrl}
+                    alt=""
+                    className="project-browser__item-thumbnail"
+                  />
+                ) : (
+                  <FontAwesomeIcon
+                    icon={faFile}
+                    className="project-browser__item-icon project-browser__item-icon--project"
+                  />
+                )}
                 {editingItem?.type === 'project' && editingItem.id === project.id ? (
                   <input
                     type="text"
@@ -348,6 +434,15 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
                     <FontAwesomeIcon icon={faSpinner} spin />
                   ) : (
                     <>
+                      <button
+                        title="Move to folder..."
+                        onClick={e => {
+                          e.stopPropagation()
+                          setMoveModalProject(project)
+                        }}
+                      >
+                        <FontAwesomeIcon icon={faArrowRight} />
+                      </button>
                       <button
                         title="Rename"
                         onClick={e => {
@@ -393,6 +488,39 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
           </>
         )}
       </div>
+
+      {moveModalProject && (
+        <div className="project-browser__modal-overlay" onClick={() => setMoveModalProject(null)}>
+          <div className="project-browser__modal" onClick={e => e.stopPropagation()}>
+            <h3>Move "{moveModalProject.name}" to...</h3>
+            <div className="project-browser__modal-folders">
+              <button
+                className={`project-browser__modal-folder ${moveModalProject.folderId === null ? 'project-browser__modal-folder--current' : ''}`}
+                onClick={() => handleMoveProject(moveModalProject.id, null)}
+                disabled={moveModalProject.folderId === null}
+              >
+                <FontAwesomeIcon icon={faFolder} /> Root
+                {moveModalProject.folderId === null && <span className="project-browser__modal-current">(current)</span>}
+              </button>
+              {allFolders.map(folder => (
+                <button
+                  key={folder.id}
+                  className={`project-browser__modal-folder ${moveModalProject.folderId === folder.id ? 'project-browser__modal-folder--current' : ''}`}
+                  onClick={() => handleMoveProject(moveModalProject.id, folder.id)}
+                  disabled={moveModalProject.folderId === folder.id}
+                >
+                  <FontAwesomeIcon icon={faFolder} /> {buildFolderPath(folder.id)}
+                  {moveModalProject.folderId === folder.id && <span className="project-browser__modal-current">(current)</span>}
+                </button>
+              ))}
+            </div>
+            <div className="project-browser__modal-actions">
+              <button onClick={() => setMoveModalProject(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {dialog}
     </div>
   )
 })

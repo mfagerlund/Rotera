@@ -106,19 +106,59 @@ async function blobToDataUrl(blob: Blob): Promise<string> {
   })
 }
 
+async function createThumbnail(imageUrl: string, maxSize: number = 120): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        reject(new Error('Could not get canvas context'))
+        return
+      }
+
+      let width = img.width
+      let height = img.height
+
+      if (width > height) {
+        if (width > maxSize) {
+          height = (height * maxSize) / width
+          width = maxSize
+        }
+      } else {
+        if (height > maxSize) {
+          width = (width * maxSize) / height
+          height = maxSize
+        }
+      }
+
+      canvas.width = width
+      canvas.height = height
+      ctx.drawImage(img, 0, 0, width, height)
+
+      resolve(canvas.toDataURL('image/jpeg', 0.7))
+    }
+    img.onerror = () => reject(new Error('Failed to load image'))
+    img.src = imageUrl
+  })
+}
+
 export const ProjectDB = {
   async listProjects(folderId: string | null = null): Promise<ProjectSummary[]> {
     const db = await openDatabase()
+    console.log('[ProjectDB.listProjects] Listing projects in folder:', folderId)
     return new Promise((resolve, reject) => {
       const tx = db.transaction(PROJECTS_STORE, 'readonly')
       const store = tx.objectStore(PROJECTS_STORE)
-      const index = store.index('folderId')
-      const request = index.getAll(folderId)
+      const request = store.getAll()
 
       request.onerror = () => reject(request.error)
       request.onsuccess = () => {
-        const projects = request.result as StoredProject[]
-        resolve(projects.map(p => ({
+        const allProjects = request.result as StoredProject[]
+        console.log('[ProjectDB.listProjects] All projects in DB:', allProjects.length)
+        const filtered = allProjects.filter(p => p.folderId === folderId)
+        console.log('[ProjectDB.listProjects] Filtered for folderId', folderId, ':', filtered.length)
+        resolve(filtered.map(p => ({
           id: p.id,
           name: p.name,
           folderId: p.folderId,
@@ -205,9 +245,12 @@ export const ProjectDB = {
 
   async saveProject(project: Project, folderId: string | null = null): Promise<string> {
     const db = await openDatabase()
+    console.log('[ProjectDB.saveProject] Saving project:', project.name, 'to folder:', folderId)
 
     const existingId = (project as any)._dbId as string | undefined
+    console.log('[ProjectDB.saveProject] Existing _dbId:', existingId)
     const id = existingId || generateId()
+    console.log('[ProjectDB.saveProject] Using id:', id)
     const now = new Date()
 
     const viewpointsArray = Array.from(project.viewpoints)
@@ -243,7 +286,12 @@ export const ProjectDB = {
 
     let thumbnailUrl: string | undefined
     if (viewpointsArray.length > 0 && viewpointsArray[0].url) {
-      thumbnailUrl = viewpointsArray[0].url.substring(0, 200)
+      try {
+        thumbnailUrl = await createThumbnail(viewpointsArray[0].url)
+        console.log('[ProjectDB.saveProject] Created thumbnail, size:', thumbnailUrl.length)
+      } catch (err) {
+        console.warn('[ProjectDB.saveProject] Failed to create thumbnail:', err)
+      }
     }
 
     const storedProject: StoredProject = {
@@ -291,6 +339,7 @@ export const ProjectDB = {
 
     const projectWithDbId = project as any
     projectWithDbId._dbId = id
+    console.log('[ProjectDB.saveProject] Save complete, assigned _dbId:', id)
 
     return id
   },
@@ -386,6 +435,7 @@ export const ProjectDB = {
   async createFolder(name: string, parentId: string | null = null): Promise<string> {
     const db = await openDatabase()
     const id = generateId()
+    console.log('[ProjectDB.createFolder] Creating folder:', name, 'in parent:', parentId, 'with id:', id)
 
     const folder: Folder = {
       id,
@@ -400,7 +450,10 @@ export const ProjectDB = {
       store.add(folder)
 
       tx.onerror = () => reject(tx.error)
-      tx.oncomplete = () => resolve()
+      tx.oncomplete = () => {
+        console.log('[ProjectDB.createFolder] Folder created successfully:', id)
+        resolve()
+      }
     })
 
     return id
@@ -408,16 +461,20 @@ export const ProjectDB = {
 
   async listFolders(parentId: string | null = null): Promise<Folder[]> {
     const db = await openDatabase()
+    console.log('[ProjectDB.listFolders] Listing folders in parent:', parentId)
 
     return new Promise((resolve, reject) => {
       const tx = db.transaction(FOLDERS_STORE, 'readonly')
       const store = tx.objectStore(FOLDERS_STORE)
-      const index = store.index('parentId')
-      const request = index.getAll(parentId)
+      const request = store.getAll()
 
       request.onerror = () => reject(request.error)
       request.onsuccess = () => {
-        resolve(request.result.map((f: Folder) => ({
+        const allFolders = request.result as Folder[]
+        console.log('[ProjectDB.listFolders] All folders in DB:', allFolders.length)
+        const filtered = allFolders.filter(f => f.parentId === parentId)
+        console.log('[ProjectDB.listFolders] Filtered for parentId', parentId, ':', filtered.length)
+        resolve(filtered.map((f: Folder) => ({
           ...f,
           createdAt: new Date(f.createdAt)
         })))

@@ -215,6 +215,14 @@
   color: #4a9eff;
 }
 
+.project-browser__item-thumbnail {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
 .project-browser__item-name {
   flex: 1;
   font-size: 15px;
@@ -284,4 +292,114 @@
 
 .project-browser__item input:focus {
   outline: none;
+}
+
+.project-browser__item--drag-over {
+  background: #1a4d2e !important;
+  border: 2px dashed #4a9eff;
+}
+
+.project-browser__item--dragging {
+  opacity: 0.5;
+}
+
+.project-browser__breadcrumb-item--drag-over {
+  background: #1a4d2e !important;
+  border: 2px dashed #4a9eff;
+}
+
+.project-browser__modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.project-browser__modal {
+  background: #242424;
+  border-radius: 12px;
+  padding: 24px;
+  min-width: 400px;
+  max-width: 500px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.project-browser__modal h3 {
+  margin: 0 0 16px 0;
+  color: #fff;
+  font-size: 18px;
+}
+
+.project-browser__modal-folders {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 400px;
+  overflow-y: auto;
+  margin-bottom: 16px;
+}
+
+.project-browser__modal-folder {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 1px solid #333;
+  border-radius: 6px;
+  background: #1a1a1a;
+  color: #e0e0e0;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.project-browser__modal-folder:hover:not(:disabled) {
+  background: #2a2a2a;
+  border-color: #4a9eff;
+}
+
+.project-browser__modal-folder:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.project-browser__modal-folder--current {
+  border-color: #4a9eff;
+  background: #1a3d5c;
+}
+
+.project-browser__modal-current {
+  margin-left: auto;
+  font-size: 12px;
+  color: #888;
+}
+
+.project-browser__modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.project-browser__modal-actions button {
+  padding: 10px 20px;
+  border: 1px solid #444;
+  border-radius: 6px;
+  background: #2a2a2a;
+  color: #e0e0e0;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.project-browser__modal-actions button:hover {
+  background: #333;
+  border-color: #555;
 }

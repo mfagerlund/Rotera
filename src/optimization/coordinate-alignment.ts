@@ -128,8 +128,10 @@ export function alignCamerasToLockedPoints(
   console.log(`  Triangulated ${wp0.name}: [${triangulated0.map(x => x.toFixed(3)).join(', ')}]`);
   console.log(`  Triangulated ${wp1.name}: [${triangulated1.map(x => x.toFixed(3)).join(', ')}]`);
 
-  const target0 = [wp0.lockedXyz[0]!, wp0.lockedXyz[1]!, wp0.lockedXyz[2]!];
-  const target1 = [wp1.lockedXyz[0]!, wp1.lockedXyz[1]!, wp1.lockedXyz[2]!];
+  const effective0 = wp0.getEffectiveXyz();
+  const target0 = [effective0[0]!, effective0[1]!, effective0[2]!];
+  const effective1 = wp1.getEffectiveXyz();
+  const target1 = [effective1[0]!, effective1[1]!, effective1[2]!];
 
   console.log(`  Target ${wp0.name}: [${target0.map(x => x.toFixed(3)).join(', ')}]`);
   console.log(`  Target ${wp1.name}: [${target1.map(x => x.toFixed(3)).join(', ')}]`);
@@ -220,7 +222,7 @@ export function alignCamerasToLockedPoints(
         rotatedXyz[2] + translation[2]
       ];
 
-      if (!wp.isFullyLocked()) {
+      if (!wp.isFullyConstrained()) {
         wp.optimizedXyz = newXyz;
       }
     }
@@ -228,7 +230,8 @@ export function alignCamerasToLockedPoints(
 
   console.log('[alignCamerasToLockedPoints] Setting locked points to their target positions...');
   for (const wp of lockedPoints) {
-    wp.optimizedXyz = [wp.lockedXyz[0]!, wp.lockedXyz[1]!, wp.lockedXyz[2]!];
+    const wpEffective = wp.getEffectiveXyz();
+    wp.optimizedXyz = [wpEffective[0]!, wpEffective[1]!, wpEffective[2]!];
     console.log(`  ${wp.name}: [${wp.optimizedXyz.join(', ')}]`);
   }
 

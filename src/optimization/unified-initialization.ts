@@ -50,18 +50,16 @@ function step1_setLockedPoints(
   initialized: Set<WorldPoint>,
   verbose: boolean
 ): void {
-  let lockedCount = 0
+  let constrainedCount = 0
   let presetCount = 0
 
   for (const point of points) {
-    if (point.isFullyLocked()) {
-      point.optimizedXyz = [
-        point.lockedXyz[0]!,
-        point.lockedXyz[1]!,
-        point.lockedXyz[2]!
-      ]
+    // Use isFullyConstrained() to include both locked AND inferred coordinates
+    if (point.isFullyConstrained()) {
+      const effective = point.getEffectiveXyz()
+      point.optimizedXyz = [effective[0]!, effective[1]!, effective[2]!]
       initialized.add(point)
-      lockedCount++
+      constrainedCount++
     } else if (point.optimizedXyz !== undefined) {
       // Point already has optimizedXyz set (e.g., from inferred coordinates)
       // Mark as initialized to prevent overwriting with incorrect values
@@ -71,7 +69,7 @@ function step1_setLockedPoints(
   }
 
   if (verbose) {
-    log(`[Step 1] Set ${lockedCount} locked points, preserved ${presetCount} pre-initialized points`)
+    log(`[Step 1] Set ${constrainedCount} constrained points (locked or inferred), preserved ${presetCount} pre-initialized points`)
   }
 }
 

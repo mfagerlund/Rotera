@@ -157,3 +157,7 @@ function createConstraint(lineId: string, target: number) { ... }  // ❌ NO ID 
 See architectural-rules.md for complete details.
 - Do NOT use any to solve your problems. Proper casting is *important*!
 - DON'T ADD FUCKING WRAPPER FUCKING FUNCTIONS TO HANDLE ID BASED CALLS, FIX THE ISSUE BY CALLING USING FULL ENTITIES.
+
+## Confirm Dialog
+
+Use `useConfirm` from `ConfirmDialog.tsx`, NOT `window.confirm()`. It auto-positions near the clicked button. Remember to render `{dialog}` in JSX.
