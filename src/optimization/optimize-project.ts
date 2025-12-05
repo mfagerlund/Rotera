@@ -1,7 +1,7 @@
 import { Project } from '../entities/project';
 import { ConstraintSystem, SolverResult, SolverOptions } from './constraint-system';
 import { initializeWorldPoints } from './entity-initialization';
-import { initializeCameraWithPnP } from './pnp';
+import { initializeCameraWithPnP, PnPInitializationResult } from './pnp';
 import { Viewpoint } from '../entities/viewpoint';
 import { WorldPoint } from '../entities/world-point';
 import { ImagePoint } from '../entities/imagePoint';
@@ -58,11 +58,10 @@ export function resetOptimizationState(project: Project) {
   }
 
   // Re-run inference propagation to rebuild inferredXyz from constraints
-  // Note: MobX reactions will trigger this automatically when we modify entities,
-  // but we call it explicitly here to ensure it runs before optimization starts
-  if (typeof (project as any).propagateInferences === 'function') {
-    (project as any).propagateInferences();
-  }
+  // CRITICAL: This MUST run synchronously before optimization starts
+  // Do NOT rely on MobX reactions - they may not have executed yet
+  project.propagateInferences();
+  log('[resetOptimizationState] Inference propagation complete');
 
   log('[resetOptimizationState] Done - all optimization state cleared');
 }
@@ -131,6 +130,7 @@ export interface OptimizeProjectOptions extends Omit<SolverOptions, 'optimizeCam
 
 export interface OptimizeProjectResult extends SolverResult {
   camerasInitialized?: string[];
+  camerasExcluded?: string[];
   outliers?: OutlierInfo[];
   medianReprojectionError?: number;
 }
@@ -139,6 +139,16 @@ export function optimizeProject(
   project: Project,
   options: OptimizeProjectOptions = {}
 ): OptimizeProjectResult {
+  // GUARD: Ensure we have an actual Project instance, not a plain object
+  // This catches the bug where someone does `{ ...project }` or creates a fake project object
+  if (typeof project.propagateInferences !== 'function') {
+    throw new Error(
+      'optimizeProject received a plain object instead of a Project instance. ' +
+      'DO NOT use spread operator on Project or create fake project objects. ' +
+      'Pass the actual Project instance from the store.'
+    );
+  }
+
   const {
     autoInitializeCameras = true,
     autoInitializeWorldPoints = true,
@@ -174,6 +184,8 @@ export function optimizeProject(
   });
 
   const camerasInitialized: string[] = [];
+  // Track cameras initialized via "late PnP" (using triangulated points) - these are vulnerable to degenerate solutions
+  const camerasInitializedViaLatePnP = new Set<Viewpoint>();
 
   if (autoInitializeCameras || autoInitializeWorldPoints) {
     log('[optimizeProject] Running initialization pipeline...');
@@ -256,10 +268,16 @@ export function optimizeProject(
 
           if (vpLockedPoints.length >= 3) {
             log(`[optimizeProject] Initializing ${vpConcrete.name} with PnP (${vpLockedPoints.length} constrained points visible)...`);
-            const success = initializeCameraWithPnP(vpConcrete, worldPointSet);
-            if (success) {
+            const pnpResult = initializeCameraWithPnP(vpConcrete, worldPointSet);
+            if (pnpResult.success && pnpResult.reliable) {
               log(`[optimizeProject] ${vpConcrete.name} initialized: pos=[${vpConcrete.position.map(x => x.toFixed(3)).join(', ')}]`);
               camerasInitialized.push(vpConcrete.name);
+            } else if (pnpResult.success && !pnpResult.reliable) {
+              log(`[optimizeProject] ${vpConcrete.name} PnP result unreliable: ${pnpResult.reason}`);
+              log(`[optimizeProject] ${vpConcrete.name} will be excluded from optimization`);
+              // Reset the camera to mark it as not initialized
+              vpConcrete.position = [0, 0, 0];
+              vpConcrete.rotation = [1, 0, 0, 0];
             } else {
               const errorMsg = `Cannot initialize ${vpConcrete.name}: PnP failed with ${vpLockedPoints.length} locked points. Check that locked points have valid coordinates and are visible in the image.`;
               log(`[optimizeProject] ${errorMsg}`);
@@ -407,11 +425,18 @@ export function optimizeProject(
       );
 
       if (hasImagePoints && hasTriangulatedPoints) {
-        log(`[optimizeProject] Initializing camera ${vpConcrete.name} with PnP...`);
-        const success = initializeCameraWithPnP(vpConcrete, worldPointSet);
-        if (success) {
+        log(`[optimizeProject] Initializing camera ${vpConcrete.name} with PnP (using triangulated points)...`);
+        const pnpResult = initializeCameraWithPnP(vpConcrete, worldPointSet);
+        if (pnpResult.success && pnpResult.reliable) {
           camerasInitialized.push(vpConcrete.name);
-          log(`[optimizeProject] Camera ${vpConcrete.name} initialized successfully`);
+          camerasInitializedViaLatePnP.add(vpConcrete); // Track for potential re-run
+          log(`[optimizeProject] Camera ${vpConcrete.name} initialized successfully (late PnP)`);
+        } else if (pnpResult.success && !pnpResult.reliable) {
+          log(`[optimizeProject] PnP result unreliable for ${vpConcrete.name}: ${pnpResult.reason}`);
+          log(`[optimizeProject] Camera ${vpConcrete.name} will be excluded from optimization`);
+          // Reset the camera to mark it as not initialized
+          vpConcrete.position = [0, 0, 0];
+          vpConcrete.rotation = [1, 0, 0, 0];
         } else {
           log(`[optimizeProject] PnP initialization failed for ${vpConcrete.name}`);
         }
@@ -443,11 +468,33 @@ export function optimizeProject(
   project.lines.forEach(l => system.addLine(l));
   log(`  Added ${project.lines.size} lines`);
 
-  project.viewpoints.forEach(v => system.addCamera(v as Viewpoint));
-  log(`  Added ${project.viewpoints.size} cameras`);
+  // Note: We do NOT exclude cameras based on position anymore.
+  // Cameras that failed PnP initialization during this run will be detected
+  // after optimization via outlier detection (all image points are outliers).
+  // Pre-existing cameras (loaded from file) may legitimately start at [0,0,0].
+  const excludedCameras = new Set<Viewpoint>();
+  const excludedCameraNames: string[] = [];
+  let addedCameras = 0;
+  project.viewpoints.forEach(v => {
+    const vp = v as Viewpoint;
+    system.addCamera(vp);
+    addedCameras++;
+  });
+  log(`  Added ${addedCameras}/${project.viewpoints.size} cameras`);
 
-  project.imagePoints.forEach(ip => system.addImagePoint(ip as ImagePoint));
-  log(`  Added ${project.imagePoints.size} image points`);
+  // Only add image points for cameras that are included in the optimization
+  let addedImagePoints = 0;
+  let skippedImagePoints = 0;
+  project.imagePoints.forEach(ip => {
+    const ipConcrete = ip as ImagePoint;
+    if (!excludedCameras.has(ipConcrete.viewpoint as Viewpoint)) {
+      system.addImagePoint(ipConcrete);
+      addedImagePoints++;
+    } else {
+      skippedImagePoints++;
+    }
+  });
+  log(`  Added ${addedImagePoints}/${project.imagePoints.size} image points (skipped ${skippedImagePoints} for excluded cameras)`);
 
   project.constraints.forEach(c => system.addConstraint(c));
   log(`  Added ${project.constraints.size} constraints`);
@@ -486,6 +533,129 @@ export function optimizeProject(
         log(`  - ${outlier.worldPointName} @ ${outlier.viewpointName}: ${outlier.error.toFixed(1)} px (median: ${medianReprojectionError.toFixed(1)} px)`);
         outlier.imagePoint.isOutlier = true;
       }
+
+      // Check for cameras where ALL image points are outliers - this indicates a failed PnP initialization
+      // IMPORTANT: Only consider cameras that were initialized via "late PnP" (using triangulated points)
+      // Cameras initialized via Essential Matrix or Vanishing Points should NOT be excluded
+      const outliersByCamera = new Map<Viewpoint, number>();
+      for (const outlier of outliers) {
+        const vp = outlier.imagePoint.viewpoint as Viewpoint;
+        outliersByCamera.set(vp, (outliersByCamera.get(vp) || 0) + 1);
+      }
+
+      const camerasToExclude: Viewpoint[] = [];
+      for (const [vp, outlierCount] of outliersByCamera) {
+        // Only check cameras that:
+        // 1. Were initialized via late PnP (vulnerable to degenerate solutions)
+        // 2. Are not already excluded
+        // 3. Have image points
+        if (camerasInitializedViaLatePnP.has(vp) && !excludedCameras.has(vp) && vp.imagePoints) {
+          const totalImagePoints = Array.from(vp.imagePoints).filter(ip => !excludedCameras.has(ip.viewpoint as Viewpoint)).length;
+          if (outlierCount === totalImagePoints && totalImagePoints > 0) {
+            log(`\nCamera ${vp.name} has ${outlierCount}/${totalImagePoints} outlier image points (100%) - likely failed late PnP initialization`);
+            camerasToExclude.push(vp);
+          }
+        }
+      }
+
+      if (camerasToExclude.length > 0) {
+        log(`\nRe-running optimization without problematic camera(s): ${camerasToExclude.map(c => c.name).join(', ')}`);
+
+        // Add to excluded cameras
+        for (const vp of camerasToExclude) {
+          excludedCameras.add(vp);
+          excludedCameraNames.push(vp.name);
+        }
+
+        // CRITICAL: Reset world points - they were corrupted by the failed camera
+        // We need to re-triangulate using only the good cameras
+        log('\n=== RESETTING WORLD POINTS FOR RE-INITIALIZATION ===');
+        for (const wp of project.worldPoints) {
+          const point = wp as WorldPoint;
+          // Keep locked coordinates, but clear triangulated positions
+          if (!point.isFullyConstrained()) {
+            point.optimizedXyz = undefined;
+          }
+        }
+
+        // Reset excluded cameras to [0,0,0] so they're clearly marked as uninitialized
+        for (const vp of camerasToExclude) {
+          vp.position = [0, 0, 0];
+          vp.rotation = [1, 0, 0, 0];
+        }
+
+        // Re-triangulate world points using only good cameras
+        const goodCameras = Array.from(project.viewpoints)
+          .filter(v => !excludedCameras.has(v as Viewpoint)) as Viewpoint[];
+
+        log(`Re-triangulating world points using ${goodCameras.length} camera(s): ${goodCameras.map(c => c.name).join(', ')}`);
+
+        // Build a set of initialized viewpoints (only the good ones)
+        const initializedViewpointSet = new Set<Viewpoint>(goodCameras);
+
+        // Re-run unified initialization with only good cameras
+        const pointArray = Array.from(project.worldPoints);
+        const lineArray = Array.from(project.lines);
+        const constraintArray = Array.from(project.constraints);
+
+        unifiedInitialize(pointArray, lineArray, constraintArray, {
+          sceneScale: 10.0,
+          verbose: false,
+          initializedViewpoints: initializedViewpointSet
+        });
+
+        // Re-create constraint system without the excluded cameras
+        const system2 = new ConstraintSystem({
+          tolerance,
+          maxIterations,
+          damping,
+          verbose,
+          optimizeCameraIntrinsics: shouldOptimizeIntrinsics,
+        });
+
+        project.worldPoints.forEach(p => system2.addPoint(p as WorldPoint));
+        project.lines.forEach(l => system2.addLine(l));
+
+        project.viewpoints.forEach(v => {
+          const vp = v as Viewpoint;
+          if (!excludedCameras.has(vp)) {
+            system2.addCamera(vp);
+          }
+        });
+
+        project.imagePoints.forEach(ip => {
+          const ipConcrete = ip as ImagePoint;
+          if (!excludedCameras.has(ipConcrete.viewpoint as Viewpoint)) {
+            system2.addImagePoint(ipConcrete);
+          }
+        });
+
+        project.constraints.forEach(c => system2.addConstraint(c));
+
+        const result2 = system2.solve();
+        log('\n=== RE-RUN OPTIMIZATION COMPLETE ===');
+        log(`  Converged: ${result2.converged}`);
+        log(`  Iterations: ${result2.iterations}`);
+        log(`  Residual: ${result2.residual.toFixed(6)}`);
+
+        // Update the result to use the new optimization result
+        result.converged = result2.converged;
+        result.iterations = result2.iterations;
+        result.residual = result2.residual;
+        result.error = result2.error;
+
+        // Re-run outlier detection with the updated solution
+        const detection2 = detectOutliers(project, outlierThreshold);
+        outliers = detection2.outliers;
+        medianReprojectionError = detection2.medianError;
+
+        if (outliers.length > 0) {
+          for (const outlier of outliers) {
+            outlier.imagePoint.isOutlier = true;
+          }
+        }
+      }
+
       log('\nThese points may have incorrect manual clicks.');
       log('Consider reviewing or removing them.');
     } else {
@@ -496,6 +666,7 @@ export function optimizeProject(
   return {
     ...result,
     camerasInitialized: camerasInitialized.length > 0 ? camerasInitialized : undefined,
+    camerasExcluded: excludedCameraNames.length > 0 ? excludedCameraNames : undefined,
     outliers,
     medianReprojectionError,
   };

@@ -889,6 +889,13 @@ function matrixMultiply3x3(A: number[][], B: number[][]): number[][] {
   return result;
 }
 
+export interface PnPInitializationResult {
+  success: boolean;
+  reliable: boolean;
+  finalReprojectionError?: number;
+  reason?: string;
+}
+
 /**
  * Initialize an additional camera using iterative PnP optimization.
  *
@@ -898,11 +905,16 @@ function matrixMultiply3x3(A: number[][], B: number[][]): number[][] {
  * 3. Return reprojection error for diagnostics
  *
  * This approach is robust and leverages our existing optimization infrastructure.
+ *
+ * Returns:
+ * - success: true if pose was computed
+ * - reliable: true if the result appears reasonable (not a degenerate solution)
+ * - finalReprojectionError: the final reprojection error in pixels
  */
 export function initializeCameraWithPnP(
   viewpoint: IViewpoint,
   allWorldPoints: Set<IWorldPoint>
-): boolean {
+): PnPInitializationResult {
   const vpConcrete = viewpoint as Viewpoint;
 
   const visiblePoints: [number, number, number][] = [];
@@ -916,7 +928,7 @@ export function initializeCameraWithPnP(
 
   if (visiblePoints.length < 3) {
     log(`PnP: Camera ${vpConcrete.name} has only ${visiblePoints.length} points with optimizedXyz`);
-    return false;
+    return { success: false, reliable: false, reason: 'Not enough points with optimizedXyz' };
   }
 
   const centroid: [number, number, number] = [0, 0, 0];
@@ -981,7 +993,73 @@ export function initializeCameraWithPnP(
   log(`  Final reprojection error: ${finalError.toFixed(2)} px (${result.iterations} iterations)`);
   log(`  Position: [${vpConcrete.position.map(x => x.toFixed(3)).join(', ')}]`);
 
-  return true;
+  // Validate the result to detect degenerate solutions
+  // A degenerate solution typically has:
+  // 1. Camera drifted far from initial estimate (placed very far away)
+  // 2. Final error that's still too high to be useful
+  // 3. Points behind the camera
+
+  let reliable = true;
+  let reason: string | undefined;
+
+  // Check 1: Verify camera didn't drift too far from initial position estimate
+  // A degenerate solution often places the camera very far away where all points
+  // project to nearly the same location, achieving low reprojection error incorrectly.
+  const finalDx = vpConcrete.position[0] - centroid[0];
+  const finalDy = vpConcrete.position[1] - centroid[1];
+  const finalDz = vpConcrete.position[2] - centroid[2];
+  const finalDistFromCentroid = Math.sqrt(finalDx * finalDx + finalDy * finalDy + finalDz * finalDz);
+  const distanceRatio = finalDistFromCentroid / cameraDistance;
+
+  log(`  Final distance from centroid: ${finalDistFromCentroid.toFixed(3)} (ratio to initial: ${distanceRatio.toFixed(2)}x)`);
+
+  const maxDistanceRatio = 15.0; // Allow up to 15x the initial estimate (generous because heuristic is rough)
+  if (distanceRatio > maxDistanceRatio) {
+    reliable = false;
+    reason = `Camera drifted too far: ${finalDistFromCentroid.toFixed(1)} units (${distanceRatio.toFixed(1)}x initial estimate of ${cameraDistance.toFixed(1)})`;
+    log(`  WARNING: ${reason}`);
+
+    // Reset to initial position since the optimization diverged
+    vpConcrete.position = [centroid[0], centroid[1], centroid[2] - cameraDistance];
+    vpConcrete.rotation = [1, 0, 0, 0];
+    log(`  Resetting camera to initial position: [${vpConcrete.position.map(x => x.toFixed(3)).join(', ')}]`);
+  }
+
+  // Check 2: If final error is still very high, the result is unreliable
+  const maxAcceptableError = 50; // pixels
+  if (finalError > maxAcceptableError && reliable) {
+    reliable = false;
+    reason = `Final error too high: ${finalError.toFixed(1)}px > ${maxAcceptableError}px`;
+    log(`  WARNING: ${reason}`);
+  }
+
+  // Check 3: Verify that most points are in front of the camera
+  let pointsInFront = 0;
+  const R = quaternionToMatrix(vpConcrete.rotation);
+  for (const pt of visiblePoints) {
+    const rel = [
+      pt[0] - vpConcrete.position[0],
+      pt[1] - vpConcrete.position[1],
+      pt[2] - vpConcrete.position[2]
+    ];
+    const camZ = R[2][0] * rel[0] + R[2][1] * rel[1] + R[2][2] * rel[2];
+    if (camZ > 0) {
+      pointsInFront++;
+    }
+  }
+
+  if (pointsInFront < visiblePoints.length * 0.5 && reliable) {
+    reliable = false;
+    reason = `Only ${pointsInFront}/${visiblePoints.length} points in front of camera`;
+    log(`  WARNING: ${reason}`);
+  }
+
+  return {
+    success: true,
+    reliable,
+    finalReprojectionError: finalError,
+    reason
+  };
 }
 
 function computeReprojectionError(vp: Viewpoint): number {

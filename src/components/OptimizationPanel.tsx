@@ -225,15 +225,8 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
     setPnpResults([])
 
     try {
-      const pointEntities = Array.from(project.worldPoints.values())
-      const lineEntities = Array.from(project.lines.values())
-      const viewpointEntities = Array.from(project.viewpoints.values())
-
       const solverResult = await clientSolver.optimize(
-        pointEntities,
-        lineEntities,
-        viewpointEntities,
-        Array.from(project.constraints),
+        project,
         {
           maxIterations: settings.maxIterations,
           tolerance: settings.tolerance,
@@ -246,7 +239,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
         converged: solverResult.converged,
         error: solverResult.error,
         totalError: solverResult.residual,
-        pointAccuracy: solverResult.residual / Math.max(1, pointEntities.length),
+        pointAccuracy: solverResult.residual / Math.max(1, project.worldPoints.size),
         iterations: solverResult.iterations,
         outliers: solverResult.outliers || [],
         medianReprojectionError: solverResult.medianReprojectionError
@@ -407,41 +400,98 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
       )}
 
       <div className="optimization-controls">
-        {!isOptimizing ? (
-          <>
-            <button
-              className="btn-optimize"
-              onClick={handleOptimize}
-              disabled={!canOptimize()}
-            >
-              <FontAwesomeIcon icon={faBullseye} /> Optimize
-            </button>
-            <button
-              className="btn-settings"
-              onClick={() => setShowAdvanced(!showAdvanced)}
-            >
-              <FontAwesomeIcon icon={faGear} /> Settings
-            </button>
-            <button
-              className="btn-settings"
-              onClick={() => {
-                const logText = optimizationLogs.join('\n')
-                navigator.clipboard.writeText(logText)
-              }}
-              title="Copy optimization logs to clipboard"
-            >
-              <FontAwesomeIcon icon={faClipboard} />
-            </button>
-          </>
-        ) : (
-          <button
-            className="btn-stop"
-            onClick={handleStop}
-          >
-            <FontAwesomeIcon icon={faStop} /> Stop
-          </button>
-        )}
+        <button
+          className="btn-optimize"
+          onClick={handleOptimize}
+          disabled={!canOptimize() || isOptimizing}
+        >
+          <FontAwesomeIcon icon={faBullseye} /> Optimize
+        </button>
+        <button
+          className="btn-stop"
+          onClick={handleStop}
+          disabled={!isOptimizing}
+        >
+          <FontAwesomeIcon icon={faStop} /> Stop
+        </button>
+        <button
+          className="btn-settings"
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          disabled={isOptimizing}
+        >
+          <FontAwesomeIcon icon={faGear} /> Settings
+        </button>
+        <button
+          className="btn-settings"
+          onClick={() => {
+            const logText = optimizationLogs.join('\n')
+            navigator.clipboard.writeText(logText)
+          }}
+          title="Copy optimization logs to clipboard"
+          disabled={isOptimizing}
+        >
+          <FontAwesomeIcon icon={faClipboard} />
+        </button>
       </div>
+
+      {showAdvanced && (
+        <div className="optimization-settings">
+          <h4>Advanced Settings</h4>
+          <div className="setting-row">
+            <label>
+              <span>Max Iterations:</span>
+              <input
+                type="number"
+                min="1"
+                max="1000"
+                value={settings.maxIterations}
+                onChange={(e) => handleSettingChange('maxIterations', parseInt(e.target.value))}
+              />
+            </label>
+          </div>
+          <div className="setting-row">
+            <label>
+              <span>Tolerance:</span>
+              <input
+                type="number"
+                step="1e-9"
+                min="1e-12"
+                max="1e-3"
+                value={settings.tolerance}
+                onChange={(e) => handleSettingChange('tolerance', parseFloat(e.target.value))}
+              />
+            </label>
+          </div>
+          <div className="setting-row">
+            <label>
+              <span>Damping Factor:</span>
+              <input
+                type="number"
+                step="0.01"
+                min="0.001"
+                max="1"
+                value={settings.damping}
+                onChange={(e) => handleSettingChange('damping', parseFloat(e.target.value))}
+              />
+            </label>
+          </div>
+          <div className="setting-row">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={settings.verbose}
+                onChange={(e) => handleSettingChange('verbose', e.target.checked)}
+              />
+              <span>Verbose Output</span>
+            </label>
+          </div>
+          <div className="settings-actions">
+            <button className="btn-reset" onClick={resetToDefaults}>
+              Reset to Defaults
+            </button>
+          </div>
+        </div>
+      )}
 
       {pnpResults.length > 0 && (
         <div className="optimization-results success">
@@ -649,65 +699,6 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
               )}
             </div>
           )}
-        </div>
-      )}
-
-      {showAdvanced && (
-        <div className="optimization-settings">
-          <h4>Advanced Settings</h4>
-          <div className="setting-row">
-            <label>
-              <span>Max Iterations:</span>
-              <input
-                type="number"
-                min="1"
-                max="1000"
-                value={settings.maxIterations}
-                onChange={(e) => handleSettingChange('maxIterations', parseInt(e.target.value))}
-              />
-            </label>
-          </div>
-          <div className="setting-row">
-            <label>
-              <span>Tolerance:</span>
-              <input
-                type="number"
-                step="1e-9"
-                min="1e-12"
-                max="1e-3"
-                value={settings.tolerance}
-                onChange={(e) => handleSettingChange('tolerance', parseFloat(e.target.value))}
-              />
-            </label>
-          </div>
-          <div className="setting-row">
-            <label>
-              <span>Damping Factor:</span>
-              <input
-                type="number"
-                step="0.01"
-                min="0.001"
-                max="1"
-                value={settings.damping}
-                onChange={(e) => handleSettingChange('damping', parseFloat(e.target.value))}
-              />
-            </label>
-          </div>
-          <div className="setting-row">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={settings.verbose}
-                onChange={(e) => handleSettingChange('verbose', e.target.checked)}
-              />
-              <span>Verbose Output</span>
-            </label>
-          </div>
-          <div className="settings-actions">
-            <button className="btn-reset" onClick={resetToDefaults}>
-              Reset to Defaults
-            </button>
-          </div>
         </div>
       )}
     </div>

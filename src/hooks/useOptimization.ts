@@ -10,6 +10,7 @@ import { Line } from '../entities/line/Line';
 import { Viewpoint } from '../entities/viewpoint/Viewpoint';
 import { Constraint } from '../entities/constraints/base-constraint';
 import { optimizeProject, OptimizeProjectResult } from '../optimization/optimize-project';
+import { Project } from '../entities/project';
 
 type ConstraintId = string;
 
@@ -109,10 +110,7 @@ export const useOptimization = () => {
    */
   const optimize = useCallback(
     async (
-      points: WorldPoint[],
-      lines: Line[],
-      viewpoints: Viewpoint[],
-      constraints: Constraint[],
+      project: Project,
       options: OptimizationOptions = {}
     ): Promise<OptimizeProjectResult> => {
       setState((prev) => ({
@@ -123,16 +121,6 @@ export const useOptimization = () => {
       }));
 
       try {
-        const project = {
-          worldPoints: new Set(points),
-          lines: new Set(lines),
-          viewpoints: new Set(viewpoints),
-          imagePoints: new Set(
-            viewpoints.flatMap(vp => Array.from(vp.imagePoints))
-          ),
-          constraints: new Set(constraints),
-        } as any;
-
         const result = await new Promise<OptimizeProjectResult>((resolve, reject) => {
           setTimeout(() => {
             try {
@@ -151,6 +139,10 @@ export const useOptimization = () => {
           }, 0);
         });
 
+        const points = Array.from(project.worldPoints);
+        const lines = Array.from(project.lines);
+        const viewpoints = Array.from(project.viewpoints);
+        const constraints = Array.from(project.constraints);
         const constraintResiduals = computeResiduals(points, lines, viewpoints, constraints);
 
         setState({

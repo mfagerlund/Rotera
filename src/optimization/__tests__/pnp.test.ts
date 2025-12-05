@@ -40,9 +40,9 @@ describe('PnP Camera Initialization', () => {
 
     const worldPoints = new Set([wp1, wp2, wp3, wp4]);
 
-    const success = initializeCameraWithPnP(vp, worldPoints);
+    const result = initializeCameraWithPnP(vp, worldPoints);
 
-    expect(success).toBe(true);
+    expect(result.success).toBe(true);
     expect(vp.position).toBeDefined();
     expect(vp.position[0]).toBeCloseTo(5, 0);
     expect(vp.position[1]).toBeCloseTo(5, 0);
@@ -74,9 +74,9 @@ describe('PnP Camera Initialization', () => {
 
     const worldPoints = new Set([wp1, wp2]);
 
-    const success = initializeCameraWithPnP(vp, worldPoints);
+    const result = initializeCameraWithPnP(vp, worldPoints);
 
-    expect(success).toBe(false);
+    expect(result.success).toBe(false);
   });
 
   it('should handle points without optimizedXyz', () => {
@@ -102,8 +102,8 @@ describe('PnP Camera Initialization', () => {
 
     const worldPoints = new Set([wp1, wp2, wp3]);
 
-    const success = initializeCameraWithPnP(vp, worldPoints);
+    const result = initializeCameraWithPnP(vp, worldPoints);
 
-    expect(success).toBe(false);
+    expect(result.success).toBe(false);
   });
 });

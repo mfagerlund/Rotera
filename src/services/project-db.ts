@@ -419,17 +419,80 @@ export const ProjectDB = {
 
       const getRequest = store.get(id)
       getRequest.onsuccess = () => {
-        const project = getRequest.result as StoredProject
-        if (project) {
-          project.name = name
-          project.updatedAt = new Date()
-          store.put(project)
+        const storedProject = getRequest.result as StoredProject
+        if (storedProject) {
+          // Also update the name in the serialized project data to keep them in sync
+          const projectData = Serialization.deserialize(storedProject.data)
+          projectData.name = name
+          storedProject.data = Serialization.serialize(projectData)
+          storedProject.name = name
+          storedProject.updatedAt = new Date()
+          store.put(storedProject)
         }
       }
 
       tx.onerror = () => reject(tx.error)
       tx.oncomplete = () => resolve()
     })
+  },
+
+  async copyProject(id: string, newName: string): Promise<string> {
+    const db = await openDatabase()
+    const newId = generateId()
+    const now = new Date()
+    console.log('[ProjectDB.copyProject] Copying project:', id, 'as:', newName)
+
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction([PROJECTS_STORE, IMAGES_STORE], 'readwrite')
+
+      tx.onerror = () => reject(tx.error)
+      tx.oncomplete = () => resolve()
+
+      const projectStore = tx.objectStore(PROJECTS_STORE)
+      const imageStore = tx.objectStore(IMAGES_STORE)
+
+      const getRequest = projectStore.get(id)
+      getRequest.onsuccess = () => {
+        const original = getRequest.result as StoredProject
+        if (!original) {
+          reject(new Error('Project not found'))
+          return
+        }
+
+        // Deserialize the project data, update the name, and re-serialize
+        // This ensures both StoredProject.name and the embedded Project.name are in sync
+        const projectData = Serialization.deserialize(original.data)
+        projectData.name = newName
+        const updatedData = Serialization.serialize(projectData)
+
+        const copy: StoredProject = {
+          ...original,
+          id: newId,
+          name: newName,
+          data: updatedData,
+          createdAt: now,
+          updatedAt: now
+        }
+        projectStore.put(copy)
+
+        const imageIndex = imageStore.index('projectId')
+        const imagesRequest = imageIndex.getAll(id)
+        imagesRequest.onsuccess = () => {
+          const images = imagesRequest.result as StoredImage[]
+          for (const img of images) {
+            const newImage: StoredImage = {
+              ...img,
+              id: generateId(),
+              projectId: newId
+            }
+            imageStore.put(newImage)
+          }
+        }
+      }
+    })
+
+    console.log('[ProjectDB.copyProject] Copy complete, new id:', newId)
+    return newId
   },
 
   async createFolder(name: string, parentId: string | null = null): Promise<string> {

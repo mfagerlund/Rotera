@@ -1,10 +1,12 @@
-import React from 'react'
+import React, { forwardRef } from 'react'
 import { observer } from 'mobx-react-lite'
 import { WorldPoint } from '../../entities/world-point'
 import { Viewpoint } from '../../entities/viewpoint'
 import { Line as LineEntity } from '../../entities/line'
-import ImageNavigationToolbar from '../ImageNavigationToolbar'
+import ImageNavigationToolbar, { ImageNavigationToolbarRef } from '../ImageNavigationToolbar'
 import { ResizableSidebar } from './ResizableSidebar'
+
+export type LeftPanelRef = ImageNavigationToolbarRef
 
 interface LeftPanelProps {
   width: number
@@ -32,7 +34,7 @@ interface LeftPanelProps {
   onShowInImageView: (viewpoint: Viewpoint) => void
 }
 
-export const LeftPanel: React.FC<LeftPanelProps> = observer(({
+export const LeftPanel = observer(forwardRef<LeftPanelRef, LeftPanelProps>(({
   width,
   onWidthChange,
   images,
@@ -56,7 +58,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = observer(({
   onCopyPointsToCurrentImage,
   onViewFromCamera,
   onShowInImageView
-}) => {
+}, ref) => {
   return (
     <ResizableSidebar
       width={width}
@@ -65,6 +67,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = observer(({
       persistKey="pictorigo-left-sidebar-width"
     >
       <ImageNavigationToolbar
+        ref={ref}
         images={images}
         currentViewpoint={currentViewpoint}
         worldPoints={worldPoints}
@@ -89,4 +92,4 @@ export const LeftPanel: React.FC<LeftPanelProps> = observer(({
       />
     </ResizableSidebar>
   )
-})
+}))

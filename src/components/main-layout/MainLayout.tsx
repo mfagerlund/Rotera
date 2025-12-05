@@ -25,7 +25,7 @@ import { MainToolbar } from './MainToolbar'
 import ImageWorkspace from './ImageWorkspace'
 import WorldWorkspace from './WorldWorkspace'
 import SplitWorkspace from './SplitWorkspace'
-import { LeftPanel } from './LeftPanel'
+import { LeftPanel, LeftPanelRef } from './LeftPanel'
 import { RightPanel } from './RightPanel'
 import { BottomPanel } from './BottomPanel'
 import { VisibilityPanel } from '../VisibilityPanel'
@@ -278,6 +278,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
 
   const imageViewerRef = useRef<ImageViewerRef>(null)
   const worldViewRef = useRef<WorldViewRef>(null)
+  const leftPanelRef = useRef<LeftPanelRef>(null)
 
   const { workspaceState, updateWorkspaceState } = useLayoutState(currentViewpoint)
 
@@ -383,6 +384,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
   }, [currentViewpoint, currentVanishingLineAxis, setActiveTool])
 
   const handleRequestAddImage = useCallback(() => {
+    leftPanelRef.current?.triggerAddImage()
   }, [])
 
   const handleMousePositionChange = useCallback((position: { u: number; v: number } | null) => {
@@ -585,6 +587,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
 
             <div className="content-area">
               <LeftPanel
+                ref={leftPanelRef}
                 width={leftSidebarWidth}
                 onWidthChange={setLeftSidebarWidth}
                 images={viewpointsArray}

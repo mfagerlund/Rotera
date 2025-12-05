@@ -8,7 +8,7 @@ TEMP_DIR=$(mktemp -d)
 trap "rm -rf $TEMP_DIR" EXIT
 
 # Run all checks in parallel
-npm test -- --passWithNoTests --silent > "$TEMP_DIR/frontend_test.log" 2>&1 &
+npm test -- --passWithNoTests --silent --watchAll=false > "$TEMP_DIR/frontend_test.log" 2>&1 &
 FRONTEND_TEST_PID=$!
 npm run lint > "$TEMP_DIR/frontend_lint.log" 2>&1 &
 FRONTEND_LINT_PID=$!

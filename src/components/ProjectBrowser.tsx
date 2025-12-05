@@ -13,7 +13,8 @@ import {
   faSpinner,
   faCamera,
   faCircle,
-  faArrowRight
+  faArrowRight,
+  faCopy
 } from '@fortawesome/free-solid-svg-icons'
 import { ProjectDB, ProjectSummary, Folder } from '../services/project-db'
 import { Project } from '../entities/project'
@@ -41,6 +42,8 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
   const [draggedProject, setDraggedProject] = useState<ProjectSummary | null>(null)
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null | 'root'>(null)
   const [moveModalProject, setMoveModalProject] = useState<ProjectSummary | null>(null)
+  const [copyModalProject, setCopyModalProject] = useState<ProjectSummary | null>(null)
+  const [copyName, setCopyName] = useState('')
   const [allFolders, setAllFolders] = useState<Folder[]>([])
 
   const loadContents = useCallback(async () => {
@@ -178,6 +181,23 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
     } catch (error) {
       console.error('Failed to move project:', error)
     }
+  }
+
+  const handleCopyProject = async () => {
+    if (!copyModalProject || !copyName.trim()) return
+    try {
+      await ProjectDB.copyProject(copyModalProject.id, copyName.trim())
+      loadContents()
+      setCopyModalProject(null)
+      setCopyName('')
+    } catch (error) {
+      console.error('Failed to copy project:', error)
+    }
+  }
+
+  const openCopyModal = (project: ProjectSummary) => {
+    setCopyModalProject(project)
+    setCopyName(project.name + ' (copy)')
   }
 
   const handleDragStart = (e: React.DragEvent, project: ProjectSummary) => {
@@ -435,6 +455,15 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
                   ) : (
                     <>
                       <button
+                        title="Copy project..."
+                        onClick={e => {
+                          e.stopPropagation()
+                          openCopyModal(project)
+                        }}
+                      >
+                        <FontAwesomeIcon icon={faCopy} />
+                      </button>
+                      <button
                         title="Move to folder..."
                         onClick={e => {
                           e.stopPropagation()
@@ -516,6 +545,36 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
             </div>
             <div className="project-browser__modal-actions">
               <button onClick={() => setMoveModalProject(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {copyModalProject && (
+        <div className="project-browser__modal-overlay" onClick={() => setCopyModalProject(null)}>
+          <div className="project-browser__modal" onClick={e => e.stopPropagation()}>
+            <h3>Copy "{copyModalProject.name}"</h3>
+            <input
+              type="text"
+              value={copyName}
+              onChange={e => setCopyName(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') handleCopyProject()
+                if (e.key === 'Escape') setCopyModalProject(null)
+              }}
+              placeholder="New project name..."
+              autoFocus
+              className="project-browser__modal-input"
+            />
+            <div className="project-browser__modal-actions">
+              <button onClick={() => setCopyModalProject(null)}>Cancel</button>
+              <button
+                onClick={handleCopyProject}
+                disabled={!copyName.trim()}
+                className="project-browser__btn--primary"
+              >
+                Copy
+              </button>
             </div>
           </div>
         </div>

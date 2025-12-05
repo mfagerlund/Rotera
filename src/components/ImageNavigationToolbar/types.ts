@@ -3,6 +3,10 @@
 import type { Viewpoint } from '../../entities/viewpoint'
 import type { WorldPoint } from '../../entities/world-point'
 
+export interface ImageNavigationToolbarRef {
+  triggerAddImage: () => void
+}
+
 export interface ImageNavigationToolbarProps {
   images: Viewpoint[]
   currentViewpoint: Viewpoint | null

@@ -234,11 +234,26 @@ export class Project {
     }
 
     clear(): void {
+        // Clear nested collections first (in case UI holds stale references)
+        for (const viewpoint of this.viewpoints) {
+            viewpoint.vanishingLines.clear()
+            viewpoint.imagePoints.clear()
+        }
+        for (const worldPoint of this.worldPoints) {
+            worldPoint.imagePoints.clear()
+            worldPoint.connectedLines.clear()
+            worldPoint.referencingConstraints.clear()
+        }
+        for (const line of this.lines) {
+            line.referencingConstraints.clear()
+        }
+        // Then clear top-level collections
         this.worldPoints.clear()
         this.lines.clear()
         this.viewpoints.clear()
         this.imagePoints.clear()
         this.constraints.clear()
+        this.inferenceConflicts = []
     }
 
     getStats() {

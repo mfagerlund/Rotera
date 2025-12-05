@@ -1,18 +1,18 @@
 // Left sidebar image navigation toolbar
 
-import React, { useRef, useMemo } from 'react'
+import React, { useRef, useMemo, forwardRef, useImperativeHandle } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPlus } from '@fortawesome/free-solid-svg-icons'
 import { ImageUtils } from '../../utils/imageUtils'
 import { useConfirm } from '../ConfirmDialog'
 import ImageEditor from '../ImageEditor'
 import { ImageNavigationItem } from './ImageNavigationItem'
-import type { ImageNavigationToolbarProps } from './types'
+import type { ImageNavigationToolbarProps, ImageNavigationToolbarRef } from './types'
 import type { Viewpoint } from '../../entities/viewpoint'
 import type { WorldPoint } from '../../entities/world-point'
 import { getEntityKey } from '../../utils/entityKeys'
 
-export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
+export const ImageNavigationToolbar = forwardRef<ImageNavigationToolbarRef, ImageNavigationToolbarProps>(({
   images,
   currentViewpoint,
   worldPoints,
@@ -34,9 +34,15 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
   onCopyPointsToCurrentImage,
   onViewFromCamera,
   onShowInImageView
-}) => {
+}, ref) => {
   const { confirm, dialog } = useConfirm()
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useImperativeHandle(ref, () => ({
+    triggerAddImage: () => {
+      fileInputRef.current?.click()
+    }
+  }))
   const [draggedImage, setDraggedImage] = React.useState<Viewpoint | null>(null)
   const [dragOverImage, setDragOverImage] = React.useState<Viewpoint | null>(null)
   const [editingImage, setEditingImage] = React.useState<Viewpoint | null>(null)
@@ -216,6 +222,6 @@ export const ImageNavigationToolbar: React.FC<ImageNavigationToolbarProps> = ({
       </div>
     </>
   )
-}
+})
 
 export default ImageNavigationToolbar
