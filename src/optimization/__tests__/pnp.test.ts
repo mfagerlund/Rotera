@@ -19,13 +19,14 @@ describe('PnP Camera Initialization', () => {
       }
     );
 
-    const wp1 = WorldPoint.create('WP1');
+    // Points must be constrained (locked) to be used in centroid calculation
+    const wp1 = WorldPoint.create('WP1', { lockedXyz: [0, 0, 0] });
     wp1.optimizedXyz = [0, 0, 0];
-    const wp2 = WorldPoint.create('WP2');
+    const wp2 = WorldPoint.create('WP2', { lockedXyz: [10, 0, 0] });
     wp2.optimizedXyz = [10, 0, 0];
-    const wp3 = WorldPoint.create('WP3');
+    const wp3 = WorldPoint.create('WP3', { lockedXyz: [0, 10, 0] });
     wp3.optimizedXyz = [0, 10, 0];
-    const wp4 = WorldPoint.create('WP4');
+    const wp4 = WorldPoint.create('WP4', { lockedXyz: [10, 10, 0] });
     wp4.optimizedXyz = [10, 10, 0];
 
     const ip1 = ImagePoint.create(wp1, vp, 400, 400);
@@ -61,9 +62,10 @@ describe('PnP Camera Initialization', () => {
       }
     );
 
-    const wp1 = WorldPoint.create('WP1');
+    // Even with locked points, 2 points are not enough for PnP
+    const wp1 = WorldPoint.create('WP1', { lockedXyz: [0, 0, 0] });
     wp1.optimizedXyz = [0, 0, 0];
-    const wp2 = WorldPoint.create('WP2');
+    const wp2 = WorldPoint.create('WP2', { lockedXyz: [10, 0, 0] });
     wp2.optimizedXyz = [10, 0, 0];
 
     const ip1 = ImagePoint.create(wp1, vp, 400, 400);

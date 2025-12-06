@@ -7,6 +7,8 @@ import { faCircle } from '@fortawesome/free-regular-svg-icons'
 import { getEntityKey } from '../../utils/entityKeys'
 import type { ImageNavigationItemProps } from './types'
 import { useImageBounds } from './hooks/useImageBounds'
+import { LinesOverlay } from './LinesOverlay'
+import { VanishingLinesOverlay } from './VanishingLinesOverlay'
 import { WorldPointOverlay } from './WorldPointOverlay'
 
 export const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
@@ -203,6 +205,20 @@ export const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
             document.addEventListener('mouseup', handleMouseUp)
           }}
           title="Drag to resize"
+        />
+
+        {/* Lines overlay (renders behind points) */}
+        <LinesOverlay
+          image={image}
+          imgRef={imgRef}
+          imgBounds={imgBounds}
+        />
+
+        {/* Vanishing lines overlay (renders behind points) */}
+        <VanishingLinesOverlay
+          image={image}
+          imgRef={imgRef}
+          imgBounds={imgBounds}
         />
 
         {/* World point locations overlay */}

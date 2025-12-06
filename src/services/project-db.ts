@@ -106,7 +106,21 @@ async function blobToDataUrl(blob: Blob): Promise<string> {
   })
 }
 
-async function createThumbnail(imageUrl: string, maxSize: number = 120): Promise<string> {
+interface ThumbnailGeometry {
+  imageWidth: number
+  imageHeight: number
+  points: Array<{ u: number; v: number; color: string }>
+  lines: Array<{ p1: { u: number; v: number }; p2: { u: number; v: number }; color: string; isConstruction: boolean }>
+  vanishingLines: Array<{ p1: { u: number; v: number }; p2: { u: number; v: number }; axis: 'x' | 'y' | 'z' }>
+}
+
+const AXIS_COLORS: Record<'x' | 'y' | 'z', string> = {
+  x: '#ff0000',
+  y: '#00ff00',
+  z: '#0000ff'
+}
+
+async function createThumbnail(imageUrl: string, geometry?: ThumbnailGeometry, maxSize: number = 120): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image()
     img.onload = () => {
@@ -135,6 +149,55 @@ async function createThumbnail(imageUrl: string, maxSize: number = 120): Promise
       canvas.width = width
       canvas.height = height
       ctx.drawImage(img, 0, 0, width, height)
+
+      // Draw geometry if provided
+      if (geometry) {
+        const scaleX = width / geometry.imageWidth
+        const scaleY = height / geometry.imageHeight
+
+        // Draw lines first (behind points)
+        for (const line of geometry.lines) {
+          ctx.beginPath()
+          ctx.moveTo(line.p1.u * scaleX, line.p1.v * scaleY)
+          ctx.lineTo(line.p2.u * scaleX, line.p2.v * scaleY)
+          ctx.strokeStyle = line.color
+          ctx.lineWidth = 1
+          ctx.globalAlpha = 0.7
+          if (line.isConstruction) {
+            ctx.setLineDash([3, 2])
+          } else {
+            ctx.setLineDash([])
+          }
+          ctx.stroke()
+        }
+
+        // Draw vanishing lines
+        ctx.setLineDash([])
+        for (const vl of geometry.vanishingLines) {
+          ctx.beginPath()
+          ctx.moveTo(vl.p1.u * scaleX, vl.p1.v * scaleY)
+          ctx.lineTo(vl.p2.u * scaleX, vl.p2.v * scaleY)
+          ctx.strokeStyle = AXIS_COLORS[vl.axis]
+          ctx.lineWidth = 1
+          ctx.globalAlpha = 0.8
+          ctx.stroke()
+        }
+
+        // Draw points on top
+        ctx.globalAlpha = 1.0
+        for (const point of geometry.points) {
+          const x = point.u * scaleX
+          const y = point.v * scaleY
+
+          ctx.beginPath()
+          ctx.arc(x, y, 3, 0, 2 * Math.PI)
+          ctx.fillStyle = point.color
+          ctx.fill()
+          ctx.strokeStyle = 'white'
+          ctx.lineWidth = 1
+          ctx.stroke()
+        }
+      }
 
       resolve(canvas.toDataURL('image/jpeg', 0.7))
     }
@@ -284,10 +347,57 @@ export const ProjectDB = {
 
     const projectData = Serialization.serialize(projectCopy)
 
+    // Build thumbnail with geometry overlay
     let thumbnailUrl: string | undefined
     if (viewpointsArray.length > 0 && viewpointsArray[0].url) {
       try {
-        thumbnailUrl = await createThumbnail(viewpointsArray[0].url)
+        const firstViewpoint = viewpointsArray[0]
+        const imgWidth = firstViewpoint.imageWidth
+        const imgHeight = firstViewpoint.imageHeight
+
+        // Build geometry for thumbnail
+        const points: ThumbnailGeometry['points'] = []
+        const worldPointToImageCoords = new Map<unknown, { u: number; v: number }>()
+        for (const ip of firstViewpoint.imagePoints) {
+          const wp = ip.worldPoint
+          points.push({ u: ip.u, v: ip.v, color: wp.color })
+          worldPointToImageCoords.set(wp, { u: ip.u, v: ip.v })
+        }
+
+        // Lines (only those with both endpoints visible)
+        const lines: ThumbnailGeometry['lines'] = []
+        for (const line of project.lines) {
+          const p1Coords = worldPointToImageCoords.get(line.pointA)
+          const p2Coords = worldPointToImageCoords.get(line.pointB)
+          if (p1Coords && p2Coords) {
+            lines.push({
+              p1: p1Coords,
+              p2: p2Coords,
+              color: line.color,
+              isConstruction: line.isConstruction
+            })
+          }
+        }
+
+        // Vanishing lines
+        const vanishingLines: ThumbnailGeometry['vanishingLines'] = []
+        for (const vl of firstViewpoint.vanishingLines) {
+          vanishingLines.push({
+            p1: { u: vl.p1.u, v: vl.p1.v },
+            p2: { u: vl.p2.u, v: vl.p2.v },
+            axis: vl.axis
+          })
+        }
+
+        const geometry: ThumbnailGeometry = {
+          imageWidth: imgWidth,
+          imageHeight: imgHeight,
+          points,
+          lines,
+          vanishingLines
+        }
+
+        thumbnailUrl = await createThumbnail(firstViewpoint.url, geometry)
         console.log('[ProjectDB.saveProject] Created thumbnail, size:', thumbnailUrl.length)
       } catch (err) {
         console.warn('[ProjectDB.saveProject] Failed to create thumbnail:', err)

@@ -10,6 +10,7 @@ interface ConfirmDialogProps {
   variant?: 'primary' | 'danger'
   position?: { x: number; y: number }
   targetElement?: HTMLElement
+  showMessage?: boolean
 }
 
 export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
@@ -20,7 +21,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   cancelLabel = 'No',
   variant = 'danger',
   position,
-  targetElement
+  targetElement,
+  showMessage = false
 }) => {
   const [isVisible, setIsVisible] = useState(false)
   const dialogRef = useRef<HTMLDivElement>(null)
@@ -119,6 +121,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           transform: isVisible ? 'scale(1)' : 'scale(0.8)'
         }}
       >
+        {showMessage && <div className="confirm-message">{message}</div>}
         <div className="confirm-buttons">
           <button className="btn-cancel" onClick={handleCancel} title={cancelLabel}>
             <span className="btn-icon">✕</span>
@@ -154,6 +157,7 @@ export const useConfirm = () => {
       confirmLabel?: string
       cancelLabel?: string
       variant?: 'primary' | 'danger'
+      showMessage?: boolean
     } = {}
   ): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -162,6 +166,7 @@ export const useConfirm = () => {
         confirmLabel: options.confirmLabel,
         cancelLabel: options.cancelLabel,
         variant: options.variant,
+        showMessage: options.showMessage,
         targetElement: targetElement || undefined,
         onConfirm: () => {
           setTimeout(() => {

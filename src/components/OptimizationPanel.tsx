@@ -134,6 +134,17 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
       c => c.getConstraintType() === 'projection_point_camera'
     ).length
 
+    // Count image observations from fully locked world points (valid for PnP)
+    let pnpObservationCount = 0
+    for (const vp of viewpointArray) {
+      const vpConcrete = vp as Viewpoint
+      for (const ip of vpConcrete.imagePoints) {
+        if ((ip.worldPoint as WorldPoint).isFullyLocked()) {
+          pnpObservationCount++
+        }
+      }
+    }
+
     // Check camera initialization requirements
     // NOTE: We assume ALL cameras will be reset to [0,0,0] when autoInitializeCameras is true
     // So we check if there are 2+ cameras that will need initialization
@@ -195,6 +206,9 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
       }
     }
 
+    // Total effective constraints: explicit constraints + line constraints + PnP observations
+    const effectiveConstraintCount = project.constraints.size + lineConstraintCount + pnpObservationCount
+
     return {
       pointCount: pointArray.length,
       unlockedPointCount: unlockedPoints.length,
@@ -202,11 +216,12 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
       viewpointCount: viewpointArray.length,
       constraintCount: project.constraints.size,
       lineConstraintCount,
+      pnpObservationCount,
       projectionConstraintCount: projectionCount,
       totalDOF,
       constraintDOF,
       netDOF,
-      canOptimize: (project.constraints.size + lineConstraintCount) > 0 && (unlockedPoints.length > 0 || viewpointArray.length > 0) && canInitialize,
+      canOptimize: effectiveConstraintCount > 0 && (unlockedPoints.length > 0 || viewpointArray.length > 0) && canInitialize,
       canInitialize,
       initializationError
     }
@@ -389,7 +404,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
             {stats.unlockedPointCount === 0 && stats.viewpointCount === 0 && (
               <li className="requirement-missing">At least 1 unlocked point or viewpoint</li>
             )}
-            {stats.constraintCount === 0 && (
+            {stats.constraintCount === 0 && stats.lineConstraintCount === 0 && stats.pnpObservationCount === 0 && (
               <li className="requirement-missing">At least 1 constraint or image observation</li>
             )}
             {stats.initializationError && (

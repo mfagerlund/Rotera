@@ -125,8 +125,11 @@ export function useImageViewerEvents({
       } else {
         precisionDragState.setIsPrecisionDrag(false)
         const nearbyPoint = selectionManager.findNearbyPoint(x, y)
-        const nearbyLine = selectionManager.findNearbyLine(x, y)
-        const nearbyVanishingLine = selectionManager.findNearbyVanishingLine(x, y)
+        const vanishingLinePart = selectionManager.findNearbyVanishingLinePart(x, y)
+        // Check for vanishing line endpoints before lines - points should always take priority over lines
+        const isVanishingLineEndpoint = vanishingLinePart && (vanishingLinePart.part === 'p1' || vanishingLinePart.part === 'p2')
+        const nearbyLine = isVanishingLineEndpoint ? null : selectionManager.findNearbyLine(x, y)
+        const nearbyVanishingLine = vanishingLinePart?.line ?? null
 
         if (nearbyPoint) {
           const draggedImagePoint = transform.canvasToImageCoords(x, y)
@@ -151,8 +154,6 @@ export function useImageViewerEvents({
           pointDragState.precisionPointerRef.current = null
           onLineClick(nearbyLine, event.ctrlKey, event.shiftKey)
         } else if (nearbyVanishingLine && onVanishingLineClick) {
-          const vanishingLinePart = selectionManager.findNearbyVanishingLinePart(x, y)
-
           if (vanishingLinePart) {
             const imageCoords = transform.canvasToImageCoordsUnbounded(x, y)
             if (imageCoords) {

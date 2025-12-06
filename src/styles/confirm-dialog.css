@@ -99,7 +99,11 @@
 }
 
 .confirm-message {
-  display: none;
+  color: #e0e0e0;
+  font-size: 13px;
+  text-align: center;
+  padding: 4px 8px 8px;
+  max-width: 200px;
 }
 
 .confirm-buttons {

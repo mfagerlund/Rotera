@@ -327,28 +327,30 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
               </button>
             </div>
           )}
-          <button
-            type="button"
-            className="btn-icon"
-            onClick={(e) => {
-              e.stopPropagation()
-              onClose()
-            }}
-            aria-label="Close"
-            style={{
-              width: '28px',
-              height: '28px',
-              border: 'none',
-              background: 'transparent',
-              color: 'var(--text-secondary)',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            <FontAwesomeIcon icon={faXmark} />
-          </button>
+          {!showOkCancel && (
+            <button
+              type="button"
+              className="btn-icon"
+              onClick={(e) => {
+                e.stopPropagation()
+                onClose()
+              }}
+              aria-label="Close"
+              style={{
+                width: '28px',
+                height: '28px',
+                border: 'none',
+                background: 'transparent',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <FontAwesomeIcon icon={faXmark} />
+            </button>
+          )}
         </div>
 
         <div className="floating-window-content">

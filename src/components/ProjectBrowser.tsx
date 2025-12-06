@@ -55,7 +55,7 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
         ProjectDB.listAllFolders()
       ])
       setFolders(loadedFolders.sort((a, b) => a.name.localeCompare(b.name)))
-      setProjects(loadedProjects.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()))
+      setProjects(loadedProjects.sort((a, b) => a.name.localeCompare(b.name)))
       setAllFolders(loadedAllFolders)
     } catch (error) {
       console.error('Failed to load contents:', error)

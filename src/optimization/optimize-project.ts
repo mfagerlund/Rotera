@@ -45,6 +45,8 @@ export function resetOptimizationState(project: Project) {
     const imagePoint = ip as ImagePoint;
     imagePoint.lastResiduals = [];
     imagePoint.isOutlier = false;
+    imagePoint.reprojectedU = undefined;
+    imagePoint.reprojectedV = undefined;
   }
 
   // Reset lines
@@ -193,11 +195,47 @@ export function optimizeProject(
     const viewpointArray = Array.from(project.viewpoints);
 
     if (autoInitializeCameras) {
-      log('[optimizeProject] Resetting all camera positions to [0,0,0]');
+      log('[optimizeProject] Resetting all camera poses and problematic intrinsics');
       for (const vp of viewpointArray) {
         const v = vp as Viewpoint;
+        // Reset pose
         v.position = [0, 0, 0];
         v.rotation = [1, 0, 0, 0];
+        // Reset intrinsics that could be garbage from a previous failed solve
+        v.skewCoefficient = 0;
+        v.aspectRatio = 1;
+        v.radialDistortion = [0, 0, 0];
+        v.tangentialDistortion = [0, 0];
+
+        // Also reset focalLength and principalPoint if they're clearly garbage
+        // (e.g., negative, outside image bounds, or unreasonable)
+        const minFocalLength = Math.min(v.imageWidth, v.imageHeight) * 0.3;
+        const maxFocalLength = Math.max(v.imageWidth, v.imageHeight) * 5;
+        if (v.focalLength < minFocalLength || v.focalLength > maxFocalLength) {
+          log(`  ${v.name}: Resetting garbage focalLength ${v.focalLength.toFixed(1)} to ${Math.max(v.imageWidth, v.imageHeight)}`);
+          v.focalLength = Math.max(v.imageWidth, v.imageHeight);
+        }
+        // Principal point should be within image bounds
+        if (v.principalPointX < 0 || v.principalPointX > v.imageWidth ||
+            v.principalPointY < 0 || v.principalPointY > v.imageHeight) {
+          log(`  ${v.name}: Resetting garbage principalPoint (${v.principalPointX.toFixed(1)}, ${v.principalPointY.toFixed(1)}) to image center`);
+          v.principalPointX = v.imageWidth / 2;
+          v.principalPointY = v.imageHeight / 2;
+        }
+      }
+
+      // Also clear optimizedXyz on unconstrained world points - they may have garbage
+      // values from previous failed optimizations that would corrupt the new solve
+      const wpArray = Array.from(project.worldPoints) as WorldPoint[];
+      let clearedCount = 0;
+      for (const wp of wpArray) {
+        if (!wp.isFullyConstrained() && wp.optimizedXyz) {
+          wp.optimizedXyz = undefined;
+          clearedCount++;
+        }
+      }
+      if (clearedCount > 0) {
+        log(`[optimizeProject] Cleared stale optimizedXyz on ${clearedCount} unconstrained world points`);
       }
     }
 

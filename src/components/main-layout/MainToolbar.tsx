@@ -46,7 +46,7 @@ interface MainToolbarProps {
   onVisualFeedbackChange: (level: 'minimal' | 'standard' | 'detailed') => void
 
   // Confirm dialog
-  confirm: (message: string) => Promise<boolean>
+  confirm: (message: string, options?: { confirmLabel?: string; cancelLabel?: string; variant?: 'primary' | 'danger'; showMessage?: boolean }) => Promise<boolean>
 
   // Navigation
   onReturnToBrowser?: () => void
@@ -149,7 +149,7 @@ export const MainToolbar: React.FC<MainToolbarProps> = ({
   const handleReturnToBrowser = async () => {
     if (!onReturnToBrowser) return
     if (isDirty && onSaveProject) {
-      const shouldSave = await confirm('Save project before closing?')
+      const shouldSave = await confirm('Save project before closing?', { showMessage: true, variant: 'primary' })
       if (shouldSave) {
         await handleSave()
       }

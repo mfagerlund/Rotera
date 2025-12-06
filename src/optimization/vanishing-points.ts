@@ -430,12 +430,8 @@ export function canInitializeWithVanishingPoints(
     return false
   }
 
-  // IMPORTANT: Only use LOCKED points (not inferred) for camera position solving
-  // Inferred coordinates depend on line constraints which may not be accurate yet
-  const fullyConstrainedPoints = Array.from(worldPoints).filter(wp => {
-    const lockedXyz = wp.lockedXyz
-    return lockedXyz.every(coord => coord !== null)
-  })
+  // Use fully constrained points (locked OR inferred) for camera position solving
+  const fullyConstrainedPoints = Array.from(worldPoints).filter(wp => wp.isFullyConstrained())
 
   if (fullyConstrainedPoints.length >= 2) {
     return true
@@ -752,9 +748,9 @@ export function computeCameraPosition(
   const b: number[] = []
 
   lockedPoints.forEach(({ worldPoint, imagePoint }) => {
-    // Use lockedXyz directly (not getEffectiveXyz which includes inferred coordinates)
-    const lockedXyz = worldPoint.lockedXyz
-    const P = [lockedXyz[0]!, lockedXyz[1]!, lockedXyz[2]!]
+    // Use effective coordinates (locked + inferred)
+    const effectiveXyz = worldPoint.getEffectiveXyz()
+    const P = [effectiveXyz[0]!, effectiveXyz[1]!, effectiveXyz[2]!]
 
     const u_norm = (imagePoint.u - principalPoint.u) / focalLength
     const v_norm = (principalPoint.v - imagePoint.v) / focalLength
@@ -994,14 +990,11 @@ export function initializeCameraWithVanishingPoints(
   }
   log(`[initializeCameraWithVanishingPoints] Trying ${baseRotations.length} base rotation(s)`)
 
-  // For POSITION SOLVING: Only use FULLY LOCKED points
-  // Inferred coordinates depend on line constraints which may not be accurate yet
-  const fullyLockedPoints = Array.from(worldPoints).filter(wp => {
-    const lockedXyz = wp.lockedXyz
-    return lockedXyz.every(coord => coord !== null)
-  })
+  // For POSITION SOLVING: Use fully constrained points (locked OR inferred)
+  // Inferred coordinates are as valid as locked coordinates after propagation
+  const constrainedPoints = Array.from(worldPoints).filter(wp => wp.isFullyConstrained())
 
-  const lockedPointsData = fullyLockedPoints
+  const lockedPointsData = constrainedPoints
     .map(wp => {
       const imagePoints = viewpoint.getImagePointsForWorldPoint(wp)
       if (imagePoints.length === 0) {
@@ -1165,6 +1158,13 @@ export function initializeCameraWithVanishingPoints(
   viewpoint.rotation = rotation
   viewpoint.position = position
   viewpoint.focalLength = focalLength
+  // Reset ALL intrinsics to sane defaults.
+  // The fixture may have garbage values from a previous failed optimization.
+  // VP initialization assumes a standard pinhole camera model.
+  viewpoint.skewCoefficient = 0
+  viewpoint.aspectRatio = 1
+  viewpoint.radialDistortion = [0, 0, 0]
+  viewpoint.tangentialDistortion = [0, 0]
 
   const basis = {
     x: [1, 0, 0] as [number, number, number],
