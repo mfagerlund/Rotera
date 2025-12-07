@@ -339,6 +339,19 @@ export function optimizeProject(
         const vp1 = uninitializedCameras[0] as Viewpoint;
         const vp2 = uninitializedCameras[1] as Viewpoint;
 
+        // CRITICAL: For Essential Matrix initialization (no locked points), we have no ground truth
+        // for intrinsics. Reset to safe defaults - the optimizer will refine them.
+        // This is necessary because previous failed solves may have left "valid-looking" but
+        // completely wrong intrinsics (e.g., focalLength=3000 for a 1000px image).
+        for (const vp of [vp1, vp2]) {
+          const originalFocal = vp.focalLength;
+          const originalPP = [vp.principalPointX, vp.principalPointY];
+          vp.focalLength = Math.max(vp.imageWidth, vp.imageHeight);
+          vp.principalPointX = vp.imageWidth / 2;
+          vp.principalPointY = vp.imageHeight / 2;
+          log(`  ${vp.name}: Reset intrinsics for Essential Matrix: f=${originalFocal.toFixed(0)}->${vp.focalLength}, pp=(${originalPP[0].toFixed(0)},${originalPP[1].toFixed(0)})->(${vp.principalPointX.toFixed(0)},${vp.principalPointY.toFixed(0)})`);
+        }
+
         const result = initializeCamerasWithEssentialMatrix(vp1, vp2, 10.0);
 
         if (result.success) {

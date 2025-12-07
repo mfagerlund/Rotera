@@ -1,4 +1,5 @@
 {
+  "formatVersion": 1,
   "name": "Scenario 05: Essential Matrix Initialization",
   "worldPoints": [
     {
@@ -138,11 +139,12 @@
       "url": "",
       "imageWidth": 1920,
       "imageHeight": 1080,
-      "focalLength": 1500,
+      "focalLength": 1920,
       "principalPointX": 960,
       "principalPointY": 540,
       "skewCoefficient": 0,
       "aspectRatio": 1,
+      "useSimpleIntrinsics": true,
       "radialDistortion": [
         0,
         0,
@@ -167,7 +169,8 @@
       "isProcessed": false,
       "isVisible": true,
       "opacity": 1,
-      "color": "#ffff00"
+      "color": "#ffff00",
+      "isPoseLocked": false
     },
     {
       "id": "Viewpoint_9",
@@ -176,11 +179,12 @@
       "url": "",
       "imageWidth": 1920,
       "imageHeight": 1080,
-      "focalLength": 1500,
+      "focalLength": 1920,
       "principalPointX": 960,
       "principalPointY": 540,
       "skewCoefficient": 0,
       "aspectRatio": 1,
+      "useSimpleIntrinsics": true,
       "radialDistortion": [
         0,
         0,
@@ -205,7 +209,8 @@
       "isProcessed": false,
       "isVisible": true,
       "opacity": 1,
-      "color": "#ffff00"
+      "color": "#ffff00",
+      "isPoseLocked": false
     }
   ],
   "lines": [],
@@ -214,8 +219,8 @@
       "id": "ImagePoint_10",
       "worldPointId": "WorldPoint_0",
       "viewpointId": "Viewpoint_8",
-      "u": 585,
-      "v": 165,
+      "u": 480,
+      "v": 1020,
       "isVisible": true,
       "confidence": 1
     },
@@ -223,8 +228,8 @@
       "id": "ImagePoint_11",
       "worldPointId": "WorldPoint_0",
       "viewpointId": "Viewpoint_9",
-      "u": 357.9191057009191,
-      "v": 216.7353156758394,
+      "u": 189.33645529717649,
+      "v": 953.7787959349256,
       "isVisible": true,
       "confidence": 1
     },
@@ -232,8 +237,8 @@
       "id": "ImagePoint_12",
       "worldPointId": "WorldPoint_1",
       "viewpointId": "Viewpoint_8",
-      "u": 1335,
-      "v": 165,
+      "u": 1440,
+      "v": 1020,
       "isVisible": true,
       "confidence": 1
     },
@@ -241,8 +246,8 @@
       "id": "ImagePoint_13",
       "worldPointId": "WorldPoint_1",
       "viewpointId": "Viewpoint_9",
-      "u": 985.2334668785948,
-      "v": 176.14508969106345,
+      "u": 992.2988376046013,
+      "v": 1005.7342851954388,
       "isVisible": true,
       "confidence": 1
     },
@@ -250,8 +255,8 @@
       "id": "ImagePoint_14",
       "worldPointId": "WorldPoint_2",
       "viewpointId": "Viewpoint_8",
-      "u": 1335,
-      "v": 915,
+      "u": 1440,
+      "v": 60,
       "isVisible": true,
       "confidence": 1
     },
@@ -259,8 +264,8 @@
       "id": "ImagePoint_15",
       "worldPointId": "WorldPoint_2",
       "viewpointId": "Viewpoint_9",
-      "u": 985.2334668785948,
-      "v": 903.8549103089365,
+      "u": 992.2988376046013,
+      "v": 74.26571480456118,
       "isVisible": true,
       "confidence": 1
     },
@@ -268,8 +273,8 @@
       "id": "ImagePoint_16",
       "worldPointId": "WorldPoint_3",
       "viewpointId": "Viewpoint_8",
-      "u": 585,
-      "v": 915,
+      "u": 480,
+      "v": 60,
       "isVisible": true,
       "confidence": 1
     },
@@ -277,8 +282,8 @@
       "id": "ImagePoint_17",
       "worldPointId": "WorldPoint_3",
       "viewpointId": "Viewpoint_9",
-      "u": 357.9191057009191,
-      "v": 863.2646843241606,
+      "u": 189.33645529717649,
+      "v": 126.2212040650744,
       "isVisible": true,
       "confidence": 1
     },
@@ -286,7 +291,7 @@
       "id": "ImagePoint_18",
       "worldPointId": "WorldPoint_4",
       "viewpointId": "Viewpoint_8",
-      "u": 780,
+      "u": 729.6,
       "v": 540,
       "isVisible": true,
       "confidence": 1
@@ -295,7 +300,7 @@
       "id": "ImagePoint_19",
       "worldPointId": "WorldPoint_4",
       "viewpointId": "Viewpoint_9",
-      "u": 628.1602140331743,
+      "u": 535.2450739624632,
       "v": 540,
       "isVisible": true,
       "confidence": 1
@@ -304,7 +309,7 @@
       "id": "ImagePoint_20",
       "worldPointId": "WorldPoint_5",
       "viewpointId": "Viewpoint_8",
-      "u": 1140,
+      "u": 1190.4,
       "v": 540,
       "isVisible": true,
       "confidence": 1
@@ -313,7 +318,7 @@
       "id": "ImagePoint_21",
       "worldPointId": "WorldPoint_5",
       "viewpointId": "Viewpoint_9",
-      "u": 943.18532281504,
+      "u": 938.4772132032512,
       "v": 540,
       "isVisible": true,
       "confidence": 1
@@ -323,7 +328,7 @@
       "worldPointId": "WorldPoint_6",
       "viewpointId": "Viewpoint_8",
       "u": 960,
-      "v": 700.7142857142857,
+      "v": 334.28571428571433,
       "isVisible": true,
       "confidence": 1
     },
@@ -331,8 +336,8 @@
       "id": "ImagePoint_23",
       "worldPointId": "WorldPoint_6",
       "viewpointId": "Viewpoint_9",
-      "u": 837.8945255307727,
-      "v": 691.8520196924665,
+      "u": 803.7049926793891,
+      "v": 345.629414793643,
       "isVisible": true,
       "confidence": 1
     },
@@ -341,7 +346,7 @@
       "worldPointId": "WorldPoint_7",
       "viewpointId": "Viewpoint_8",
       "u": 960,
-      "v": 379.28571428571433,
+      "v": 745.7142857142857,
       "isVisible": true,
       "confidence": 1
     },
@@ -349,8 +354,8 @@
       "id": "ImagePoint_25",
       "worldPointId": "WorldPoint_7",
       "viewpointId": "Viewpoint_9",
-      "u": 837.8945255307727,
-      "v": 388.14798030753354,
+      "u": 803.7049926793891,
+      "v": 734.370585206357,
       "isVisible": true,
       "confidence": 1
     }
@@ -370,5 +375,24 @@
   "showConstructionGeometry": true,
   "enableSmartSnapping": true,
   "constraintPreview": true,
-  "visualFeedbackLevel": "standard"
+  "visualFeedbackLevel": "standard",
+  "viewSettings": {
+    "visibility": {
+      "worldPoints": true,
+      "lines": true,
+      "planes": true,
+      "vanishingLines": true,
+      "vanishingPoints": true,
+      "perspectiveGrid": false,
+      "reprojectionErrors": false,
+      "cameraVanishingGeometry": false
+    },
+    "locking": {
+      "worldPoints": false,
+      "lines": false,
+      "planes": false,
+      "vanishingLines": false
+    },
+    "isExpanded": false
+  }
 }

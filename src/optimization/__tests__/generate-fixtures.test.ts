@@ -533,7 +533,8 @@ describe.skip('Generate Fixtures', () => {
   it('should generate Scenario 05: Essential Matrix Initialization fixture', () => {
     const imageWidth = 1920;
     const imageHeight = 1080;
-    const focalLength = 1500;
+    // Use imageWidth as focal length so the fixture is robust to intrinsic resets
+    const focalLength = imageWidth;
     const principalPointX = imageWidth / 2;
     const principalPointY = imageHeight / 2;
     const aspectRatio = 1.0;
