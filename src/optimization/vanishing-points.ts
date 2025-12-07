@@ -471,14 +471,15 @@ export function estimatePrincipalPoint(
 ): { u: number; v: number } | null {
   // For most cameras, the principal point is very close to the image center.
   // Estimating PP from vanishing points is unreliable and can produce wildly wrong values.
-  // Just use the image center - it's simple, robust, and almost always correct.
-  const vps = Object.values(vanishingPoints).filter(vp => vp !== undefined) as VanishingPoint[]
-
-  if (vps.length < 2) {
-    return null
-  }
-
-  return { u: imageWidth / 2, v: imageHeight / 2 }
+  //
+  // IMPORTANT: We return null here to preserve user-set principal point values.
+  // This is critical for cropped images where the principal point is NOT at image center.
+  // The Viewpoint already defaults cx/cy to image center when created, so returning
+  // null here means we respect either the default or any user-specified values.
+  //
+  // If reliable PP estimation from 3+ orthogonal VPs is needed in the future,
+  // implement it here - but for now, null is the safe choice.
+  return null
 }
 
 function normalize(v: number[]): number[] {

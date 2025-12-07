@@ -27,6 +27,13 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
     principalPointY: number
     skewCoefficient: number
     aspectRatio: number
+    /**
+     * When true (default), optimization only varies f, cx, cy.
+     * Skew is fixed at 0 and aspectRatio is fixed at 1.
+     * This is appropriate for modern digital cameras with square pixels.
+     * Set to false for unusual sensors or historical images.
+     */
+    useSimpleIntrinsics: boolean
     radialDistortion: [number, number, number]
     tangentialDistortion: [number, number]
     position: [number, number, number]
@@ -54,6 +61,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
         principalPointY: number,
         skewCoefficient: number,
         aspectRatio: number,
+        useSimpleIntrinsics: boolean,
         radialDistortion: [number, number, number],
         tangentialDistortion: [number, number],
         position: [number, number, number],
@@ -78,6 +86,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
         this.principalPointY = principalPointY
         this.skewCoefficient = skewCoefficient
         this.aspectRatio = aspectRatio
+        this.useSimpleIntrinsics = useSimpleIntrinsics
         this.radialDistortion = radialDistortion
         this.tangentialDistortion = tangentialDistortion
         this.position = position
@@ -113,6 +122,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
         principalPointY: number,
         skewCoefficient: number,
         aspectRatio: number,
+        useSimpleIntrinsics: boolean,
         radialDistortion: [number, number, number],
         tangentialDistortion: [number, number],
         position: [number, number, number],
@@ -138,6 +148,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
             principalPointY,
             skewCoefficient,
             aspectRatio,
+            useSimpleIntrinsics,
             radialDistortion,
             tangentialDistortion,
             position,
@@ -168,6 +179,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
             principalPointY?: number
             skewCoefficient?: number
             aspectRatio?: number
+            useSimpleIntrinsics?: boolean
             radialDistortion?: [number, number, number]
             tangentialDistortion?: [number, number]
 
@@ -220,6 +232,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
             principalPointY: options.principalPointY ?? imageHeight / 2,
             skewCoefficient: options.skewCoefficient ?? 0,
             aspectRatio: options.aspectRatio ?? 1,
+            useSimpleIntrinsics: options.useSimpleIntrinsics ?? true,
             radialDistortion: options.radialDistortion ?? [0, 0, 0],
             tangentialDistortion: options.tangentialDistortion ?? [0, 0],
             position: options.position ?? [0, 0, 0],
@@ -251,6 +264,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
             dto.principalPointY,
             dto.skewCoefficient,
             dto.aspectRatio,
+            dto.useSimpleIntrinsics,
             dto.radialDistortion,
             dto.tangentialDistortion,
             dto.position,
@@ -450,12 +464,21 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
         const rotation = new Vec4(qw, qx, qy, qz)
         if (optimizePose) variables.push(qw, qx, qy, qz)
 
+        // When useSimpleIntrinsics=true (default), only optimize f, cx, cy
+        // aspectRatio and skew stay fixed at their current values (typically 1 and 0)
+        const optimizeFullIntrinsics = optimizeIntrinsics && !this.useSimpleIntrinsics
+
         const focalLength = optimizeIntrinsics ? V.W(this.focalLength) : V.C(this.focalLength)
-        const aspectRatio = optimizeIntrinsics ? V.W(this.aspectRatio) : V.C(this.aspectRatio)
+        const aspectRatio = optimizeFullIntrinsics ? V.W(this.aspectRatio) : V.C(this.aspectRatio)
         const principalPointX = optimizeIntrinsics ? V.W(this.principalPointX) : V.C(this.principalPointX)
         const principalPointY = optimizeIntrinsics ? V.W(this.principalPointY) : V.C(this.principalPointY)
-        const skew = optimizeIntrinsics ? V.W(this.skewCoefficient) : V.C(this.skewCoefficient)
-        if (optimizeIntrinsics) variables.push(focalLength, aspectRatio, principalPointX, principalPointY, skew)
+        const skew = optimizeFullIntrinsics ? V.W(this.skewCoefficient) : V.C(this.skewCoefficient)
+        if (optimizeIntrinsics) {
+            variables.push(focalLength, principalPointX, principalPointY)
+            if (optimizeFullIntrinsics) {
+                variables.push(aspectRatio, skew)
+            }
+        }
 
         const k1 = optimizeDistortion ? V.W(this.radialDistortion[0]) : V.C(this.radialDistortion[0])
         const k2 = optimizeDistortion ? V.W(this.radialDistortion[1]) : V.C(this.radialDistortion[1])
@@ -524,6 +547,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
             principalPointY: this.principalPointY,
             skewCoefficient: this.skewCoefficient,
             aspectRatio: this.aspectRatio,
+            useSimpleIntrinsics: this.useSimpleIntrinsics,
             radialDistortion: [...this.radialDistortion] as [number, number, number],
             tangentialDistortion: [...this.tangentialDistortion] as [number, number],
             position: [...this.position] as [number, number, number],
@@ -554,6 +578,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
             dto.principalPointY,
             dto.skewCoefficient,
             dto.aspectRatio,
+            dto.useSimpleIntrinsics ?? true,  // Default to true for backwards compatibility
             dto.radialDistortion,
             dto.tangentialDistortion,
             dto.position,

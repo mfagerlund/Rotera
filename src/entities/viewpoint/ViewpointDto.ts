@@ -12,6 +12,7 @@ export interface ViewpointDto extends BaseDto {
   principalPointY: number
   skewCoefficient: number
   aspectRatio: number
+  useSimpleIntrinsics?: boolean  // Optional for backwards compatibility (defaults to true)
   radialDistortion: [number, number, number]
   tangentialDistortion: [number, number]
   position: [number, number, number]
