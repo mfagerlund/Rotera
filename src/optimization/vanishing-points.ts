@@ -1,59 +1,65 @@
 /**
  * Vanishing Point Camera Initialization
  *
- * IMPORTANT COORDINATE SYSTEM LIMITATION:
+ * HOW VP INITIALIZATION WORKS:
  *
- * Vanishing points define axis DIRECTIONS but have a sign ambiguity. A VP is where
- * parallel lines converge at infinity - but lines extend in BOTH directions (+/-).
- * The VP only tells us the LINE direction, not which end is "positive".
+ * 1. Vanishing points (VPs) define axis DIRECTIONS but have sign ambiguity.
+ *    A VP is where parallel lines converge at infinity - but lines extend in
+ *    BOTH directions (+/-). The VP tells us the LINE direction, not which end
+ *    is "positive".
  *
- * The code computes 3D directions from VPs using: [u/f, -v/f, 1]
- * The -v converts from image coords (+v = down) to camera coords (+Y = up).
- * This coordinate conversion is correct.
+ * 2. The code computes 3D directions TO the VPs: [u/f, -v/f, 1]
+ *    The -v converts from image coords (+v = down) to camera coords (+Y = up).
  *
- * THE ACTUAL LIMITATION:
+ * 3. A rotation matrix R is built from these directions, where columns represent
+ *    where world +X, +Y, +Z axes point in camera space.
  *
- * The VP location in the image depends on WHERE parallel lines converge FROM THE
- * CAMERA'S VIEWPOINT. For the Y axis (vertical lines):
+ * 4. The code tests all 4 valid rotational sign combinations:
+ *    - [F,F,F]: (+X, +Y, +Z) toward VPs
+ *    - [T,T,F]: (+X, +Y toward OPPOSITE of VPs, +Z toward VP)
+ *    - [T,F,T]: similar combinations
+ *    - [F,T,T]: similar combinations
  *
- * - Camera looking DOWN: Vertical lines converge DOWNWARD (toward ground below).
- *   The Y VP is BELOW the principal point. Direction to VP is -Y (down in camera space).
- *   To get +Y = up, we need to FLIP the Y direction.
+ *    These cover all 4 rotational orientations. Odd flips (1 or 3) would create
+ *    reflections, which quaternions cannot represent.
  *
- * - Camera looking UP: Vertical lines converge UPWARD (toward sky above).
- *   The Y VP is ABOVE the principal point. Direction to VP is +Y (up in camera space).
- *   No flip needed.
+ * 5. Additionally, when Y is from a VP (not derived), the code now also tests
+ *    an alternate rotation with Y flipped (and X flipped to maintain rotation).
  *
- * The same applies to X and Z axes depending on camera orientation.
+ * 6. For each orientation, camera position is computed and reprojection error
+ *    measured against LOCKED world points. The orientation with lowest error wins.
  *
- * THE QUATERNION CONSTRAINT:
+ * DETERMINING COORDINATE SIGNS:
  *
- * Quaternions can only represent ROTATIONS (det = +1), not REFLECTIONS (det = -1).
- * Flipping an ODD number of axes (1 or 3) creates a reflection.
- * Flipping an EVEN number of axes (0 or 2) creates a rotation.
+ * The VP geometry alone CANNOT determine which direction is "+X", "+Y", or "+Z".
+ * The sign is determined by LOCKED POINTS:
  *
- * CONSEQUENCE:
+ * - If you lock a point at Y=+10, you're saying "+Y is in this direction"
+ * - The code tests orientations and finds one where that point reprojects correctly
+ * - If Y=+10 gives high error but Y=-10 gives low error, it means the physical
+ *   point is actually in the -Y direction from the origin
  *
- * If the camera orientation causes exactly 1 or 3 VP directions to be "backwards"
- * (requiring flips), the resulting coordinate system is LEFT-HANDED, which cannot
- * be represented as a quaternion rotation.
+ * RIGHT-HAND RULE:
  *
- * COMMON CASE - Camera looking down at a scene:
- * - X VP may be left or right of center (depends on camera yaw) - may or may not need flip
- * - Y VP is BELOW center (vertical lines converge down) - NEEDS FLIP for +Y = up
- * - Z VP may be left or right of center (depends on camera yaw) - may or may not need flip
+ * Pointing your fingers at VPs does NOT determine sign! VPs represent where
+ * parallel lines converge at infinity - they don't specify which direction
+ * along that line is "positive".
  *
- * If only Y needs flipping (common for cameras looking down with standard X/Z orientation),
- * that's 1 flip = reflection = CANNOT BE REPRESENTED.
+ * To set up a right-handed coordinate system:
+ * 1. Place origin (O) at a known physical location
+ * 2. Place +X point in the desired positive X direction from O
+ * 3. Place +Y point in the desired positive Y direction from O
+ * 4. Place +Z point in the desired positive Z direction from O
+ * 5. Lock these points with positive coordinates
  *
- * WORKAROUND:
+ * The VP orientations will be resolved to match your locked points.
  *
- * Use negative world coordinates for the problematic axes. If Y VP requires a flip,
- * lock points at negative Y values instead of positive. This effectively redefines
- * which direction is "positive" to match what the VP geometry naturally produces.
+ * TROUBLESHOOTING:
  *
- * Example: Instead of locking Y at [0, +10, 0], lock at [0, -10, 0].
- * The optimization will work, but +Y will point "down" in the conventional sense.
+ * If positive coordinates don't work, it likely means:
+ * - The physical point is placed in the negative direction from origin
+ * - Try locking with negative coordinates instead
+ * - OR move the physical point to the other side of the origin
  */
 
 import { VanishingLine, VanishingLineAxis } from '../entities/vanishing-line'
@@ -732,11 +738,16 @@ export function computeRotationsFromVPs(
 
     const dir = normalize([u / focalLength, -v / focalLength, 1])
     directions[axis] = dir
+
+    // Log which way each axis points in camera space
+    const camX = dir[0] > 0 ? 'RIGHT' : 'LEFT'
+    const camY = dir[1] > 0 ? 'UP' : 'DOWN'
+    log(`[VP Debug] ${axis.toUpperCase()} VP at (${vp.u.toFixed(0)}, ${vp.v.toFixed(0)}) -> direction ${camX}/${camY} in camera [${dir.map(d => d.toFixed(3)).join(', ')}]`)
   })
 
   let d_x: number[], d_y: number[], d_z: number[]
-  let derivedYAxis = false
-  let d_y_alt: number[] | null = null  // Alternate Y direction for when Y is derived
+  let d_y_alt: number[] | null = null  // Alternate Y direction (flipped)
+  let derivedYAxis = false  // True when Y is computed from cross product (not from VP)
 
   if (directions.x && directions.z && !directions.y) {
     d_x = directions.x
@@ -752,13 +763,29 @@ export function computeRotationsFromVPs(
     d_y = directions.y
     d_z = cross(d_x, d_y)
     d_z = normalize(d_z)
+    // ALSO compute alternate Y (flipped) - the VP only tells us the LINE, not which end is +Y
+    d_y_alt = [-d_y[0], -d_y[1], -d_y[2]]
   } else if (directions.y && directions.z) {
     d_y = directions.y
     d_z = directions.z
     d_x = cross(d_y, d_z)
     d_x = normalize(d_x)
+    // ALSO compute alternate Y (flipped) - the VP only tells us the LINE, not which end is +Y
+    d_y_alt = [-d_y[0], -d_y[1], -d_y[2]]
   } else {
     return null
+  }
+
+  // If all 3 VP directions were observed, check cross product consistency
+  if (directions.x && directions.y && directions.z) {
+    const expected_z = cross(directions.x, directions.y)
+    const expected_z_norm = normalize(expected_z)
+    const actual_z = directions.z
+    const dot = expected_z_norm[0] * actual_z[0] + expected_z_norm[1] * actual_z[1] + expected_z_norm[2] * actual_z[2]
+    log(`[VP Debug] Cross product check: X × Y dot Z = ${dot.toFixed(3)} (should be +1 for right-handed, -1 for left-handed)`)
+    if (dot < 0) {
+      log(`[VP Debug] WARNING: VP configuration appears LEFT-HANDED! The Z VP is on the opposite side of X×Y.`)
+    }
   }
 
   // NOTE: We do NOT force d_y[1] > 0 here. The sign ambiguity is resolved by
@@ -771,6 +798,27 @@ export function computeRotationsFromVPs(
     [d_x[1], d_y[1], d_z[1]],
     [d_x[2], d_y[2], d_z[2]]
   ]
+
+  // CRITICAL: Check if the coordinate system is right-handed (det > 0) or left-handed (det < 0)
+  // If left-handed, quaternion conversion will produce GARBAGE!
+  const det = d_x[0] * (d_y[1] * d_z[2] - d_y[2] * d_z[1])
+            - d_x[1] * (d_y[0] * d_z[2] - d_y[2] * d_z[0])
+            + d_x[2] * (d_y[0] * d_z[1] - d_y[1] * d_z[0])
+  log(`[VP Debug] Rotation matrix determinant: ${det.toFixed(6)} (should be +1 for right-handed)`)
+
+  if (det < 0) {
+    log(`[VP Debug] WARNING: Left-handed coordinate system detected! det=${det.toFixed(6)}`)
+    log(`[VP Debug] This means the VP directions don't form a valid right-handed system.`)
+    log(`[VP Debug] The code will try to fix this by flipping an axis.`)
+    // Flip Z to convert from left-handed to right-handed
+    d_z = [-d_z[0], -d_z[1], -d_z[2]]
+    R = [
+      [d_x[0], d_y[0], d_z[0]],
+      [d_x[1], d_y[1], d_z[1]],
+      [d_x[2], d_y[2], d_z[2]]
+    ]
+    log(`[VP Debug] After Z flip, new det: ${(d_x[0] * (d_y[1] * d_z[2] - d_y[2] * d_z[1]) - d_x[1] * (d_y[0] * d_z[2] - d_y[2] * d_z[0]) + d_x[2] * (d_y[0] * d_z[1] - d_y[1] * d_z[0])).toFixed(6)}`)
+  }
 
   if (derivedYAxis) {
     const targetU = (directions.x[0] / directions.x[2] + directions.z[0] / directions.z[2]) / 2
@@ -832,15 +880,18 @@ export function computeRotationsFromVPs(
   log(`[ ${R[2].map(v => v.toFixed(6)).join(', ')} ]`)
   log(`[VP Debug] Quaternion: ${JSON.stringify(quaternion.map(v => Number(v.toFixed(6))))}`)
 
-  // If Y was derived, also build the alternate rotation with opposite Y direction
+  // If we have an alternate Y direction, build a second rotation with flipped Y.
+  // IMPORTANT: Just flipping Y creates a reflection (det=-1). We must flip an EVEN
+  // number of axes to stay in rotation space. So flip both Y and X (equivalent to
+  // 180° rotation around Z-axis combined with the base rotation).
   if (d_y_alt) {
     const R_alt = [
-      [d_x[0], d_y_alt[0], d_z[0]],
-      [d_x[1], d_y_alt[1], d_z[1]],
-      [d_x[2], d_y_alt[2], d_z[2]]
+      [-d_x[0], d_y_alt[0], d_z[0]],  // Also flip X to maintain rotation (not reflection)
+      [-d_x[1], d_y_alt[1], d_z[1]],
+      [-d_x[2], d_y_alt[2], d_z[2]]
     ]
     const quaternion_alt = matrixToQuaternion(R_alt)
-    log('[VP Debug] Also returning alternate rotation with Y = X × Z')
+    log('[VP Debug] Also returning alternate rotation with flipped Y and X')
     return [quaternion, quaternion_alt]
   }
 
