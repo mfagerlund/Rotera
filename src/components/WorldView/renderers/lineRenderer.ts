@@ -1,8 +1,26 @@
 // Line rendering
 
 import type { Project } from '../../../entities/project'
-import type { Line } from '../../../entities/line/Line'
+import type { Line, LineDirection } from '../../../entities/line/Line'
 import type { ProjectedPoint } from '../types'
+
+const AXIS_COLORS: Record<'x' | 'y' | 'z', string> = {
+  x: '#ff0000',
+  y: '#00ff00',
+  z: '#0000ff'
+}
+
+/**
+ * Returns the axis color for direction-constrained lines, or null for non-axis-aligned lines.
+ */
+function getAxisColorForDirection(direction: LineDirection): string | null {
+  switch (direction) {
+    case 'x-aligned': return AXIS_COLORS.x
+    case 'vertical': return AXIS_COLORS.y
+    case 'z-aligned': return AXIS_COLORS.z
+    default: return null
+  }
+}
 
 export function renderLines(
   ctx: CanvasRenderingContext2D,
@@ -34,7 +52,9 @@ export function renderLines(
       ctx.setLineDash([]) // Solid for segments
     }
 
-    let strokeColor = line.color || '#2196F3'
+    // Use axis color for direction-constrained lines, otherwise use line's own color
+    const axisColor = getAxisColorForDirection(line.direction)
+    let strokeColor = axisColor || line.color || '#2196F3'
     let lineWidth = 2
 
     if (isSelected) {

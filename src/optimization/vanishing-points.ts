@@ -1,8 +1,77 @@
 import { VanishingLine, VanishingLineAxis } from '../entities/vanishing-line'
 import { Viewpoint } from '../entities/viewpoint'
 import { WorldPoint } from '../entities/world-point'
+import { Line, LineDirection } from '../entities/line'
 import { Quaternion } from './Quaternion'
 import { log } from './optimization-logger'
+
+/**
+ * Maps Line direction constraints to vanishing point axes.
+ * Returns null for directions that don't map to a single axis.
+ */
+function lineDirectionToVPAxis(direction: LineDirection): VanishingLineAxis | null {
+  switch (direction) {
+    case 'x-aligned': return 'x'
+    case 'vertical': return 'y'
+    case 'z-aligned': return 'z'
+    case 'horizontal': return null  // Ambiguous - could be X or Z
+    case 'free': return null
+    default: return null
+  }
+}
+
+/**
+ * Finds ImagePoint for a WorldPoint in a specific Viewpoint.
+ */
+function findImagePointInViewpoint(
+  worldPoint: WorldPoint,
+  viewpoint: Viewpoint
+): { u: number; v: number } | null {
+  for (const ip of worldPoint.imagePoints) {
+    if (ip.viewpoint === viewpoint) {
+      return { u: ip.u, v: ip.v }
+    }
+  }
+  return null
+}
+
+/**
+ * Collects direction-constrained Lines visible in a viewpoint as virtual vanishing lines.
+ * A Line is "visible" if both endpoints have ImagePoints in the viewpoint.
+ */
+function collectDirectionConstrainedLines(
+  viewpoint: Viewpoint
+): { axis: VanishingLineAxis; p1: { u: number; v: number }; p2: { u: number; v: number } }[] {
+  const virtualLines: { axis: VanishingLineAxis; p1: { u: number; v: number }; p2: { u: number; v: number } }[] = []
+  const processedLines = new Set<Line>()
+
+  // Iterate through all imagePoints in this viewpoint
+  for (const imagePoint of viewpoint.imagePoints) {
+    const worldPoint = imagePoint.worldPoint as WorldPoint
+
+    // Check each line connected to this world point
+    for (const iline of worldPoint.connectedLines) {
+      const line = iline as Line
+
+      // Skip if already processed or no direction constraint
+      if (processedLines.has(line)) continue
+      processedLines.add(line)
+
+      const axis = lineDirectionToVPAxis(line.direction)
+      if (!axis) continue
+
+      // Find image points for both endpoints
+      const p1 = findImagePointInViewpoint(line.pointA as WorldPoint, viewpoint)
+      const p2 = findImagePointInViewpoint(line.pointB as WorldPoint, viewpoint)
+
+      if (p1 && p2) {
+        virtualLines.push({ axis, p1, p2 })
+      }
+    }
+  }
+
+  return virtualLines
+}
 
 export interface VanishingPoint {
   u: number
@@ -119,7 +188,7 @@ function flipRotationAxes(
 }
 
 export function computeVanishingPoint(
-  lines: VanishingLine[]
+  lines: Array<{ p1: { u: number; v: number }; p2: { u: number; v: number } }>
 ): { u: number; v: number } | null {
   if (lines.length < 2) {
     return null
@@ -327,15 +396,30 @@ export function validateVanishingPoints(viewpoint: Viewpoint): ValidationResult 
     z?: VanishingPoint
   } = {}
 
-  const linesByAxis: Record<VanishingLineAxis, VanishingLine[]> = {
+  // Use a generic type that works for both explicit VanishingLines and virtual lines from direction constraints
+  type VPLineData = { p1: { u: number; v: number }; p2: { u: number; v: number } }
+  const linesByAxis: Record<VanishingLineAxis, VPLineData[]> = {
     x: [],
     y: [],
     z: []
   }
 
+  // 1. Collect explicit VanishingLines
   Array.from(viewpoint.vanishingLines).forEach(line => {
     linesByAxis[line.axis].push(line)
   })
+
+  // 2. Collect direction-constrained Lines as virtual vanishing lines
+  const virtualLines = collectDirectionConstrainedLines(viewpoint)
+  let virtualLineCount = 0
+  virtualLines.forEach(vl => {
+    linesByAxis[vl.axis].push(vl)
+    virtualLineCount++
+  })
+
+  if (virtualLineCount > 0) {
+    log(`[validateVanishingPoints] Added ${virtualLineCount} virtual VP lines from direction-constrained Lines`)
+  }
 
   const axes: VanishingLineAxis[] = ['x', 'y', 'z']
   axes.forEach(axis => {

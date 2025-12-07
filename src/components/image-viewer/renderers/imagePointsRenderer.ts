@@ -1,4 +1,17 @@
-import { RenderParams } from './types'
+import { RenderParams, AXIS_COLORS } from './types'
+import type { LineDirection } from '../../../entities/line'
+
+/**
+ * Returns the axis color for direction-constrained lines, or null for non-axis-aligned lines.
+ */
+function getAxisColorForDirection(direction: LineDirection): string | null {
+  switch (direction) {
+    case 'x-aligned': return AXIS_COLORS.x
+    case 'vertical': return AXIS_COLORS.y
+    case 'z-aligned': return AXIS_COLORS.z
+    default: return null
+  }
+}
 
 export function renderLines(params: RenderParams): void {
   const {
@@ -37,7 +50,11 @@ export function renderLines(params: RenderParams): void {
     const isSelected = selectedLines.some(l => l.pointA === line.pointA && l.pointB === line.pointB)
     const isHovered = hoveredLine && hoveredLine.pointA === line.pointA && hoveredLine.pointB === line.pointB
 
-    let strokeColor = line.isConstruction ? 'rgba(0, 150, 255, 0.6)' : line.color
+    // Use axis color for direction-constrained lines, otherwise use line's own color
+    const axisColor = getAxisColorForDirection(line.direction)
+    let strokeColor = line.isConstruction
+      ? 'rgba(0, 150, 255, 0.6)'
+      : (axisColor || line.color)
     let lineWidth = line.isConstruction ? 1 : 2
 
     if (isSelected) {
