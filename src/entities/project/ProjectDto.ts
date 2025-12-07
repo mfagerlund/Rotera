@@ -7,7 +7,14 @@ import type { VanishingLineDto } from '../vanishing-line/VanishingLineDto'
 import type { MeasurementUnits, Theme, WorkspaceType, VisualFeedbackLevel, ImageSortOrder } from './Project'
 import type { ViewSettings } from '../../types/visibility'
 
+// Current format version: 1
+// Version history:
+// - 0 (implicit): Original format with 'horizontal', 'vertical', 'x-aligned', 'z-aligned' directions
+// - 1: New axis-based directions: 'x', 'y', 'z', 'xy', 'xz', 'yz'
+export const CURRENT_FORMAT_VERSION = 1
+
 export interface ProjectDto {
+  formatVersion?: number  // undefined = version 0
   name: string
   worldPoints: WorldPointDto[]
   lines: LineDto[]

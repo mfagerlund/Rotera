@@ -32,7 +32,7 @@ export interface LineUpdates {
   name?: string
   color?: string
   isConstruction?: boolean
-  direction?: 'free' | 'horizontal' | 'vertical' | 'x-aligned' | 'z-aligned'
+  direction?: LineDirection
   targetLength?: number
   tolerance?: number
   lineStyle?: 'solid' | 'dashed' | 'dotted'

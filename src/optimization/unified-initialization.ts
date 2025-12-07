@@ -157,24 +157,31 @@ function inferPointPosition(
   let position: [number, number, number] | null = null
 
   switch (direction) {
-    case 'x-aligned':
+    case 'x':
       position = [x0 + targetLength, y0, z0]
       break
 
-    case 'y-aligned':
+    case 'y':
       position = [x0, y0 + targetLength, z0]
       break
 
-    case 'z-aligned':
+    case 'z':
       position = [x0, y0, z0 + targetLength]
       break
 
-    case 'vertical':
-      position = [x0, y0 + targetLength, z0]
+    case 'xy':
+      // In XY plane - arbitrary direction, use 45 degrees
+      position = [x0 + targetLength * 0.707, y0 + targetLength * 0.707, z0]
       break
 
-    case 'horizontal':
+    case 'xz':
+      // In XZ plane (horizontal) - arbitrary direction, use 45 degrees
       position = [x0 + targetLength * 0.707, y0, z0 + targetLength * 0.707]
+      break
+
+    case 'yz':
+      // In YZ plane - arbitrary direction, use 45 degrees
+      position = [x0, y0 + targetLength * 0.707, z0 + targetLength * 0.707]
       break
 
     default:

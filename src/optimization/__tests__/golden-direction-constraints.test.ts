@@ -213,13 +213,13 @@ describe('GOLDEN-3: Line Direction Constraints', () => {
 
     console.log('CREATING LINE DIRECTION CONSTRAINTS:\n');
 
-    const lineDefinitions: [number, number, string, 'horizontal' | 'vertical' | 'x-aligned' | 'z-aligned' | 'free', number][] = [
-      [0, 1, 'H1', 'horizontal', 10],
-      [0, 2, 'V1', 'vertical', 10],
-      [0, 3, 'Z1', 'z-aligned', 10],
-      [0, 4, 'X1', 'x-aligned', 20],
-      [0, 5, 'V2', 'vertical', 20],
-      [0, 6, 'Z2', 'z-aligned', 20],
+    const lineDefinitions: [number, number, string, 'x' | 'y' | 'z' | 'xy' | 'xz' | 'yz' | 'free', number][] = [
+      [0, 1, 'XZ1', 'xz', 10],   // horizontal (in XZ plane)
+      [0, 2, 'Y1', 'y', 10],    // vertical (Y-aligned)
+      [0, 3, 'Z1', 'z', 10],    // Z-aligned
+      [0, 4, 'X1', 'x', 20],    // X-aligned
+      [0, 5, 'Y2', 'y', 20],    // Y-aligned (vertical)
+      [0, 6, 'Z2', 'z', 20],    // Z-aligned
       [0, 7, 'F1', 'free', Math.sqrt(200)],
     ];
 
@@ -289,17 +289,29 @@ describe('GOLDEN-3: Line Direction Constraints', () => {
       let dirError = 0;
 
       switch (direction) {
-        case 'horizontal':
+        case 'x':
+          // X-aligned: dy and dz should be 0
           dirError = Math.sqrt(dy**2 + dz**2);
           break;
-        case 'vertical':
+        case 'y':
+          // Y-aligned (vertical): dx and dz should be 0
           dirError = Math.sqrt(dx**2 + dz**2);
           break;
-        case 'x-aligned':
-          dirError = Math.sqrt(dy**2 + dz**2);
-          break;
-        case 'z-aligned':
+        case 'z':
+          // Z-aligned: dx and dy should be 0
           dirError = Math.sqrt(dx**2 + dy**2);
+          break;
+        case 'xy':
+          // XY plane: dz should be 0
+          dirError = Math.abs(dz);
+          break;
+        case 'xz':
+          // XZ plane (horizontal): dy should be 0
+          dirError = Math.abs(dy);
+          break;
+        case 'yz':
+          // YZ plane: dx should be 0
+          dirError = Math.abs(dx);
           break;
         case 'free':
           dirError = 0;

@@ -235,20 +235,20 @@ describe('GOLDEN-5: Mixed Constraints', () => {
     console.log('CREATING MIXED CONSTRAINTS:\n');
     console.log('1. CUBE EDGE LINES (12 edges, all length=10, with directions):');
 
-    type LineDir = 'horizontal' | 'vertical' | 'x-aligned' | 'z-aligned' | 'free';
+    type LineDir = 'xz' | 'y' | 'x' | 'z' | 'free';
     const edgeDefinitions: [number, number, string, LineDir, number][] = [
-      [0, 1, 'Bottom-Front', 'horizontal', 10],
-      [1, 2, 'Bottom-Right', 'vertical', 10],
-      [2, 3, 'Bottom-Back', 'horizontal', 10],
-      [3, 0, 'Bottom-Left', 'vertical', 10],
-      [4, 5, 'Top-Front', 'horizontal', 10],
-      [5, 6, 'Top-Right', 'vertical', 10],
-      [6, 7, 'Top-Back', 'horizontal', 10],
-      [7, 4, 'Top-Left', 'vertical', 10],
-      [0, 4, 'Vertical-FL', 'z-aligned', 10],
-      [1, 5, 'Vertical-FR', 'z-aligned', 10],
-      [2, 6, 'Vertical-BR', 'z-aligned', 10],
-      [3, 7, 'Vertical-BL', 'z-aligned', 10],
+      [0, 1, 'Bottom-Front', 'xz', 10],
+      [1, 2, 'Bottom-Right', 'y', 10],
+      [2, 3, 'Bottom-Back', 'xz', 10],
+      [3, 0, 'Bottom-Left', 'y', 10],
+      [4, 5, 'Top-Front', 'xz', 10],
+      [5, 6, 'Top-Right', 'y', 10],
+      [6, 7, 'Top-Back', 'xz', 10],
+      [7, 4, 'Top-Left', 'y', 10],
+      [0, 4, 'Vertical-FL', 'z', 10],
+      [1, 5, 'Vertical-FR', 'z', 10],
+      [2, 6, 'Vertical-BR', 'z', 10],
+      [3, 7, 'Vertical-BL', 'z', 10],
     ];
 
     const lines: Line[] = [];
@@ -354,16 +354,16 @@ describe('GOLDEN-5: Mixed Constraints', () => {
       let dirError = 0;
 
       switch (direction) {
-        case 'horizontal':
+        case 'xz':
           dirError = Math.sqrt(dy**2 + dz**2);
           break;
-        case 'vertical':
+        case 'y':
           dirError = Math.sqrt(dx**2 + dz**2);
           break;
-        case 'x-aligned':
+        case 'x':
           dirError = Math.sqrt(dy**2 + dz**2);
           break;
-        case 'z-aligned':
+        case 'z':
           dirError = Math.sqrt(dx**2 + dy**2);
           break;
         case 'free':

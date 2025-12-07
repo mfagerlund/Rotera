@@ -7,14 +7,18 @@ import { log } from './optimization-logger'
 
 /**
  * Maps Line direction constraints to vanishing point axes.
- * Returns null for directions that don't map to a single axis.
+ * Only axis-aligned directions (x, y, z) map to a single vanishing point.
+ * Plane-constrained directions (xy, xz, yz) don't map to a single axis.
  */
 function lineDirectionToVPAxis(direction: LineDirection): VanishingLineAxis | null {
   switch (direction) {
-    case 'x-aligned': return 'x'
-    case 'vertical': return 'y'
-    case 'z-aligned': return 'z'
-    case 'horizontal': return null  // Ambiguous - could be X or Z
+    case 'x': return 'x'
+    case 'y': return 'y'
+    case 'z': return 'z'
+    // Plane constraints don't map to a single vanishing point
+    case 'xy': return null
+    case 'xz': return null
+    case 'yz': return null
     case 'free': return null
     default: return null
   }

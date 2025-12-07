@@ -27,10 +27,10 @@ function createTestProject(): Project {
   project.addWorldPoint(wp4);
   project.addWorldPoint(wp5);
 
-  const line1 = Line.create('Loop_1', wp1, wp2, { direction: 'z-aligned', targetLength: 10 });
+  const line1 = Line.create('Loop_1', wp1, wp2, { direction: 'z', targetLength: 10 });
   const line2 = Line.create('Loop_2', wp2, wp3);
   const line3 = Line.create('Loop_3', wp3, wp4);
-  const line4 = Line.create('Loop_4', wp4, wp5, { direction: 'x-aligned', targetLength: 10 });
+  const line4 = Line.create('Loop_4', wp4, wp5, { direction: 'x', targetLength: 10 });
   const line5 = Line.create('Loop_5', wp5, wp1, { direction: 'free', targetLength: 10 });
 
   project.addLine(line1);

@@ -9,13 +9,17 @@ import type { SerializationContext } from '../serialization/SerializationContext
 import type { LineDto } from './LineDto'
 import {makeAutoObservable} from 'mobx'
 
-// Direction constraint enum for lines
+// Direction constraint for lines
+// Axis-aligned: line is parallel to that axis (1 DoF)
+// Plane-constrained: line lies in that plane (2 DoF)
 export type LineDirection =
-  | 'free'           // No directional constraint
-  | 'horizontal'     // Constrained to horizontal (XY plane, Z=0 direction)
-  | 'vertical'       // Constrained to vertical (Z-axis direction, same as Y-axis)
-  | 'x-aligned'      // Constrained to X-axis direction
-  | 'z-aligned'      // Constrained to Z-axis direction
+  | 'free'  // No constraint (3 DoF)
+  | 'x'     // Parallel to X axis
+  | 'y'     // Parallel to Y axis (vertical)
+  | 'z'     // Parallel to Z axis
+  | 'xy'    // Lies in XY plane (Z=0)
+  | 'xz'    // Lies in XZ plane (Y=0, horizontal ground plane)
+  | 'yz'    // Lies in YZ plane (X=0)
 
 export class Line implements ISelectable, ILine, IResidualProvider, ISerializable<LineDto> {
   lastResiduals: number[] = []
@@ -143,22 +147,34 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
   }
 
   isHorizontal(): boolean {
-    return this.direction === 'horizontal'
+    return this.direction === 'xz'
   }
 
   isVertical(): boolean {
-    return this.direction === 'vertical'
+    return this.direction === 'y'
   }
 
   isXAligned(): boolean {
-    return this.direction === 'x-aligned'
+    return this.direction === 'x'
+  }
+
+  isYAligned(): boolean {
+    return this.direction === 'y'
   }
 
   isZAligned(): boolean {
-    return this.direction === 'z-aligned'
+    return this.direction === 'z'
   }
 
   isAxisAligned(): boolean {
+    return this.direction === 'x' || this.direction === 'y' || this.direction === 'z'
+  }
+
+  isPlaneConstrained(): boolean {
+    return this.direction === 'xy' || this.direction === 'xz' || this.direction === 'yz'
+  }
+
+  isConstrained(): boolean {
     return this.direction !== 'free'
   }
 
@@ -176,24 +192,40 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
         const [dx, dy, dz] = dir
 
         switch (this.direction) {
-          case 'horizontal':
-            if (Math.abs(dy) > tol) {
-              violations.push('Line is not horizontal')
-            }
-            break
-          case 'vertical':
-            if (Math.abs(dx) > tol || Math.abs(dz) > tol) {
-              violations.push('Line is not vertical')
-            }
-            break
-          case 'x-aligned':
+          case 'x':
+            // X-aligned: dy and dz should be 0
             if (Math.abs(dy) > tol || Math.abs(dz) > tol) {
               violations.push('Line is not X-axis aligned')
             }
             break
-          case 'z-aligned':
+          case 'y':
+            // Y-aligned (vertical): dx and dz should be 0
+            if (Math.abs(dx) > tol || Math.abs(dz) > tol) {
+              violations.push('Line is not Y-axis aligned (vertical)')
+            }
+            break
+          case 'z':
+            // Z-aligned: dx and dy should be 0
             if (Math.abs(dx) > tol || Math.abs(dy) > tol) {
               violations.push('Line is not Z-axis aligned')
+            }
+            break
+          case 'xy':
+            // XY plane: dz should be 0
+            if (Math.abs(dz) > tol) {
+              violations.push('Line is not in XY plane')
+            }
+            break
+          case 'xz':
+            // XZ plane (horizontal): dy should be 0
+            if (Math.abs(dy) > tol) {
+              violations.push('Line is not in XZ plane (horizontal)')
+            }
+            break
+          case 'yz':
+            // YZ plane: dx should be 0
+            if (Math.abs(dx) > tol) {
+              violations.push('Line is not in YZ plane')
             }
             break
         }
@@ -412,20 +444,34 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
     const geoScale = V.C(GEOMETRIC_SCALE)
 
     switch (this.direction) {
-      case 'horizontal':
-        residuals.push(V.mul(direction.y, geoScale))
-        break
-
-      case 'vertical':
-        residuals.push(V.mul(direction.x, geoScale), V.mul(direction.z, geoScale))
-        break
-
-      case 'x-aligned':
+      case 'x':
+        // X-aligned: penalize Y and Z components
         residuals.push(V.mul(direction.y, geoScale), V.mul(direction.z, geoScale))
         break
 
-      case 'z-aligned':
+      case 'y':
+        // Y-aligned (vertical): penalize X and Z components
+        residuals.push(V.mul(direction.x, geoScale), V.mul(direction.z, geoScale))
+        break
+
+      case 'z':
+        // Z-aligned: penalize X and Y components
         residuals.push(V.mul(direction.x, geoScale), V.mul(direction.y, geoScale))
+        break
+
+      case 'xy':
+        // XY plane: penalize Z component
+        residuals.push(V.mul(direction.z, geoScale))
+        break
+
+      case 'xz':
+        // XZ plane (horizontal): penalize Y component
+        residuals.push(V.mul(direction.y, geoScale))
+        break
+
+      case 'yz':
+        // YZ plane: penalize X component
+        residuals.push(V.mul(direction.x, geoScale))
         break
 
       case 'free':

@@ -459,35 +459,34 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
             <label style={{fontSize: '12px', fontWeight: '500', display: 'block', marginBottom: '4px'}}>Direction</label>
             <div style={{display: 'flex', gap: '4px', flexWrap: 'wrap'}}>
               {[
-                { value: 'free', label: 'Free', setsValue: 'free', tooltip: undefined },
-                { value: 'horizontal', label: '↔ Horiz', setsValue: 'horizontal', tooltip: undefined },
-                { value: 'vertical', label: '↕ Vert', setsValue: 'vertical', tooltip: undefined },
-                { value: 'x-aligned', label: 'X', setsValue: 'x-aligned', tooltip: undefined },
-                { value: 'y-aligned', label: 'Y', setsValue: 'vertical', tooltip: 'Same as Vert' },
-                { value: 'z-aligned', label: 'Z', setsValue: 'z-aligned', tooltip: undefined }
+                { value: 'free', label: 'Free', tooltip: 'No constraint' },
+                { value: 'x', label: 'X', tooltip: 'Parallel to X axis' },
+                { value: 'y', label: 'Y', tooltip: 'Parallel to Y axis (vertical)' },
+                { value: 'z', label: 'Z', tooltip: 'Parallel to Z axis' },
+                { value: 'xy', label: 'XY', tooltip: 'In XY plane' },
+                { value: 'xz', label: 'XZ', tooltip: 'In XZ plane (horizontal)' },
+                { value: 'yz', label: 'YZ', tooltip: 'In YZ plane' }
               ].map(option => {
-                const isGrayed = option.value === 'y-aligned'
-                const isActive = direction === option.setsValue
+                const isActive = direction === option.value
 
                 return (
                   <button
                     key={option.value}
                     type="button"
-                    onClick={() => setDirection(option.setsValue as LineDirection)}
+                    onClick={() => setDirection(option.value as LineDirection)}
                     title={option.tooltip}
                     style={{
                       flex: '1 1 auto',
-                      minWidth: '50px',
-                      padding: '4px 8px',
+                      minWidth: '40px',
+                      padding: '4px 6px',
                       fontSize: '11px',
                       border: `1px solid ${isActive ? 'var(--accent, #0696d7)' : 'var(--border, #555)'}`,
-                      background: isGrayed ? 'var(--bg-disabled, #1a1a1a)' : isActive ? 'var(--accent, #0696d7)' : 'var(--bg-input, #2a2a2a)',
-                      color: isGrayed ? 'var(--text-disabled, #666)' : isActive ? '#fff' : 'var(--text, #fff)',
+                      background: isActive ? 'var(--accent, #0696d7)' : 'var(--bg-input, #2a2a2a)',
+                      color: isActive ? '#fff' : 'var(--text, #fff)',
                       borderRadius: '3px',
                       cursor: 'pointer',
                       fontWeight: isActive ? '600' : '400',
-                      transition: 'all 0.15s ease',
-                      opacity: isGrayed ? 0.6 : 1
+                      transition: 'all 0.15s ease'
                     }}
                     onMouseEnter={(e) => {
                       if (!isActive) {

@@ -146,21 +146,21 @@ describe('GOLDEN-VP: Single Camera with Vanishing Point Initialization', () => {
     // Create lines with direction constraints
     // WP1-WP4: vertical (Y-aligned)
     const line1 = Line.create('L1_vertical', worldPoints[0], worldPoints[3], {
-      direction: 'vertical',
+      direction: 'y',
       targetLength: 10,
     });
     project.addLine(line1);
 
     // WP1-WP2: X-aligned
     const line2 = Line.create('L2_x-aligned', worldPoints[0], worldPoints[1], {
-      direction: 'x-aligned',
+      direction: 'x',
       targetLength: 10,
     });
     project.addLine(line2);
 
     // WP2-WP3: Z-aligned
     const line3 = Line.create('L3_z-aligned', worldPoints[1], worldPoints[2], {
-      direction: 'z-aligned',
+      direction: 'z',
       targetLength: 10,
     });
     project.addLine(line3);

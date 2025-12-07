@@ -15,9 +15,9 @@ const AXIS_COLORS: Record<'x' | 'y' | 'z', string> = {
  */
 function getAxisColorForDirection(direction: LineDirection): string | null {
   switch (direction) {
-    case 'x-aligned': return AXIS_COLORS.x
-    case 'vertical': return AXIS_COLORS.y
-    case 'z-aligned': return AXIS_COLORS.z
+    case 'x': return AXIS_COLORS.x
+    case 'y': return AXIS_COLORS.y
+    case 'z': return AXIS_COLORS.z
     default: return null
   }
 }
@@ -74,14 +74,16 @@ export function renderLines(
     const midY = (projA.y + projB.y) / 2
 
     // Show glyph with direction constraint if available
-    let directionGlyph = '↔' // Default glyph
+    let directionGlyph = '' // No glyph for free
     const direction = line.direction
     switch (direction) {
-      case 'horizontal': directionGlyph = '↔'; break
-      case 'vertical': directionGlyph = '↕'; break
-      case 'x-aligned': directionGlyph = 'X'; break
-      case 'z-aligned': directionGlyph = 'Z'; break
-      case 'free': directionGlyph = '↔'; break
+      case 'x': directionGlyph = 'X'; break
+      case 'y': directionGlyph = 'Y'; break
+      case 'z': directionGlyph = 'Z'; break
+      case 'xy': directionGlyph = 'XY'; break
+      case 'xz': directionGlyph = 'XZ'; break
+      case 'yz': directionGlyph = 'YZ'; break
+      case 'free': directionGlyph = ''; break
     }
 
     // Show target length if set, otherwise show calculated length

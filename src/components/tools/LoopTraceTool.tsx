@@ -237,37 +237,51 @@ export const LoopTraceTool: React.FC<LoopTraceToolProps> = ({
             <button
               className={`orientation-btn ${orientation === 'free' ? 'active' : ''}`}
               onClick={() => handleOrientationChange('free')}
-              title="Free"
+              title="No constraint"
             >
               Free
             </button>
             <button
-              className={`orientation-btn ${orientation === 'horizontal' ? 'active' : ''}`}
-              onClick={() => handleOrientationChange('horizontal')}
-              title="Horizontal"
-            >
-              ↔ Horiz
-            </button>
-            <button
-              className={`orientation-btn ${orientation === 'vertical' ? 'active' : ''}`}
-              onClick={() => handleOrientationChange('vertical')}
-              title="Vertical"
-            >
-              ↕ Vert
-            </button>
-            <button
-              className={`orientation-btn ${orientation === 'x-aligned' ? 'active' : ''}`}
-              onClick={() => handleOrientationChange('x-aligned')}
-              title="X-aligned"
+              className={`orientation-btn ${orientation === 'x' ? 'active' : ''}`}
+              onClick={() => handleOrientationChange('x')}
+              title="Parallel to X axis"
             >
               X
             </button>
             <button
-              className={`orientation-btn ${orientation === 'z-aligned' ? 'active' : ''}`}
-              onClick={() => handleOrientationChange('z-aligned')}
-              title="Z-aligned"
+              className={`orientation-btn ${orientation === 'y' ? 'active' : ''}`}
+              onClick={() => handleOrientationChange('y')}
+              title="Parallel to Y axis (vertical)"
+            >
+              Y
+            </button>
+            <button
+              className={`orientation-btn ${orientation === 'z' ? 'active' : ''}`}
+              onClick={() => handleOrientationChange('z')}
+              title="Parallel to Z axis"
             >
               Z
+            </button>
+            <button
+              className={`orientation-btn ${orientation === 'xy' ? 'active' : ''}`}
+              onClick={() => handleOrientationChange('xy')}
+              title="In XY plane"
+            >
+              XY
+            </button>
+            <button
+              className={`orientation-btn ${orientation === 'xz' ? 'active' : ''}`}
+              onClick={() => handleOrientationChange('xz')}
+              title="In XZ plane (horizontal)"
+            >
+              XZ
+            </button>
+            <button
+              className={`orientation-btn ${orientation === 'yz' ? 'active' : ''}`}
+              onClick={() => handleOrientationChange('yz')}
+              title="In YZ plane"
+            >
+              YZ
             </button>
           </div>
         </div>

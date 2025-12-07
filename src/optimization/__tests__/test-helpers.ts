@@ -125,7 +125,7 @@ export function getDirection(pointA: WorldPoint, pointB: WorldPoint): [number, n
 export function expectLineDirection(
   pointA: WorldPoint,
   pointB: WorldPoint,
-  direction: 'x-aligned' | 'vertical' | 'z-aligned',
+  direction: 'x' | 'y' | 'z',
   tolerance: number = Tolerance.DIRECTION
 ): void {
   const dir = getDirection(pointA, pointB);
@@ -136,17 +136,17 @@ export function expectLineDirection(
   const [dx, dy, dz] = [Math.abs(dir[0]), Math.abs(dir[1]), Math.abs(dir[2])];
 
   switch (direction) {
-    case 'x-aligned':
+    case 'x':
       expect(dx).toBeGreaterThan(0.99);
       expect(dy).toBeLessThan(tolerance);
       expect(dz).toBeLessThan(tolerance);
       break;
-    case 'vertical':
+    case 'y':
       expect(dy).toBeGreaterThan(0.99);
       expect(dx).toBeLessThan(tolerance);
       expect(dz).toBeLessThan(tolerance);
       break;
-    case 'z-aligned':
+    case 'z':
       expect(dz).toBeGreaterThan(0.99);
       expect(dx).toBeLessThan(tolerance);
       expect(dy).toBeLessThan(tolerance);

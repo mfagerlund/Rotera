@@ -32,7 +32,7 @@ describe('Serialization Integration Tests', () => {
     project.addWorldPoint(p3)
 
     const line1 = Line.create('L1', p1, p2, { color: '#ff0000' })
-    const line2 = Line.create('L2', p2, p3, { direction: 'vertical' })
+    const line2 = Line.create('L2', p2, p3, { direction: 'y' })
 
     project.addLine(line1)
     project.addLine(line2)
@@ -53,7 +53,7 @@ describe('Serialization Integration Tests', () => {
     expect(l1?.color).toBe('#ff0000')
 
     const l2 = deserializedLines.find(l => l.name === 'L2')
-    expect(l2?.direction).toBe('vertical')
+    expect(l2?.direction).toBe('y')
   })
 
   test('project with viewpoints and image points round-trip', () => {

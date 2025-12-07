@@ -100,7 +100,7 @@ describe('Intrinsic Constraints', () => {
       const p2 = WorldPoint.create('P2', { lockedXyz: [null, null, null], optimizedXyz: [10, 5, 3] }); // Not horizontal
 
       const line = Line.create('Horizontal', p1, p2, {
-        direction: 'horizontal', // INTRINSIC constraint - line must be horizontal
+        direction: 'xz', // INTRINSIC constraint - line must be horizontal
         tolerance: 1e-4,
       });
 
@@ -135,7 +135,7 @@ describe('Intrinsic Constraints', () => {
       const p2 = WorldPoint.create('P2', { lockedXyz: [null, null, null], optimizedXyz: [5, 10, 3] }); // Not vertical
 
       const line = Line.create('Vertical', p1, p2, {
-        direction: 'vertical', // INTRINSIC constraint - line along Y-axis
+        direction: 'y', // INTRINSIC constraint - line along Y-axis
         tolerance: 1e-4,
       });
 
@@ -169,7 +169,7 @@ describe('Intrinsic Constraints', () => {
       const p2 = WorldPoint.create('P2', { lockedXyz: [null, null, null], optimizedXyz: [10, 5, 3] }); // Not x-aligned
 
       const line = Line.create('X-Aligned', p1, p2, {
-        direction: 'x-aligned', // INTRINSIC constraint
+        direction: 'x', // INTRINSIC constraint
         tolerance: 1e-4,
       });
 
@@ -203,7 +203,7 @@ describe('Intrinsic Constraints', () => {
       const p2 = WorldPoint.create('P2', { lockedXyz: [null, null, null], optimizedXyz: [5, 3, 10] }); // Not z-aligned
 
       const line = Line.create('Z-Aligned', p1, p2, {
-        direction: 'z-aligned', // INTRINSIC constraint
+        direction: 'z', // INTRINSIC constraint
         tolerance: 1e-4,
       });
 
@@ -237,7 +237,7 @@ describe('Intrinsic Constraints', () => {
       const p2 = WorldPoint.create('P2', { lockedXyz: [null, null, null], optimizedXyz: [5, 3, 2] }); // Wrong direction and length
 
       const line = Line.create('Combined', p1, p2, {
-        direction: 'horizontal', // Must be horizontal
+        direction: 'xz', // Must be horizontal
         targetLength: 50,        // Must be 50 units long
         tolerance: 1e-4,
       });
@@ -279,15 +279,15 @@ describe('Intrinsic Constraints', () => {
 
       // Create 3 perpendicular axes from origin
       const lineX = Line.create('X-Axis', origin, px, {
-        direction: 'x-aligned', targetLength: 10,
+        direction: 'x', targetLength: 10,
       });
 
       const lineY = Line.create('Y-Axis', origin, py, {
-        direction: 'vertical', targetLength: 10,
+        direction: 'y', targetLength: 10,
       });
 
       const lineZ = Line.create('Z-Axis', origin, pz, {
-        direction: 'z-aligned', targetLength: 10,
+        direction: 'z', targetLength: 10,
       });
 
       project.addWorldPoint(origin);

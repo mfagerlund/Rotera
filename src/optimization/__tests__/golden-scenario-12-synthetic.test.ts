@@ -150,46 +150,46 @@ describe('GOLDEN-SCENARIO-12: Synthetic Recreation', () => {
     // Create lines with direction constraints (matching scenario-12 structure)
     // L1: WP1-WP4 vertical (y-axis)
     const line1 = Line.create('L1_vertical', worldPoints[0], worldPoints[3], {
-      direction: 'vertical',
+      direction: 'y',
       targetLength: 10,
     });
     project.addLine(line1);
 
     // L2: WP4-WP5 horizontal (xz-plane)
     const line2 = Line.create('L2_horizontal', worldPoints[3], worldPoints[4], {
-      direction: 'horizontal',
+      direction: 'xz',
     });
     project.addLine(line2);
 
     // L3: WP5-WP2 vertical
     const line3 = Line.create('L3_vertical', worldPoints[4], worldPoints[1], {
-      direction: 'vertical',
+      direction: 'y',
     });
     project.addLine(line3);
 
     // L4: WP2-WP1 z-aligned
     const line4 = Line.create('L4_z-aligned', worldPoints[1], worldPoints[0], {
-      direction: 'z-aligned',
+      direction: 'z',
       targetLength: 10,
     });
     project.addLine(line4);
 
     // L5: WP1-WP3 x-aligned
     const line5 = Line.create('L5_x-aligned', worldPoints[0], worldPoints[2], {
-      direction: 'x-aligned',
+      direction: 'x',
       targetLength: 10,
     });
     project.addLine(line5);
 
     // L6: WP3-WP6 vertical
     const line6 = Line.create('L6_vertical', worldPoints[2], worldPoints[5], {
-      direction: 'vertical',
+      direction: 'y',
     });
     project.addLine(line6);
 
     // L7: WP6-WP4 horizontal
     const line7 = Line.create('L7_horizontal', worldPoints[5], worldPoints[3], {
-      direction: 'horizontal',
+      direction: 'xz',
     });
     project.addLine(line7);
 

@@ -42,7 +42,7 @@ WorldPoint now automatically infers coordinates from geometric constraints:
 - `inferredXyz` field auto-populated by constraint propagation
 - `getEffectiveXyz()` returns merged `lockedXyz` + `inferredXyz`
 - `isFullyConstrained()` checks if all 3 axes are known (locked or inferred)
-- Lines propagate coordinates based on direction (vertical, horizontal, x-aligned, z-aligned)
+- Lines propagate coordinates based on direction (x, y, z for axis-aligned; xy, xz, yz for plane-constrained)
 - Project automatically runs propagation via MobX reactions
 
 **Usage in Optimization:**

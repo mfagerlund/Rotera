@@ -508,7 +508,7 @@ describe.skip('Generate Fixtures', () => {
     }
 
     const line = Line.create('OriginToP10', worldPoints[0], worldPoints[1], {
-      direction: 'x-aligned',
+      direction: 'x',
       color: '#ff0000'
     });
     project.addLine(line);
@@ -1386,21 +1386,21 @@ describe.skip('Generate Fixtures', () => {
     }
 
     const lineX = Line.create('LineX', worldPoints[0], worldPoints[1], {
-      direction: 'x-aligned',
+      direction: 'x',
       targetLength: 10.0,
       color: '#ff0000'
     });
     project.addLine(lineX);
 
     const lineY = Line.create('LineY', worldPoints[0], worldPoints[2], {
-      direction: 'vertical',
+      direction: 'y',
       targetLength: 10.0,
       color: '#00ff00'
     });
     project.addLine(lineY);
 
     const lineZ = Line.create('LineZ', worldPoints[0], worldPoints[3], {
-      direction: 'z-aligned',
+      direction: 'z',
       targetLength: 10.0,
       color: '#0000ff'
     });
@@ -1674,14 +1674,14 @@ describe.skip('Generate Fixtures', () => {
     }
 
     const line1 = Line.create('Line1', worldPoints[0], worldPoints[3], {
-      direction: 'x-aligned',
+      direction: 'x',
       targetLength: 10.0,
       color: '#ff0000'
     });
     project.addLine(line1);
 
     const line2 = Line.create('Line2', worldPoints[0], worldPoints[7], {
-      direction: 'z-aligned',
+      direction: 'z',
       targetLength: 10.0,
       color: '#00ff00'
     });

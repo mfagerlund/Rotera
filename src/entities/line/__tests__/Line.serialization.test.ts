@@ -40,7 +40,7 @@ describe('Line Serialization', () => {
       isConstruction: true,
       lineStyle: 'dashed',
       thickness: 2,
-      direction: 'horizontal',
+      direction: 'xz',
       targetLength: 10,
       tolerance: 0.01
     })
@@ -58,7 +58,7 @@ describe('Line Serialization', () => {
     expect(deserialized.isConstruction).toBe(true)
     expect(deserialized.lineStyle).toBe('dashed')
     expect(deserialized.thickness).toBe(2)
-    expect(deserialized.direction).toBe('horizontal')
+    expect(deserialized.direction).toBe('xz')
     expect(deserialized.targetLength).toBe(10)
     expect(deserialized.tolerance).toBe(0.01)
   })

@@ -6,9 +6,11 @@ import { Viewpoint } from './viewpoint/Viewpoint'
 import { deserializeConstraint } from './constraints/constraint-factory'
 import { SerializationContext } from './serialization/SerializationContext'
 import type { ProjectDto } from './project/ProjectDto'
+import { CURRENT_FORMAT_VERSION } from './project/ProjectDto'
 import type { VanishingLineDto } from './vanishing-line/VanishingLineDto'
 import { VanishingLine } from './vanishing-line/VanishingLine'
 import { DEFAULT_VIEW_SETTINGS } from '../types/visibility'
+import { migrateProject } from './migrations/migrate'
 
 export class Serialization {
 
@@ -21,6 +23,7 @@ export class Serialization {
     }
 
     const dto: ProjectDto = {
+      formatVersion: CURRENT_FORMAT_VERSION,
       name: project.name,
       worldPoints: Array.from(project.worldPoints).map(wp => wp.serialize(context)),
       viewpoints: Array.from(project.viewpoints).map(vp => vp.serialize(context)),
@@ -52,7 +55,11 @@ export class Serialization {
   }
 
   static deserialize(json: string): Project {
-    const dto = JSON.parse(json) as ProjectDto
+    let dto = JSON.parse(json) as ProjectDto
+
+    // Migrate from older format versions if needed
+    dto = migrateProject(dto)
+
     const context = new SerializationContext()
 
     const worldPoints = new Set(
