@@ -1,3 +1,61 @@
+/**
+ * Vanishing Point Camera Initialization
+ *
+ * IMPORTANT COORDINATE SYSTEM LIMITATION:
+ *
+ * Vanishing points define axis DIRECTIONS but have a sign ambiguity. A VP is where
+ * parallel lines converge at infinity - but lines extend in BOTH directions (+/-).
+ * The VP only tells us the LINE direction, not which end is "positive".
+ *
+ * The code computes 3D directions from VPs using: [u/f, -v/f, 1]
+ * The -v converts from image coords (+v = down) to camera coords (+Y = up).
+ * This coordinate conversion is correct.
+ *
+ * THE ACTUAL LIMITATION:
+ *
+ * The VP location in the image depends on WHERE parallel lines converge FROM THE
+ * CAMERA'S VIEWPOINT. For the Y axis (vertical lines):
+ *
+ * - Camera looking DOWN: Vertical lines converge DOWNWARD (toward ground below).
+ *   The Y VP is BELOW the principal point. Direction to VP is -Y (down in camera space).
+ *   To get +Y = up, we need to FLIP the Y direction.
+ *
+ * - Camera looking UP: Vertical lines converge UPWARD (toward sky above).
+ *   The Y VP is ABOVE the principal point. Direction to VP is +Y (up in camera space).
+ *   No flip needed.
+ *
+ * The same applies to X and Z axes depending on camera orientation.
+ *
+ * THE QUATERNION CONSTRAINT:
+ *
+ * Quaternions can only represent ROTATIONS (det = +1), not REFLECTIONS (det = -1).
+ * Flipping an ODD number of axes (1 or 3) creates a reflection.
+ * Flipping an EVEN number of axes (0 or 2) creates a rotation.
+ *
+ * CONSEQUENCE:
+ *
+ * If the camera orientation causes exactly 1 or 3 VP directions to be "backwards"
+ * (requiring flips), the resulting coordinate system is LEFT-HANDED, which cannot
+ * be represented as a quaternion rotation.
+ *
+ * COMMON CASE - Camera looking down at a scene:
+ * - X VP may be left or right of center (depends on camera yaw) - may or may not need flip
+ * - Y VP is BELOW center (vertical lines converge down) - NEEDS FLIP for +Y = up
+ * - Z VP may be left or right of center (depends on camera yaw) - may or may not need flip
+ *
+ * If only Y needs flipping (common for cameras looking down with standard X/Z orientation),
+ * that's 1 flip = reflection = CANNOT BE REPRESENTED.
+ *
+ * WORKAROUND:
+ *
+ * Use negative world coordinates for the problematic axes. If Y VP requires a flip,
+ * lock points at negative Y values instead of positive. This effectively redefines
+ * which direction is "positive" to match what the VP geometry naturally produces.
+ *
+ * Example: Instead of locking Y at [0, +10, 0], lock at [0, -10, 0].
+ * The optimization will work, but +Y will point "down" in the conventional sense.
+ */
+
 import { VanishingLine, VanishingLineAxis } from '../entities/vanishing-line'
 import { Viewpoint } from '../entities/viewpoint'
 import { WorldPoint } from '../entities/world-point'
