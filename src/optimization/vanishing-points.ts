@@ -1,3 +1,5 @@
+const VP_SIGN_DEBUG = process.env.VP_SIGN_DEBUG === '1'
+
 /**
  * Vanishing Point Camera Initialization
  *
@@ -799,103 +801,240 @@ export function computeRotationsFromVPs(
     [d_x[2], d_y[2], d_z[2]]
   ]
 
-  // CRITICAL: Check if the coordinate system is right-handed (det > 0) or left-handed (det < 0)
-  // If left-handed, quaternion conversion will produce GARBAGE!
-  const det = d_x[0] * (d_y[1] * d_z[2] - d_y[2] * d_z[1])
-            - d_x[1] * (d_y[0] * d_z[2] - d_y[2] * d_z[0])
-            + d_x[2] * (d_y[0] * d_z[1] - d_y[1] * d_z[0])
-  log(`[VP Debug] Rotation matrix determinant: ${det.toFixed(6)} (should be +1 for right-handed)`)
+  // Check orthogonality of the basis vectors
+  const dot_xy = d_x[0] * d_y[0] + d_x[1] * d_y[1] + d_x[2] * d_y[2]
+  const dot_xz = d_x[0] * d_z[0] + d_x[1] * d_z[1] + d_x[2] * d_z[2]
+  const dot_yz = d_y[0] * d_z[0] + d_y[1] * d_z[1] + d_y[2] * d_z[2]
+  log(`[VP Debug] Orthogonality check: X·Y=${dot_xy.toFixed(3)}, X·Z=${dot_xz.toFixed(3)}, Y·Z=${dot_yz.toFixed(3)} (all should be ~0)`)
 
-  if (det < 0) {
-    log(`[VP Debug] WARNING: Left-handed coordinate system detected! det=${det.toFixed(6)}`)
-    log(`[VP Debug] This means the VP directions don't form a valid right-handed system.`)
-    log(`[VP Debug] The code will try to fix this by flipping an axis.`)
-    // Flip Z to convert from left-handed to right-handed
-    d_z = [-d_z[0], -d_z[1], -d_z[2]]
-    R = [
-      [d_x[0], d_y[0], d_z[0]],
-      [d_x[1], d_y[1], d_z[1]],
-      [d_x[2], d_y[2], d_z[2]]
-    ]
-    log(`[VP Debug] After Z flip, new det: ${(d_x[0] * (d_y[1] * d_z[2] - d_y[2] * d_z[1]) - d_x[1] * (d_y[0] * d_z[2] - d_y[2] * d_z[0]) + d_x[2] * (d_y[0] * d_z[1] - d_y[1] * d_z[0])).toFixed(6)}`)
+  // Save original directions for X-fixed strategy
+  const d_x_original = [...d_x] as number[]
+  const d_z_original = [...d_z] as number[]
+
+  // If VP directions are not orthogonal, we need to orthogonalize them!
+  // This is critical - non-orthogonal directions produce invalid rotation matrices.
+  //
+  // IMPORTANT: We try BOTH orthogonalization strategies:
+  // 1. Keep Z fixed, adjust X (Z is often more reliable for depth)
+  // 2. Keep X fixed, adjust Z
+  // Then we return BOTH rotations and let the sign combination search find the best one.
+  const orthogonalityThreshold = 0.1
+  let d_x_orthZ = [...d_x] as number[]  // X orthogonalized against Z (Z kept fixed)
+  let d_z_orthX = [...d_z] as number[]  // Z orthogonalized against X (X kept fixed)
+  let d_y_orthZ = [...d_y] as number[]
+  let d_y_orthX = [...d_y] as number[]
+  let didOrthogonalize = false
+
+  // Strategy 3 variables for Procrustes orthogonalization
+  let d_x_procrustes = [...d_x] as number[]
+  let d_z_procrustes = [...d_z] as number[]
+  let d_y_procrustes = [...d_y] as number[]
+
+  if (Math.abs(dot_xz) > orthogonalityThreshold) {
+    didOrthogonalize = true
+    log(`[VP Debug] WARNING: VP directions are not orthogonal (X·Z=${dot_xz.toFixed(3)})! Trying orthogonalization strategies...`)
+
+    // Strategy 1: Keep Z fixed, orthogonalize X against Z
+    const x_proj_z = dot_xz
+    d_x_orthZ = normalize([
+      d_x_original[0] - x_proj_z * d_z_original[0],
+      d_x_original[1] - x_proj_z * d_z_original[1],
+      d_x_original[2] - x_proj_z * d_z_original[2]
+    ])
+    d_y_orthZ = normalize(cross(d_z_original, d_x_orthZ))
+    const angle1 = Math.acos(Math.min(1, Math.abs(d_x_original[0]*d_x_orthZ[0] + d_x_original[1]*d_x_orthZ[1] + d_x_original[2]*d_x_orthZ[2]))) * 180/Math.PI
+    log(`[VP Debug] Strategy 1 (Z fixed): X moved by ${angle1.toFixed(1)}°`)
+
+    // Strategy 2: Keep X fixed, orthogonalize Z against X
+    const z_proj_x = dot_xz
+    d_z_orthX = normalize([
+      d_z_original[0] - z_proj_x * d_x_original[0],
+      d_z_original[1] - z_proj_x * d_x_original[1],
+      d_z_original[2] - z_proj_x * d_x_original[2]
+    ])
+    d_y_orthX = normalize(cross(d_z_orthX, d_x_original))
+    const angle2 = Math.acos(Math.min(1, Math.abs(d_z_original[0]*d_z_orthX[0] + d_z_original[1]*d_z_orthX[1] + d_z_original[2]*d_z_orthX[2]))) * 180/Math.PI
+    log(`[VP Debug] Strategy 2 (X fixed): Z moved by ${angle2.toFixed(1)}°`)
+
+    // Strategy 3: Procrustes - split the difference equally between X and Z
+    // This finds the closest orthogonal pair to the original non-orthogonal pair
+    // by rotating both X and Z toward each other by half the angle
+    const halfAngle = Math.acos(Math.min(1, Math.abs(dot_xz))) / 2
+    // Compute the axis perpendicular to both X and Z
+    const perpAxis = normalize(cross(d_x_original, d_z_original))
+    // Rotate X toward Z by halfAngle, and Z toward X by halfAngle
+    // Using Rodrigues' rotation formula: v_rot = v*cos(θ) + (k×v)*sin(θ) + k*(k·v)*(1-cos(θ))
+    const cosHalf = Math.cos(halfAngle)
+    const sinHalf = Math.sin(halfAngle)
+    // Rotate X toward Z (around perpAxis)
+    const kCrossX = cross(perpAxis, d_x_original)
+    const kDotX = perpAxis[0]*d_x_original[0] + perpAxis[1]*d_x_original[1] + perpAxis[2]*d_x_original[2]
+    d_x_procrustes = normalize([
+      d_x_original[0]*cosHalf + kCrossX[0]*sinHalf + perpAxis[0]*kDotX*(1-cosHalf),
+      d_x_original[1]*cosHalf + kCrossX[1]*sinHalf + perpAxis[1]*kDotX*(1-cosHalf),
+      d_x_original[2]*cosHalf + kCrossX[2]*sinHalf + perpAxis[2]*kDotX*(1-cosHalf)
+    ])
+    // Rotate Z toward X (around -perpAxis, i.e., opposite direction)
+    const kCrossZ = cross(perpAxis, d_z_original)
+    const kDotZ = perpAxis[0]*d_z_original[0] + perpAxis[1]*d_z_original[1] + perpAxis[2]*d_z_original[2]
+    d_z_procrustes = normalize([
+      d_z_original[0]*cosHalf - kCrossZ[0]*sinHalf + perpAxis[0]*kDotZ*(1-cosHalf),
+      d_z_original[1]*cosHalf - kCrossZ[1]*sinHalf + perpAxis[1]*kDotZ*(1-cosHalf),
+      d_z_original[2]*cosHalf - kCrossZ[2]*sinHalf + perpAxis[2]*kDotZ*(1-cosHalf)
+    ])
+    d_y_procrustes = normalize(cross(d_z_procrustes, d_x_procrustes))
+    const angleX = Math.acos(Math.min(1, Math.abs(d_x_original[0]*d_x_procrustes[0] + d_x_original[1]*d_x_procrustes[1] + d_x_original[2]*d_x_procrustes[2]))) * 180/Math.PI
+    const angleZ = Math.acos(Math.min(1, Math.abs(d_z_original[0]*d_z_procrustes[0] + d_z_original[1]*d_z_procrustes[1] + d_z_original[2]*d_z_procrustes[2]))) * 180/Math.PI
+    log(`[VP Debug] Strategy 3 (Procrustes): X moved by ${angleX.toFixed(1)}°, Z moved by ${angleZ.toFixed(1)}°`)
   }
 
-  if (derivedYAxis) {
-    const targetU = (directions.x[0] / directions.x[2] + directions.z[0] / directions.z[2]) / 2
-    const currentU = R[0][1] / R[2][1]
+  // Use strategy 1 as primary (Z fixed, X adjusted)
+  d_x = d_x_orthZ
+  d_y = d_y_orthZ
+  // d_z stays the same (it was the reference in strategy 1)
 
-    if (Math.abs(R[2][1]) > 1e-6 && Math.abs(currentU - targetU) > 0.01) {
-      let bestRoll = 0
-      let bestError = Math.abs(currentU - targetU)
+  const hasAlternateY = !!d_y_alt
 
-      for (let roll = -Math.PI; roll <= Math.PI; roll += 0.05) {
-        const c = Math.cos(roll)
-        const s = Math.sin(roll)
+  const computeDet = (dx: number[], dy: number[], dz: number[]) =>
+    dx[0] * (dy[1] * dz[2] - dy[2] * dz[1]) -
+    dx[1] * (dy[0] * dz[2] - dy[2] * dz[0]) +
+    dx[2] * (dy[0] * dz[1] - dy[1] * dz[0])
 
-        const newYx = R[0][1] * c - R[0][0] * s
-        const newYz = R[2][1] * c - R[2][0] * s
+  type AxisSet = {
+    label: string
+    d_x: number[]
+    d_y: number[]
+    d_z: number[]
+  }
 
-        if (Math.abs(newYz) > 1e-6) {
-          const testU = newYx / newYz
-          const error = Math.abs(testU - targetU)
-          if (error < bestError) {
-            bestError = error
-            bestRoll = roll
-          }
-        }
-      }
+  const axisSets: AxisSet[] = []
 
-      if (Math.abs(bestRoll) > 0.001) {
-        const c = Math.cos(bestRoll)
-        const s = Math.sin(bestRoll)
+  const addAxisSet = (label: string, dx: number[], dy: number[], dz: number[]) => {
+    const det = computeDet(dx, dy, dz)
+    log(`[VP Debug] Rotation determinant (${label}): ${det.toFixed(6)} (should be +1 for right-handed)`)
+    if (det <= 0) {
+      log(`[VP Debug] ${label} is still left-handed - skipping`)
+      return
+    }
+    axisSets.push({ label, d_x: dx, d_y: dy, d_z: dz })
+  }
 
-        R = [
-          [
-            R[0][0] * c + R[0][1] * s,
-            R[0][1] * c - R[0][0] * s,
-            R[0][2]
-          ],
-          [
-            R[1][0] * c + R[1][1] * s,
-            R[1][1] * c - R[1][0] * s,
-            R[1][2]
-          ],
-          [
-            R[2][0] * c + R[2][1] * s,
-            R[2][1] * c - R[2][0] * s,
-            R[2][2]
-          ]
-        ]
+  const det = computeDet(d_x, d_y, d_z)
+  if (det > 0) {
+    addAxisSet('base', d_x, d_y, d_z)
+  } else {
+    log('[VP Debug] WARNING: Left-handed coordinate system detected! Trying axis flips...')
+    const flipCandidates: Array<{ label: string; d_x: number[]; d_y: number[]; d_z: number[] }> = [
+      { label: 'flipX', d_x: [-d_x[0], -d_x[1], -d_x[2]], d_y, d_z },
+      { label: 'flipY', d_x, d_y: [-d_y[0], -d_y[1], -d_y[2]], d_z },
+      { label: 'flipZ', d_x, d_y, d_z: [-d_z[0], -d_z[1], -d_z[2]] }
+    ]
 
-        log(`[VP Debug] Applied roll correction: ${bestRoll} radians`)
-      }
+    for (const candidate of flipCandidates) {
+      addAxisSet(candidate.label, candidate.d_x, candidate.d_y, candidate.d_z)
+    }
+
+    if (axisSets.length === 0) {
+      log('[VP Debug] All single-axis flips are invalid - forcing Z flip as fallback')
+      addAxisSet('forced-flipZ', d_x, d_y, [-d_z[0], -d_z[1], -d_z[2]])
     }
   }
 
-  const quaternion = matrixToQuaternion(R)
+  // NOTE: Roll correction was removed. It used pre-orthogonalization directions which
+  // caused massive errors after orthogonalization changed d_x significantly.
+  // The sign combination search handles orientation ambiguity better.
 
-  log('[VP Debug] Computed rotation matrix from vanishing points:')
-  log(`[ ${R[0].map(v => v.toFixed(6)).join(', ')} ]`)
-  log(`[ ${R[1].map(v => v.toFixed(6)).join(', ')} ]`)
-  log(`[ ${R[2].map(v => v.toFixed(6)).join(', ')} ]`)
-  log(`[VP Debug] Quaternion: ${JSON.stringify(quaternion.map(v => Number(v.toFixed(6))))}`)
+  const rotations: [number, number, number, number][] = []
 
-  // If we have an alternate Y direction, build a second rotation with flipped Y.
-  // IMPORTANT: Just flipping Y creates a reflection (det=-1). We must flip an EVEN
-  // number of axes to stay in rotation space. So flip both Y and X (equivalent to
-  // 180° rotation around Z-axis combined with the base rotation).
-  if (d_y_alt) {
-    const R_alt = [
-      [-d_x[0], d_y_alt[0], d_z[0]],  // Also flip X to maintain rotation (not reflection)
-      [-d_x[1], d_y_alt[1], d_z[1]],
-      [-d_x[2], d_y_alt[2], d_z[2]]
+  for (const { label, d_x: dx, d_y: dy, d_z: dz } of axisSets) {
+    const R_candidate = [
+      [dx[0], dy[0], dz[0]],
+      [dx[1], dy[1], dz[1]],
+      [dx[2], dy[2], dz[2]]
     ]
-    const quaternion_alt = matrixToQuaternion(R_alt)
-    log('[VP Debug] Also returning alternate rotation with flipped Y and X')
-    return [quaternion, quaternion_alt]
+    const quaternion = matrixToQuaternion(R_candidate)
+
+    log(`[VP Debug] Computed rotation matrix from vanishing points (${label}):`)
+    log(`[ ${R_candidate[0].map(v => v.toFixed(6)).join(', ')} ]`)
+    log(`[ ${R_candidate[1].map(v => v.toFixed(6)).join(', ')} ]`)
+    log(`[ ${R_candidate[2].map(v => v.toFixed(6)).join(', ')} ]`)
+    log(`[VP Debug] Quaternion (${label}): ${JSON.stringify(quaternion.map(v => Number(v.toFixed(6))))}`)
+
+    rotations.push(quaternion)
+
+    if (hasAlternateY) {
+      const dyFlipped = [-dy[0], -dy[1], -dy[2]]
+      const R_alt = [
+        [-dx[0], dyFlipped[0], dz[0]],
+        [-dx[1], dyFlipped[1], dz[1]],
+        [-dx[2], dyFlipped[2], dz[2]]
+      ]
+      const quaternion_alt = matrixToQuaternion(R_alt)
+      rotations.push(quaternion_alt)
+      log(`[VP Debug] Added alternate rotation with flipped Y and X (${label})`)
+    }
   }
 
-  return [quaternion]
+  // If we orthogonalized, also try the X-fixed and Procrustes strategies
+  if (didOrthogonalize) {
+    // Strategy 2: X fixed, Z adjusted (using original X)
+    const R_xfixed = [
+      [d_x_original[0], d_y_orthX[0], d_z_orthX[0]],
+      [d_x_original[1], d_y_orthX[1], d_z_orthX[1]],
+      [d_x_original[2], d_y_orthX[2], d_z_orthX[2]]
+    ]
+    // Check determinant
+    const det_xfixed = d_x_original[0] * (d_y_orthX[1] * d_z_orthX[2] - d_y_orthX[2] * d_z_orthX[1])
+                     - d_x_original[1] * (d_y_orthX[0] * d_z_orthX[2] - d_y_orthX[2] * d_z_orthX[0])
+                     + d_x_original[2] * (d_y_orthX[0] * d_z_orthX[1] - d_y_orthX[1] * d_z_orthX[0])
+    log(`[VP Debug] X-fixed strategy det: ${det_xfixed.toFixed(6)}`)
+    if (det_xfixed > 0) {
+      const q_xfixed = matrixToQuaternion(R_xfixed)
+      rotations.push(q_xfixed)
+      log('[VP Debug] Added X-fixed orthogonalization rotation')
+
+      // Also add flipped Y version
+      const d_y_orthX_flipped = [-d_y_orthX[0], -d_y_orthX[1], -d_y_orthX[2]]
+      const R_xfixed_flipY = [
+        [-d_x_original[0], d_y_orthX_flipped[0], d_z_orthX[0]],
+        [-d_x_original[1], d_y_orthX_flipped[1], d_z_orthX[1]],
+        [-d_x_original[2], d_y_orthX_flipped[2], d_z_orthX[2]]
+      ]
+      const q_xfixed_flipY = matrixToQuaternion(R_xfixed_flipY)
+      rotations.push(q_xfixed_flipY)
+      log('[VP Debug] Added X-fixed + flipped Y rotation')
+    }
+
+    // Strategy 3: Procrustes - both X and Z adjusted equally
+    const R_procrustes = [
+      [d_x_procrustes[0], d_y_procrustes[0], d_z_procrustes[0]],
+      [d_x_procrustes[1], d_y_procrustes[1], d_z_procrustes[1]],
+      [d_x_procrustes[2], d_y_procrustes[2], d_z_procrustes[2]]
+    ]
+    const det_procrustes = d_x_procrustes[0] * (d_y_procrustes[1] * d_z_procrustes[2] - d_y_procrustes[2] * d_z_procrustes[1])
+                         - d_x_procrustes[1] * (d_y_procrustes[0] * d_z_procrustes[2] - d_y_procrustes[2] * d_z_procrustes[0])
+                         + d_x_procrustes[2] * (d_y_procrustes[0] * d_z_procrustes[1] - d_y_procrustes[1] * d_z_procrustes[0])
+    log(`[VP Debug] Procrustes strategy det: ${det_procrustes.toFixed(6)}`)
+    if (det_procrustes > 0) {
+      const q_procrustes = matrixToQuaternion(R_procrustes)
+      rotations.push(q_procrustes)
+      log('[VP Debug] Added Procrustes orthogonalization rotation')
+
+      // Also add flipped Y version
+      const d_y_procrustes_flipped = [-d_y_procrustes[0], -d_y_procrustes[1], -d_y_procrustes[2]]
+      const R_procrustes_flipY = [
+        [-d_x_procrustes[0], d_y_procrustes_flipped[0], d_z_procrustes[0]],
+        [-d_x_procrustes[1], d_y_procrustes_flipped[1], d_z_procrustes[1]],
+        [-d_x_procrustes[2], d_y_procrustes_flipped[2], d_z_procrustes[2]]
+      ]
+      const q_procrustes_flipY = matrixToQuaternion(R_procrustes_flipY)
+      rotations.push(q_procrustes_flipY)
+      log('[VP Debug] Added Procrustes + flipped Y rotation')
+    }
+  }
+
+  log(`[VP Debug] Returning ${rotations.length} base rotation(s)`)
+  return rotations
 }
 
 // Backwards compatibility wrapper
@@ -919,6 +1058,7 @@ export function computeCameraPosition(
   lockedPoints: Array<{
     worldPoint: WorldPoint
     imagePoint: { u: number; v: number }
+    effectiveXyz: [number, number, number]
   }>
 ): [number, number, number] | null {
   if (lockedPoints.length < 2) {
@@ -942,54 +1082,162 @@ export function computeCameraPosition(
     [R[0][2], R[1][2], R[2][2]]
   ]
 
-  const A: number[][] = []
-  const b: number[] = []
+  const A = [
+    [0, 0, 0],
+    [0, 0, 0],
+    [0, 0, 0]
+  ]
+  const b = [0, 0, 0]
 
-  lockedPoints.forEach(({ worldPoint, imagePoint }) => {
-    // Use effective coordinates (locked + inferred)
-    const effectiveXyz = worldPoint.getEffectiveXyz()
-    const P = [effectiveXyz[0]!, effectiveXyz[1]!, effectiveXyz[2]!]
+  let validLines = 0
+
+  lockedPoints.forEach(({ effectiveXyz, imagePoint }) => {
+    const P = [effectiveXyz[0], effectiveXyz[1], effectiveXyz[2]]
 
     const u_norm = (imagePoint.u - principalPoint.u) / focalLength
     const v_norm = (principalPoint.v - imagePoint.v) / focalLength
 
-    const ray = [u_norm, v_norm, 1]
-    const ray_world = [
-      Rt[0][0] * ray[0] + Rt[0][1] * ray[1] + Rt[0][2] * ray[2],
-      Rt[1][0] * ray[0] + Rt[1][1] * ray[1] + Rt[1][2] * ray[2],
-      Rt[2][0] * ray[0] + Rt[2][1] * ray[1] + Rt[2][2] * ray[2]
+    const ray_cam = normalize([u_norm, v_norm, 1])
+    const ray_world = normalize([
+      Rt[0][0] * ray_cam[0] + Rt[0][1] * ray_cam[1] + Rt[0][2] * ray_cam[2],
+      Rt[1][0] * ray_cam[0] + Rt[1][1] * ray_cam[1] + Rt[1][2] * ray_cam[2],
+      Rt[2][0] * ray_cam[0] + Rt[2][1] * ray_cam[1] + Rt[2][2] * ray_cam[2]
+    ])
+
+    if (
+      !isFinite(ray_world[0]) ||
+      !isFinite(ray_world[1]) ||
+      !isFinite(ray_world[2])
+    ) {
+      return
+    }
+
+    validLines++
+
+    const Ix = 1 - ray_world[0] * ray_world[0]
+    const Iy = 1 - ray_world[1] * ray_world[1]
+    const Iz = 1 - ray_world[2] * ray_world[2]
+    const xy = -ray_world[0] * ray_world[1]
+    const xz = -ray_world[0] * ray_world[2]
+    const yz = -ray_world[1] * ray_world[2]
+
+    const Ai = [
+      [Ix, xy, xz],
+      [xy, Iy, yz],
+      [xz, yz, Iz]
     ]
 
-    A.push([ray_world[1], -ray_world[0], 0])
-    b.push(P[0] * ray_world[1] - P[1] * ray_world[0])
-
-    A.push([ray_world[2], 0, -ray_world[0]])
-    b.push(P[0] * ray_world[2] - P[2] * ray_world[0])
-
-    A.push([0, ray_world[2], -ray_world[1]])
-    b.push(P[1] * ray_world[2] - P[2] * ray_world[1])
+    for (let i = 0; i < 3; i++) {
+      for (let j = 0; j < 3; j++) {
+        A[i][j] += Ai[i][j]
+      }
+      b[i] += Ai[i][0] * P[0] + Ai[i][1] * P[1] + Ai[i][2] * P[2]
+    }
   })
 
-  const AtA: number[][] = Array(3).fill(0).map(() => Array(3).fill(0))
-  const Atb: number[] = Array(3).fill(0)
-
-  for (let i = 0; i < 3; i++) {
-    for (let j = 0; j < 3; j++) {
-      for (let k = 0; k < A.length; k++) {
-        AtA[i][j] += A[k][i] * A[k][j]
-      }
-    }
-    for (let k = 0; k < A.length; k++) {
-      Atb[i] += A[k][i] * b[k]
-    }
+  if (validLines < 2) {
+    return null
   }
 
-  const C = solveLinearSystem3x3(AtA, Atb)
+  const C = solveLinearSystem3x3(A, b)
   if (!C) {
     return null
   }
 
   return [C[0], C[1], C[2]]
+}
+
+function refineTranslation(
+  initialPosition: [number, number, number],
+  rotationMatrix: number[][],
+  focalLength: number,
+  principalPoint: { u: number; v: number },
+  points: Array<{
+    effectiveXyz: [number, number, number]
+    imagePoint: { u: number; v: number }
+  }>
+): [number, number, number] {
+  let position: [number, number, number] = [...initialPosition] as [number, number, number]
+
+  const maxIterations = 10
+
+  for (let iter = 0; iter < maxIterations; iter++) {
+    const JTJ = [
+      [0, 0, 0],
+      [0, 0, 0],
+      [0, 0, 0]
+    ]
+    const JTr = [0, 0, 0]
+    let usedPoints = 0
+
+    for (const { effectiveXyz, imagePoint } of points) {
+      const rel = [
+        effectiveXyz[0] - position[0],
+        effectiveXyz[1] - position[1],
+        effectiveXyz[2] - position[2]
+      ]
+      const cam = [
+        rotationMatrix[0][0] * rel[0] + rotationMatrix[0][1] * rel[1] + rotationMatrix[0][2] * rel[2],
+        rotationMatrix[1][0] * rel[0] + rotationMatrix[1][1] * rel[1] + rotationMatrix[1][2] * rel[2],
+        rotationMatrix[2][0] * rel[0] + rotationMatrix[2][1] * rel[1] + rotationMatrix[2][2] * rel[2]
+      ]
+
+      if (cam[2] <= 1e-6) {
+        continue
+      }
+
+      usedPoints++
+
+      const projU = principalPoint.u + focalLength * (cam[0] / cam[2])
+      const projV = principalPoint.v - focalLength * (cam[1] / cam[2])
+      const ru = projU - imagePoint.u
+      const rv = projV - imagePoint.v
+
+      const invZ = 1 / cam[2]
+      const invZ2 = invZ * invZ
+
+      const dCam0 = [-rotationMatrix[0][0], -rotationMatrix[0][1], -rotationMatrix[0][2]]
+      const dCam1 = [-rotationMatrix[1][0], -rotationMatrix[1][1], -rotationMatrix[1][2]]
+      const dCam2 = [-rotationMatrix[2][0], -rotationMatrix[2][1], -rotationMatrix[2][2]]
+
+      const du: number[] = []
+      const dv: number[] = []
+
+      for (let j = 0; j < 3; j++) {
+        du[j] = focalLength * ((dCam0[j] * cam[2] - cam[0] * dCam2[j]) * invZ2)
+        dv[j] = -focalLength * ((dCam1[j] * cam[2] - cam[1] * dCam2[j]) * invZ2)
+      }
+
+      for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 3; c++) {
+          JTJ[r][c] += du[r] * du[c] + dv[r] * dv[c]
+        }
+        JTr[r] += du[r] * ru + dv[r] * rv
+      }
+    }
+
+    if (usedPoints < 2) {
+      break
+    }
+
+    const delta = solveLinearSystem3x3(JTJ, JTr)
+    if (!delta) {
+      break
+    }
+
+    position = [
+      position[0] - delta[0],
+      position[1] - delta[1],
+      position[2] - delta[2]
+    ]
+
+    const deltaNorm = Math.sqrt(delta[0] * delta[0] + delta[1] * delta[1] + delta[2] * delta[2])
+    if (deltaNorm < 1e-4) {
+      break
+    }
+  }
+
+  return position
 }
 
 function solveLinearSystem3x3(A: number[][], b: number[]): number[] | null {
@@ -1172,14 +1420,9 @@ export function initializeCameraWithVanishingPoints(
   }
 
   let focalLength = viewpoint.focalLength
-  const estimatedF = estimateFocalLength(vpArray[0], vpArray[1], principalPoint)
-  if (estimatedF && estimatedF > 0 && estimatedF < viewpoint.imageWidth * 2) {
-    focalLength = estimatedF
-    viewpoint.focalLength = focalLength
-    log(`[initializeCameraWithVanishingPoints] Estimated focal length: ${focalLength.toFixed(1)}`)
-  } else {
-    log(`[initializeCameraWithVanishingPoints] Using existing focal length: ${focalLength.toFixed(1)}`)
-  }
+  // DON'T estimate focal length from VPs - it changes the projection math and breaks
+  // reprojection of locked points. The viewpoint's focal length is the actual camera intrinsic.
+  log(`[initializeCameraWithVanishingPoints] Using existing focal length: ${focalLength.toFixed(1)}`)
 
   const baseRotations = computeRotationsFromVPs(vps, focalLength, principalPoint)
   if (!baseRotations || baseRotations.length === 0) {
@@ -1200,12 +1443,14 @@ export function initializeCameraWithVanishingPoints(
       }
       return {
         worldPoint: wp,
-        imagePoint: { u: imagePoints[0].u, v: imagePoints[0].v }
+        imagePoint: { u: imagePoints[0].u, v: imagePoints[0].v },
+        effectiveXyz: wp.getEffectiveXyz() as [number, number, number]
       }
     })
     .filter(p => p !== null) as Array<{
     worldPoint: WorldPoint
     imagePoint: { u: number; v: number }
+    effectiveXyz: [number, number, number]
   }>
 
   if (lockedPointsData.length < 2) {
@@ -1267,11 +1512,19 @@ export function initializeCameraWithVanishingPoints(
 
   for (const [flipX, flipY, flipZ] of signCombinations) {
     const rotation = flipRotationAxes(baseRotation, flipX, flipY, flipZ)
-    const position = computeCameraPosition(rotation, focalLength, principalPoint, lockedPointsData)
+    const positionInitial = computeCameraPosition(rotation, focalLength, principalPoint, lockedPointsData)
 
-    if (!position) {
+    if (!positionInitial) {
       continue
     }
+
+    const rotationMatrix = [
+      [1 - 2 * (rotation[2] * rotation[2] + rotation[3] * rotation[3]), 2 * (rotation[1] * rotation[2] - rotation[3] * rotation[0]), 2 * (rotation[1] * rotation[3] + rotation[2] * rotation[0])],
+      [2 * (rotation[1] * rotation[2] + rotation[3] * rotation[0]), 1 - 2 * (rotation[1] * rotation[1] + rotation[3] * rotation[3]), 2 * (rotation[2] * rotation[3] - rotation[1] * rotation[0])],
+      [2 * (rotation[1] * rotation[3] - rotation[2] * rotation[0]), 2 * (rotation[2] * rotation[3] + rotation[1] * rotation[0]), 1 - 2 * (rotation[1] * rotation[1] + rotation[2] * rotation[2])]
+    ]
+
+    const position = refineTranslation(positionInitial, rotationMatrix, focalLength, principalPoint, effectivePointsData)
 
     // Count how many points are in front of the camera (using effective coordinates)
     let pointsInFront = 0
@@ -1284,12 +1537,6 @@ export function initializeCameraWithVanishingPoints(
     // Compute reprojection error for ALL constrained points (locked + inferred)
     // This ensures Y-axis constraints from partially-locked points influence sign selection
     let totalReprojError = 0
-    const rotationMatrix = [
-      [1 - 2 * (rotation[2] * rotation[2] + rotation[3] * rotation[3]), 2 * (rotation[1] * rotation[2] - rotation[3] * rotation[0]), 2 * (rotation[1] * rotation[3] + rotation[2] * rotation[0])],
-      [2 * (rotation[1] * rotation[2] + rotation[3] * rotation[0]), 1 - 2 * (rotation[1] * rotation[1] + rotation[3] * rotation[3]), 2 * (rotation[2] * rotation[3] - rotation[1] * rotation[0])],
-      [2 * (rotation[1] * rotation[3] - rotation[2] * rotation[0]), 2 * (rotation[2] * rotation[3] + rotation[1] * rotation[0]), 1 - 2 * (rotation[1] * rotation[1] + rotation[2] * rotation[2])]
-    ]
-
     for (const { effectiveXyz, imagePoint } of effectivePointsData) {
       const wp = effectiveXyz
 
@@ -1320,7 +1567,16 @@ export function initializeCameraWithVanishingPoints(
     // Use negative reproj error so higher score = better
     const score = pointsInFront * 1000000 - totalReprojError
     const avgError = totalReprojError / effectivePointsData.length
-    log(`  [${baseLabel} ${flipX},${flipY},${flipZ}] pointsInFront=${pointsInFront}/${effectivePointsData.length}, avgError=${avgError.toFixed(1)} px`)
+    if (VP_SIGN_DEBUG) {
+      log(
+        `[VP Sign Debug] [${baseLabel} ${flipX},${flipY},${flipZ}]` +
+        ` pointsInFront=${pointsInFront}/${effectivePointsData.length}, avgError=${avgError.toFixed(1)} px`
+      )
+      log(
+        `[VP Sign Debug]   position=[${position.map(p => p.toFixed(2)).join(', ')}],` +
+        ` score=${score.toFixed(1)}`
+      )
+    }
 
     if (score > bestScore) {
       bestScore = score
@@ -1343,7 +1599,7 @@ export function initializeCameraWithVanishingPoints(
 
   // If the best reprojection error is too high, fail and let PnP try instead.
   // This handles cases where vanishing lines are inconsistent with pixel observations.
-  const maxAcceptableError = 50 // pixels
+  const maxAcceptableError = 100 // pixels - higher threshold to allow optimization to refine
   if (bestReprojError > maxAcceptableError) {
     log(`[initializeCameraWithVanishingPoints] Best reprojection error (${bestReprojError.toFixed(1)} px) exceeds threshold (${maxAcceptableError} px)`)
     log('[initializeCameraWithVanishingPoints] Vanishing lines may be inconsistent with pixel observations - failing to allow PnP fallback')

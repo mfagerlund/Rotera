@@ -2,8 +2,13 @@
 
 export const optimizationLogs: string[] = [];
 
+const VP_DEBUG_ENABLED = process.env.VP_DEBUG === '1';
+
 export function log(message: string) {
-  console.log(message);
+  const isVpDebug = message.startsWith('[VP Debug]');
+  if (!isVpDebug || VP_DEBUG_ENABLED) {
+    console.log(message);
+  }
   optimizationLogs.push(message);
 }
 

@@ -559,4 +559,87 @@ describe('Solving Scenarios - Phase 4: Single Camera with Inferred Coordinates',
       expect(result.medianReprojectionError).toBeLessThan(10.0);
     });
   });
+
+  describe('VP Initialization with Positive Coordinates', () => {
+    it('should work with Y=-10 (stillwrong fixture)', () => {
+      const project = loadFixture('stillwrong-neg-y.json');
+      const result = optimizeProject(project, {
+        autoInitializeCameras: true,
+        autoInitializeWorldPoints: true,
+        detectOutliers: true,
+        maxIterations: 100,
+        tolerance: 1e-6,
+        verbose: true
+      });
+      console.log('\n=== Y=-10 TEST RESULT ===');
+      console.log(`Median reproj error: ${result.medianReprojectionError}`);
+      expect(result.converged).toBe(true);
+    });
+
+    it('should work with Y=+10 (stillwrong fixture)', () => {
+      const project = loadFixture('stillwrong-pos-y.json');
+      const result = optimizeProject(project, {
+        autoInitializeCameras: true,
+        autoInitializeWorldPoints: true,
+        detectOutliers: true,
+        maxIterations: 100,
+        tolerance: 1e-6,
+        verbose: true
+      });
+      console.log('\n=== Y=+10 TEST RESULT ===');
+      console.log(`Median reproj error: ${result.medianReprojectionError}`);
+      expect(result.converged).toBe(true);
+    });
+
+    it('should achieve sub-pixel accuracy with positive locked coordinates and vanishing lines', () => {
+      // This test verifies that VP initialization works correctly with positive coordinates
+      // The fixture has: O at (0,0,0), X at (10,0,0), Y at (0,10,0), Z at (0,0,10)
+      // With X and Z vanishing lines observed
+      const project = loadFixture('vp-positive-coords.json');
+
+      expect(project.worldPoints.size).toBe(4);
+      expect(project.viewpoints.size).toBe(1);
+
+      const camera = Array.from(project.viewpoints)[0] as Viewpoint;
+      const worldPointsArray = Array.from(project.worldPoints);
+
+      // Verify the locked coordinates are positive
+      const wpO = worldPointsArray.find(p => p.name === 'O')!;
+      const wpX = worldPointsArray.find(p => p.name === 'X')!;
+      const wpY = worldPointsArray.find(p => p.name === 'Y')!;
+      const wpZ = worldPointsArray.find(p => p.name === 'Z')!;
+
+      expect(wpO.lockedXyz).toEqual([0, 0, 0]);
+      expect(wpX.lockedXyz).toEqual([10, 0, 0]);
+      expect(wpY.getEffectiveXyz()).toEqual([0, 10, 0]); // Y is inferred from line constraint
+      expect(wpZ.lockedXyz).toEqual([0, 0, 10]);
+
+      // Check vanishing lines exist
+      expect(camera.vanishingLines.size).toBeGreaterThanOrEqual(2);
+
+      const result = optimizeProject(project, {
+        autoInitializeCameras: true,
+        autoInitializeWorldPoints: true,
+        detectOutliers: true,
+        maxIterations: 100,
+        tolerance: 1e-6,
+        verbose: true  // Enable verbose to see VP initialization logs
+      });
+
+      // Log the result for debugging
+      console.log('\n=== VP POSITIVE COORDS TEST RESULT ===');
+      console.log(`Converged: ${result.converged}`);
+      console.log(`Iterations: ${result.iterations}`);
+      console.log(`Residual: ${result.residual}`);
+      console.log(`Median reproj error: ${result.medianReprojectionError}`);
+      console.log(`Cameras initialized: ${result.camerasInitialized}`);
+
+      // Verify convergence
+      expect(result.converged).toBe(true);
+      expect(result.error).toBeNull();
+
+      // CRITICAL: Median reprojection error should be < 1 pixel for a good solve
+      expect(result.medianReprojectionError).toBeLessThan(1.0);
+    });
+  });
 });
