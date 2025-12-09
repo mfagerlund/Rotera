@@ -303,9 +303,12 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
 
   const handleEditLineSave = useCallback((lineEntity: LineEntity, updatedLine: { name?: string; color?: string; isVisible?: boolean }) => {
     updateLine(lineEntity, updatedLine)
-    setEditingLine(null)
-    setActiveTool('select')
-  }, [updateLine, setEditingLine, setActiveTool])
+    // Don't deactivate tool when using orientation paint (multi-use tool)
+    if (activeTool !== 'orientationPaint') {
+      setEditingLine(null)
+      setActiveTool('select')
+    }
+  }, [updateLine, setEditingLine, setActiveTool, activeTool])
 
   const handleEditLineDelete = useCallback((line: LineEntity) => {
     deleteLine(line)
@@ -573,12 +576,6 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
               selectedLines={selectedLineEntities}
               allConstraints={allConstraints}
               onConstraintClick={() => {}}
-              showPointNames={project!.showPointNames}
-              onTogglePointNames={() => {}}
-              showComponentOverlay={showComponentNames}
-              onToggleComponentOverlay={handleComponentOverlayToggle}
-              visualFeedbackLevel={project!.visualFeedbackLevel || 'standard'}
-              onVisualFeedbackChange={() => {}}
               confirm={confirm}
               onReturnToBrowser={onReturnToBrowser}
               onSaveProject={handleSaveProject}

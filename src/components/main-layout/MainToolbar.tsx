@@ -37,13 +37,6 @@ interface MainToolbarProps {
   allConstraints: AvailableConstraint[]
   onConstraintClick: (type: string, selectedPoints: WorldPoint[], selectedLines: Line[]) => void
 
-  // Settings
-  showPointNames: boolean
-  onTogglePointNames: (show: boolean) => void
-  showComponentOverlay: boolean
-  onToggleComponentOverlay: () => void
-  visualFeedbackLevel: 'minimal' | 'standard' | 'detailed'
-  onVisualFeedbackChange: (level: 'minimal' | 'standard' | 'detailed') => void
 
   // Confirm dialog
   confirm: (message: string, options?: { confirmLabel?: string; cancelLabel?: string; variant?: 'primary' | 'danger'; showMessage?: boolean }) => Promise<boolean>
@@ -68,12 +61,6 @@ export const MainToolbar: React.FC<MainToolbarProps> = ({
   selectedLines,
   allConstraints,
   onConstraintClick,
-  showPointNames,
-  onTogglePointNames,
-  showComponentOverlay,
-  onToggleComponentOverlay,
-  visualFeedbackLevel,
-  onVisualFeedbackChange,
   confirm,
   onReturnToBrowser,
   onSaveProject,
@@ -255,30 +242,6 @@ export const MainToolbar: React.FC<MainToolbarProps> = ({
         selectionSummary="" // Remove redundant selection display
         onConstraintClick={onConstraintClick}
       />
-
-      <div className="toolbar-section">
-        <label className="toolbar-toggle">
-          <input
-            type="checkbox"
-            checked={showPointNames}
-            onChange={(e) => onTogglePointNames(e.target.checked)}
-          />
-          Point Names
-        </label>
-
-        <label className="toolbar-label">
-          Feedback:
-          <select
-            className="toolbar-select"
-            value={visualFeedbackLevel}
-            onChange={(e) => onVisualFeedbackChange(e.target.value as 'minimal' | 'standard' | 'detailed')}
-          >
-            <option value="minimal">Minimal</option>
-            <option value="standard">Standard</option>
-            <option value="detailed">Detailed</option>
-          </select>
-        </label>
-      </div>
     </div>
   )
 }

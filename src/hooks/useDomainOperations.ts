@@ -151,7 +151,7 @@ export function useDomainOperations(
     if (!project) throw new Error('No project')
 
     const line = Line.create(
-      options?.name || 'Line',
+      options?.name ?? '',
       pointA,
       pointB,
       options

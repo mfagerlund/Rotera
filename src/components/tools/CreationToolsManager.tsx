@@ -2,9 +2,10 @@
 
 import React, { useState, useCallback, useMemo } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faLocationDot, faRuler, faSquare } from '@fortawesome/free-solid-svg-icons'
+import { faLocationDot, faRuler, faSquare, faPaintBrush } from '@fortawesome/free-solid-svg-icons'
 import LineCreationTool from './LineCreationTool'
 import LoopTraceTool from './LoopTraceTool'
+import OrientationPaintTool from './OrientationPaintTool'
 import FloatingWindow from '../FloatingWindow'
 import { Line, LineDirection } from '../../entities/line'
 import { WorldPoint } from '../../entities/world-point'
@@ -15,7 +16,7 @@ import type { ISelectable } from '../../types/selectable'
 import { getEntityKey } from '../../utils/entityKeys'
 import '../../styles/tools.css'
 
-type ToolType = 'select' | 'point' | 'line' | 'plane' | 'circle' | 'loop' | 'vanishing'
+type ToolType = 'select' | 'point' | 'line' | 'plane' | 'circle' | 'loop' | 'vanishing' | 'orientationPaint'
 
 interface LineConstraints {
   name?: string
@@ -265,6 +266,16 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
           <span className="tool-label">Vanishing</span>
           <span className="tool-shortcut">V</span>
         </button>
+
+        <button
+          className={`tool-button ${activeTool === 'orientationPaint' ? 'active' : ''}`}
+          onClick={() => handleToolActivation('orientationPaint')}
+          title="Paint line orientations - click lines to apply selected direction"
+        >
+          <span className="tool-icon"><FontAwesomeIcon icon={faPaintBrush} /></span>
+          <span className="tool-label">Orient</span>
+          <span className="tool-shortcut">D</span>
+        </button>
       </div>
 
       {/* Active Tool Panel */}
@@ -409,6 +420,18 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
               </div>
             </div>
           </div>
+        )}
+
+        {activeTool === 'orientationPaint' && (
+          <OrientationPaintTool
+            isActive={activeTool === 'orientationPaint'}
+            onCancel={handleToolCancel}
+            onPaintLine={(line, direction) => {
+              if (onUpdateLine) {
+                onUpdateLine(line, { direction })
+              }
+            }}
+          />
         )}
       </div>
 

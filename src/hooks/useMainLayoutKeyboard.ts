@@ -151,6 +151,9 @@ export function useMainLayoutKeyboard({
           case 'v':
             setActiveTool(activeTool === 'vanishing' ? 'select' : 'vanishing')
             break
+          case 'd':
+            setActiveTool(activeTool === 'orientationPaint' ? 'select' : 'orientationPaint')
+            break
           case 'x':
             if (activeTool === 'vanishing') {
               setCurrentVanishingLineAxis('x')

@@ -70,8 +70,15 @@ export function useMainLayoutHandlers({
       return
     }
 
+    // If Orientation Paint tool is active, dispatch event for painting
+    if (activeTool === 'orientationPaint') {
+      const event = new CustomEvent('orientationPaintLineClick', { detail: { line } })
+      window.dispatchEvent(event)
+      return
+    }
+
     handleEntityClick(line, ctrlKey, shiftKey)
-  }, [editingLine, handleEntityClick])
+  }, [editingLine, handleEntityClick, activeTool])
 
   // Plane click handler
   const handlePlaneClick = useCallback((
@@ -84,7 +91,8 @@ export function useMainLayoutHandlers({
 
   // Empty space click handler
   const handleEmptySpaceClick = useCallback((shiftKey: boolean) => {
-    if (activeTool === 'loop') {
+    // Don't clear selection when loop or orientationPaint tools are active
+    if (activeTool === 'loop' || activeTool === 'orientationPaint') {
       return
     }
     if (!shiftKey) {

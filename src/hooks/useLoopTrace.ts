@@ -127,10 +127,10 @@ export function useLoopTrace({
         continue
       }
 
-      // Create new line with optional prefix
+      // Create new line with optional prefix (no default name if prefix is empty)
       const lineName = namePrefix
         ? `${namePrefix}_${i + 1}`
-        : `Loop_${i + 1}`
+        : ''
 
       const constraints: LineConstraints = {
         name: lineName,
