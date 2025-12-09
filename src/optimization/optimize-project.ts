@@ -8,6 +8,7 @@ import { ImagePoint } from '../entities/imagePoint';
 import { Line } from '../entities/line';
 import { initializeCamerasWithEssentialMatrix } from './essential-matrix';
 import { initializeWorldPoints as unifiedInitialize } from './unified-initialization';
+import { initializeSingleCameraPoints } from './single-camera-initialization';
 import { initializeCameraWithVanishingPoints } from './vanishing-points';
 import { log, clearOptimizationLogs, optimizationLogs } from './optimization-logger';
 
@@ -503,6 +504,116 @@ export function optimizeProject(
     return (vp as Viewpoint).getVanishingLineCount() === 0;
   };
 
+  // Build set of initialized viewpoints
+  const initializedViewpointSet = new Set<Viewpoint>();
+  for (const vpName of camerasInitialized) {
+    const vp = Array.from(project.viewpoints).find(v => v.name === vpName);
+    if (vp) {
+      initializedViewpointSet.add(vp as Viewpoint);
+    }
+  }
+
+  // Identify multi-camera vs single-camera world points
+  const worldPointArray = Array.from(project.worldPoints) as WorldPoint[];
+  const multiCameraPoints = new Set<WorldPoint>();
+  const singleCameraPoints = new Set<WorldPoint>();
+
+  for (const wp of worldPointArray) {
+    const visibleInCameras = Array.from(wp.imagePoints)
+      .filter(ip => initializedViewpointSet.has((ip as ImagePoint).viewpoint as Viewpoint))
+      .length;
+
+    if (visibleInCameras >= 2) {
+      multiCameraPoints.add(wp);
+    } else if (visibleInCameras === 1) {
+      singleCameraPoints.add(wp);
+    }
+  }
+
+  log(`[optimizeProject] Multi-camera points: ${multiCameraPoints.size}, Single-camera points: ${singleCameraPoints.size}`);
+
+  // TWO-STAGE OPTIMIZATION: First optimize with only multi-camera points
+  // This gives us stable camera poses and triangulated positions
+  if (singleCameraPoints.size > 0 && multiCameraPoints.size >= 4) {
+    log('\n=== STAGE 1: Optimizing with multi-camera points only ===');
+
+    // Stage 1: Don't optimize intrinsics - with few constraints this can lead to bad local minima
+    // Keep intrinsics fixed to stabilize the optimization
+    const stage1System = new ConstraintSystem({
+      tolerance,
+      maxIterations,
+      damping,
+      verbose,
+      optimizeCameraIntrinsics: false,
+    });
+
+    // Add only multi-camera points
+    multiCameraPoints.forEach(p => stage1System.addPoint(p));
+    log(`  Added ${multiCameraPoints.size} multi-camera world points`);
+
+    // Add lines that connect multi-camera points
+    const stage1Lines: Line[] = [];
+    project.lines.forEach(l => {
+      if (multiCameraPoints.has(l.pointA as WorldPoint) && multiCameraPoints.has(l.pointB as WorldPoint)) {
+        stage1System.addLine(l);
+        stage1Lines.push(l);
+      }
+    });
+    log(`  Added ${stage1Lines.length} lines between multi-camera points`);
+
+    // Add all cameras
+    project.viewpoints.forEach(v => stage1System.addCamera(v as Viewpoint));
+    log(`  Added ${project.viewpoints.size} cameras`);
+
+    // Add only image points for multi-camera world points
+    let stage1ImagePoints = 0;
+    project.imagePoints.forEach(ip => {
+      const ipConcrete = ip as ImagePoint;
+      if (multiCameraPoints.has(ipConcrete.worldPoint as WorldPoint)) {
+        stage1System.addImagePoint(ipConcrete);
+        stage1ImagePoints++;
+      }
+    });
+    log(`  Added ${stage1ImagePoints} image points`);
+
+    // Add constraints that only involve multi-camera points
+    project.constraints.forEach(c => {
+      const points = 'points' in c ? (c as any).points as WorldPoint[] : [];
+      const allMultiCamera = points.length === 0 || points.every(p => multiCameraPoints.has(p));
+      if (allMultiCamera) {
+        stage1System.addConstraint(c);
+      }
+    });
+
+    log('[Stage 1] Running optimization...');
+    const stage1Result = stage1System.solve();
+    log(`[Stage 1] Complete: converged=${stage1Result.converged}, iterations=${stage1Result.iterations}, residual=${stage1Result.residual.toFixed(6)}`);
+
+    // Clear optimizedXyz on single-camera points - they have garbage values from unified initialization
+    // (unified init uses random fallback for points that can't be triangulated)
+    for (const wp of singleCameraPoints) {
+      wp.optimizedXyz = undefined;
+    }
+    log(`[Stage 1] Cleared stale optimizedXyz on ${singleCameraPoints.size} single-camera points`);
+
+    // Now initialize single-camera points using the solved geometry
+    log('\n=== STAGE 2: Initializing single-camera points ===');
+    const lineArray = Array.from(project.lines);
+    const constraintArray = Array.from(project.constraints);
+
+    const initResult = initializeSingleCameraPoints(
+      worldPointArray,
+      lineArray,
+      constraintArray,
+      initializedViewpointSet,
+      { verbose: true }
+    );
+
+    log(`[Stage 2] Initialized ${initResult.initialized} single-camera points, ${initResult.failed} could not be initialized`);
+  }
+
+  // Now run the full optimization with all points
+  log('\n=== FULL OPTIMIZATION ===');
   const system = new ConstraintSystem({
     tolerance,
     maxIterations,
