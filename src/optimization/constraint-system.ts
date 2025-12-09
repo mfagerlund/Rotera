@@ -159,12 +159,15 @@ export class ConstraintSystem {
     };
 
     // Add points
+    let pointVarCount = 0;
     for (const point of this.points) {
       const pointVariables = point.addToValueMap(valueMap);
+      pointVarCount += pointVariables.length;
       variables.push(...pointVariables);
     }
 
     // Add cameras (if they implement IValueMapContributor)
+    let cameraVarCount = 0;
     for (const camera of this.cameras) {
       if ('addToValueMap' in camera && typeof camera.addToValueMap === 'function') {
         const optimizeIntrinsics =
@@ -176,8 +179,13 @@ export class ConstraintSystem {
           optimizeIntrinsics,
           optimizeDistortion: false,
         });
+        cameraVarCount += cameraVariables.length;
         variables.push(...cameraVariables);
       }
+    }
+
+    if (this.verbose) {
+      console.log(`[ConstraintSystem] Variables: ${variables.length} total (${pointVarCount} from ${this.points.size} points, ${cameraVarCount} from ${this.cameras.size} cameras)`);
     }
 
     // 2. Build residual function from all entities
@@ -277,6 +285,11 @@ export class ConstraintSystem {
 
       return residuals;
     };
+
+    // Log variable counts for debugging
+    if (this.verbose) {
+      console.log(`[ConstraintSystem] Variables: ${variables.length} total (${pointVarCount} from ${this.points.size} points, ${cameraVarCount} from ${this.cameras.size} cameras)`);
+    }
 
     // If no variables to optimize, check if constraints are satisfied
     if (variables.length === 0) {

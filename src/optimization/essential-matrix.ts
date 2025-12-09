@@ -965,8 +965,9 @@ function ransacEssentialMatrix(
   let totalCandidates = 0;
 
   // For small point counts, try all combinations exhaustively
-  // C(8,7) = 8, C(10,7) = 120, C(14,7) = 3432, C(15,7) = 6435 - all reasonable
-  const useExhaustive = n <= 15;
+  // C(8,7) = 8, C(10,7) = 120, C(14,7) = 3432, C(15,7) = 6435, C(16,7) = 11440, C(18,7) = 31824
+  // All reasonable - ensures deterministic results
+  const useExhaustive = n <= 18;
 
   // Generate all combinations of 7 from n
   const allCombinations: number[][] = [];

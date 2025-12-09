@@ -1,4 +1,5 @@
-const VP_SIGN_DEBUG = process.env.VP_SIGN_DEBUG === '1'
+// Debug flag - set to true to enable verbose VP sign debug output
+const VP_SIGN_DEBUG = false
 
 /**
  * Vanishing Point Camera Initialization

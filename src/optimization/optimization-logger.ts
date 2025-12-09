@@ -2,7 +2,8 @@
 
 export const optimizationLogs: string[] = [];
 
-const VP_DEBUG_ENABLED = process.env.VP_DEBUG === '1';
+// Debug flag - set to true to enable VP debug messages in console
+const VP_DEBUG_ENABLED = false;
 
 export function log(message: string) {
   const isVpDebug = message.startsWith('[VP Debug]');
