@@ -153,7 +153,9 @@ function computeReprojectionError(vp: Viewpoint): number {
         count++;
       }
     } catch (e) {
-      console.warn(`Error computing reprojection for ${wp.name} @ ${vp.name}:`, e);
+      if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
+        console.warn(`Error computing reprojection for ${wp.name} @ ${vp.name}:`, e);
+      }
     }
   }
 

@@ -153,11 +153,7 @@ export function smartInitialization(project: Project): void {
   const coplanarGroups = findCoplanarGroups(project.constraints);
   const initialized = initializeCoplanarGroups(coplanarGroups, sceneScale);
 
-  console.log(`Smart init: ${coplanarGroups.length} coplanar groups, ${initialized.size} points initialized`);
-
   propagateViaLineGraph(project.worldPoints, project.lines, initialized, sceneScale);
-
-  console.log(`Smart init: All ${project.worldPoints.size} points initialized`);
 }
 
 export function computeInitialResidual(project: Project): number {

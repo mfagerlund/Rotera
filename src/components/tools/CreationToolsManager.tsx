@@ -477,22 +477,6 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
         </div>
       )}
 
-      {/* Selection Summary */}
-      <div className="selection-summary">
-        <div className="summary-item">
-          <span className="summary-label">Points:</span>
-          <span className="summary-count">{selectedPoints.length}</span>
-        </div>
-        <div className="summary-item">
-          <span className="summary-label">Lines:</span>
-          <span className="summary-count">{selectedLines.length}</span>
-        </div>
-        <div className="summary-item">
-          <span className="summary-label">Planes:</span>
-          <span className="summary-count">{selectedPlanes.length}</span>
-        </div>
-      </div>
-
       {/* Floating Line Tool - handles both creation and editing */}
       <FloatingWindow
         title={editingLine ? `Edit Line: ${editingLine.name}` : "Create Line"}

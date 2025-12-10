@@ -38,6 +38,7 @@ export interface MainLayoutState {
 
   // Entity popup states
   entityPopups: {
+    showWorldPointsPopup: boolean
     showLinesPopup: boolean
     showPlanesPopup: boolean
     showImagePointsPopup: boolean
@@ -119,6 +120,7 @@ export function useMainLayoutState(options: UseMainLayoutStateOptions = {}): Mai
 
   // Entity popups
   const [entityPopups, setEntityPopups] = useState({
+    showWorldPointsPopup: false,
     showLinesPopup: false,
     showPlanesPopup: false,
     showImagePointsPopup: false,

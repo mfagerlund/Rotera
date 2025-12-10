@@ -86,7 +86,9 @@ export function alignCamerasToLockedPoints(
   allPoints: WorldPoint[]
 ): boolean {
   if (cameras.length < 2 || lockedPoints.length < 2) {
-    console.warn('[alignCamerasToLockedPoints] Need at least 2 cameras and 2 locked points');
+    if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
+      console.warn('[alignCamerasToLockedPoints] Need at least 2 cameras and 2 locked points');
+    }
     return false;
   }
 
@@ -100,7 +102,9 @@ export function alignCamerasToLockedPoints(
   });
 
   if (shared.length < 2) {
-    console.warn('[alignCamerasToLockedPoints] Need at least 2 shared locked points between cameras');
+    if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
+      console.warn('[alignCamerasToLockedPoints] Need at least 2 shared locked points between cameras');
+    }
     return false;
   }
 
@@ -113,32 +117,29 @@ export function alignCamerasToLockedPoints(
   const ip1_cam2 = Array.from(vp2.imagePoints).find(ip => ip.worldPoint === wp1);
 
   if (!ip0_cam1 || !ip0_cam2 || !ip1_cam1 || !ip1_cam2) {
-    console.warn('[alignCamerasToLockedPoints] Missing image points');
+    if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
+      console.warn('[alignCamerasToLockedPoints] Missing image points');
+    }
     return false;
   }
 
-  console.log('[alignCamerasToLockedPoints] Triangulating locked points in Essential Matrix coordinate system...');
   const result0 = triangulateRayRay(ip0_cam1, ip0_cam2, vp1, vp2, 10.0);
   const result1 = triangulateRayRay(ip1_cam1, ip1_cam2, vp1, vp2, 10.0);
 
   if (!result0 || !result1) {
-    console.warn('[alignCamerasToLockedPoints] Triangulation failed');
+    if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
+      console.warn('[alignCamerasToLockedPoints] Triangulation failed');
+    }
     return false;
   }
 
   const triangulated0 = result0.worldPoint;
   const triangulated1 = result1.worldPoint;
 
-  console.log(`  Triangulated ${wp0.name}: [${triangulated0.map(x => x.toFixed(3)).join(', ')}]`);
-  console.log(`  Triangulated ${wp1.name}: [${triangulated1.map(x => x.toFixed(3)).join(', ')}]`);
-
   const effective0 = wp0.getEffectiveXyz();
   const target0 = [effective0[0]!, effective0[1]!, effective0[2]!];
   const effective1 = wp1.getEffectiveXyz();
   const target1 = [effective1[0]!, effective1[1]!, effective1[2]!];
-
-  console.log(`  Target ${wp0.name}: [${target0.map(x => x.toFixed(3)).join(', ')}]`);
-  console.log(`  Target ${wp1.name}: [${target1.map(x => x.toFixed(3)).join(', ')}]`);
 
   const vec_triangulated = [
     triangulated1[0] - triangulated0[0],
@@ -165,15 +166,15 @@ export function alignCamerasToLockedPoints(
   );
 
   if (dist_triangulated < 1e-6) {
-    console.warn('[alignCamerasToLockedPoints] Triangulated points are too close together');
+    if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
+      console.warn('[alignCamerasToLockedPoints] Triangulated points are too close together');
+    }
     return false;
   }
 
   const scale = dist_target / dist_triangulated;
-  console.log(`  Scale factor: ${scale.toFixed(6)}`);
 
   const rotation = computeRotationBetweenVectors(vec_triangulated, vec_target);
-  console.log(`  Rotation quaternion: [${rotation.map(x => x.toFixed(6)).join(', ')}]`);
 
   const scaled_tri0 = [
     triangulated0[0] * scale,
@@ -188,10 +189,6 @@ export function alignCamerasToLockedPoints(
     target0[1] - rotated_scaled_tri0[1],
     target0[2] - rotated_scaled_tri0[2]
   ];
-
-  console.log(`  Translation: [${translation.map(x => x.toFixed(6)).join(', ')}]`);
-
-  console.log('[alignCamerasToLockedPoints] Applying transformation to cameras...');
 
   for (const cam of cameras) {
     const oldPos = cam.position;
@@ -210,11 +207,8 @@ export function alignCamerasToLockedPoints(
 
     cam.position = [newPos[0], newPos[1], newPos[2]];
     cam.rotation = [newRot[0], newRot[1], newRot[2], newRot[3]];
-
-    console.log(`  ${cam.name}: pos [${oldPos.map(x => x.toFixed(3)).join(', ')}] -> [${newPos.map(x => x.toFixed(3)).join(', ')}]`);
   }
 
-  console.log('[alignCamerasToLockedPoints] Transforming all triangulated world points...');
   for (const wp of allPoints) {
     if (wp.optimizedXyz) {
       const oldXyz = wp.optimizedXyz;
@@ -232,14 +226,10 @@ export function alignCamerasToLockedPoints(
     }
   }
 
-  console.log('[alignCamerasToLockedPoints] Setting locked points to their target positions...');
   for (const wp of lockedPoints) {
     const wpEffective = wp.getEffectiveXyz();
     wp.optimizedXyz = [wpEffective[0]!, wpEffective[1]!, wpEffective[2]!];
-    console.log(`  ${wp.name}: [${wp.optimizedXyz.join(', ')}]`);
   }
-
-  console.log('[alignCamerasToLockedPoints] Verification (direct transform check):');
 
   const scaled_tri1 = [triangulated1[0] * scale, triangulated1[1] * scale, triangulated1[2] * scale];
   const rotated_scaled_tri1 = quaternionRotateVector(rotation, scaled_tri1);
@@ -261,16 +251,7 @@ export function alignCamerasToLockedPoints(
     (transformed_tri1[2] - target1[2]) ** 2
   );
 
-  console.log(`  ${wp0.name} (direct transform) error: ${error0_direct.toFixed(6)} units`);
-  console.log(`  ${wp1.name} (direct transform) error: ${error1_direct.toFixed(6)} units`);
-
   if (error0_direct > 0.01 || error1_direct > 0.01) {
-    console.error('[alignCamerasToLockedPoints] ERROR: Transform is not correct! Debugging:');
-    console.log(`    Triangulated ${wp0.name}: [${triangulated0.map(x => x.toFixed(6)).join(', ')}]`);
-    console.log(`    Scaled: [${scaled_tri0.map(x => x.toFixed(6)).join(', ')}]`);
-    console.log(`    Rotated+scaled: [${rotated_scaled_tri0.map(x => x.toFixed(6)).join(', ')}]`);
-    console.log(`    After translation: [${(rotated_scaled_tri0[0] + translation[0]).toFixed(6)}, ${(rotated_scaled_tri0[1] + translation[1]).toFixed(6)}, ${(rotated_scaled_tri0[2] + translation[2]).toFixed(6)}]`);
-    console.log(`    Target: [${target0.map(x => x.toFixed(6)).join(', ')}]`);
     return false;
   }
 
@@ -339,79 +320,30 @@ export function alignSceneToLineDirections(
   }
 
   if (axisLines.length === 0) {
-    log('[alignSceneToLineDirections] No axis-aligned lines with initialized endpoints found');
     return false;
   }
 
-  log(`[alignSceneToLineDirections] Found ${axisLines.length} axis-aligned lines to align`);
-
-  // Use the first line to compute the initial rotation
-  // This aligns that line's direction with its target axis
   const firstLine = axisLines[0];
-  log(`  Primary alignment: ${firstLine.line.pointA.name}->${firstLine.line.pointB.name} to ${firstLine.line.direction}-axis`);
-  log(`    Current direction: [${firstLine.direction.map(x => x.toFixed(4)).join(', ')}]`);
-  log(`    Target axis: [${firstLine.targetAxis.join(', ')}]`);
-
   const rotation = computeRotationBetweenVectors(firstLine.direction, firstLine.targetAxis);
-  log(`    Rotation quaternion: [${rotation.map(x => x.toFixed(6)).join(', ')}]`);
 
-  // If we have a second line with a different axis constraint, we could refine
-  // For now, just use the first line's rotation
-
-  // Apply rotation to all cameras
-  log('[alignSceneToLineDirections] Applying rotation to cameras...');
+  // Apply rotation to cameras
   for (const cam of cameras) {
-    const oldPos = cam.position;
-    const oldRot = cam.rotation;
-
-    // Rotate position around origin
-    const newPos = quaternionRotateVector(rotation, oldPos);
-
-    // Combine rotations: new_rotation = old_rotation * inverse(scene_rotation)
-    // This keeps the camera looking at the same relative direction in the scene
+    const newPos = quaternionRotateVector(rotation, cam.position);
     const rotInverse = quaternionInverse(rotation);
-    const newRot = quaternionMultiply(oldRot, rotInverse);
-
+    const newRot = quaternionMultiply(cam.rotation, rotInverse);
     cam.position = [newPos[0], newPos[1], newPos[2]];
     cam.rotation = [newRot[0], newRot[1], newRot[2], newRot[3]];
-
-    log(`  ${cam.name}: pos [${oldPos.map(x => x.toFixed(3)).join(', ')}] -> [${newPos.map(x => x.toFixed(3)).join(', ')}]`);
   }
 
-  // Apply rotation to all world points
-  log('[alignSceneToLineDirections] Applying rotation to world points...');
+  // Apply rotation to world points
   for (const wp of allPoints) {
     if (wp.optimizedXyz) {
-      const oldXyz = wp.optimizedXyz;
-      const newXyz = quaternionRotateVector(rotation, oldXyz);
+      const newXyz = quaternionRotateVector(rotation, wp.optimizedXyz);
       wp.optimizedXyz = [newXyz[0], newXyz[1], newXyz[2]];
     }
   }
 
-  // Verify alignment
-  log('[alignSceneToLineDirections] Verification:');
-  for (const { line, targetAxis } of axisLines) {
-    const posA = line.pointA.optimizedXyz;
-    const posB = line.pointB.optimizedXyz;
-    if (!posA || !posB) continue;
-
-    const newDir: [number, number, number] = [
-      posB[0] - posA[0],
-      posB[1] - posA[1],
-      posB[2] - posA[2]
-    ];
-    const len = Math.sqrt(newDir[0] ** 2 + newDir[1] ** 2 + newDir[2] ** 2);
-    if (len > 1e-6) {
-      newDir[0] /= len;
-      newDir[1] /= len;
-      newDir[2] /= len;
-    }
-
-    const dot = Math.abs(newDir[0] * targetAxis[0] + newDir[1] * targetAxis[1] + newDir[2] * targetAxis[2]);
-    const angleDeg = Math.acos(Math.min(1, dot)) * 180 / Math.PI;
-    log(`  ${line.pointA.name}->${line.pointB.name} (${line.direction}): angle error = ${angleDeg.toFixed(2)}°`);
-  }
-
+  log(`[Align] ${axisLines.length} axis lines aligned to ${firstLine.line.direction}-axis`);
   return true;
 }
 
@@ -455,19 +387,13 @@ export function alignSceneToLockedPoints(
   // Need at least 3 non-collinear locked points to fully constrain rotation
 
   if (lockedPoints.length === 0) {
-    log('[alignSceneToLockedPoints] No locked points - nothing to align to');
     return false;
   }
 
-  // Get locked points that have optimized positions (from free solve)
   const alignablePoints = lockedPoints.filter(wp => wp.optimizedXyz !== undefined);
-
   if (alignablePoints.length === 0) {
-    log('[alignSceneToLockedPoints] No locked points have optimized positions');
     return false;
   }
-
-  log(`[alignSceneToLockedPoints] Aligning with ${alignablePoints.length} locked points`);
 
   // Case 1: Single locked point - just translate
   if (alignablePoints.length === 1) {
@@ -481,8 +407,6 @@ export function alignSceneToLockedPoints(
       targetXyz[1] - optimized[1],
       targetXyz[2] - optimized[2]
     ];
-
-    log(`  Single point alignment: translating by [${translation.map(x => x.toFixed(3)).join(', ')}]`);
 
     // Apply translation to all cameras
     for (const cam of cameras) {
@@ -535,8 +459,6 @@ export function alignSceneToLockedPoints(
   dstCentroid[1] /= n;
   dstCentroid[2] /= n;
 
-  log(`  Source centroid: [${srcCentroid.map(x => x.toFixed(3)).join(', ')}]`);
-  log(`  Target centroid: [${dstCentroid.map(x => x.toFixed(3)).join(', ')}]`);
 
   // Compute scale from average distances to centroid
   let srcScale = 0;
@@ -560,7 +482,6 @@ export function alignSceneToLockedPoints(
   }
 
   const scale = srcScale > 1e-10 ? dstScale / srcScale : 1.0;
-  log(`  Scale factor: ${scale.toFixed(6)}`);
 
   // For rotation, we need at least 2 points with non-zero distance from centroid
   // Use the direction from first to second point to get one rotation constraint
@@ -608,16 +529,10 @@ export function alignSceneToLockedPoints(
       dst2[2]! - dst1[2]!
     ];
 
-    log(`  Direction alignment: ${wp1.name} -> ${wp2.name}`);
-    log(`    Source: [${srcDir.map(x => x.toFixed(3)).join(', ')}]`);
-    log(`    Target: [${dstDir.map(x => x.toFixed(3)).join(', ')}]`);
-
     rotation = computeRotationBetweenVectors(srcDir, dstDir);
-    log(`  Rotation quaternion: [${rotation.map(x => x.toFixed(6)).join(', ')}]`);
   }
 
   // Apply transformation: new = R * scale * (old - srcCentroid) + dstCentroid
-  log('[alignSceneToLockedPoints] Applying similarity transform...');
 
   // Transform cameras
   for (const cam of cameras) {
@@ -648,8 +563,6 @@ export function alignSceneToLockedPoints(
 
     cam.position = [newPos[0], newPos[1], newPos[2]];
     cam.rotation = [newRot[0], newRot[1], newRot[2], newRot[3]];
-
-    log(`  ${cam.name}: pos [${oldPos.map(x => x.toFixed(3)).join(', ')}] -> [${newPos.map(x => x.toFixed(3)).join(', ')}]`);
   }
 
   // Transform world points
@@ -684,18 +597,6 @@ export function alignSceneToLockedPoints(
     wp.optimizedXyz = [target[0]!, target[1]!, target[2]!];
   }
 
-  // Verification
-  log('[alignSceneToLockedPoints] Verification:');
-  for (const wp of alignablePoints) {
-    const optimized = wp.optimizedXyz!;
-    const target = wp.getEffectiveXyz();
-    const error = Math.sqrt(
-      (optimized[0] - target[0]!) ** 2 +
-      (optimized[1] - target[1]!) ** 2 +
-      (optimized[2] - target[2]!) ** 2
-    );
-    log(`  ${wp.name}: error = ${error.toFixed(6)}`);
-  }
-
+  log(`[Align] ${alignablePoints.length} locked pts, scale=${scale.toFixed(3)}`);
   return true;
 }

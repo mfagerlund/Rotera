@@ -62,7 +62,9 @@ export function computeConstraintResiduals(
       return computeEqualAnglesResiduals(constraint as EqualAnglesConstraint, valueMap);
 
     default:
-      console.warn(`Unknown constraint type: ${constraintType}`);
+      if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
+        console.warn(`Unknown constraint type: ${constraintType}`);
+    }
       return [];
   }
 }

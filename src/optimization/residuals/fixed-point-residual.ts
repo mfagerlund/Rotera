@@ -16,7 +16,9 @@ export function computeFixedPointResiduals(
   const pointVec = valueMap.points.get(constraint.point);
 
   if (!pointVec) {
-    console.warn(`Fixed point constraint: point not found in valueMap`);
+    if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
+      console.warn(`Fixed point constraint: point not found in valueMap`);
+    }
     return [];
   }
 

@@ -705,11 +705,6 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
                 onStartPlacement={startPlacementMode}
                 onCancelPlacement={cancelPlacementMode}
                 project={project}
-                onShowLinesPopup={() => setEntityPopup('showLinesPopup', true)}
-                onShowPlanesPopup={() => setEntityPopup('showPlanesPopup', true)}
-                onShowImagePointsPopup={() => setEntityPopup('showImagePointsPopup', true)}
-                onShowConstraintsPopup={() => setEntityPopup('showConstraintsPopup', true)}
-                onShowOptimizationPanel={() => setEntityPopup('showOptimizationPanel', true)}
               />
             </div>
 
@@ -720,20 +715,51 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
                 worldInfo={worldInfo}
               />
 
-              <div style={{display: 'flex', gap: '12px', fontSize: '12px', color: '#888'}}>
-                <span>World Points: {project?.worldPoints.size || 0}</span>
-                <span>Image Points: {Array.from(project?.viewpoints || []).reduce((total, vp) => total + vp.imagePoints.size, 0)}</span>
-                <span>Lines: {project?.lines.size || 0}</span>
-                <span>Planes: {0}</span>
-                <span>Constraints: {project?.constraints.size || 0}</span>
+              <div className="entity-status-bar">
+                <button
+                  className="entity-status-item"
+                  onClick={() => setEntityPopup('showWorldPointsPopup', true)}
+                  title="Manage world points"
+                >
+                  <span className="entity-status-label">WP</span>
+                  <span className="entity-status-count">{project?.worldPoints.size || 0}</span>
+                  {selectionStats.point > 0 && <span className="entity-status-selected">({selectionStats.point})</span>}
+                </button>
+                <button
+                  className="entity-status-item"
+                  onClick={() => setEntityPopup('showImagePointsPopup', true)}
+                  title="Manage image points"
+                >
+                  <span className="entity-status-label">IP</span>
+                  <span className="entity-status-count">{Array.from(project?.viewpoints || []).reduce((total, vp) => total + vp.imagePoints.size, 0)}</span>
+                </button>
+                <button
+                  className="entity-status-item"
+                  onClick={() => setEntityPopup('showLinesPopup', true)}
+                  title="Manage lines"
+                >
+                  <span className="entity-status-label">Lines</span>
+                  <span className="entity-status-count">{project?.lines.size || 0}</span>
+                  {selectionStats.line > 0 && <span className="entity-status-selected">({selectionStats.line})</span>}
+                </button>
+                <button
+                  className="entity-status-item"
+                  onClick={() => setEntityPopup('showConstraintsPopup', true)}
+                  title="Manage constraints"
+                >
+                  <span className="entity-status-label">Constraints</span>
+                  <span className="entity-status-count">{project?.constraints.size || 0}</span>
+                </button>
+                <button
+                  className="entity-status-item optimize-btn"
+                  onClick={() => setEntityPopup('showOptimizationPanel', true)}
+                  title="Bundle adjustment optimization"
+                >
+                  <span className="entity-status-label">Optimize</span>
+                </button>
                 {mousePosition && (
-                  <span style={{ color: '#4a9eff', fontWeight: 'bold' }}>
-                    Mouse: ({mousePosition.u.toFixed(1)}, {mousePosition.v.toFixed(1)})
-                  </span>
-                )}
-                {selection.count > 0 && (
-                  <span style={{ color: '#0696d7', fontWeight: 'bold' }}>
-                    Selected: {selectionStats.point}p {selectionStats.line}l {selectionStats.plane}pl {selectionStats.constraint}c
+                  <span className="mouse-position">
+                    ({mousePosition.u.toFixed(0)}, {mousePosition.v.toFixed(0)})
                   </span>
                 )}
               </div>
@@ -809,11 +835,19 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
         worldPointsMap={worldPointsMap}
         viewpointsMap={viewpointsMap}
         onEditImagePoint={(ref) => {}}
+        onDeleteAllImagePoints={() => {
+          if (project) {
+            Array.from(project.imagePoints).forEach(ip => project.removeImagePoint(ip))
+          }
+        }}
         onSelectImagePoint={(ref) => {}}
         constraints={constraints as any}
         allLines={linesArray}
         onEditConstraint={(constraint) => {}}
         onDeleteConstraint={(constraint) => deleteConstraint(constraint)}
+        onDeleteAllConstraints={() => {
+          constraints.forEach(c => deleteConstraint(c))
+        }}
         onToggleConstraint={(constraint) => toggleConstraint(constraint)}
         onSelectConstraint={(constraint) => {}}
         project={project}
@@ -835,6 +869,11 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
           deleteWorldPoint(worldPoint)
           closeWorldPointEdit()
         }}
+        onDeleteAllWorldPoints={() => {
+          Array.from(project?.worldPoints || []).forEach(wp => deleteWorldPoint(wp))
+        }}
+        onEditWorldPointFromManager={openWorldPointEdit}
+        selectedWorldPoints={selectedPointEntities}
         onDeleteImagePoint={(ref) => {
           if (project) {
             const imagePoint = Array.from(project.imagePoints).find(

@@ -17,7 +17,9 @@ export function computeCoplanarPointsResiduals(
   const points = constraint.points;
 
   if (points.length < 4) {
-    console.warn('Coplanar constraint requires at least 4 points');
+    if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
+      console.warn('Coplanar constraint requires at least 4 points');
+    }
     return [];
   }
 
@@ -27,7 +29,9 @@ export function computeCoplanarPointsResiduals(
   const p3 = valueMap.points.get(points[3]);
 
   if (!p0 || !p1 || !p2 || !p3) {
-    console.warn('Coplanar constraint: not enough points found in valueMap');
+    if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
+      console.warn('Coplanar constraint: not enough points found in valueMap');
+    }
     return [];
   }
 

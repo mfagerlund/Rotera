@@ -17,6 +17,8 @@ export function computePerpendicularLinesResiduals(
   // For now, we'll need to extend the system to track lines in valueMap
   // TODO: Add line support to valueMap
 
-  console.warn('Perpendicular lines constraint not yet implemented - requires line support in valueMap');
+  if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
+    console.warn('Perpendicular lines constraint not yet implemented - requires line support in valueMap');
+    }
   return [];
 }

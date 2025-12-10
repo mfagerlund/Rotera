@@ -17,7 +17,9 @@ export function computeCollinearPointsResiduals(
   const points = constraint.points;
 
   if (points.length < 3) {
-    console.warn('Collinear constraint requires at least 3 points');
+    if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
+      console.warn('Collinear constraint requires at least 3 points');
+    }
     return [];
   }
 
@@ -26,7 +28,9 @@ export function computeCollinearPointsResiduals(
   const p2 = valueMap.points.get(points[2]);
 
   if (!p0 || !p1 || !p2) {
-    console.warn('Collinear constraint: not enough points found in valueMap');
+    if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
+      console.warn('Collinear constraint: not enough points found in valueMap');
+    }
     return [];
   }
 

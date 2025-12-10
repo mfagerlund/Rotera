@@ -18,7 +18,9 @@ export function computeAngleResiduals(
   const pointCVec = valueMap.points.get(constraint.pointC);
 
   if (!pointAVec || !vertexVec || !pointCVec) {
-    console.warn(`Angle constraint: points not found in valueMap`);
+    if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
+      console.warn(`Angle constraint: points not found in valueMap`);
+    }
     return [];
   }
 

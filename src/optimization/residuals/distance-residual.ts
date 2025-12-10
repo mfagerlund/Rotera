@@ -17,7 +17,9 @@ export function computeDistanceResiduals(
   const pointBVec = valueMap.points.get(constraint.pointB);
 
   if (!pointAVec || !pointBVec) {
-    console.warn(`Distance constraint: points not found in valueMap`);
+    if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
+      console.warn(`Distance constraint: points not found in valueMap`);
+    }
     return [];
   }
 

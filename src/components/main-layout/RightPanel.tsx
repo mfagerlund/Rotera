@@ -1,7 +1,5 @@
 import React from 'react'
 import { observer } from 'mobx-react-lite'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faRuler, faSquare, faCamera, faGear, faBullseye } from '@fortawesome/free-solid-svg-icons'
 import { WorldPoint } from '../../entities/world-point'
 import { Line as LineEntity } from '../../entities/line'
 import { Viewpoint } from '../../entities/viewpoint'
@@ -59,11 +57,6 @@ interface RightPanelProps {
   onStartPlacement: (worldPoint: WorldPoint) => void
   onCancelPlacement: () => void
   project: Project
-  onShowLinesPopup: () => void
-  onShowPlanesPopup: () => void
-  onShowImagePointsPopup: () => void
-  onShowConstraintsPopup: () => void
-  onShowOptimizationPanel: () => void
 }
 
 export const RightPanel: React.FC<RightPanelProps> = observer(({
@@ -109,12 +102,7 @@ export const RightPanel: React.FC<RightPanelProps> = observer(({
   onEditWorldPoint,
   onStartPlacement,
   onCancelPlacement,
-  project,
-  onShowLinesPopup,
-  onShowPlanesPopup,
-  onShowImagePointsPopup,
-  onShowConstraintsPopup,
-  onShowOptimizationPanel
+  project
 }) => {
   return (
     <div className="sidebar-right">
@@ -170,63 +158,6 @@ export const RightPanel: React.FC<RightPanelProps> = observer(({
         onStartPlacement={onStartPlacement}
         onCancelPlacement={onCancelPlacement}
       />
-
-      <div className="entity-management-panel" style={{ padding: '4px', marginTop: '8px' }}>
-        <div className="entity-buttons" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-          <button
-            className="entity-button"
-            onClick={onShowLinesPopup}
-            title="Manage lines"
-            style={{ padding: '2px 6px', fontSize: '11px', minHeight: 'auto' }}
-          >
-            <span className="button-icon" style={{ fontSize: '10px' }}><FontAwesomeIcon icon={faRuler} /></span>
-            <span className="button-label">Lines</span>
-            <span className="button-count">{project?.lines.size || 0}</span>
-          </button>
-
-          <button
-            className="entity-button"
-            onClick={onShowPlanesPopup}
-            title="Manage planes"
-            style={{ padding: '2px 6px', fontSize: '11px', minHeight: 'auto' }}
-          >
-            <span className="button-icon" style={{ fontSize: '10px' }}><FontAwesomeIcon icon={faSquare} /></span>
-            <span className="button-label">Planes</span>
-            <span className="button-count">{0}</span>
-          </button>
-
-          <button
-            className="entity-button"
-            onClick={onShowImagePointsPopup}
-            title="Manage image points"
-            style={{ padding: '2px 6px', fontSize: '11px', minHeight: 'auto' }}
-          >
-            <span className="button-icon" style={{ fontSize: '10px' }}><FontAwesomeIcon icon={faCamera} /></span>
-            <span className="button-label">IPs</span>
-            <span className="button-count">{Array.from(project?.viewpoints || []).reduce((total, vp) => total + vp.imagePoints.size, 0)}</span>
-          </button>
-
-          <button
-            className="entity-button"
-            onClick={onShowConstraintsPopup}
-            title="Manage constraints"
-            style={{ padding: '2px 6px', fontSize: '11px', minHeight: 'auto' }}
-          >
-            <span className="button-icon" style={{ fontSize: '10px' }}><FontAwesomeIcon icon={faGear} /></span>
-            <span className="button-count">{project?.constraints.size || 0}</span>
-          </button>
-
-          <button
-            className="entity-button"
-            onClick={onShowOptimizationPanel}
-            title="Bundle adjustment optimization"
-            style={{ padding: '2px 6px', fontSize: '11px', minHeight: 'auto' }}
-          >
-            <span className="button-icon" style={{ fontSize: '10px' }}><FontAwesomeIcon icon={faBullseye} /></span>
-            <span className="button-label">Optimize</span>
-          </button>
-        </div>
-      </div>
     </div>
   )
 })

@@ -278,7 +278,9 @@ export class ConstraintSystem {
           const constraintResiduals = constraint.computeResiduals(valueMap);
           residuals.push(...constraintResiduals);
         } catch (error) {
-          console.error(`[ConstraintSystem] Error computing residuals for constraint ${constraint.getName()}:`, error);
+          if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
+            console.error(`[ConstraintSystem] Error computing residuals for constraint ${constraint.getName()}:`, error);
+          }
           throw error;
         }
       }
@@ -350,24 +352,30 @@ export class ConstraintSystem {
       const hasInfinity = allResiduals.some(r => !isFinite(r.data));
 
       if (hasNaN) {
-        console.error('[ConstraintSystem] NaN detected in initial residuals!');
-        allResiduals.forEach((r, i) => {
-          if (isNaN(r.data)) {
-            console.error(`  Residual ${i}: NaN`);
-          }
-        });
+        if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
+          console.error('[ConstraintSystem] NaN detected in initial residuals!');
+          allResiduals.forEach((r, i) => {
+            if (isNaN(r.data)) {
+              console.error(`  Residual ${i}: NaN`);
+            }
+          });
+        }
       }
 
       if (hasInfinity) {
-        console.error('[ConstraintSystem] Infinity detected in initial residuals!');
-        allResiduals.forEach((r, i) => {
-          if (!isFinite(r.data)) {
-            console.error(`  Residual ${i}: ${r.data}`);
-          }
-        });
+        if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
+          console.error('[ConstraintSystem] Infinity detected in initial residuals!');
+          allResiduals.forEach((r, i) => {
+            if (!isFinite(r.data)) {
+              console.error(`  Residual ${i}: ${r.data}`);
+            }
+          });
+        }
       }
     } catch (error) {
-      console.error('[ConstraintSystem] Error testing residual function:', error);
+      if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
+        console.error('[ConstraintSystem] Error testing residual function:', error);
+      }
       throw error;
     }
 
@@ -431,7 +439,9 @@ export class ConstraintSystem {
         error: result.success ? null : result.convergenceReason,
       };
     } catch (error) {
-      console.error("[ConstraintSystem] Optimization threw exception:", error);
+      if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
+        console.error("[ConstraintSystem] Optimization threw exception:", error);
+      }
       return {
         converged: false,
         iterations: 0,
@@ -494,17 +504,21 @@ export class ConstraintSystem {
       if ('lastResiduals' in entity) {
         const actualCount = (entity as any).lastResiduals?.length ?? 0;
         if (actualCount !== info.count) {
-          console.error(
-            `[ConstraintSystem] Push/pop mismatch for "${info.name}": ` +
-            `pushed ${info.count}, popped ${actualCount}`
-          );
+          if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
+            console.error(
+              `[ConstraintSystem] Push/pop mismatch for "${info.name}": ` +
+              `pushed ${info.count}, popped ${actualCount}`
+            );
+          }
           hasViolations = true;
         }
       } else if (info.count > 0) {
-        console.warn(
-          `[ConstraintSystem] "${info.name}" pushed ${info.count} residuals ` +
-          `but has no lastResiduals field to pop them into`
-        );
+        if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
+          console.warn(
+            `[ConstraintSystem] "${info.name}" pushed ${info.count} residuals ` +
+            `but has no lastResiduals field to pop them into`
+          );
+        }
         hasViolations = true;
       }
     }

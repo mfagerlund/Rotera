@@ -41,9 +41,23 @@ global.ResizeObserver = class ResizeObserver {
   disconnect() {}
 }
 
-// Suppress console warnings in tests
+// Suppress console output in tests (unless PICTORIGO_VERBOSE_TESTS is set)
+const originalLog = console.log
+const originalWarn = console.warn
 const originalError = console.error
+const originalInfo = console.info
+const originalDebug = console.debug
+
+const isVerbose = process.env.PICTORIGO_VERBOSE_TESTS === 'true'
+
 beforeAll(() => {
+  if (!isVerbose) {
+    console.log = () => {}
+    console.warn = () => {}
+    console.info = () => {}
+    console.debug = () => {}
+  }
+
   console.error = (...args) => {
     if (
       typeof args[0] === 'string' &&
@@ -51,10 +65,17 @@ beforeAll(() => {
     ) {
       return
     }
+    if (!isVerbose) {
+      return
+    }
     originalError.call(console, ...args)
   }
 })
 
 afterAll(() => {
+  console.log = originalLog
+  console.warn = originalWarn
   console.error = originalError
+  console.info = originalInfo
+  console.debug = originalDebug
 })

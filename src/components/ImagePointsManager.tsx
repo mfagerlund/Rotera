@@ -1,11 +1,11 @@
 import React from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faBullseye, faXmark } from '@fortawesome/free-solid-svg-icons'
-import EntityListPopup, { EntityListItem } from './EntityListPopup'
+import { faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
+import FloatingWindow from './FloatingWindow'
 import { WorldPoint } from '../entities/world-point'
 import { Viewpoint } from '../entities/viewpoint'
 import { IWorldPoint, IViewpoint, IImagePoint } from '../entities/interfaces'
-import { getEntityKey } from '../utils/entityKeys'
+import { useConfirm } from './ConfirmDialog'
 
 export interface ImagePointReference {
   worldPoint: IWorldPoint
@@ -20,6 +20,7 @@ interface ImagePointsManagerProps {
   selectedImagePoints?: ImagePointReference[]
   onEditImagePoint?: (ref: ImagePointReference) => void
   onDeleteImagePoint?: (ref: ImagePointReference) => void
+  onDeleteAllImagePoints?: () => void
   onSelectImagePoint?: (ref: ImagePointReference) => void
 }
 
@@ -31,82 +32,130 @@ export const ImagePointsManager: React.FC<ImagePointsManagerProps> = ({
   selectedImagePoints = [],
   onEditImagePoint,
   onDeleteImagePoint,
+  onDeleteAllImagePoints,
   onSelectImagePoint
 }) => {
-  const allImagePointRefs: ImagePointReference[] = []
+  const { confirm, dialog } = useConfirm()
+
+  const allImagePointRefs: { ref: ImagePointReference; imagePoint: IImagePoint }[] = []
 
   Array.from(images.values()).forEach(viewpoint => {
     Array.from(viewpoint.imagePoints).forEach(imagePoint => {
       const worldPoint = imagePoint.worldPoint
       if (worldPoint) {
-        allImagePointRefs.push({ worldPoint, viewpoint })
+        allImagePointRefs.push({
+          ref: { worldPoint, viewpoint },
+          imagePoint
+        })
       }
     })
   })
 
-  const imagePointEntities: EntityListItem<ImagePointReference>[] = allImagePointRefs.map(ref => {
-    const imagePoint = Array.from(ref.viewpoint.imagePoints).find(ip => ip.worldPoint === ref.worldPoint)
-    const compositeKey = `${getEntityKey(ref.worldPoint)}-${getEntityKey(ref.viewpoint)}`
-    const isSelected = selectedImagePoints.some(sel =>
+  const handleDelete = async (ref: ImagePointReference) => {
+    if (await confirm(`Delete image point for "${ref.worldPoint.getName()}" in "${ref.viewpoint.getName()}"?`)) {
+      onDeleteImagePoint?.(ref)
+    }
+  }
+
+  const handleDeleteAll = async () => {
+    if (await confirm(`Delete all ${allImagePointRefs.length} image points?`)) {
+      onDeleteAllImagePoints?.()
+    }
+  }
+
+  const formatResidual = (imagePoint: IImagePoint): string => {
+    if (imagePoint.reprojectedU === undefined || imagePoint.reprojectedV === undefined) return '-'
+    const du = imagePoint.reprojectedU - imagePoint.u
+    const dv = imagePoint.reprojectedV - imagePoint.v
+    const error = Math.sqrt(du * du + dv * dv)
+    return `${error.toFixed(1)}px`
+  }
+
+  const formatCoords = (imagePoint: IImagePoint): string => {
+    return `(${imagePoint.u.toFixed(0)}, ${imagePoint.v.toFixed(0)})`
+  }
+
+  const isSelected = (ref: ImagePointReference) => {
+    return selectedImagePoints.some(sel =>
       sel.worldPoint === ref.worldPoint && sel.viewpoint === ref.viewpoint
     )
-
-    return {
-      id: compositeKey,
-      name: `${ref.worldPoint.getName()} (${ref.viewpoint.getName()})`,
-      displayInfo: imagePoint ? `(${imagePoint.u.toFixed(1)}, ${imagePoint.v.toFixed(1)})` : '',
-      additionalInfo: [
-        `World Point: ${ref.worldPoint.getName()}`,
-        `Image: ${ref.viewpoint.getName()}`,
-        imagePoint ? `Pixel coordinates: (${imagePoint.u.toFixed(1)}, ${imagePoint.v.toFixed(1)})` : ''
-      ],
-      isActive: isSelected,
-      entity: ref  // Pass the actual ImagePointReference object
-    }
-  })
+  }
 
   return (
-    <EntityListPopup
-      title="Image Points"
-      isOpen={isOpen}
-      onClose={onClose}
-      entities={imagePointEntities}
-      emptyMessage="No image points found"
-      storageKey="image-points-popup"
-      onEdit={onEditImagePoint}
-      onDelete={onDeleteImagePoint}
-      onSelect={onSelectImagePoint}
-      renderEntityDetails={(entityItem) => {
-        const ref = entityItem.entity
-        if (!ref) return null
-        const imagePoint = (Array.from(ref.viewpoint.imagePoints) as IImagePoint[]).find(ip => ip.worldPoint === ref.worldPoint)
-
-        return (
-          <div className="image-point-details">
-            <div className="image-info">
-              Image: {ref.viewpoint.imageWidth}<FontAwesomeIcon icon={faXmark} />{ref.viewpoint.imageHeight}px
-            </div>
-            {imagePoint && (
-              <div className="coordinates">
-                Pixel: ({imagePoint.u.toFixed(1)}, {imagePoint.v.toFixed(1)})
-              </div>
-            )}
-          </div>
-        )
-      }}
-      renderCustomActions={(entity) => (
-        <button
-          className="btn-focus"
-          onClick={(e) => {
-            e.stopPropagation()
-            // TODO: Focus on this image point in the image viewer
-          }}
-          title="Focus in image viewer"
-        >
-          <FontAwesomeIcon icon={faBullseye} />
-        </button>
-      )}
-    />
+    <>
+      {dialog}
+      <FloatingWindow
+        title={`Image Points (${allImagePointRefs.length})`}
+        isOpen={isOpen}
+        onClose={onClose}
+        width={480}
+        maxHeight={400}
+        storageKey="image-points-popup"
+        showOkCancel={false}
+        onDelete={allImagePointRefs.length > 0 && onDeleteAllImagePoints ? handleDeleteAll : undefined}
+      >
+        <div className="lines-manager">
+          {allImagePointRefs.length === 0 ? (
+            <div className="lines-manager__empty">No image points found</div>
+          ) : (
+            <table className="lines-manager__table">
+              <thead>
+                <tr>
+                  <th>World Point</th>
+                  <th>Image</th>
+                  <th>Coords</th>
+                  <th>Residual</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {allImagePointRefs.map(({ ref, imagePoint }) => {
+                  const key = `${ref.worldPoint.getName()}-${ref.viewpoint.getName()}`
+                  return (
+                    <tr
+                      key={key}
+                      className={isSelected(ref) ? 'selected' : ''}
+                      onClick={() => onSelectImagePoint?.(ref)}
+                    >
+                      <td>{ref.worldPoint.getName()}</td>
+                      <td className="points-cell">{ref.viewpoint.getName()}</td>
+                      <td className="length-cell">{formatCoords(imagePoint)}</td>
+                      <td className="residual-cell">{formatResidual(imagePoint)}</td>
+                      <td className="actions-cell">
+                        {onEditImagePoint && (
+                          <button
+                            className="btn-icon"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onEditImagePoint(ref)
+                            }}
+                            title="Edit"
+                          >
+                            <FontAwesomeIcon icon={faPencil} />
+                          </button>
+                        )}
+                        {onDeleteImagePoint && (
+                          <button
+                            className="btn-icon btn-danger-icon"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDelete(ref)
+                            }}
+                            title="Delete"
+                          >
+                            <FontAwesomeIcon icon={faTrash} />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </FloatingWindow>
+    </>
   )
 }
 

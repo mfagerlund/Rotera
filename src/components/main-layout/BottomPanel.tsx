@@ -4,6 +4,7 @@ import { WorldPoint } from '../../entities/world-point'
 import { Line as LineEntity } from '../../entities/line'
 import { Viewpoint } from '../../entities/viewpoint'
 import { Project } from '../../entities/project'
+import WorldPointsManager from '../WorldPointsManager'
 import LinesManager from '../LinesManager'
 import PlanesManager from '../PlanesManager'
 import ImagePointsManager, { ImagePointReference } from '../ImagePointsManager'
@@ -15,6 +16,7 @@ import FloatingWindow from '../FloatingWindow'
 
 interface BottomPanelProps {
   entityPopups: {
+    showWorldPointsPopup: boolean
     showLinesPopup: boolean
     showPlanesPopup: boolean
     showImagePointsPopup: boolean
@@ -41,11 +43,13 @@ interface BottomPanelProps {
   viewpointsMap: Map<string, Viewpoint>
   onEditImagePoint: (ref: ImagePointReference) => void
   onDeleteImagePoint: (ref: ImagePointReference) => void
+  onDeleteAllImagePoints?: () => void
   onSelectImagePoint: (ref: ImagePointReference) => void
   constraints: any[]
   allLines: LineEntity[]
   onEditConstraint: (constraint: any) => void
   onDeleteConstraint: (constraint: any) => void
+  onDeleteAllConstraints?: () => void
   onToggleConstraint: (constraint: any) => void
   onSelectConstraint: (constraint: any) => void
   project: Project | null
@@ -60,6 +64,9 @@ interface BottomPanelProps {
   onCloseWorldPointEdit: () => void
   onUpdateWorldPoint: (worldPoint: WorldPoint) => void
   onDeleteWorldPoint: (worldPoint: WorldPoint) => void
+  onDeleteAllWorldPoints?: () => void
+  onEditWorldPointFromManager?: (worldPoint: WorldPoint) => void
+  selectedWorldPoints?: WorldPoint[]
   showVPQualityWindow: boolean
   onCloseVPQualityWindow: () => void
   currentViewpoint: Viewpoint | null
@@ -87,11 +94,13 @@ export const BottomPanel: React.FC<BottomPanelProps> = observer(({
   viewpointsMap,
   onEditImagePoint,
   onDeleteImagePoint,
+  onDeleteAllImagePoints,
   onSelectImagePoint,
   constraints,
   allLines,
   onEditConstraint,
   onDeleteConstraint,
+  onDeleteAllConstraints,
   onToggleConstraint,
   onSelectConstraint,
   project,
@@ -106,12 +115,27 @@ export const BottomPanel: React.FC<BottomPanelProps> = observer(({
   onCloseWorldPointEdit,
   onUpdateWorldPoint,
   onDeleteWorldPoint,
+  onDeleteAllWorldPoints,
+  onEditWorldPointFromManager,
+  selectedWorldPoints = [],
   showVPQualityWindow,
   onCloseVPQualityWindow,
   currentViewpoint
 }) => {
   return (
     <>
+      <WorldPointsManager
+        isOpen={entityPopups.showWorldPointsPopup}
+        onClose={() => onClosePopup('showWorldPointsPopup')}
+        worldPoints={worldPointsMap}
+        viewpoints={viewpointsMap}
+        selectedWorldPoints={selectedWorldPoints}
+        onEditWorldPoint={onEditWorldPointFromManager}
+        onDeleteWorldPoint={onDeleteWorldPoint}
+        onDeleteAllWorldPoints={onDeleteAllWorldPoints}
+        onSelectWorldPoint={onSelectWorldPoint}
+      />
+
       <LinesManager
         isOpen={entityPopups.showLinesPopup}
         onClose={() => onClosePopup('showLinesPopup')}
@@ -146,6 +170,7 @@ export const BottomPanel: React.FC<BottomPanelProps> = observer(({
         images={viewpointsMap}
         onEditImagePoint={onEditImagePoint}
         onDeleteImagePoint={onDeleteImagePoint}
+        onDeleteAllImagePoints={onDeleteAllImagePoints}
         onSelectImagePoint={onSelectImagePoint}
       />
 
@@ -157,6 +182,7 @@ export const BottomPanel: React.FC<BottomPanelProps> = observer(({
         allLines={allLines}
         onEditConstraint={onEditConstraint}
         onDeleteConstraint={onDeleteConstraint}
+        onDeleteAllConstraints={onDeleteAllConstraints}
         onToggleConstraint={onToggleConstraint}
         onSelectConstraint={onSelectConstraint}
       />

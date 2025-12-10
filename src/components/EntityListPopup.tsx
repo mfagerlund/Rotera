@@ -27,6 +27,7 @@ interface EntityListPopupProps<T = any> {
   storageKey: string
   width?: number
   height?: number
+  maxHeight?: number
   onEdit?: (entity: T) => void
   onDelete?: (entity: T) => void
   onDeleteAll?: () => void
@@ -44,7 +45,8 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
   emptyMessage = 'No items found',
   storageKey,
   width = 400,
-  height = 500,
+  height,
+  maxHeight = 500,
   onEdit,
   onDelete,
   onDeleteAll,
@@ -139,6 +141,9 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
         isOpen={isOpen}
         onClose={onClose}
         storageKey={storageKey}
+        width={width}
+        height={height}
+        maxHeight={maxHeight}
         showOkCancel={false}
       >
         <div className="entity-list-popup">

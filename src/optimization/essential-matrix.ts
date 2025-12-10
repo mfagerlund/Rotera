@@ -516,7 +516,6 @@ function jacobiEigenDecomposition9x9(A: number[][]): { eigenvalues: number[], ei
 
 function decomposeEssentialMatrix(E: number[][]): DecomposedEssentialMatrix[] {
   // Normalize E to have singular values [1, 1, 0] for numerical stability
-  // First compute Frobenius norm and scale
   let frobNorm = 0;
   for (let i = 0; i < 3; i++) {
     for (let j = 0; j < 3; j++) {
@@ -525,7 +524,6 @@ function decomposeEssentialMatrix(E: number[][]): DecomposedEssentialMatrix[] {
   }
   frobNorm = Math.sqrt(frobNorm);
 
-  // Normalize E (Frobenius norm of a rank-2 matrix with sv [1,1,0] is sqrt(2))
   const scale = frobNorm > 1e-10 ? Math.sqrt(2) / frobNorm : 1;
   const E_normalized: number[][] = [
     [E[0][0] * scale, E[0][1] * scale, E[0][2] * scale],
@@ -534,18 +532,6 @@ function decomposeEssentialMatrix(E: number[][]): DecomposedEssentialMatrix[] {
   ];
 
   const svd = svd3x3(E_normalized);
-
-  log('[decomposeEssentialMatrix] SVD of E (normalized):');
-  log(`  Frobenius norm before: ${frobNorm.toFixed(4)}, scale factor: ${scale.toFixed(6)}`);
-  log(`  Singular values: [${svd.S.map(v => v.toFixed(6)).join(', ')}]`);
-
-  // Verify U is orthonormal
-  const u0Norm = Math.sqrt(svd.U[0][0]**2 + svd.U[1][0]**2 + svd.U[2][0]**2);
-  const u1Norm = Math.sqrt(svd.U[0][1]**2 + svd.U[1][1]**2 + svd.U[2][1]**2);
-  const u2Norm = Math.sqrt(svd.U[0][2]**2 + svd.U[1][2]**2 + svd.U[2][2]**2);
-  log(`  U column norms: [${u0Norm.toFixed(4)}, ${u1Norm.toFixed(4)}, ${u2Norm.toFixed(4)}]`);
-
-  log(`  Translation t (3rd column of U) = [${svd.U[0][2].toFixed(6)}, ${svd.U[1][2].toFixed(6)}, ${svd.U[2][2].toFixed(6)}]`);
 
   const W = [
     [0, -1, 0],
@@ -606,9 +592,6 @@ function decomposeEssentialMatrix(E: number[][]): DecomposedEssentialMatrix[] {
 
   validateRotation(R1, 'R1');
   validateRotation(R2, 'R2');
-
-  log(`  t1 (3rd column of U): [${t1.map(v => v.toFixed(6)).join(', ')}]`);
-  log(`  t2 (negated): [${t2.map(v => v.toFixed(6)).join(', ')}]`);
 
   return [
     { R: R1, t: t1 },
@@ -794,18 +777,14 @@ function selectCorrectDecomposition(
   let bestSolution = E_solutions[0];
   let maxInFront = 0;
 
-  log('[Essential Matrix] Cheirality test for 4 decompositions:');
   for (let i = 0; i < E_solutions.length; i++) {
     const solution = E_solutions[i];
-    const debug = i === 0;
-    const numInFront = checkCheirality(correspondences, solution.R, solution.t, debug);
-    log(`  Solution ${i + 1}: ${numInFront}/${correspondences.length} points in front`);
+    const numInFront = checkCheirality(correspondences, solution.R, solution.t, false);
     if (numInFront > maxInFront) {
       maxInFront = numInFront;
       bestSolution = solution;
     }
   }
-  log(`  Selected solution with ${maxInFront} points in front`);
 
   return { ...bestSolution, score: maxInFront };
 }
@@ -959,14 +938,10 @@ function ransacEssentialMatrix(
     return indices;
   };
 
-  log(`\n[RANSAC] Starting with ${n} correspondences, max ${maxIterations} iterations`);
-
   let degenerateCount = 0;
   let totalCandidates = 0;
 
   // For small point counts, try all combinations exhaustively
-  // C(8,7) = 8, C(10,7) = 120, C(14,7) = 3432, C(15,7) = 6435, C(16,7) = 11440, C(18,7) = 31824
-  // All reasonable - ensures deterministic results
   const useExhaustive = n <= 18;
 
   // Generate all combinations of 7 from n
@@ -984,7 +959,6 @@ function ransacEssentialMatrix(
       }
     };
     generateCombinations(0, []);
-    log(`[RANSAC] Using exhaustive search: ${allCombinations.length} combinations`);
   }
 
   for (let iter = 0; iter < maxIterations; iter++) {
@@ -1062,22 +1036,10 @@ function ransacEssentialMatrix(
     const currentBest = bestResult;
     if (currentBest !== null && currentBest.cheiralityScore === n && currentBest.inlierCount === n) {
       // Only terminate early after testing a minimum number of candidates
-      // This helps avoid picking the first solution when multiple perfect solutions exist
       if (totalCandidates >= Math.min(n, 10)) {
-        log(`[RANSAC] Early termination at iteration ${iter + 1} with perfect solution`);
         break;
       }
     }
-  }
-
-  log(`[RANSAC] Completed: ${totalCandidates} candidates tested, ${degenerateCount} degenerate solutions filtered`);
-
-  const finalResult = bestResult;
-  if (finalResult !== null) {
-    log(`[RANSAC] Best solution: ${finalResult.cheiralityScore}/${n} cheirality, ${finalResult.inlierCount}/${n} inliers`);
-    log(`[RANSAC] Translation: [${finalResult.t.map((v: number) => v.toFixed(4)).join(', ')}]`);
-  } else {
-    log(`[RANSAC] No valid non-degenerate solution found`);
   }
 
   return bestResult;
@@ -1158,27 +1120,16 @@ export function initializeCamerasWithEssentialMatrix(
     };
   }
 
-  log(`\n[Essential Matrix] Found ${correspondences.length} correspondences`);
-  log('[Essential Matrix] Sample correspondences:');
-  for (let i = 0; i < Math.min(3, correspondences.length); i++) {
-    const c = correspondences[i];
-    log(`  ${i}: cam1=[${c.x1.toFixed(4)}, ${c.y1.toFixed(4)}], cam2=[${c.x2.toFixed(4)}, ${c.y2.toFixed(4)}]`);
-  }
-
   let bestDecomposition: { R: number[][], t: number[] } | null = null;
   let bestE: number[][] | null = null;
 
   // Try RANSAC first if we have enough correspondences (>= 8 for meaningful sampling)
   if (correspondences.length >= 8) {
-    log('[Essential Matrix] Trying RANSAC with 7-point algorithm...');
     const ransacResult = ransacEssentialMatrix(correspondences, 100, 0.01);
 
     if (ransacResult && !isTranslationDegenerate(ransacResult.t)) {
-      log('[Essential Matrix] RANSAC found valid non-degenerate solution');
       bestDecomposition = { R: ransacResult.R, t: ransacResult.t };
       bestE = ransacResult.E;
-    } else {
-      log('[Essential Matrix] RANSAC failed or found only degenerate solutions, falling back to 8-point');
     }
   }
 
@@ -1187,11 +1138,8 @@ export function initializeCamerasWithEssentialMatrix(
     let allCandidates: number[][][] = [];
 
     if (correspondences.length === 7) {
-      log('[Essential Matrix] Using 7-point algorithm');
       allCandidates = estimateEssentialMatrix7Point(correspondences);
-      log(`[Essential Matrix] 7-point produced ${allCandidates.length} candidate(s)`);
     } else {
-      log('[Essential Matrix] Using 8-point algorithm');
       const E = estimateEssentialMatrix8Point(correspondences);
       allCandidates = [E];
     }
@@ -1200,44 +1148,11 @@ export function initializeCamerasWithEssentialMatrix(
 
     for (let candidateIdx = 0; candidateIdx < allCandidates.length; candidateIdx++) {
       const E = allCandidates[candidateIdx];
-
-      if (allCandidates.length > 1) {
-        log(`\n[Essential Matrix] Testing candidate ${candidateIdx + 1}/${allCandidates.length}:`);
-      } else {
-        log('\n[Essential Matrix] E matrix:');
-      }
-      E.forEach(row => log(`  [${row.map(v => v.toFixed(6)).join(', ')}]`));
-
-      log('\n[Essential Matrix] Verifying epipolar constraint (x2^T * E * x1 should be ~0):');
-      for (let i = 0; i < Math.min(5, correspondences.length); i++) {
-        const c = correspondences[i];
-        const x1 = [c.x1, c.y1, 1];
-        const x2 = [c.x2, c.y2, 1];
-
-        const Ex1 = [
-          E[0][0] * x1[0] + E[0][1] * x1[1] + E[0][2] * x1[2],
-          E[1][0] * x1[0] + E[1][1] * x1[1] + E[1][2] * x1[2],
-          E[2][0] * x1[0] + E[2][1] * x1[1] + E[2][2] * x1[2]
-        ];
-
-        const epipolarError = x2[0] * Ex1[0] + x2[1] * Ex1[1] + x2[2] * Ex1[2];
-        if (allCandidates.length === 1 || i < 2) {
-          log(`  Point ${i}: error = ${epipolarError.toExponential(4)}`);
-        }
-      }
-
       const decompositions = decomposeEssentialMatrix(E);
-      if (allCandidates.length > 1) {
-        log(`[Essential Matrix] Testing ${decompositions.length} decompositions for candidate ${candidateIdx + 1}...`);
-      } else {
-        log(`\n[Essential Matrix] Testing ${decompositions.length} possible decompositions...`);
-      }
-
       const candidateDecomp = selectCorrectDecomposition(decompositions, correspondences);
 
       // Skip degenerate solutions
       if (isTranslationDegenerate(candidateDecomp.t)) {
-        log(`[Essential Matrix] Candidate ${candidateIdx + 1} has degenerate translation, skipping`);
         continue;
       }
 
@@ -1246,12 +1161,6 @@ export function initializeCamerasWithEssentialMatrix(
         bestDecomposition = candidateDecomp;
         bestE = E;
       }
-    }
-
-    if (allCandidates.length > 1 && bestDecomposition) {
-      log(`\n[Essential Matrix] Best candidate selected with score: ${bestScore}`);
-    } else if (bestDecomposition) {
-      log('[Essential Matrix] Selected best decomposition');
     }
   }
 
@@ -1264,14 +1173,11 @@ export function initializeCamerasWithEssentialMatrix(
 
   // Check if the selected solution is degenerate
   if (isTranslationDegenerate(bestDecomposition.t)) {
-    log('[Essential Matrix] ERROR: All solutions are degenerate (axis-aligned translation)');
     return {
       success: false,
       error: 'All Essential Matrix solutions are degenerate. The scene geometry may be too planar or the camera motion is ambiguous.'
     };
   }
-
-  log(`\n[Essential Matrix] Translation vector t: [${bestDecomposition.t.map(v => v.toFixed(4)).join(', ')}]`);
 
   const tNorm = Math.sqrt(
     bestDecomposition.t[0] * bestDecomposition.t[0] +
@@ -1279,10 +1185,7 @@ export function initializeCamerasWithEssentialMatrix(
     bestDecomposition.t[2] * bestDecomposition.t[2]
   );
 
-  log(`[Essential Matrix] tNorm: ${tNorm}, baselineScale: ${baselineScale}`);
-
   if (tNorm < 1e-10) {
-    log('[Essential Matrix] ERROR: Translation norm is too small!');
     return { success: false, error: 'Translation norm is too small (degenerate configuration)' };
   }
 
@@ -1291,8 +1194,6 @@ export function initializeCamerasWithEssentialMatrix(
     bestDecomposition.t[1] / tNorm * baselineScale,
     bestDecomposition.t[2] / tNorm * baselineScale
   ];
-
-  log(`[Essential Matrix] tScaled: [${tScaled.map(v => v.toFixed(4)).join(', ')}]`);
 
   vp1.position = [0, 0, 0];
   vp1.rotation = [1, 0, 0, 0];
@@ -1319,13 +1220,7 @@ export function initializeCamerasWithEssentialMatrix(
   vp2.position = [camera2Center[0], camera2Center[1], camera2Center[2]];
   vp2.rotation = [quat[0], quat[1], quat[2], quat[3]];
 
-  log('\n[Essential Matrix] Camera poses after initialization:');
-  log(`  Camera 1: pos=[${vp1.position.join(', ')}], rot=[${vp1.rotation.join(', ')}]`);
-  log(`  Camera 2: pos=[${vp2.position.map(v => v.toFixed(3)).join(', ')}], rot=[${vp2.rotation.map(v => v.toFixed(3)).join(', ')}]`);
-  log(`  Rotation matrix R:`);
-  bestDecomposition.R.forEach(row => log(`    [${row.map(v => v.toFixed(4)).join(', ')}]`));
-  log(`  Translation t (normalized): [${bestDecomposition.t.map(v => v.toFixed(4)).join(', ')}]`);
-  log(`  Translation t (scaled): [${tScaled.map(v => v.toFixed(3)).join(', ')}]`);
+  log(`[EssentialMatrix] ${correspondences.length} pts, t=[${tScaled.map(v => v.toFixed(2)).join(',')}]`);
 
   return { success: true };
 }

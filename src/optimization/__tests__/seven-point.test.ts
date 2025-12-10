@@ -316,7 +316,7 @@ describe('7-Point Essential Matrix Algorithm', () => {
         maxIterations: 10,
         verbose: false
       });
-    }).toThrow(/at least 7 shared point correspondences/);
+    }).toThrow(/Need 7\+ shared points/);
 
     console.log('Optimization correctly blocked due to insufficient correspondences');
     console.log('\n=== Test Passed ===\n');
