@@ -8,6 +8,15 @@ export interface FloatingWindowPosition {
   y: number
 }
 
+export interface HeaderButton {
+  icon: React.ReactNode
+  label?: string
+  onClick: () => void
+  disabled?: boolean
+  title?: string
+  className?: string
+}
+
 interface FloatingWindowProps {
   title: string
   isOpen: boolean
@@ -15,6 +24,7 @@ interface FloatingWindowProps {
   onOk?: () => void
   onCancel?: () => void
   onDelete?: () => void
+  headerButtons?: HeaderButton[]
   children: React.ReactNode
   initialPosition?: FloatingWindowPosition
   width?: number
@@ -41,6 +51,7 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
   onOk,
   onCancel,
   onDelete,
+  headerButtons,
   children,
   initialPosition,
   width,
@@ -284,6 +295,32 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
           style={{padding: '4px 8px', minHeight: 'auto', display: 'flex', alignItems: 'center', gap: '8px'}}
         >
           <h3 className="floating-window-title" style={{flex: 1}}>{title}</h3>
+          {headerButtons && headerButtons.map((btn, idx) => (
+            <button
+              key={idx}
+              type="button"
+              className={btn.className || 'btn-secondary'}
+              onClick={(e) => {
+                e.stopPropagation()
+                btn.onClick()
+              }}
+              disabled={btn.disabled}
+              title={btn.title}
+              style={{
+                fontSize: '12px',
+                padding: btn.label ? '4px 8px' : '4px 6px',
+                height: '28px',
+                minWidth: btn.label ? '80px' : 'auto',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px'
+              }}
+            >
+              {btn.icon}
+              {btn.label && <span>{btn.label}</span>}
+            </button>
+          ))}
           {onDelete && (
             <button
               type="button"

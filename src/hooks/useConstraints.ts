@@ -25,7 +25,6 @@ export const useConstraints = (
   onAddConstraint: (constraint: Constraint) => void,
   onUpdateConstraint: (constraint: Constraint, updates: { name?: string; isEnabled?: boolean; parameters?: Record<string, unknown> }) => void,
   onDeleteConstraint: (constraint: Constraint) => void,
-  onToggleConstraint: (constraint: Constraint) => void
 ) => {
   const [activeConstraintType, setActiveConstraintType] = useState<string | null>(null)
   const [constraintParameters, setConstraintParameters] = useState<Record<string, any>>({})
@@ -385,7 +384,6 @@ export const useConstraints = (
     // Constraint management
     editConstraint: onUpdateConstraint,
     deleteConstraint: onDeleteConstraint,
-    toggleConstraint: onToggleConstraint,
 
     // Utilities
     isConstraintComplete,

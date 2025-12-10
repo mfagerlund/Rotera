@@ -75,7 +75,6 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
     addConstraint,
     updateConstraint,
     deleteConstraint,
-    toggleConstraint,
     clearProject,
     exportOptimizationDto,
     removeDuplicateImagePoints
@@ -251,7 +250,6 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
     addConstraint,
     updateConstraint,
     deleteConstraint,
-    toggleConstraint
   )
 
   const [showComponentNames, setShowComponentNames] = useState(() => isComponentOverlayEnabled())
@@ -848,7 +846,6 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
         onDeleteAllConstraints={() => {
           constraints.forEach(c => deleteConstraint(c))
         }}
-        onToggleConstraint={(constraint) => toggleConstraint(constraint)}
         onSelectConstraint={(constraint) => {}}
         project={project}
         onOptimizationComplete={(success, message) => {

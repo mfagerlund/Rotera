@@ -1,10 +1,11 @@
 // Optimization panel - works with ENTITIES only
 // NO DTOs
 
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useMemo } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faBullseye, faGear, faStop, faCamera, faClipboard } from '@fortawesome/free-solid-svg-icons'
+import { faBullseye, faGear, faStop, faClipboard } from '@fortawesome/free-solid-svg-icons'
 import { Project } from '../entities/project'
+import FloatingWindow, { HeaderButton } from './FloatingWindow'
 import { useOptimization } from '../hooks/useOptimization'
 import { defaultOptimizationSettings } from '../services/optimization'
 import { getEntityKey } from '../utils/entityKeys'
@@ -12,11 +13,14 @@ import { initializeCameraWithPnP } from '../optimization/pnp'
 import { Viewpoint } from '../entities/viewpoint'
 import { WorldPoint } from '../entities/world-point'
 import { Line } from '../entities/line'
+import { CoplanarPointsConstraint } from '../entities/constraints/coplanar-points-constraint'
 import { projectWorldPointToPixelQuaternion } from '../optimization/camera-projection'
 import { V, Vec3, Vec4 } from 'scalar-autograd'
 import { optimizationLogs } from '../optimization/optimize-project'
 
 interface OptimizationPanelProps {
+  isOpen: boolean
+  onClose: () => void
   project: Project
   onOptimizationComplete: (success: boolean, message: string) => void
   onSelectWorldPoint?: (worldPoint: WorldPoint) => void
@@ -87,6 +91,8 @@ function computeCameraReprojectionError(vp: Viewpoint): number {
 }
 
 export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
+  isOpen,
+  onClose,
   project,
   onOptimizationComplete,
   onSelectWorldPoint,
@@ -367,10 +373,53 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
     if (abs >= 0.001) {
       return value.toFixed(6);
     }
-    return '0.000';
+    // For very small values, use scientific notation
+    return value.toExponential(2);
   }
 
+  const headerButtons: HeaderButton[] = useMemo(() => [
+    {
+      icon: <FontAwesomeIcon icon={faBullseye} />,
+      label: 'Optimize',
+      onClick: handleOptimize,
+      disabled: !canOptimize() || isOptimizing,
+      title: 'Run bundle adjustment optimization',
+      className: 'btn-primary'
+    },
+    {
+      icon: <FontAwesomeIcon icon={faStop} />,
+      onClick: handleStop,
+      disabled: !isOptimizing,
+      title: 'Stop optimization'
+    },
+    {
+      icon: <FontAwesomeIcon icon={faGear} />,
+      onClick: () => setShowAdvanced(!showAdvanced),
+      disabled: isOptimizing,
+      title: 'Toggle settings'
+    },
+    {
+      icon: <FontAwesomeIcon icon={faClipboard} />,
+      onClick: () => {
+        const logText = optimizationLogs.join('\n')
+        navigator.clipboard.writeText(logText)
+      },
+      disabled: isOptimizing,
+      title: 'Copy optimization logs to clipboard'
+    }
+  ], [handleOptimize, canOptimize, isOptimizing, handleStop, showAdvanced])
+
   return (
+    <FloatingWindow
+      title="Bundle Adjustment Optimization"
+      isOpen={isOpen}
+      onClose={onClose}
+      width={500}
+      maxHeight={600}
+      storageKey="optimization-panel"
+      showOkCancel={false}
+      headerButtons={headerButtons}
+    >
     <div className="optimization-panel">
       <div className="optimization-stats">
         <div className="stat-item">
@@ -413,41 +462,6 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
           </ul>
         </div>
       )}
-
-      <div className="optimization-controls">
-        <button
-          className="btn-optimize"
-          onClick={handleOptimize}
-          disabled={!canOptimize() || isOptimizing}
-        >
-          <FontAwesomeIcon icon={faBullseye} /> Optimize
-        </button>
-        <button
-          className="btn-stop"
-          onClick={handleStop}
-          disabled={!isOptimizing}
-        >
-          <FontAwesomeIcon icon={faStop} /> Stop
-        </button>
-        <button
-          className="btn-settings"
-          onClick={() => setShowAdvanced(!showAdvanced)}
-          disabled={isOptimizing}
-        >
-          <FontAwesomeIcon icon={faGear} /> Settings
-        </button>
-        <button
-          className="btn-settings"
-          onClick={() => {
-            const logText = optimizationLogs.join('\n')
-            navigator.clipboard.writeText(logText)
-          }}
-          title="Copy optimization logs to clipboard"
-          disabled={isOptimizing}
-        >
-          <FontAwesomeIcon icon={faClipboard} />
-        </button>
-      </div>
 
       {showAdvanced && (
         <div className="optimization-settings">
@@ -712,11 +726,45 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                   </table>
                 </div>
               )}
+
+              {/* Coplanar Constraints */}
+              {(() => {
+                const coplanarConstraints = Array.from(project.constraints).filter(
+                  c => c instanceof CoplanarPointsConstraint
+                ) as CoplanarPointsConstraint[]
+                return coplanarConstraints.length > 0 && (
+                  <div className="entity-section">
+                    <h5>Coplanar Constraints ({coplanarConstraints.length})</h5>
+                    <table className="entity-table">
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>Points</th>
+                          <th>RMS</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {coplanarConstraints.map(constraint => {
+                          const info = constraint.getOptimizationInfo()
+                          return (
+                            <tr key={constraint.getName()}>
+                              <td>{constraint.getName()}</td>
+                              <td>{constraint.points.length}</td>
+                              <td>{formatNumber(info.rmsResidual)}</td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )
+              })()}
             </div>
           )}
         </div>
       )}
     </div>
+    </FloatingWindow>
   )
 }
 

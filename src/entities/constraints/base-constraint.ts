@@ -88,6 +88,20 @@ export abstract class Constraint implements ISelectable, IValidatable, IResidual
     return null
   }
 
+  getOptimizationInfo() {
+    const residuals = this.lastResiduals
+    const totalResidual = residuals.length > 0
+      ? Math.sqrt(residuals.reduce((sum, r) => sum + r * r, 0))
+      : 0
+
+    return {
+      constraintType: this.getConstraintType(),
+      residuals: residuals,
+      totalResidual,
+      rmsResidual: residuals.length > 0 ? totalResidual / Math.sqrt(residuals.length) : 0
+    }
+  }
+
   // IValidatable implementation
   validate(context: ValidationContext): ValidationResult {
     const errors: ValidationError[] = []

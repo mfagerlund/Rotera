@@ -7,6 +7,7 @@ import { Constraint } from '../entities/constraints'
 import type { OptimizationExportDto } from '../types/optimization-export'
 import { DistanceConstraint } from '../entities/constraints/distance-constraint'
 import { AngleConstraint } from '../entities/constraints/angle-constraint'
+import { CoplanarPointsConstraint } from '../entities/constraints/coplanar-points-constraint'
 import { Serialization } from '../entities/Serialization'
 import { VanishingLine } from '../entities/vanishing-line'
 import { ImageUtils } from '../utils/imageUtils'
@@ -76,7 +77,6 @@ export interface DomainOperations {
   addConstraint: (constraint: Constraint) => void
   updateConstraint: (constraint: Constraint, updates: ConstraintUpdates) => void
   deleteConstraint: (constraint: Constraint) => void
-  toggleConstraint: (constraint: Constraint) => void
 
   // Project
   clearProject: () => void
@@ -92,6 +92,8 @@ function cleanupConstraintReferences(constraint: Constraint): void {
     constraint.pointA.removeReferencingConstraint(constraint)
     constraint.vertex.removeReferencingConstraint(constraint)
     constraint.pointC.removeReferencingConstraint(constraint)
+  } else if (constraint instanceof CoplanarPointsConstraint) {
+    constraint.cleanup()
   }
 }
 
@@ -140,8 +142,18 @@ export function useDomainOperations(
     })
 
     Array.from(worldPoint.referencingConstraints).forEach(constraint => {
-      cleanupConstraintReferences(constraint as Constraint)
-      project.removeConstraint(constraint as Constraint)
+      if (constraint instanceof CoplanarPointsConstraint) {
+        // For coplanar constraints, remove the point from it
+        // If it drops below 4 points, delete the constraint
+        const shouldDelete = constraint.removePoint(worldPoint)
+        if (shouldDelete) {
+          constraint.cleanup()
+          project.removeConstraint(constraint)
+        }
+      } else {
+        cleanupConstraintReferences(constraint as Constraint)
+        project.removeConstraint(constraint as Constraint)
+      }
     })
 
     project.removeWorldPoint(worldPoint)
@@ -334,11 +346,6 @@ export function useDomainOperations(
     project.removeConstraint(constraint)
   }
 
-  const toggleConstraint = (constraint: Constraint) => {
-    if (!project) return
-    constraint.isEnabled = !constraint.isEnabled
-  }
-
   const clearProject = () => {
     if (!project) return
     project.clear()
@@ -404,7 +411,6 @@ export function useDomainOperations(
     addConstraint,
     updateConstraint,
     deleteConstraint,
-    toggleConstraint,
     clearProject,
     exportOptimizationDto,
     removeDuplicateImagePoints

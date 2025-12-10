@@ -12,7 +12,6 @@ import ConstraintsManager from '../ConstraintsManager'
 import WorldPointEditor from '../WorldPointEditor'
 import { VanishingPointQualityWindow } from '../VanishingPointQualityWindow'
 import OptimizationPanel from '../OptimizationPanel'
-import FloatingWindow from '../FloatingWindow'
 
 interface BottomPanelProps {
   entityPopups: {
@@ -50,7 +49,6 @@ interface BottomPanelProps {
   onEditConstraint: (constraint: any) => void
   onDeleteConstraint: (constraint: any) => void
   onDeleteAllConstraints?: () => void
-  onToggleConstraint: (constraint: any) => void
   onSelectConstraint: (constraint: any) => void
   project: Project | null
   onOptimizationComplete: (success: boolean, message: string) => void
@@ -101,7 +99,6 @@ export const BottomPanel: React.FC<BottomPanelProps> = observer(({
   onEditConstraint,
   onDeleteConstraint,
   onDeleteAllConstraints,
-  onToggleConstraint,
   onSelectConstraint,
   project,
   onOptimizationComplete,
@@ -183,33 +180,23 @@ export const BottomPanel: React.FC<BottomPanelProps> = observer(({
         onEditConstraint={onEditConstraint}
         onDeleteConstraint={onDeleteConstraint}
         onDeleteAllConstraints={onDeleteAllConstraints}
-        onToggleConstraint={onToggleConstraint}
         onSelectConstraint={onSelectConstraint}
       />
 
-      {entityPopups.showOptimizationPanel && (
-        <FloatingWindow
-          title="Bundle Adjustment Optimization"
+      {project && (
+        <OptimizationPanel
           isOpen={entityPopups.showOptimizationPanel}
           onClose={() => onClosePopup('showOptimizationPanel')}
-          width={500}
-          height={600}
-          storageKey="optimization-panel"
-        >
-          {project && (
-            <OptimizationPanel
-              project={project}
-              onOptimizationComplete={onOptimizationComplete}
-              onSelectWorldPoint={onSelectWorldPoint}
-              onSelectLine={onSelectLine}
-              onHoverWorldPoint={onHoverWorldPoint}
-              onHoverLine={onHoverLine}
-              isWorldPointSelected={isWorldPointSelected}
-              isLineSelected={isLineSelected}
-              hoveredWorldPoint={hoveredWorldPoint}
-            />
-          )}
-        </FloatingWindow>
+          project={project}
+          onOptimizationComplete={onOptimizationComplete}
+          onSelectWorldPoint={onSelectWorldPoint}
+          onSelectLine={onSelectLine}
+          onHoverWorldPoint={onHoverWorldPoint}
+          onHoverLine={onHoverLine}
+          isWorldPointSelected={isWorldPointSelected}
+          isLineSelected={isLineSelected}
+          hoveredWorldPoint={hoveredWorldPoint}
+        />
       )}
 
       {worldPointEditWindow.worldPoint && (

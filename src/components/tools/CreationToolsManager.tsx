@@ -14,6 +14,7 @@ import { VanishingLine } from '../../entities/vanishing-line'
 import { ConstructionPreview } from '../image-viewer/types'
 import type { ISelectable } from '../../types/selectable'
 import { getEntityKey } from '../../utils/entityKeys'
+import { CoplanarPointsConstraint } from '../../entities/constraints/coplanar-points-constraint'
 import '../../styles/tools.css'
 
 type ToolType = 'select' | 'point' | 'line' | 'plane' | 'circle' | 'loop' | 'vanishing' | 'orientationPaint'
@@ -164,13 +165,19 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
     return selectedPoints.length >= 0 && selectedPoints.length <= 2
   }
 
+  // Collect unique points from selected lines + selected points
+  const getPlanePoints = (): WorldPoint[] => {
+    const pointSet = new Set<WorldPoint>(selectedPoints)
+    selectedLines.forEach(line => {
+      pointSet.add(line.pointA)
+      pointSet.add(line.pointB)
+    })
+    return Array.from(pointSet)
+  }
+
   const canCreatePlane = () => {
-    // 3 points, 2 lines, or 1 line + 1 point
-    return (
-      selectedPoints.length === 3 ||
-      selectedLines.length === 2 ||
-      (selectedLines.length === 1 && selectedPoints.length === 1)
-    )
+    // Need at least 4 unique points for a coplanar constraint
+    return getPlanePoints().length >= 4
   }
 
   const getLineButtonTooltip = () => {
@@ -187,10 +194,11 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
   }
 
   const getPlaneButtonTooltip = () => {
+    const planePoints = getPlanePoints()
     if (canCreatePlane()) {
-      return 'Create plane from selection'
+      return `Create coplanar constraint with ${planePoints.length} points`
     }
-    return 'Select 3 points, 2 lines, or 1 line + 1 point to create plane'
+    return `Select 4+ points or lines (have ${planePoints.length} unique points)`
   }
 
   return (
@@ -309,15 +317,44 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
         {activeTool === 'plane' && (
           <div className="plane-creation-tool">
             <div className="tool-header">
-              <h4>Create Plane</h4>
+              <h4>Coplanar Constraint</h4>
               <button className="btn-cancel" onClick={handleToolCancel}>✕</button>
             </div>
             <div className="tool-message">
-              Plane creation tool - Coming soon
+              {canCreatePlane()
+                ? `Ready to create coplanar constraint with ${getPlanePoints().length} points`
+                : `Select 4+ points (have ${getPlanePoints().length})`
+              }
             </div>
             <div className="selection-status">
               <div>Selected Points: {selectedPoints.length}</div>
               <div>Selected Lines: {selectedLines.length}</div>
+              <div>Total Unique Points: {getPlanePoints().length}</div>
+            </div>
+            {canCreatePlane() && (
+              <div style={{ marginTop: '10px' }}>
+                <button
+                  className="btn-primary"
+                  onClick={() => {
+                    const points = getPlanePoints()
+                    const constraint = CoplanarPointsConstraint.create(
+                      `Coplanar ${points.length}pts`,
+                      points
+                    )
+                    onCreateConstraint?.(constraint)
+                    handleToolCancel()
+                  }}
+                >
+                  Create Coplanar Constraint
+                </button>
+              </div>
+            )}
+            <div className="tool-help" style={{ marginTop: '10px' }}>
+              <div className="help-text">
+                Points on selected lines are included.
+                <br />
+                Press Esc to cancel.
+              </div>
             </div>
           </div>
         )}

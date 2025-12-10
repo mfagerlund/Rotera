@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faPencil, faTrash, faToggleOn, faToggleOff } from '@fortawesome/free-solid-svg-icons'
+import { faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
 import FloatingWindow from './FloatingWindow'
 import type { Constraint } from '../entities/constraints'
 import {
@@ -30,7 +30,6 @@ interface ConstraintsPopupProps {
   onEditConstraint?: (constraint: Constraint) => void
   onDeleteConstraint?: (constraint: Constraint) => void
   onDeleteAllConstraints?: () => void
-  onToggleConstraint?: (constraint: Constraint) => void
   onSelectConstraint?: (constraint: Constraint) => void
 }
 
@@ -42,7 +41,6 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
   onEditConstraint,
   onDeleteConstraint,
   onDeleteAllConstraints,
-  onToggleConstraint,
   onSelectConstraint
 }) => {
   const { confirm, dialog } = useConfirm()
@@ -164,18 +162,6 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
                       <td className="length-cell">{getConstraintValue(constraint)}</td>
                       <td className="residual-cell" style={{ color }}>{status}</td>
                       <td className="actions-cell">
-                        {onToggleConstraint && (
-                          <button
-                            className="btn-icon"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              onToggleConstraint(constraint)
-                            }}
-                            title={constraint.isEnabled ? 'Disable' : 'Enable'}
-                          >
-                            <FontAwesomeIcon icon={constraint.isEnabled ? faToggleOn : faToggleOff} />
-                          </button>
-                        )}
                         {onEditConstraint && (
                           <button
                             className="btn-icon"

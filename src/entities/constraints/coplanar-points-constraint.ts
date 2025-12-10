@@ -15,7 +15,7 @@ import type { SerializationContext } from '../serialization/SerializationContext
 import type { CoplanarPointsConstraintDto } from './ConstraintDto'
 
 export class CoplanarPointsConstraint extends Constraint {
-  readonly points: WorldPoint[]
+  points: WorldPoint[]
   tolerance: number
 
   private constructor(
@@ -29,6 +29,35 @@ export class CoplanarPointsConstraint extends Constraint {
 
     // Register with all points
     points.forEach(p => p.addReferencingConstraint(this))
+  }
+
+  /**
+   * Remove a point from this constraint.
+   * Returns true if the constraint should be deleted (fewer than 4 points remaining).
+   */
+  removePoint(point: WorldPoint): boolean {
+    const index = this.points.indexOf(point)
+    if (index === -1) return false
+
+    point.removeReferencingConstraint(this)
+    this.points.splice(index, 1)
+
+    // Constraint needs at least 4 points to be meaningful
+    return this.points.length < 4
+  }
+
+  /**
+   * Check if this constraint should be deleted due to insufficient points.
+   */
+  shouldDelete(): boolean {
+    return this.points.length < 4
+  }
+
+  /**
+   * Clean up all point references when deleting this constraint.
+   */
+  cleanup(): void {
+    this.points.forEach(p => p.removeReferencingConstraint(this))
   }
 
   static create(
