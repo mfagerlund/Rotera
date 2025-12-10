@@ -124,8 +124,8 @@ export const useOptimization = () => {
             try {
               const solverResult = optimizeProject(project, {
                 tolerance: options.tolerance ?? 1e-6,
-                maxIterations: options.maxIterations ?? 100,
-                damping: options.damping ?? 1e-3,
+                maxIterations: options.maxIterations ?? 10000,
+                damping: options.damping ?? 0.1,
                 verbose: options.verbose ?? false,
                 autoInitializeCameras: true,
                 autoInitializeWorldPoints: true,

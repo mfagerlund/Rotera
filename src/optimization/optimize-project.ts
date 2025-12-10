@@ -154,8 +154,8 @@ export function optimizeProject(
     detectOutliers: shouldDetectOutliers = true,
     outlierThreshold = 3.0,
     tolerance = 1e-6,
-    maxIterations = 100,
-    damping = 1e-3,
+    maxIterations = 10000,
+    damping = 0.1,
     verbose = false,
     optimizeCameraIntrinsics = 'auto',
   } = options;

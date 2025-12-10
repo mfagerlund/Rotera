@@ -82,6 +82,7 @@ describe('FixedPointConstraint - Solver Integration', () => {
     const result = optimizeProject(project, {
       tolerance: 1e-6,
       maxIterations: 100,
+      damping: 1e-3, // Use low damping for high precision with limited iterations
       verbose: false,
       autoInitializeCameras: false,
       autoInitializeWorldPoints: false
@@ -209,6 +210,7 @@ describe('FixedPointConstraint - Solver Integration', () => {
     const result = optimizeProject(project, {
       tolerance: 1e-6,
       maxIterations: 100,
+      damping: 1e-3, // Use low damping for high precision with limited iterations
       verbose: false,
       autoInitializeCameras: false,
       autoInitializeWorldPoints: false

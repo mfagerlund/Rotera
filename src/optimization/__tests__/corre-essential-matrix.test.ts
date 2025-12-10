@@ -80,6 +80,7 @@ describe('Corre Essential Matrix Debug', () => {
       detectOutliers: true,
       maxIterations: 200,
       tolerance: 1e-6,
+      damping: 1e-3, // Use low damping for better convergence with limited iterations
       verbose: false
     });
 

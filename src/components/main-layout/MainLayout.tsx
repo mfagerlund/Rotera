@@ -8,7 +8,6 @@ import { useMainLayoutState } from '../../hooks/useMainLayoutState'
 import { useMainLayoutHandlers } from '../../hooks/useMainLayoutHandlers'
 import { useMainLayoutKeyboard } from '../../hooks/useMainLayoutKeyboard'
 import { useLayoutState } from './hooks/useLayoutState'
-import { AvailableConstraint } from '../../types/ui-types'
 import { ConstructionPreview } from '../image-viewer/types'
 import { Line as LineEntity } from '../../entities/line'
 import { WorldPoint } from '../../entities/world-point'
@@ -123,6 +122,31 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
       alert('Failed to save project: ' + (error as Error).message)
     }
   }, [project])
+
+  const handleSaveAsProject = useCallback(async (newName: string) => {
+    if (!project) return
+    try {
+      // Get the current project's DB ID
+      const currentDbId = (project as any)._dbId as string | undefined
+      if (!currentDbId) {
+        // If the current project hasn't been saved yet, save it first
+        await ProjectDB.saveProject(project)
+      }
+      const dbId = (project as any)._dbId as string
+      // Copy the project with the new name
+      const newId = await ProjectDB.copyProject(dbId, newName)
+      // Load the new project
+      const newProject = await ProjectDB.loadProject(newId)
+      // Use setProject to update both global store AND trigger re-render
+      setProject(newProject)
+      markClean()
+      setIsDirtyState(false)
+      console.log('Project saved as:', newName)
+    } catch (error) {
+      console.error('Failed to save project as:', error)
+      alert('Failed to save project as: ' + (error as Error).message)
+    }
+  }, [project, setProject])
 
   const { confirm, dialog, isOpen: isConfirmDialogOpen } = useConfirm()
 
@@ -298,9 +322,6 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
     return Array.from(points)
   }, [selectedCoplanarConstraints])
   const selectedEntities = [...selectedPointEntities, ...selectedLineEntities, ...selectedPlaneEntities, ...selectedVanishingLineEntities] as ISelectable[]
-
-  const allConstraints: AvailableConstraint[] = []
-  const availableConstraints: AvailableConstraint[] = []
 
   const handleEditLineOpen = useCallback((line: LineEntity) => {
     setEditingLine(line)
@@ -585,13 +606,11 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
               project={project as any}
               onExportOptimization={exportOptimizationDto}
               onClearProject={clearProject}
-              selectedPoints={selectedPointEntities}
-              selectedLines={selectedLineEntities}
-              allConstraints={allConstraints}
-              onConstraintClick={() => {}}
               confirm={confirm}
               onReturnToBrowser={onReturnToBrowser}
               onSaveProject={handleSaveProject}
+              onSaveAsProject={handleSaveAsProject}
+              onOpenOptimization={() => setEntityPopup('showOptimizationPanel', true)}
               isDirty={isDirty}
             />
 
@@ -766,14 +785,6 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
                 </button>
                 <button
                   className="entity-status-item"
-                  onClick={() => setEntityPopup('showConstraintsPopup', true)}
-                  title="Manage constraints"
-                >
-                  <span className="entity-status-label">Constraints</span>
-                  <span className="entity-status-count">{project?.nonCoplanarConstraints.length || 0}</span>
-                </button>
-                <button
-                  className="entity-status-item"
                   onClick={() => setEntityPopup('showCoplanarConstraintsPopup', true)}
                   title="Manage coplanar constraints"
                 >
@@ -781,11 +792,12 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
                   <span className="entity-status-count">{project?.coplanarConstraints.length || 0}</span>
                 </button>
                 <button
-                  className="entity-status-item optimize-btn"
-                  onClick={() => setEntityPopup('showOptimizationPanel', true)}
-                  title="Bundle adjustment optimization"
+                  className="entity-status-item"
+                  onClick={() => setEntityPopup('showConstraintsPopup', true)}
+                  title="Manage constraints"
                 >
-                  <span className="entity-status-label">Optimize</span>
+                  <span className="entity-status-label">Constraints</span>
+                  <span className="entity-status-count">{project?.nonCoplanarConstraints.length || 0}</span>
                 </button>
                 {mousePosition && (
                   <span className="mouse-position">

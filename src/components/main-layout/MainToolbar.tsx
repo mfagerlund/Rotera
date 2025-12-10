@@ -5,18 +5,16 @@ import React from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faFloppyDisk,
+  faCopy,
   faFileExport,
   faTrash,
   faHome,
   faPencil,
-  faCheck
+  faCheck,
+  faBolt
 } from '@fortawesome/free-solid-svg-icons'
 import { WorkspaceSwitcher } from '../WorkspaceManager'
-import { ConstraintToolbar } from '../ConstraintToolbar'
-import type { AvailableConstraint } from '../../types/ui-types'
 import type { Project } from '../../entities/project'
-import { Line } from '../../entities/line'
-import { WorldPoint } from '../../entities/world-point'
 import type { OptimizationExportDto } from '../../types/optimization-export'
 
 interface MainToolbarProps {
@@ -31,19 +29,14 @@ interface MainToolbarProps {
   onExportOptimization: () => OptimizationExportDto | null
   onClearProject: () => void
 
-  // Selection & constraints
-  selectedPoints: WorldPoint[]
-  selectedLines: Line[]
-  allConstraints: AvailableConstraint[]
-  onConstraintClick: (type: string, selectedPoints: WorldPoint[], selectedLines: Line[]) => void
-
-
   // Confirm dialog
   confirm: (message: string, options?: { confirmLabel?: string; cancelLabel?: string; variant?: 'primary' | 'danger'; showMessage?: boolean }) => Promise<boolean>
 
   // Navigation
   onReturnToBrowser?: () => void
   onSaveProject?: () => Promise<void>
+  onSaveAsProject?: (newName: string) => Promise<void>
+  onOpenOptimization?: () => void
 
   // Dirty state
   isDirty?: boolean
@@ -57,13 +50,11 @@ export const MainToolbar: React.FC<MainToolbarProps> = ({
   project,
   onExportOptimization,
   onClearProject,
-  selectedPoints,
-  selectedLines,
-  allConstraints,
-  onConstraintClick,
   confirm,
   onReturnToBrowser,
   onSaveProject,
+  onSaveAsProject,
+  onOpenOptimization,
   isDirty
 }) => {
   const [excludeImageUrls, setExcludeImageUrls] = React.useState(true)
@@ -112,6 +103,9 @@ export const MainToolbar: React.FC<MainToolbarProps> = ({
   }
 
   const [isSaving, setIsSaving] = React.useState(false)
+  const [isSavingAs, setIsSavingAs] = React.useState(false)
+  const [showSaveAsInput, setShowSaveAsInput] = React.useState(false)
+  const [saveAsName, setSaveAsName] = React.useState('')
   const [isEditingName, setIsEditingName] = React.useState(false)
   const [editedName, setEditedName] = React.useState(project?.name || '')
 
@@ -131,6 +125,28 @@ export const MainToolbar: React.FC<MainToolbarProps> = ({
     } finally {
       setIsSaving(false)
     }
+  }
+
+  const handleSaveAsClick = () => {
+    setSaveAsName(project?.name ? `${project.name} (copy)` : 'New Project')
+    setShowSaveAsInput(true)
+  }
+
+  const handleSaveAsSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault()
+    if (!onSaveAsProject || isSavingAs || !saveAsName.trim()) return
+    setIsSavingAs(true)
+    try {
+      await onSaveAsProject(saveAsName.trim())
+      setShowSaveAsInput(false)
+    } finally {
+      setIsSavingAs(false)
+    }
+  }
+
+  const handleSaveAsCancel = () => {
+    setShowSaveAsInput(false)
+    setSaveAsName('')
   }
 
   const handleReturnToBrowser = async () => {
@@ -201,6 +217,15 @@ export const MainToolbar: React.FC<MainToolbarProps> = ({
         worldHasContent={worldHasContent}
       />
 
+      <button
+        className="btn-optimize"
+        onClick={onOpenOptimization}
+        title="Run bundle adjustment optimization"
+      >
+        <FontAwesomeIcon icon={faBolt} />
+        <span>Optimize</span>
+      </button>
+
       <div className="toolbar-section">
         <button
           className="btn-tool"
@@ -210,6 +235,33 @@ export const MainToolbar: React.FC<MainToolbarProps> = ({
         >
           <FontAwesomeIcon icon={faFloppyDisk} /> {isSaving ? 'Saving...' : 'Save'}
         </button>
+        {showSaveAsInput ? (
+          <form onSubmit={handleSaveAsSubmit} className="save-as-form">
+            <input
+              type="text"
+              value={saveAsName}
+              onChange={(e) => setSaveAsName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') handleSaveAsCancel()
+              }}
+              autoFocus
+              className="save-as-input"
+              placeholder="New project name"
+            />
+            <button type="submit" className="btn-tool btn-small" disabled={isSavingAs || !saveAsName.trim()} title="Save as new project">
+              <FontAwesomeIcon icon={faCheck} />
+            </button>
+          </form>
+        ) : (
+          <button
+            className="btn-tool"
+            onClick={handleSaveAsClick}
+            disabled={!onSaveAsProject}
+            title="Save as a new project"
+          >
+            <FontAwesomeIcon icon={faCopy} /> Save As
+          </button>
+        )}
         <button
           className="btn-tool"
           onClick={handleExport}
@@ -233,15 +285,6 @@ export const MainToolbar: React.FC<MainToolbarProps> = ({
           <FontAwesomeIcon icon={faTrash} /> Clear
         </button>
       </div>
-
-      {/* Context-sensitive constraint toolbar */}
-      <ConstraintToolbar
-        selectedPoints={selectedPoints}
-        selectedLines={selectedLines}
-        availableConstraints={allConstraints}
-        selectionSummary="" // Remove redundant selection display
-        onConstraintClick={onConstraintClick}
-      />
     </div>
   )
 }

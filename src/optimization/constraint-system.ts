@@ -93,8 +93,8 @@ export class ConstraintSystem {
 
   constructor(options: SolverOptions = {}) {
     this.tolerance = options.tolerance ?? 1e-6;
-    this.maxIterations = options.maxIterations ?? 100;
-    this.damping = options.damping ?? 1e-3;
+    this.maxIterations = options.maxIterations ?? 10000;
+    this.damping = options.damping ?? 0.1;
     this.verbose = options.verbose ?? false;
     this.optimizeCameraIntrinsics = options.optimizeCameraIntrinsics ?? false;
   }
