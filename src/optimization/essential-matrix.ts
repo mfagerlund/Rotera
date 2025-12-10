@@ -1297,8 +1297,26 @@ export function initializeCamerasWithEssentialMatrix(
   vp1.position = [0, 0, 0];
   vp1.rotation = [1, 0, 0, 0];
 
+  // The Essential Matrix decomposition gives us R and t where:
+  //   x2 = R * x1 + t  (point transformation from cam1 to cam2 coords)
+  //   P2 = K * [R | t] (projection matrix)
+  //
+  // The camera CENTER C2 in world coordinates is: C2 = -R^T * t
+  // (since t = -R * C2, we solve for C2)
+  const R = bestDecomposition.R;
+  const RT = [
+    [R[0][0], R[1][0], R[2][0]],
+    [R[0][1], R[1][1], R[2][1]],
+    [R[0][2], R[1][2], R[2][2]]
+  ];
+  const camera2Center = [
+    -(RT[0][0] * tScaled[0] + RT[0][1] * tScaled[1] + RT[0][2] * tScaled[2]),
+    -(RT[1][0] * tScaled[0] + RT[1][1] * tScaled[1] + RT[1][2] * tScaled[2]),
+    -(RT[2][0] * tScaled[0] + RT[2][1] * tScaled[1] + RT[2][2] * tScaled[2])
+  ];
+
   const quat = rotationMatrixToQuaternion(bestDecomposition.R);
-  vp2.position = [tScaled[0], tScaled[1], tScaled[2]];
+  vp2.position = [camera2Center[0], camera2Center[1], camera2Center[2]];
   vp2.rotation = [quat[0], quat[1], quat[2], quat[3]];
 
   log('\n[Essential Matrix] Camera poses after initialization:');

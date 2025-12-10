@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTrash } from '@fortawesome/free-solid-svg-icons'
 import FloatingWindow from './FloatingWindow'
@@ -15,7 +16,7 @@ interface ImageEditorProps {
   onDeleteViewpoint?: (viewpoint: Viewpoint) => void
 }
 
-export const ImageEditor: React.FC<ImageEditorProps> = ({
+export const ImageEditor: React.FC<ImageEditorProps> = observer(({
   isOpen,
   onClose,
   viewpoint,
@@ -249,10 +250,48 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Camera Intrinsics */}
+          <div className="edit-section">
+            <h4>Camera Intrinsics</h4>
+
+            <div className="status-grid">
+              <div className="status-item">
+                <label>Focal Length</label>
+                <span>{viewpoint.focalLength.toFixed(1)} px</span>
+              </div>
+
+              <div className="status-item">
+                <label>Principal Point</label>
+                <span style={{ fontFamily: 'monospace', fontSize: '11px' }}>
+                  ({viewpoint.principalPointX.toFixed(1)}, {viewpoint.principalPointY.toFixed(1)})
+                </span>
+              </div>
+            </div>
+
+            <div className="form-row" style={{ marginTop: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={viewpoint.isPossiblyCropped}
+                  onChange={(e) => {
+                    viewpoint.isPossiblyCropped = e.target.checked
+                    setHasChanges(true)
+                  }}
+                />
+                <span>Image may be cropped</span>
+              </label>
+              <span style={{ fontSize: '11px', color: '#888', marginLeft: '24px' }}>
+                {viewpoint.isPossiblyCropped
+                  ? 'Principal point can be optimized'
+                  : 'Principal point locked to image center'}
+              </span>
+            </div>
+          </div>
         </div>
       </FloatingWindow>
     </>
   )
-}
+})
 
 export default ImageEditor

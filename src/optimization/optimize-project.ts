@@ -10,6 +10,7 @@ import { initializeCamerasWithEssentialMatrix } from './essential-matrix';
 import { initializeWorldPoints as unifiedInitialize } from './unified-initialization';
 import { initializeSingleCameraPoints } from './single-camera-initialization';
 import { initializeCameraWithVanishingPoints } from './vanishing-points';
+import { alignSceneToLineDirections, alignSceneToLockedPoints } from './coordinate-alignment';
 import { log, clearOptimizationLogs, optimizationLogs } from './optimization-logger';
 
 // Re-export for backwards compatibility
@@ -369,6 +370,11 @@ export function optimizeProject(
     }
   }
 
+  // Check if we used Essential Matrix (fewer than 3 locked points means no PnP)
+  const wpArrayForCheck = Array.from(project.worldPoints) as WorldPoint[];
+  const lockedPointsForCheck = wpArrayForCheck.filter(wp => wp.isFullyConstrained());
+  const usedEssentialMatrix = autoInitializeCameras && lockedPointsForCheck.length < 3;
+
   if (autoInitializeWorldPoints) {
     const pointArray = Array.from(project.worldPoints);
     const lineArray = Array.from(project.lines);
@@ -382,14 +388,134 @@ export function optimizeProject(
       }
     }
 
+    // Compute axis-constrained lines early so we know if free-solve is needed
+    const viewpointArray = Array.from(project.viewpoints) as Viewpoint[];
+    const axisConstrainedLines = lineArray.filter(l => l.direction && ['x', 'y', 'z'].includes(l.direction));
+
+    // For Essential Matrix WITHOUT axis constraints, use "free solve then align" approach:
+    // 1. DON'T pre-set locked points to their target positions
+    // 2. Triangulate everything in the Essential Matrix coordinate frame
+    // 3. Run a preliminary optimization to satisfy geometric constraints
+    // 4. Apply a similarity transform to align with locked points
+    // This is ONLY needed when axis constraints don't exist to fix orientation.
+    const useFreeSolve = usedEssentialMatrix && axisConstrainedLines.length === 0;
+    if (useFreeSolve) {
+      log('[optimizeProject] Using FREE SOLVE approach for Essential Matrix initialization (no axis constraints)');
+    }
+
     unifiedInitialize(pointArray, lineArray, constraintArray, {
       sceneScale: 10.0,
       verbose: false,
-      initializedViewpoints: initializedViewpointSet
+      initializedViewpoints: initializedViewpointSet,
+      skipLockedPoints: useFreeSolve,  // Only skip locked points for free-solve path
     });
 
-    const lockedPoints = pointArray.filter(wp => wp.isFullyConstrained());
-    if (lockedPoints.length >= 2) {
+    // Log positions after triangulation (before any alignment)
+    if (useFreeSolve) {
+      log(`[optimizeProject] After triangulation (before alignment): ${lockedPointsForCheck.length} locked points`);
+      for (const wp of lockedPointsForCheck) {
+        log(`  ${wp.name}: optimizedXyz = ${JSON.stringify(wp.optimizedXyz)}`);
+      }
+    }
+
+    if (axisConstrainedLines.length > 0) {
+      alignSceneToLineDirections(viewpointArray, pointArray, lineArray);
+
+      // Check if we have enough constraints to fully resolve rotation
+      const uniqueAxes = new Set(axisConstrainedLines.map(l => l.direction));
+      if (usedEssentialMatrix && uniqueAxes.size < 2) {
+        log('[optimizeProject] WARNING: Essential Matrix initialization with only one axis constraint.');
+        log('  A single axis constraint leaves one rotational degree of freedom unresolved.');
+        log('  For best results, add a second axis constraint on a perpendicular line,');
+        log('  or lock at least 2 world point positions.');
+      }
+    } else if (usedEssentialMatrix && lockedPointsForCheck.length < 2) {
+      log('[optimizeProject] WARNING: Essential Matrix initialization without axis constraints.');
+      log('  The scene orientation is arbitrary and may converge to incorrect local minima.');
+      log('  For best results, either:');
+      log('    - Add axis direction constraints (x, y, z) to at least 2 perpendicular lines');
+      log('    - Lock at least 2 world point positions');
+    }
+
+    // For Essential Matrix WITHOUT axis constraints: Run preliminary optimization WITHOUT locked point constraints
+    // to let geometric constraints (coplanar, etc.) be satisfied first.
+    // This is ONLY needed when there are no axis constraints, because then the scene orientation
+    // is arbitrary and we need to let the optimizer find a valid configuration before aligning.
+    // When axis constraints exist, alignSceneToLineDirections already handles orientation properly.
+    // Only run preliminary free optimization if using free-solve AND there are constraints to satisfy
+    if (useFreeSolve && constraintArray.length > 0) {
+      log('\n=== PRELIMINARY FREE OPTIMIZATION (Essential Matrix) ===');
+      log('Running optimization with all points free to satisfy geometric constraints...');
+
+      // Temporarily clear lockedXyz on locked points so they become free variables
+      // Store original values to restore later
+      const savedLockedXyz = new Map<WorldPoint, [number | null, number | null, number | null]>();
+      for (const wp of lockedPointsForCheck) {
+        log(`  ${wp.name} before unlock: lockedXyz=${JSON.stringify(wp.lockedXyz)}, inferredXyz=${JSON.stringify(wp.inferredXyz)}`);
+        savedLockedXyz.set(wp, [...wp.lockedXyz] as [number | null, number | null, number | null]);
+        // Clear BOTH lockedXyz AND inferredXyz to make the point truly free
+        wp.lockedXyz = [null, null, null];
+        (wp as any).savedInferredXyz = [...wp.inferredXyz];  // Save for later restoration
+        wp.inferredXyz = [null, null, null];
+        log(`  Temporarily unlocked ${wp.name} for free optimization`);
+      }
+
+      const freeSystem = new ConstraintSystem({
+        tolerance,
+        maxIterations: 200,  // More iterations for preliminary pass
+        damping,
+        verbose: false,
+        optimizeCameraIntrinsics: false,  // Keep intrinsics fixed for stability
+      });
+
+      // Add all entities
+      pointArray.forEach(p => freeSystem.addPoint(p));
+      lineArray.forEach(l => freeSystem.addLine(l));
+
+      const vpArray = Array.from(project.viewpoints) as Viewpoint[];
+      vpArray.forEach(v => freeSystem.addCamera(v));
+
+      for (const ip of project.imagePoints) {
+        freeSystem.addImagePoint(ip as ImagePoint);
+      }
+
+      // Add geometric constraints (coplanar, etc.) but NOT locked point constraints
+      // The locked point constraints are handled via post-hoc alignment
+      for (const c of constraintArray) {
+        freeSystem.addConstraint(c);
+      }
+
+      const freeResult = freeSystem.solve();
+      log(`Preliminary optimization: converged=${freeResult.converged}, iterations=${freeResult.iterations}, residual=${freeResult.residual.toFixed(6)}`);
+      if (freeResult.error) {
+        log(`  Preliminary error: ${freeResult.error}`);
+      }
+
+      // Log where O ended up after free optimization
+      const oPoint = lockedPointsForCheck[0];
+      if (oPoint && oPoint.optimizedXyz) {
+        log(`  O after free optimization: [${oPoint.optimizedXyz.map(x => x.toFixed(3)).join(', ')}]`);
+      }
+
+      // Restore lockedXyz and inferredXyz on locked points
+      for (const [wp, lockedXyz] of savedLockedXyz) {
+        wp.lockedXyz = lockedXyz;
+        if ((wp as any).savedInferredXyz) {
+          wp.inferredXyz = (wp as any).savedInferredXyz;
+          delete (wp as any).savedInferredXyz;
+        }
+        log(`  Restored lock on ${wp.name}`);
+      }
+    }
+
+    // Now apply similarity transform to align with locked points (ONLY for free-solve path)
+    if (useFreeSolve && lockedPointsForCheck.length >= 1) {
+      log('\n=== POST-HOC ALIGNMENT TO LOCKED POINTS ===');
+      const vpArrayForAlignment = Array.from(project.viewpoints) as Viewpoint[];
+      alignSceneToLockedPoints(vpArrayForAlignment, pointArray, lockedPointsForCheck);
+    } else if (!usedEssentialMatrix && lockedPointsForCheck.length >= 2) {
+      // Old path: PnP initialization - use the scale computation
+      const lockedPoints = lockedPointsForCheck;
       const triangulatedLockedPoints = lockedPoints.filter(wp => wp.optimizedXyz !== undefined);
 
       if (triangulatedLockedPoints.length >= 2) {
@@ -668,6 +794,9 @@ export function optimizeProject(
   log(`  Converged: ${result.converged}`);
   log(`  Iterations: ${result.iterations}`);
   log(`  Residual: ${result.residual.toFixed(6)}`);
+  if (result.error) {
+    log(`  Error: ${result.error}`);
+  }
 
   let outliers: OutlierInfo[] | undefined;
   let medianReprojectionError: number | undefined;

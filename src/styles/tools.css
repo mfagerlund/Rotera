@@ -707,11 +707,12 @@
   gap: 4px;
   flex: 1;
   flex-wrap: nowrap;
+  justify-content: center;
 }
 
 .orientation-buttons.compact .orientation-btn {
   min-width: 0;
-  flex: 1;
+  flex: 0 0 auto;
   padding: 4px 8px;
   font-size: 11px;
 }
@@ -729,6 +730,9 @@
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .orientation-btn:hover {

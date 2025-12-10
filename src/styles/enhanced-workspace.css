@@ -36,7 +36,7 @@
   padding: 6px 12px;
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 6px 6px 0 0;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s ease;
   font-size: 12px;
@@ -55,7 +55,6 @@
   background: var(--surface-primary);
   color: var(--text-primary);
   border-color: var(--primary);
-  border-bottom-color: var(--surface-primary);
   z-index: 1;
 }
 

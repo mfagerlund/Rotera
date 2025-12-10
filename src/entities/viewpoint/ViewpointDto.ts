@@ -27,5 +27,6 @@ export interface ViewpointDto extends BaseDto {
   opacity: number
   color: string
   isPoseLocked?: boolean
+  isPossiblyCropped?: boolean  // If true, principal point can be optimized. Defaults to false (PP locked to center)
   vanishingLineIds?: string[]
 }

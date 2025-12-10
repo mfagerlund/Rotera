@@ -19,6 +19,7 @@ import {
 import { ProjectDB, ProjectSummary, Folder } from '../services/project-db'
 import { Project } from '../entities/project'
 import { useConfirm } from './ConfirmDialog'
+import { SessionStore } from '../services/session-store'
 
 interface ProjectBrowserProps {
   onOpenProject: (project: Project) => void
@@ -32,7 +33,8 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
   const { confirm, dialog } = useConfirm()
   const [folders, setFolders] = useState<Folder[]>([])
   const [projects, setProjects] = useState<ProjectSummary[]>([])
-  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null)
+  const [currentFolderId, setCurrentFolderIdState] = useState<string | null>(() => SessionStore.getCurrentFolderId())
+  const [lastOpenedProjectId] = useState<string | null>(() => SessionStore.getLastOpenedProjectId())
   const [folderPath, setFolderPath] = useState<Folder[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [loadingProjectId, setLoadingProjectId] = useState<string | null>(null)
@@ -45,6 +47,11 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
   const [copyModalProject, setCopyModalProject] = useState<ProjectSummary | null>(null)
   const [copyName, setCopyName] = useState('')
   const [allFolders, setAllFolders] = useState<Folder[]>([])
+
+  const setCurrentFolderId = useCallback((folderId: string | null) => {
+    setCurrentFolderIdState(folderId)
+    SessionStore.setCurrentFolderId(folderId)
+  }, [])
 
   const loadContents = useCallback(async () => {
     setIsLoading(true)
@@ -406,7 +413,9 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
                 key={project.id}
                 className={`project-browser__item project-browser__item--project ${
                   loadingProjectId === project.id ? 'project-browser__item--loading' : ''
-                } ${draggedProject?.id === project.id ? 'project-browser__item--dragging' : ''}`}
+                } ${draggedProject?.id === project.id ? 'project-browser__item--dragging' : ''} ${
+                  lastOpenedProjectId === project.id ? 'project-browser__item--last-opened' : ''
+                }`}
                 draggable
                 onDragStart={e => handleDragStart(e, project)}
                 onDragEnd={handleDragEnd}

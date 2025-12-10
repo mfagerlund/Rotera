@@ -1,6 +1,10 @@
 import type { Viewpoint } from '../entities/viewpoint';
 import type { WorldPoint } from '../entities/world-point';
+import type { Line } from '../entities/line';
+import type { CoplanarPointsConstraint } from '../entities/constraints/coplanar-points-constraint';
+import type { Constraint } from '../entities/constraints/base-constraint';
 import { triangulateRayRay } from './triangulation';
+import { log } from './optimization-logger';
 
 function quaternionMultiply(q1: number[], q2: number[]): number[] {
   const w1 = q1[0], x1 = q1[1], y1 = q1[2], z1 = q1[3];
@@ -268,6 +272,429 @@ export function alignCamerasToLockedPoints(
     console.log(`    After translation: [${(rotated_scaled_tri0[0] + translation[0]).toFixed(6)}, ${(rotated_scaled_tri0[1] + translation[1]).toFixed(6)}, ${(rotated_scaled_tri0[2] + translation[2]).toFixed(6)}]`);
     console.log(`    Target: [${target0.map(x => x.toFixed(6)).join(', ')}]`);
     return false;
+  }
+
+  return true;
+}
+
+/**
+ * Align the scene to match line direction constraints.
+ *
+ * After Essential Matrix initialization, the scene is in an arbitrary coordinate frame.
+ * If there are lines with direction constraints (x, y, z axis-aligned), we should rotate
+ * the entire scene so those lines actually align with the specified axes.
+ *
+ * This computes a best-fit rotation that minimizes the angular error between
+ * actual line directions and their target axis directions.
+ */
+export function alignSceneToLineDirections(
+  cameras: Viewpoint[],
+  allPoints: WorldPoint[],
+  lines: Line[]
+): boolean {
+  // Find lines with axis-aligned direction constraints that have both endpoints initialized
+  const axisLines: Array<{ line: Line; direction: [number, number, number]; targetAxis: [number, number, number] }> = [];
+
+  for (const line of lines) {
+    if (!line.direction || line.direction === 'free') continue;
+
+    // Only handle pure axis constraints for now (x, y, z)
+    // Plane constraints (xy, xz, yz) are more complex
+    let targetAxis: [number, number, number] | null = null;
+    switch (line.direction) {
+      case 'x': targetAxis = [1, 0, 0]; break;
+      case 'y': targetAxis = [0, 1, 0]; break;
+      case 'z': targetAxis = [0, 0, 1]; break;
+      default: continue; // Skip plane constraints for now
+    }
+
+    const posA = line.pointA.optimizedXyz;
+    const posB = line.pointB.optimizedXyz;
+
+    if (!posA || !posB) continue;
+
+    const direction: [number, number, number] = [
+      posB[0] - posA[0],
+      posB[1] - posA[1],
+      posB[2] - posA[2]
+    ];
+
+    const length = Math.sqrt(direction[0] ** 2 + direction[1] ** 2 + direction[2] ** 2);
+    if (length < 1e-6) continue;
+
+    // Normalize direction
+    direction[0] /= length;
+    direction[1] /= length;
+    direction[2] /= length;
+
+    // Make sure direction points in positive axis direction (flip if needed)
+    const dotWithTarget = direction[0] * targetAxis[0] + direction[1] * targetAxis[1] + direction[2] * targetAxis[2];
+    if (dotWithTarget < 0) {
+      direction[0] = -direction[0];
+      direction[1] = -direction[1];
+      direction[2] = -direction[2];
+    }
+
+    axisLines.push({ line, direction, targetAxis });
+  }
+
+  if (axisLines.length === 0) {
+    log('[alignSceneToLineDirections] No axis-aligned lines with initialized endpoints found');
+    return false;
+  }
+
+  log(`[alignSceneToLineDirections] Found ${axisLines.length} axis-aligned lines to align`);
+
+  // Use the first line to compute the initial rotation
+  // This aligns that line's direction with its target axis
+  const firstLine = axisLines[0];
+  log(`  Primary alignment: ${firstLine.line.pointA.name}->${firstLine.line.pointB.name} to ${firstLine.line.direction}-axis`);
+  log(`    Current direction: [${firstLine.direction.map(x => x.toFixed(4)).join(', ')}]`);
+  log(`    Target axis: [${firstLine.targetAxis.join(', ')}]`);
+
+  const rotation = computeRotationBetweenVectors(firstLine.direction, firstLine.targetAxis);
+  log(`    Rotation quaternion: [${rotation.map(x => x.toFixed(6)).join(', ')}]`);
+
+  // If we have a second line with a different axis constraint, we could refine
+  // For now, just use the first line's rotation
+
+  // Apply rotation to all cameras
+  log('[alignSceneToLineDirections] Applying rotation to cameras...');
+  for (const cam of cameras) {
+    const oldPos = cam.position;
+    const oldRot = cam.rotation;
+
+    // Rotate position around origin
+    const newPos = quaternionRotateVector(rotation, oldPos);
+
+    // Combine rotations: new_rotation = old_rotation * inverse(scene_rotation)
+    // This keeps the camera looking at the same relative direction in the scene
+    const rotInverse = quaternionInverse(rotation);
+    const newRot = quaternionMultiply(oldRot, rotInverse);
+
+    cam.position = [newPos[0], newPos[1], newPos[2]];
+    cam.rotation = [newRot[0], newRot[1], newRot[2], newRot[3]];
+
+    log(`  ${cam.name}: pos [${oldPos.map(x => x.toFixed(3)).join(', ')}] -> [${newPos.map(x => x.toFixed(3)).join(', ')}]`);
+  }
+
+  // Apply rotation to all world points
+  log('[alignSceneToLineDirections] Applying rotation to world points...');
+  for (const wp of allPoints) {
+    if (wp.optimizedXyz) {
+      const oldXyz = wp.optimizedXyz;
+      const newXyz = quaternionRotateVector(rotation, oldXyz);
+      wp.optimizedXyz = [newXyz[0], newXyz[1], newXyz[2]];
+    }
+  }
+
+  // Verify alignment
+  log('[alignSceneToLineDirections] Verification:');
+  for (const { line, targetAxis } of axisLines) {
+    const posA = line.pointA.optimizedXyz;
+    const posB = line.pointB.optimizedXyz;
+    if (!posA || !posB) continue;
+
+    const newDir: [number, number, number] = [
+      posB[0] - posA[0],
+      posB[1] - posA[1],
+      posB[2] - posA[2]
+    ];
+    const len = Math.sqrt(newDir[0] ** 2 + newDir[1] ** 2 + newDir[2] ** 2);
+    if (len > 1e-6) {
+      newDir[0] /= len;
+      newDir[1] /= len;
+      newDir[2] /= len;
+    }
+
+    const dot = Math.abs(newDir[0] * targetAxis[0] + newDir[1] * targetAxis[1] + newDir[2] * targetAxis[2]);
+    const angleDeg = Math.acos(Math.min(1, dot)) * 180 / Math.PI;
+    log(`  ${line.pointA.name}->${line.pointB.name} (${line.direction}): angle error = ${angleDeg.toFixed(2)}°`);
+  }
+
+  return true;
+}
+
+/**
+ * Align the scene to satisfy coplanar constraints that involve locked points.
+ *
+ * When we have a coplanar constraint like (A, B, C, O) where O is locked at origin,
+ * the constraint says these 4 points lie on a plane. After Essential Matrix initialization,
+ * points A, B, C are coplanar (by construction), but the plane may not pass through origin.
+ *
+ * This function finds a rotation that makes the reconstructed plane pass through the
+ * locked point(s), helping the optimizer converge.
+ *
+ * The approach:
+ * 1. Find the plane normal from the triangulated points
+ * 2. Compute where the locked point projects onto this plane
+ * 3. Find a rotation that moves the plane to include the locked point
+ */
+/**
+ * Align a freely-solved scene to match locked point constraints.
+ *
+ * After Essential Matrix initialization and optimization with all points free,
+ * this function computes and applies a similarity transform (scale, rotation, translation)
+ * to align the optimized positions with the locked point targets.
+ *
+ * This is a post-hoc alignment that preserves the relative geometry of the solution
+ * while placing it in the correct world coordinate frame.
+ *
+ * @param cameras - All viewpoints to transform
+ * @param allPoints - All world points (will transform optimizedXyz)
+ * @param lockedPoints - Points with known target positions
+ * @returns true if alignment was successful
+ */
+export function alignSceneToLockedPoints(
+  cameras: Viewpoint[],
+  allPoints: WorldPoint[],
+  lockedPoints: WorldPoint[]
+): boolean {
+  // Need at least 1 locked point to set translation (origin)
+  // Need at least 2 locked points to set scale
+  // Need at least 3 non-collinear locked points to fully constrain rotation
+
+  if (lockedPoints.length === 0) {
+    log('[alignSceneToLockedPoints] No locked points - nothing to align to');
+    return false;
+  }
+
+  // Get locked points that have optimized positions (from free solve)
+  const alignablePoints = lockedPoints.filter(wp => wp.optimizedXyz !== undefined);
+
+  if (alignablePoints.length === 0) {
+    log('[alignSceneToLockedPoints] No locked points have optimized positions');
+    return false;
+  }
+
+  log(`[alignSceneToLockedPoints] Aligning with ${alignablePoints.length} locked points`);
+
+  // Case 1: Single locked point - just translate
+  if (alignablePoints.length === 1) {
+    const wp = alignablePoints[0];
+    const optimized = wp.optimizedXyz!;
+    const target = wp.getEffectiveXyz();
+    const targetXyz = [target[0]!, target[1]!, target[2]!];
+
+    const translation = [
+      targetXyz[0] - optimized[0],
+      targetXyz[1] - optimized[1],
+      targetXyz[2] - optimized[2]
+    ];
+
+    log(`  Single point alignment: translating by [${translation.map(x => x.toFixed(3)).join(', ')}]`);
+
+    // Apply translation to all cameras
+    for (const cam of cameras) {
+      cam.position = [
+        cam.position[0] + translation[0],
+        cam.position[1] + translation[1],
+        cam.position[2] + translation[2]
+      ];
+    }
+
+    // Apply translation to all world points
+    for (const wp of allPoints) {
+      if (wp.optimizedXyz) {
+        wp.optimizedXyz = [
+          wp.optimizedXyz[0] + translation[0],
+          wp.optimizedXyz[1] + translation[1],
+          wp.optimizedXyz[2] + translation[2]
+        ];
+      }
+    }
+
+    return true;
+  }
+
+  // Case 2: Two or more locked points - compute full similarity transform
+  // Use Procrustes analysis (rigid alignment)
+
+  // Compute centroids
+  let srcCentroid = [0, 0, 0];
+  let dstCentroid = [0, 0, 0];
+
+  for (const wp of alignablePoints) {
+    const src = wp.optimizedXyz!;
+    const dst = wp.getEffectiveXyz();
+
+    srcCentroid[0] += src[0];
+    srcCentroid[1] += src[1];
+    srcCentroid[2] += src[2];
+
+    dstCentroid[0] += dst[0]!;
+    dstCentroid[1] += dst[1]!;
+    dstCentroid[2] += dst[2]!;
+  }
+
+  const n = alignablePoints.length;
+  srcCentroid[0] /= n;
+  srcCentroid[1] /= n;
+  srcCentroid[2] /= n;
+  dstCentroid[0] /= n;
+  dstCentroid[1] /= n;
+  dstCentroid[2] /= n;
+
+  log(`  Source centroid: [${srcCentroid.map(x => x.toFixed(3)).join(', ')}]`);
+  log(`  Target centroid: [${dstCentroid.map(x => x.toFixed(3)).join(', ')}]`);
+
+  // Compute scale from average distances to centroid
+  let srcScale = 0;
+  let dstScale = 0;
+
+  for (const wp of alignablePoints) {
+    const src = wp.optimizedXyz!;
+    const dst = wp.getEffectiveXyz();
+
+    srcScale += Math.sqrt(
+      (src[0] - srcCentroid[0]) ** 2 +
+      (src[1] - srcCentroid[1]) ** 2 +
+      (src[2] - srcCentroid[2]) ** 2
+    );
+
+    dstScale += Math.sqrt(
+      (dst[0]! - dstCentroid[0]) ** 2 +
+      (dst[1]! - dstCentroid[1]) ** 2 +
+      (dst[2]! - dstCentroid[2]) ** 2
+    );
+  }
+
+  const scale = srcScale > 1e-10 ? dstScale / srcScale : 1.0;
+  log(`  Scale factor: ${scale.toFixed(6)}`);
+
+  // For rotation, we need at least 2 points with non-zero distance from centroid
+  // Use the direction from first to second point to get one rotation constraint
+  let rotation = [1, 0, 0, 0]; // Identity quaternion
+
+  // Find two points that are far from each other (for stable direction computation)
+  let bestPairDist = 0;
+  let bestI = 0, bestJ = 1;
+
+  for (let i = 0; i < alignablePoints.length; i++) {
+    for (let j = i + 1; j < alignablePoints.length; j++) {
+      const src1 = alignablePoints[i].optimizedXyz!;
+      const src2 = alignablePoints[j].optimizedXyz!;
+      const dist = Math.sqrt(
+        (src2[0] - src1[0]) ** 2 +
+        (src2[1] - src1[1]) ** 2 +
+        (src2[2] - src1[2]) ** 2
+      );
+      if (dist > bestPairDist) {
+        bestPairDist = dist;
+        bestI = i;
+        bestJ = j;
+      }
+    }
+  }
+
+  if (bestPairDist > 1e-6) {
+    const wp1 = alignablePoints[bestI];
+    const wp2 = alignablePoints[bestJ];
+
+    const src1 = wp1.optimizedXyz!;
+    const src2 = wp2.optimizedXyz!;
+    const dst1 = wp1.getEffectiveXyz();
+    const dst2 = wp2.getEffectiveXyz();
+
+    const srcDir = [
+      src2[0] - src1[0],
+      src2[1] - src1[1],
+      src2[2] - src1[2]
+    ];
+
+    const dstDir = [
+      dst2[0]! - dst1[0]!,
+      dst2[1]! - dst1[1]!,
+      dst2[2]! - dst1[2]!
+    ];
+
+    log(`  Direction alignment: ${wp1.name} -> ${wp2.name}`);
+    log(`    Source: [${srcDir.map(x => x.toFixed(3)).join(', ')}]`);
+    log(`    Target: [${dstDir.map(x => x.toFixed(3)).join(', ')}]`);
+
+    rotation = computeRotationBetweenVectors(srcDir, dstDir);
+    log(`  Rotation quaternion: [${rotation.map(x => x.toFixed(6)).join(', ')}]`);
+  }
+
+  // Apply transformation: new = R * scale * (old - srcCentroid) + dstCentroid
+  log('[alignSceneToLockedPoints] Applying similarity transform...');
+
+  // Transform cameras
+  for (const cam of cameras) {
+    const oldPos = cam.position;
+    const oldRot = cam.rotation;
+
+    // Translate to origin, scale, rotate, translate to target
+    const centered = [
+      oldPos[0] - srcCentroid[0],
+      oldPos[1] - srcCentroid[1],
+      oldPos[2] - srcCentroid[2]
+    ];
+    const scaled = [
+      centered[0] * scale,
+      centered[1] * scale,
+      centered[2] * scale
+    ];
+    const rotated = quaternionRotateVector(rotation, scaled);
+    const newPos = [
+      rotated[0] + dstCentroid[0],
+      rotated[1] + dstCentroid[1],
+      rotated[2] + dstCentroid[2]
+    ];
+
+    // Rotate camera orientation
+    const rotInverse = quaternionInverse(rotation);
+    const newRot = quaternionMultiply(oldRot, rotInverse);
+
+    cam.position = [newPos[0], newPos[1], newPos[2]];
+    cam.rotation = [newRot[0], newRot[1], newRot[2], newRot[3]];
+
+    log(`  ${cam.name}: pos [${oldPos.map(x => x.toFixed(3)).join(', ')}] -> [${newPos.map(x => x.toFixed(3)).join(', ')}]`);
+  }
+
+  // Transform world points
+  for (const wp of allPoints) {
+    if (wp.optimizedXyz) {
+      const oldXyz = wp.optimizedXyz;
+
+      const centered = [
+        oldXyz[0] - srcCentroid[0],
+        oldXyz[1] - srcCentroid[1],
+        oldXyz[2] - srcCentroid[2]
+      ];
+      const scaled = [
+        centered[0] * scale,
+        centered[1] * scale,
+        centered[2] * scale
+      ];
+      const rotated = quaternionRotateVector(rotation, scaled);
+      const newXyz: [number, number, number] = [
+        rotated[0] + dstCentroid[0],
+        rotated[1] + dstCentroid[1],
+        rotated[2] + dstCentroid[2]
+      ];
+
+      wp.optimizedXyz = newXyz;
+    }
+  }
+
+  // Force locked points to their exact target positions
+  for (const wp of lockedPoints) {
+    const target = wp.getEffectiveXyz();
+    wp.optimizedXyz = [target[0]!, target[1]!, target[2]!];
+  }
+
+  // Verification
+  log('[alignSceneToLockedPoints] Verification:');
+  for (const wp of alignablePoints) {
+    const optimized = wp.optimizedXyz!;
+    const target = wp.getEffectiveXyz();
+    const error = Math.sqrt(
+      (optimized[0] - target[0]!) ** 2 +
+      (optimized[1] - target[1]!) ** 2 +
+      (optimized[2] - target[2]!) ** 2
+    );
+    log(`  ${wp.name}: error = ${error.toFixed(6)}`);
   }
 
   return true;

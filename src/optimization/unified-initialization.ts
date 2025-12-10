@@ -12,6 +12,8 @@ export interface InitializationOptions {
   sceneScale?: number
   verbose?: boolean
   initializedViewpoints?: Set<Viewpoint>
+  /** If true, don't pre-set locked points to their target positions (for Essential Matrix free solve) */
+  skipLockedPoints?: boolean
 }
 
 export function initializeWorldPoints(
@@ -20,7 +22,7 @@ export function initializeWorldPoints(
   constraints: Constraint[],
   options: InitializationOptions = {}
 ): void {
-  const { sceneScale = 10.0, verbose = false, initializedViewpoints } = options
+  const { sceneScale = 10.0, verbose = false, initializedViewpoints, skipLockedPoints = false } = options
 
   const initialized = new Set<WorldPoint>()
 
@@ -28,7 +30,11 @@ export function initializeWorldPoints(
     log('[Unified Initialization] Starting 6-step initialization...')
   }
 
-  step1_setLockedPoints(points, initialized, verbose)
+  if (!skipLockedPoints) {
+    step1_setLockedPoints(points, initialized, verbose)
+  } else {
+    log('[Step 1] SKIPPED (skipLockedPoints=true for Essential Matrix free solve)')
+  }
 
   step2_inferFromConstraints(points, lines, initialized, sceneScale, verbose)
 

@@ -34,6 +34,13 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
      * Set to false for unusual sensors or historical images.
      */
     useSimpleIntrinsics: boolean
+    /**
+     * When true, the principal point (cx, cy) can be optimized.
+     * When false (default), the principal point is locked to the image center.
+     * Most images are uncropped, so PP should be at center. Only set to true
+     * if the image was cropped and the original center is unknown.
+     */
+    isPossiblyCropped: boolean
     radialDistortion: [number, number, number]
     tangentialDistortion: [number, number]
     position: [number, number, number]
@@ -62,6 +69,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
         skewCoefficient: number,
         aspectRatio: number,
         useSimpleIntrinsics: boolean,
+        isPossiblyCropped: boolean,
         radialDistortion: [number, number, number],
         tangentialDistortion: [number, number],
         position: [number, number, number],
@@ -87,6 +95,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
         this.skewCoefficient = skewCoefficient
         this.aspectRatio = aspectRatio
         this.useSimpleIntrinsics = useSimpleIntrinsics
+        this.isPossiblyCropped = isPossiblyCropped
         this.radialDistortion = radialDistortion
         this.tangentialDistortion = tangentialDistortion
         this.position = position
@@ -123,6 +132,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
         skewCoefficient: number,
         aspectRatio: number,
         useSimpleIntrinsics: boolean,
+        isPossiblyCropped: boolean,
         radialDistortion: [number, number, number],
         tangentialDistortion: [number, number],
         position: [number, number, number],
@@ -149,6 +159,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
             skewCoefficient,
             aspectRatio,
             useSimpleIntrinsics,
+            isPossiblyCropped,
             radialDistortion,
             tangentialDistortion,
             position,
@@ -188,6 +199,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
             rotation?: [number, number, number, number]
             rotationEuler?: [number, number, number]
             isPoseLocked?: boolean
+            isPossiblyCropped?: boolean
 
             // Metadata
             calibrationAccuracy?: number
@@ -233,6 +245,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
             skewCoefficient: options.skewCoefficient ?? 0,
             aspectRatio: options.aspectRatio ?? 1,
             useSimpleIntrinsics: options.useSimpleIntrinsics ?? true,
+            isPossiblyCropped: options.isPossiblyCropped ?? false,
             radialDistortion: options.radialDistortion ?? [0, 0, 0],
             tangentialDistortion: options.tangentialDistortion ?? [0, 0],
             position: options.position ?? [0, 0, 0],
@@ -265,6 +278,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
             dto.skewCoefficient,
             dto.aspectRatio,
             dto.useSimpleIntrinsics,
+            dto.isPossiblyCropped,
             dto.radialDistortion,
             dto.tangentialDistortion,
             dto.position,
@@ -467,14 +481,23 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
         // When useSimpleIntrinsics=true (default), only optimize f, cx, cy
         // aspectRatio and skew stay fixed at their current values (typically 1 and 0)
         const optimizeFullIntrinsics = optimizeIntrinsics && !this.useSimpleIntrinsics
+        // Only optimize principal point if the image might be cropped
+        // For uncropped images, PP should be locked to the image center
+        const optimizePrincipalPoint = optimizeIntrinsics && this.isPossiblyCropped
 
         const focalLength = optimizeIntrinsics ? V.W(this.focalLength) : V.C(this.focalLength)
         const aspectRatio = optimizeFullIntrinsics ? V.W(this.aspectRatio) : V.C(this.aspectRatio)
-        const principalPointX = optimizeIntrinsics ? V.W(this.principalPointX) : V.C(this.principalPointX)
-        const principalPointY = optimizeIntrinsics ? V.W(this.principalPointY) : V.C(this.principalPointY)
+        // For uncropped images, force PP to image center regardless of stored value
+        const effectivePPX = this.isPossiblyCropped ? this.principalPointX : this.imageWidth / 2
+        const effectivePPY = this.isPossiblyCropped ? this.principalPointY : this.imageHeight / 2
+        const principalPointX = optimizePrincipalPoint ? V.W(effectivePPX) : V.C(effectivePPX)
+        const principalPointY = optimizePrincipalPoint ? V.W(effectivePPY) : V.C(effectivePPY)
         const skew = optimizeFullIntrinsics ? V.W(this.skewCoefficient) : V.C(this.skewCoefficient)
         if (optimizeIntrinsics) {
-            variables.push(focalLength, principalPointX, principalPointY)
+            variables.push(focalLength)
+            if (optimizePrincipalPoint) {
+                variables.push(principalPointX, principalPointY)
+            }
             if (optimizeFullIntrinsics) {
                 variables.push(aspectRatio, skew)
             }
@@ -517,8 +540,16 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
         this.rotation = [cameraValues.rotation.w.data, cameraValues.rotation.x.data, cameraValues.rotation.y.data, cameraValues.rotation.z.data]
         this.focalLength = cameraValues.focalLength.data
         this.aspectRatio = cameraValues.aspectRatio.data
-        this.principalPointX = cameraValues.principalPointX.data
-        this.principalPointY = cameraValues.principalPointY.data
+        // Only update principal point if the image might be cropped
+        // For uncropped images, PP should stay at image center
+        if (this.isPossiblyCropped) {
+            this.principalPointX = cameraValues.principalPointX.data
+            this.principalPointY = cameraValues.principalPointY.data
+        } else {
+            // Enforce centered PP for uncropped images
+            this.principalPointX = this.imageWidth / 2
+            this.principalPointY = this.imageHeight / 2
+        }
         this.skewCoefficient = cameraValues.skew.data
         this.radialDistortion = [cameraValues.k1.data, cameraValues.k2.data, cameraValues.k3.data]
         this.tangentialDistortion = [cameraValues.p1.data, cameraValues.p2.data]
@@ -548,6 +579,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
             skewCoefficient: this.skewCoefficient,
             aspectRatio: this.aspectRatio,
             useSimpleIntrinsics: this.useSimpleIntrinsics,
+            isPossiblyCropped: this.isPossiblyCropped,
             radialDistortion: [...this.radialDistortion] as [number, number, number],
             tangentialDistortion: [...this.tangentialDistortion] as [number, number],
             position: [...this.position] as [number, number, number],
@@ -579,6 +611,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
             dto.skewCoefficient,
             dto.aspectRatio,
             dto.useSimpleIntrinsics ?? true,  // Default to true for backwards compatibility
+            dto.isPossiblyCropped ?? false,   // Default to false (PP locked to center) for backwards compatibility
             dto.radialDistortion,
             dto.tangentialDistortion,
             dto.position,
