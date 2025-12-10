@@ -42,7 +42,6 @@ export interface LineUpdates {
 
 export interface ConstraintUpdates {
   name?: string
-  isEnabled?: boolean
   parameters?: Record<string, unknown>
 }
 

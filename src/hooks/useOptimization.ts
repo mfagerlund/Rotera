@@ -86,8 +86,6 @@ export const useOptimization = () => {
       const residuals: ConstraintResidual[] = [];
 
       for (const constraint of constraints) {
-        if (!constraint.isEnabled) continue;
-
         const constraintResiduals = constraint.computeResiduals(valueMap);
         const residualMagnitude = Math.sqrt(
           constraintResiduals.reduce((sum, r) => sum + r.data ** 2, 0)

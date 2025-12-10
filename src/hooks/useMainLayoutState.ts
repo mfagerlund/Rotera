@@ -43,6 +43,7 @@ export interface MainLayoutState {
     showPlanesPopup: boolean
     showImagePointsPopup: boolean
     showConstraintsPopup: boolean
+    showCoplanarConstraintsPopup: boolean
     showOptimizationPanel: boolean
   }
   setEntityPopup: (popup: keyof MainLayoutState['entityPopups'], value: boolean) => void
@@ -125,6 +126,7 @@ export function useMainLayoutState(options: UseMainLayoutStateOptions = {}): Mai
     showPlanesPopup: false,
     showImagePointsPopup: false,
     showConstraintsPopup: false,
+    showCoplanarConstraintsPopup: false,
     showOptimizationPanel: false
   })
 

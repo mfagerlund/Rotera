@@ -4,11 +4,13 @@ import { WorldPoint } from '../../entities/world-point'
 import { Line as LineEntity } from '../../entities/line'
 import { Viewpoint } from '../../entities/viewpoint'
 import { Project } from '../../entities/project'
+import { CoplanarPointsConstraint } from '../../entities/constraints/coplanar-points-constraint'
 import WorldPointsManager from '../WorldPointsManager'
 import LinesManager from '../LinesManager'
 import PlanesManager from '../PlanesManager'
 import ImagePointsManager, { ImagePointReference } from '../ImagePointsManager'
 import ConstraintsManager from '../ConstraintsManager'
+import CoplanarConstraintsManager from '../CoplanarConstraintsManager'
 import WorldPointEditor from '../WorldPointEditor'
 import { VanishingPointQualityWindow } from '../VanishingPointQualityWindow'
 import OptimizationPanel from '../OptimizationPanel'
@@ -20,6 +22,7 @@ interface BottomPanelProps {
     showPlanesPopup: boolean
     showImagePointsPopup: boolean
     showConstraintsPopup: boolean
+    showCoplanarConstraintsPopup: boolean
     showOptimizationPanel: boolean
   }
   onClosePopup: (popup: string) => void
@@ -50,6 +53,10 @@ interface BottomPanelProps {
   onDeleteConstraint: (constraint: any) => void
   onDeleteAllConstraints?: () => void
   onSelectConstraint: (constraint: any) => void
+  onEditCoplanarConstraint?: (constraint: CoplanarPointsConstraint) => void
+  onDeleteCoplanarConstraint?: (constraint: CoplanarPointsConstraint) => void
+  onDeleteAllCoplanarConstraints?: () => void
+  onSelectCoplanarConstraint?: (constraint: CoplanarPointsConstraint) => void
   project: Project | null
   onOptimizationComplete: (success: boolean, message: string) => void
   onSelectWorldPoint?: (worldPoint: WorldPoint) => void
@@ -100,6 +107,10 @@ export const BottomPanel: React.FC<BottomPanelProps> = observer(({
   onDeleteConstraint,
   onDeleteAllConstraints,
   onSelectConstraint,
+  onEditCoplanarConstraint,
+  onDeleteCoplanarConstraint,
+  onDeleteAllCoplanarConstraints,
+  onSelectCoplanarConstraint,
   project,
   onOptimizationComplete,
   onSelectWorldPoint,
@@ -182,6 +193,18 @@ export const BottomPanel: React.FC<BottomPanelProps> = observer(({
         onDeleteAllConstraints={onDeleteAllConstraints}
         onSelectConstraint={onSelectConstraint}
       />
+
+      {project && (
+        <CoplanarConstraintsManager
+          isOpen={entityPopups.showCoplanarConstraintsPopup}
+          onClose={() => onClosePopup('showCoplanarConstraintsPopup')}
+          constraints={project.coplanarConstraints}
+          onEditConstraint={onEditCoplanarConstraint}
+          onDeleteConstraint={onDeleteCoplanarConstraint}
+          onDeleteAllConstraints={onDeleteAllCoplanarConstraints}
+          onSelectConstraint={onSelectCoplanarConstraint}
+        />
+      )}
 
       {project && (
         <OptimizationPanel

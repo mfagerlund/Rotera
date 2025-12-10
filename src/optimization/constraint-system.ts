@@ -134,9 +134,7 @@ export class ConstraintSystem {
    * Add a constraint to the constraint system.
    */
   addConstraint(constraint: Constraint): void {
-    if (constraint.isEnabled) {
-      this.constraints.add(constraint);
-    }
+    this.constraints.add(constraint);
   }
 
   /**

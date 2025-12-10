@@ -2,7 +2,7 @@
 
 import type { ValidationResult } from '../../validation/validator'
 import type { ValueMap } from '../../optimization/IOptimizable'
-import { Vec3, type Value } from 'scalar-autograd'
+import { V, Vec3, type Value } from 'scalar-autograd'
 import * as vec3 from '../../utils/vec3'
 import { ValidationHelpers } from '../../validation/validator'
 import type { WorldPoint } from '../world-point/WorldPoint'
@@ -156,9 +156,13 @@ export class CoplanarPointsConstraint extends Constraint {
 
   /**
    * Compute residuals for coplanar points constraint.
-   * Residual: For 4+ points to be coplanar, the scalar triple product
-   * (v1 · (v2 × v3)) should be zero.
-   * Returns 1 residual (the scalar triple product).
+   *
+   * For each point beyond the first 3, we compute its signed distance from the
+   * plane defined by the first 3 points. This is done by:
+   * 1. Computing the normal to the plane (cross product of two edge vectors)
+   * 2. Computing the distance = (v · normal) / |normal|
+   *
+   * This gives a scale-independent residual representing actual distance from plane.
    */
   computeResiduals(valueMap: ValueMap): Value[] {
     if (this.points.length < 4) {
@@ -169,26 +173,46 @@ export class CoplanarPointsConstraint extends Constraint {
     const p0 = valueMap.points.get(this.points[0])
     const p1 = valueMap.points.get(this.points[1])
     const p2 = valueMap.points.get(this.points[2])
-    const p3 = valueMap.points.get(this.points[3])
 
-    if (!p0 || !p1 || !p2 || !p3) {
+    if (!p0 || !p1 || !p2) {
       console.warn(`Coplanar constraint ${this.getName()}: not enough points found in valueMap`)
       return []
     }
 
-    // Calculate vectors from p0 using Vec3 API
-    const v1 = p1.sub(p0)
-    const v2 = p2.sub(p0)
-    const v3 = p3.sub(p0)
+    // Calculate edge vectors for the base triangle
+    const edge1 = p1.sub(p0)  // p0 -> p1
+    const edge2 = p2.sub(p0)  // p0 -> p2
 
-    // Calculate cross product v2 × v3
-    const cross = Vec3.cross(v2, v3)
+    // Normal vector (not normalized) = edge1 × edge2
+    const normal = Vec3.cross(edge1, edge2)
 
-    // Calculate scalar triple product: v1 · (v2 × v3)
-    const scalarTripleProduct = Vec3.dot(v1, cross)
+    // |normal| = 2 * area of base triangle
+    const normalLengthSq = Vec3.dot(normal, normal)
 
-    // Should be 0 for coplanar points
-    return [scalarTripleProduct]
+    // For numerical stability, add small epsilon to avoid division by zero
+    const epsilon = V.C(1e-10)
+    const normalLength = V.sqrt(V.add(normalLengthSq, epsilon))
+
+    // Compute residual for each point beyond the first 3
+    const residuals: Value[] = []
+    for (let i = 3; i < this.points.length; i++) {
+      const pi = valueMap.points.get(this.points[i])
+      if (!pi) {
+        console.warn(`Coplanar constraint ${this.getName()}: point ${i} not found in valueMap`)
+        continue
+      }
+
+      // Vector from p0 to pi
+      const v = pi.sub(p0)
+
+      // Signed distance from plane = (v · normal) / |normal|
+      const dotProduct = Vec3.dot(v, normal)
+      const signedDistance = V.div(dotProduct, normalLength)
+
+      residuals.push(signedDistance)
+    }
+
+    return residuals
   }
 
   serialize(context: SerializationContext): CoplanarPointsConstraintDto {

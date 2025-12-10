@@ -23,7 +23,7 @@ type ConstraintType =
 export const useConstraints = (
   constraints: Constraint[],
   onAddConstraint: (constraint: Constraint) => void,
-  onUpdateConstraint: (constraint: Constraint, updates: { name?: string; isEnabled?: boolean; parameters?: Record<string, unknown> }) => void,
+  onUpdateConstraint: (constraint: Constraint, updates: { name?: string; parameters?: Record<string, unknown> }) => void,
   onDeleteConstraint: (constraint: Constraint) => void,
 ) => {
   const [activeConstraintType, setActiveConstraintType] = useState<string | null>(null)

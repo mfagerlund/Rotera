@@ -38,7 +38,6 @@ export abstract class Constraint implements ISelectable, IValidatable, IResidual
   lastResiduals: number[] = []
   selected = false
   isVisible = true
-  isEnabled = true
   name: string
 
   protected constructor(name: string) {
@@ -48,7 +47,6 @@ export abstract class Constraint implements ISelectable, IValidatable, IResidual
       lastResiduals: observable,
       selected: observable,
       isVisible: observable,
-      isEnabled: observable,
       name: observable,
     })
   }

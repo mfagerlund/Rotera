@@ -3,6 +3,7 @@ import type {Line} from '../line'
 import type {Viewpoint} from '../viewpoint'
 import type {ImagePoint} from '../imagePoint'
 import type {Constraint} from '../constraints'
+import { CoplanarPointsConstraint } from '../constraints/coplanar-points-constraint'
 import {makeAutoObservable} from 'mobx'
 import { propagateCoordinateInferences, type InferenceConflict } from '../world-point/coordinate-inference'
 import { ViewSettings, DEFAULT_VIEW_SETTINGS } from '../../types/visibility'
@@ -269,5 +270,11 @@ export class Project {
     propagateInferences(): void {
         const result = propagateCoordinateInferences(this.worldPoints, this.lines)
         this.inferenceConflicts = result.conflicts
+    }
+
+    get coplanarConstraints(): CoplanarPointsConstraint[] {
+        return Array.from(this.constraints).filter(
+            (c): c is CoplanarPointsConstraint => c instanceof CoplanarPointsConstraint
+        )
     }
 }

@@ -373,8 +373,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
     if (abs >= 0.001) {
       return value.toFixed(6);
     }
-    // For very small values, use scientific notation
-    return value.toExponential(2);
+    return '0.000';
   }
 
   const headerButtons: HeaderButton[] = useMemo(() => [

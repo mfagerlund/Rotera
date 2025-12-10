@@ -241,7 +241,7 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
           title={getPlaneButtonTooltip()}
         >
           <span className="tool-icon"><FontAwesomeIcon icon={faSquare} /></span>
-          <span className="tool-label">Plane</span>
+          <span className="tool-label">Coplanar</span>
           <span className="tool-shortcut">P</span>
         </button>
 

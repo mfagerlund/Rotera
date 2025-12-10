@@ -749,6 +749,14 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
                   <span className="entity-status-count">{project?.constraints.size || 0}</span>
                 </button>
                 <button
+                  className="entity-status-item"
+                  onClick={() => setEntityPopup('showCoplanarConstraintsPopup', true)}
+                  title="Manage coplanar constraints"
+                >
+                  <span className="entity-status-label">Coplanar</span>
+                  <span className="entity-status-count">{project?.coplanarConstraints.length || 0}</span>
+                </button>
+                <button
                   className="entity-status-item optimize-btn"
                   onClick={() => setEntityPopup('showOptimizationPanel', true)}
                   title="Bundle adjustment optimization"
@@ -847,6 +855,12 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
           constraints.forEach(c => deleteConstraint(c))
         }}
         onSelectConstraint={(constraint) => {}}
+        onEditCoplanarConstraint={(constraint) => {}}
+        onDeleteCoplanarConstraint={(constraint) => deleteConstraint(constraint)}
+        onDeleteAllCoplanarConstraints={() => {
+          project?.coplanarConstraints.forEach(c => deleteConstraint(c))
+        }}
+        onSelectCoplanarConstraint={(constraint) => {}}
         project={project}
         onOptimizationComplete={(success, message) => {
           saveProject()

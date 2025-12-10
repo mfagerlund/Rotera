@@ -12,10 +12,10 @@ import {
   PerpendicularLinesConstraint,
   FixedPointConstraint,
   CollinearPointsConstraint,
-  CoplanarPointsConstraint,
   EqualDistancesConstraint,
   EqualAnglesConstraint
 } from '../entities/constraints'
+import { CoplanarPointsConstraint } from '../entities/constraints/coplanar-points-constraint'
 import { WorldPoint } from '../entities/world-point'
 import { Line } from '../entities/line'
 import { useConfirm } from './ConfirmDialog'
@@ -45,6 +45,9 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
 }) => {
   const { confirm, dialog } = useConfirm()
 
+  // Filter out CoplanarPointsConstraint - they have their own dedicated manager
+  const filteredConstraints = constraints.filter(c => !(c instanceof CoplanarPointsConstraint))
+
   const getConstraintDisplayName = (type: string) => {
     const names: Record<string, string> = {
       'distance': 'Distance',
@@ -53,7 +56,6 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
       'perpendicular_lines': 'Perpendicular',
       'fixed_point': 'Fixed Point',
       'collinear_points': 'Collinear',
-      'coplanar_points': 'Coplanar',
       'equal_distances': 'Equal Dist',
       'equal_angles': 'Equal Angles'
     }
@@ -69,7 +71,7 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
       return `${constraint.lineA.getName()}, ${constraint.lineB.getName()}`
     } else if (constraint instanceof FixedPointConstraint) {
       return constraint.point.getName()
-    } else if (constraint instanceof CollinearPointsConstraint || constraint instanceof CoplanarPointsConstraint) {
+    } else if (constraint instanceof CollinearPointsConstraint) {
       return constraint.points.map(p => p.getName()).join(', ')
     } else if (constraint instanceof EqualDistancesConstraint) {
       return `${constraint.distancePairs.length} pairs`
@@ -90,17 +92,6 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
     return '-'
   }
 
-  const getStatusInfo = (constraint: Constraint): { status: string; color: string } => {
-    if (!constraint.isEnabled) {
-      return { status: 'off', color: '#666' }
-    }
-    const evaluation = constraint.evaluate()
-    if (evaluation.satisfied) {
-      return { status: 'ok', color: '#5cb85c' }
-    }
-    return { status: 'err', color: '#d9534f' }
-  }
-
   const handleDelete = async (constraint: Constraint) => {
     if (await confirm(`Delete ${getConstraintDisplayName(constraint.getConstraintType())} constraint?`)) {
       onDeleteConstraint?.(constraint)
@@ -108,8 +99,9 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
   }
 
   const handleDeleteAll = async () => {
-    if (await confirm(`Delete all ${constraints.length} constraints?`)) {
-      onDeleteAllConstraints?.()
+    if (await confirm(`Delete all ${filteredConstraints.length} constraints?`)) {
+      // Only delete non-coplanar constraints
+      filteredConstraints.forEach(c => onDeleteConstraint?.(c))
     }
   }
 
@@ -119,17 +111,17 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
     <>
       {dialog}
       <FloatingWindow
-        title={`Constraints (${constraints.length})`}
+        title={`Constraints (${filteredConstraints.length})`}
         isOpen={isOpen}
         onClose={onClose}
         width={520}
         maxHeight={400}
         storageKey="constraints-popup"
         showOkCancel={false}
-        onDelete={constraints.length > 0 && onDeleteAllConstraints ? handleDeleteAll : undefined}
+        onDelete={filteredConstraints.length > 0 && onDeleteConstraint ? handleDeleteAll : undefined}
       >
         <div className="lines-manager">
-          {constraints.length === 0 ? (
+          {filteredConstraints.length === 0 ? (
             <div className="lines-manager__empty">No constraints created yet</div>
           ) : (
             <table className="lines-manager__table">
@@ -138,29 +130,20 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
                   <th>Type</th>
                   <th>Entities</th>
                   <th>Value</th>
-                  <th>Status</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
-                {constraints.map((constraint, index) => {
-                  const { status, color } = getStatusInfo(constraint)
+                {filteredConstraints.map((constraint, index) => {
                   return (
                     <tr
                       key={index}
                       className={isSelected(constraint) ? 'selected' : ''}
                       onClick={() => onSelectConstraint?.(constraint)}
                     >
-                      <td>
-                        <span
-                          className="color-dot"
-                          style={{ backgroundColor: color }}
-                        />
-                        {getConstraintDisplayName(constraint.getConstraintType())}
-                      </td>
+                      <td>{getConstraintDisplayName(constraint.getConstraintType())}</td>
                       <td className="points-cell">{getConstraintEntities(constraint)}</td>
                       <td className="length-cell">{getConstraintValue(constraint)}</td>
-                      <td className="residual-cell" style={{ color }}>{status}</td>
                       <td className="actions-cell">
                         {onEditConstraint && (
                           <button
