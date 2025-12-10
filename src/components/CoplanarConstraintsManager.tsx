@@ -82,7 +82,10 @@ export const CoplanarConstraintsManager: React.FC<CoplanarConstraintsManagerProp
                     <tr
                       key={index}
                       className={isSelected(constraint) ? 'selected' : ''}
-                      onClick={() => onSelectConstraint?.(constraint)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onSelectConstraint?.(constraint)
+                      }}
                     >
                       <td>{constraint.getName()}</td>
                       <td className="dir-cell">{constraint.points.length}</td>

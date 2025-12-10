@@ -366,14 +366,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
     if (value === 0 || Math.abs(value) < 1e-10) {
       return '0.000';
     }
-    const abs = Math.abs(value);
-    if (abs >= 1) {
-      return value.toFixed(3);
-    }
-    if (abs >= 0.001) {
-      return value.toFixed(6);
-    }
-    return '0.000';
+    return value.toFixed(3);
   }
 
   const headerButtons: HeaderButton[] = useMemo(() => [

@@ -277,4 +277,10 @@ export class Project {
             (c): c is CoplanarPointsConstraint => c instanceof CoplanarPointsConstraint
         )
     }
+
+    get nonCoplanarConstraints(): Constraint[] {
+        return Array.from(this.constraints).filter(
+            c => !(c instanceof CoplanarPointsConstraint)
+        )
+    }
 }

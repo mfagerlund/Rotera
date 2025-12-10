@@ -3,6 +3,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { WorldPoint } from '../entities/world-point'
 import { Line as LineEntity } from '../entities/line'
 import { Viewpoint } from '../entities/viewpoint'
+import { CoplanarPointsConstraint } from '../entities/constraints/coplanar-points-constraint'
 
 export type ActiveTool = 'select' | 'point' | 'line' | 'plane' | 'circle' | 'loop' | 'vanishing' | 'orientationPaint'
 
@@ -35,6 +36,10 @@ export interface MainLayoutState {
   // Edit line state
   editingLine: LineEntity | null
   setEditingLine: (line: LineEntity | null) => void
+
+  // Edit coplanar constraint state
+  editingCoplanarConstraint: CoplanarPointsConstraint | null
+  setEditingCoplanarConstraint: (constraint: CoplanarPointsConstraint | null) => void
 
   // Entity popup states
   entityPopups: {
@@ -119,6 +124,9 @@ export function useMainLayoutState(options: UseMainLayoutStateOptions = {}): Mai
   // Edit line state
   const [editingLine, setEditingLine] = useState<LineEntity | null>(null)
 
+  // Edit coplanar constraint state
+  const [editingCoplanarConstraint, setEditingCoplanarConstraint] = useState<CoplanarPointsConstraint | null>(null)
+
   // Entity popups
   const [entityPopups, setEntityPopups] = useState({
     showWorldPointsPopup: false,
@@ -176,6 +184,8 @@ export function useMainLayoutState(options: UseMainLayoutStateOptions = {}): Mai
     handleImageReorder,
     editingLine,
     setEditingLine,
+    editingCoplanarConstraint,
+    setEditingCoplanarConstraint,
     entityPopups,
     setEntityPopup,
     worldPointEditWindow,

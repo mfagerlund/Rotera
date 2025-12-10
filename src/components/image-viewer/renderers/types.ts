@@ -17,6 +17,7 @@ export interface RenderParams {
   selectedPoints: WorldPoint[]
   selectedLines: Line[]
   selectedVanishingLines: VanishingLine[]
+  constraintHighlightedPoints: WorldPoint[]
   hoveredWorldPoint: WorldPoint | null
   hoveredPoint: WorldPoint | null
   hoveredLine: Line | null

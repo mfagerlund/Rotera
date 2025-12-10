@@ -8,6 +8,7 @@ export function renderWorldPoints(params: RenderParams): void {
     scale,
     offset,
     selectedPoints,
+    constraintHighlightedPoints,
     hoveredPoint,
     hoveredWorldPoint,
     isDraggingPoint,
@@ -29,9 +30,19 @@ export function renderWorldPoints(params: RenderParams): void {
     const y = imagePoint.v * scale + offset.y
 
     const isSelected = selectedPoints.includes(wp)
+    const isConstraintHighlighted = constraintHighlightedPoints.includes(wp)
     const isBeingDragged = isDraggingPoint && draggedPoint === wp
     const isHovered = hoveredPoint === wp
     const isGloballyHovered = hoveredWorldPoint === wp
+
+    // Draw constraint highlight ring (magenta/purple ring)
+    if (isConstraintHighlighted && !isSelected) {
+      ctx.strokeStyle = 'rgba(255, 0, 255, 0.8)'
+      ctx.lineWidth = 3
+      ctx.beginPath()
+      ctx.arc(x, y, 14, 0, 2 * Math.PI)
+      ctx.stroke()
+    }
 
     if (isHovered && onMovePoint && !isBeingDragged) {
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)'

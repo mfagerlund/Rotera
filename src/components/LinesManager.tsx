@@ -122,7 +122,10 @@ export const LinesManager: React.FC<LinesManagerProps> = ({
                     <tr
                       key={line.pointA.name + '-' + line.pointB.name}
                       className={isSelected ? 'selected' : ''}
-                      onClick={() => onSelectLine?.(line)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onSelectLine?.(line)
+                      }}
                     >
                       <td>
                         <span

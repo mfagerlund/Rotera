@@ -6,6 +6,7 @@ import { faLocationDot, faRuler, faSquare, faPaintBrush } from '@fortawesome/fre
 import LineCreationTool from './LineCreationTool'
 import LoopTraceTool from './LoopTraceTool'
 import OrientationPaintTool from './OrientationPaintTool'
+import CoplanarCreationTool from './CoplanarCreationTool'
 import FloatingWindow from '../FloatingWindow'
 import { Line, LineDirection } from '../../entities/line'
 import { WorldPoint } from '../../entities/world-point'
@@ -50,6 +51,10 @@ interface CreationToolsManagerProps {
   onDeleteLine?: (line: Line) => void
   onClearEditingLine?: () => void
   projectConstraints?: Record<string, any>
+  editingCoplanarConstraint?: CoplanarPointsConstraint | null
+  onUpdateCoplanarConstraint?: (constraint: CoplanarPointsConstraint, updates: { name: string; points: WorldPoint[] }) => void
+  onDeleteCoplanarConstraint?: (constraint: CoplanarPointsConstraint) => void
+  onClearEditingCoplanarConstraint?: () => void
 }
 
 export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
@@ -72,7 +77,11 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
   onUpdateLine,
   onDeleteLine,
   onClearEditingLine,
-  projectConstraints = {}
+  projectConstraints = {},
+  editingCoplanarConstraint = null,
+  onUpdateCoplanarConstraint,
+  onDeleteCoplanarConstraint,
+  onClearEditingCoplanarConstraint
 }) => {
   const [toolMessage, setToolMessage] = useState<string>('')
   const [isRightHandGuideOpen, setIsRightHandGuideOpen] = useState(false)
@@ -122,18 +131,24 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
       if (tool === 'line' && onClearEditingLine) {
         onClearEditingLine()
       }
+      if (tool === 'plane' && onClearEditingCoplanarConstraint) {
+        onClearEditingCoplanarConstraint()
+      }
       if (tool === 'loop' && onConstructionPreviewChange) {
         onConstructionPreviewChange(null)
       }
     } else {
-      // Activating a new tool - clear editing state for line tool
+      // Activating a new tool - clear editing state
       if (tool === 'line' && onClearEditingLine) {
         onClearEditingLine()
+      }
+      if (tool === 'plane' && onClearEditingCoplanarConstraint) {
+        onClearEditingCoplanarConstraint()
       }
       onToolChange(tool)
       setToolMessage('')
     }
-  }, [activeTool, onToolChange, onClearEditingLine, onConstructionPreviewChange])
+  }, [activeTool, onToolChange, onClearEditingLine, onClearEditingCoplanarConstraint, onConstructionPreviewChange])
 
   const openRightHandGuide = useCallback(() => setIsRightHandGuideOpen(true), [])
   const closeRightHandGuide = useCallback(() => setIsRightHandGuideOpen(false), [])
@@ -315,46 +330,9 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
         )}
 
         {activeTool === 'plane' && (
-          <div className="plane-creation-tool">
-            <div className="tool-header">
-              <h4>Coplanar Constraint</h4>
-              <button className="btn-cancel" onClick={handleToolCancel}>✕</button>
-            </div>
+          <div className="tool-placeholder">
             <div className="tool-message">
-              {canCreatePlane()
-                ? `Ready to create coplanar constraint with ${getPlanePoints().length} points`
-                : `Select 4+ points (have ${getPlanePoints().length})`
-              }
-            </div>
-            <div className="selection-status">
-              <div>Selected Points: {selectedPoints.length}</div>
-              <div>Selected Lines: {selectedLines.length}</div>
-              <div>Total Unique Points: {getPlanePoints().length}</div>
-            </div>
-            {canCreatePlane() && (
-              <div style={{ marginTop: '10px' }}>
-                <button
-                  className="btn-primary"
-                  onClick={() => {
-                    const points = getPlanePoints()
-                    const constraint = CoplanarPointsConstraint.create(
-                      `Coplanar ${points.length}pts`,
-                      points
-                    )
-                    onCreateConstraint?.(constraint)
-                    handleToolCancel()
-                  }}
-                >
-                  Create Coplanar Constraint
-                </button>
-              </div>
-            )}
-            <div className="tool-help" style={{ marginTop: '10px' }}>
-              <div className="help-text">
-                Points on selected lines are included.
-                <br />
-                Press Esc to cancel.
-              </div>
+              Use the floating Coplanar Constraint window.
             </div>
           </div>
         )}
@@ -587,6 +565,42 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
           isActive={activeTool === 'loop'}
           showHeader={false}
           showActionButtons={false}
+        />
+      </FloatingWindow>
+
+      {/* Floating Coplanar Constraint Tool */}
+      <FloatingWindow
+        title={editingCoplanarConstraint ? `Edit: ${editingCoplanarConstraint.getName()}` : "Create Coplanar Constraint"}
+        isOpen={activeTool === 'plane'}
+        onClose={handleToolCancel}
+        storageKey="coplanar-tool"
+        width={400}
+        maxHeight={500}
+        showOkCancel={true}
+        onOk={() => {
+          window.dispatchEvent(new CustomEvent('coplanarToolSave'))
+        }}
+        onCancel={handleToolCancel}
+        onDelete={editingCoplanarConstraint && onDeleteCoplanarConstraint ? () => {
+          onDeleteCoplanarConstraint(editingCoplanarConstraint)
+          handleToolCancel()
+        } : undefined}
+        okText={editingCoplanarConstraint ? "Save" : "Create"}
+        cancelText="Cancel"
+      >
+        <CoplanarCreationTool
+          selectedPoints={editingCoplanarConstraint ? [] : selectedPoints}
+          selectedLines={editingCoplanarConstraint ? [] : selectedLines}
+          allWorldPoints={allWorldPoints}
+          onCreateConstraint={(constraint) => {
+            onCreateConstraint?.(constraint)
+          }}
+          onUpdateConstraint={onUpdateCoplanarConstraint}
+          onDeleteConstraint={onDeleteCoplanarConstraint}
+          onCancel={handleToolCancel}
+          isActive={activeTool === 'plane'}
+          editMode={!!editingCoplanarConstraint}
+          existingConstraint={editingCoplanarConstraint || undefined}
         />
       </FloatingWindow>
 

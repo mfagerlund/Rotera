@@ -125,7 +125,10 @@ export const PlanesManager: React.FC<PlanesManagerProps> = ({
                   <tr
                     key={plane.id}
                     className={isSelected(plane) ? 'selected' : ''}
-                    onClick={() => onSelectPlane?.(plane)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onSelectPlane?.(plane)
+                    }}
                   >
                     <td>
                       <span

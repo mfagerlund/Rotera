@@ -13,6 +13,8 @@ import { ConstructionPreview } from '../image-viewer/types'
 import { Line as LineEntity } from '../../entities/line'
 import { WorldPoint } from '../../entities/world-point'
 import { VanishingLine } from '../../entities/vanishing-line'
+import type { Constraint } from '../../entities/constraints'
+import { CoplanarPointsConstraint } from '../../entities/constraints/coplanar-points-constraint'
 import type { ISelectable } from '../../types/selectable'
 import { COMPONENT_OVERLAY_EVENT, isComponentOverlayEnabled, setComponentOverlayEnabled } from '../../utils/componentNameOverlay'
 import { useConfirm } from '../ConfirmDialog'
@@ -144,6 +146,8 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
     handleImageReorder,
     editingLine,
     setEditingLine,
+    editingCoplanarConstraint,
+    setEditingCoplanarConstraint,
     entityPopups,
     setEntityPopup,
     worldPointEditWindow,
@@ -284,6 +288,15 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
   const selectedPointEntities = getSelectedByType<WorldPoint>('point')
   const selectedPlaneEntities = getSelectedByType('plane')
   const selectedVanishingLineEntities = getSelectedByType<VanishingLine>('vanishingLine')
+  const selectedConstraintEntities = getSelectedByType<Constraint>('constraint')
+  const selectedCoplanarConstraints = selectedConstraintEntities.filter(
+    (c): c is CoplanarPointsConstraint => c instanceof CoplanarPointsConstraint
+  )
+  const constraintHighlightedPoints = useMemo(() => {
+    const points = new Set<WorldPoint>()
+    selectedCoplanarConstraints.forEach(c => c.points.forEach(p => points.add(p)))
+    return Array.from(points)
+  }, [selectedCoplanarConstraints])
   const selectedEntities = [...selectedPointEntities, ...selectedLineEntities, ...selectedPlaneEntities, ...selectedVanishingLineEntities] as ISelectable[]
 
   const allConstraints: AvailableConstraint[] = []
@@ -442,6 +455,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
       lines={linesMap}
       selectedPoints={selectedPointEntities}
       selectedLines={selectedLineEntities}
+      constraintHighlightedPoints={constraintHighlightedPoints}
       hoveredConstraintId={hoveredConstraintId}
       hoveredWorldPoint={hoveredWorldPoint}
       placementMode={placementMode}
@@ -486,6 +500,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
     placementMode,
     selectedLineEntities,
     selectedPointEntities,
+    constraintHighlightedPoints,
     setHoveredWorldPoint,
     hoveredConstraintId,
     hoveredWorldPoint,
@@ -676,6 +691,15 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
                 onDeleteLine={handleEditLineDelete}
                 onClearEditingLine={() => setEditingLine(null)}
                 projectConstraints={constraints}
+                editingCoplanarConstraint={editingCoplanarConstraint}
+                onUpdateCoplanarConstraint={(constraint, updates) => {
+                  constraint.name = updates.name
+                  constraint.points = updates.points
+                }}
+                onDeleteCoplanarConstraint={(constraint) => {
+                  deleteConstraint(constraint)
+                }}
+                onClearEditingCoplanarConstraint={() => setEditingCoplanarConstraint(null)}
                 currentVanishingLineAxis={currentVanishingLineAxis}
                 onVanishingLineAxisChange={setCurrentVanishingLineAxis}
                 activeConstraintType={activeConstraintType}
@@ -746,7 +770,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
                   title="Manage constraints"
                 >
                   <span className="entity-status-label">Constraints</span>
-                  <span className="entity-status-count">{project?.constraints.size || 0}</span>
+                  <span className="entity-status-count">{project?.nonCoplanarConstraints.length || 0}</span>
                 </button>
                 <button
                   className="entity-status-item"
@@ -855,12 +879,19 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
           constraints.forEach(c => deleteConstraint(c))
         }}
         onSelectConstraint={(constraint) => {}}
-        onEditCoplanarConstraint={(constraint) => {}}
+        onEditCoplanarConstraint={(constraint) => {
+          setEditingCoplanarConstraint(constraint)
+          setActiveTool('plane')
+          // Don't close the popup - keep it open like WorldPointsManager
+        }}
         onDeleteCoplanarConstraint={(constraint) => deleteConstraint(constraint)}
         onDeleteAllCoplanarConstraints={() => {
           project?.coplanarConstraints.forEach(c => deleteConstraint(c))
         }}
-        onSelectCoplanarConstraint={(constraint) => {}}
+        onSelectCoplanarConstraint={(constraint) => {
+          handleEntityClick(constraint, false, false)
+        }}
+        selectedCoplanarConstraints={selectedCoplanarConstraints}
         project={project}
         onOptimizationComplete={(success, message) => {
           saveProject()

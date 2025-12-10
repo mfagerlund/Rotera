@@ -12,6 +12,7 @@ import CreationToolsManager from '../tools/CreationToolsManager'
 import ConstraintPropertyPanel from '../ConstraintPropertyPanel'
 import WorldPointPanel from '../WorldPointPanel'
 import { Project } from '../../entities/project'
+import { CoplanarPointsConstraint } from '../../entities/constraints/coplanar-points-constraint'
 
 interface RightPanelProps {
   selectedEntities: ISelectable[]
@@ -32,6 +33,10 @@ interface RightPanelProps {
   onDeleteLine: (line: LineEntity) => void
   onClearEditingLine: () => void
   projectConstraints: any[]
+  editingCoplanarConstraint: CoplanarPointsConstraint | null
+  onUpdateCoplanarConstraint: (constraint: CoplanarPointsConstraint, updates: { name: string; points: WorldPoint[] }) => void
+  onDeleteCoplanarConstraint: (constraint: CoplanarPointsConstraint) => void
+  onClearEditingCoplanarConstraint: () => void
   currentVanishingLineAxis: 'x' | 'y' | 'z'
   onVanishingLineAxisChange: (axis: 'x' | 'y' | 'z') => void
   activeConstraintType: string | null
@@ -78,6 +83,10 @@ export const RightPanel: React.FC<RightPanelProps> = observer(({
   onDeleteLine,
   onClearEditingLine,
   projectConstraints,
+  editingCoplanarConstraint,
+  onUpdateCoplanarConstraint,
+  onDeleteCoplanarConstraint,
+  onClearEditingCoplanarConstraint,
   currentVanishingLineAxis,
   onVanishingLineAxisChange,
   activeConstraintType,
@@ -125,6 +134,10 @@ export const RightPanel: React.FC<RightPanelProps> = observer(({
         onDeleteLine={onDeleteLine}
         onClearEditingLine={onClearEditingLine}
         projectConstraints={projectConstraints}
+        editingCoplanarConstraint={editingCoplanarConstraint}
+        onUpdateCoplanarConstraint={onUpdateCoplanarConstraint}
+        onDeleteCoplanarConstraint={onDeleteCoplanarConstraint}
+        onClearEditingCoplanarConstraint={onClearEditingCoplanarConstraint}
         currentVanishingLineAxis={currentVanishingLineAxis}
         onVanishingLineAxisChange={onVanishingLineAxisChange}
       />

@@ -42,6 +42,7 @@ export interface ImageViewerPropsBase {
   lineEntities?: Map<string, Line>
   selectedPoints: WorldPoint[]
   selectedLines?: Line[]
+  constraintHighlightedPoints?: WorldPoint[]
   hoveredConstraintId: string | null
   hoveredWorldPoint?: WorldPoint | null
   placementMode?: { active: boolean; worldPoint: WorldPoint | null }
@@ -64,6 +65,7 @@ export interface ImageViewerRenderState {
   selectedPoints: WorldPoint[]
   selectedLines: Line[]
   selectedVanishingLines: VanishingLine[]
+  constraintHighlightedPoints: WorldPoint[]
   hoveredConstraintId: string | null
   hoveredWorldPoint: WorldPoint | null
   hoveredPoint: WorldPoint | null

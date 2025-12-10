@@ -20,6 +20,7 @@ interface ImageWorkspaceProps {
   lines: Map<string, LineEntity>
   selectedPoints: WorldPoint[]
   selectedLines: LineEntity[]
+  constraintHighlightedPoints?: WorldPoint[]
   hoveredConstraintId: string | null
   hoveredWorldPoint: WorldPoint | null
   placementMode: { active: boolean; worldPoint: WorldPoint | null }
@@ -52,6 +53,7 @@ const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({
   lines,
   selectedPoints,
   selectedLines,
+  constraintHighlightedPoints = [],
   hoveredConstraintId,
   hoveredWorldPoint,
   placementMode,
@@ -109,6 +111,7 @@ const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({
           lineEntities={lines}
           selectedPoints={selectedPoints}
           selectedLines={selectedLines}
+          constraintHighlightedPoints={constraintHighlightedPoints}
           hoveredConstraintId={hoveredConstraintId}
           hoveredWorldPoint={hoveredWorldPoint}
           placementMode={placementMode}

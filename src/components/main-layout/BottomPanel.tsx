@@ -57,6 +57,7 @@ interface BottomPanelProps {
   onDeleteCoplanarConstraint?: (constraint: CoplanarPointsConstraint) => void
   onDeleteAllCoplanarConstraints?: () => void
   onSelectCoplanarConstraint?: (constraint: CoplanarPointsConstraint) => void
+  selectedCoplanarConstraints?: CoplanarPointsConstraint[]
   project: Project | null
   onOptimizationComplete: (success: boolean, message: string) => void
   onSelectWorldPoint?: (worldPoint: WorldPoint) => void
@@ -111,6 +112,7 @@ export const BottomPanel: React.FC<BottomPanelProps> = observer(({
   onDeleteCoplanarConstraint,
   onDeleteAllCoplanarConstraints,
   onSelectCoplanarConstraint,
+  selectedCoplanarConstraints = [],
   project,
   onOptimizationComplete,
   onSelectWorldPoint,
@@ -199,6 +201,7 @@ export const BottomPanel: React.FC<BottomPanelProps> = observer(({
           isOpen={entityPopups.showCoplanarConstraintsPopup}
           onClose={() => onClosePopup('showCoplanarConstraintsPopup')}
           constraints={project.coplanarConstraints}
+          selectedConstraints={selectedCoplanarConstraints}
           onEditConstraint={onEditCoplanarConstraint}
           onDeleteConstraint={onDeleteCoplanarConstraint}
           onDeleteAllConstraints={onDeleteAllCoplanarConstraints}

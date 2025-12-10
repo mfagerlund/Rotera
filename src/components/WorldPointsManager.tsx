@@ -102,7 +102,10 @@ export const WorldPointsManager: React.FC<WorldPointsManagerProps> = ({
                   <tr
                     key={worldPoint.getName()}
                     className={isSelected(worldPoint) ? 'selected' : ''}
-                    onClick={() => onSelectWorldPoint?.(worldPoint)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onSelectWorldPoint?.(worldPoint)
+                    }}
                   >
                     <td>
                       <span

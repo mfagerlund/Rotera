@@ -115,7 +115,10 @@ export const ImagePointsManager: React.FC<ImagePointsManagerProps> = ({
                     <tr
                       key={key}
                       className={isSelected(ref) ? 'selected' : ''}
-                      onClick={() => onSelectImagePoint?.(ref)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onSelectImagePoint?.(ref)
+                      }}
                     >
                       <td>{ref.worldPoint.getName()}</td>
                       <td className="points-cell">{ref.viewpoint.getName()}</td>

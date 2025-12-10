@@ -40,6 +40,13 @@ export function useMainLayoutHandlers({
       return
     }
 
+    // If Coplanar tool is active, dispatch event for adding points
+    if (activeTool === 'plane') {
+      const event = new CustomEvent('coplanarToolPointClick', { detail: { worldPoint } })
+      window.dispatchEvent(event)
+      return
+    }
+
     // If Loop tool is active, treat normal clicks as additive only
     if (activeTool === 'loop') {
       if (shiftKey) {

@@ -139,7 +139,10 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
                     <tr
                       key={index}
                       className={isSelected(constraint) ? 'selected' : ''}
-                      onClick={() => onSelectConstraint?.(constraint)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onSelectConstraint?.(constraint)
+                      }}
                     >
                       <td>{getConstraintDisplayName(constraint.getConstraintType())}</td>
                       <td className="points-cell">{getConstraintEntities(constraint)}</td>
