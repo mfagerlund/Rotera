@@ -533,16 +533,17 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
 
         // Focal length regularization: penalize deviation from reasonable range
         // For most cameras, f is roughly 0.8x to 2.5x the max image dimension
-        // This prevents focal length from exploding during under-constrained solves
+        // This prevents focal length from going negative or exploding during under-constrained solves
         const maxDim = Math.max(this.imageWidth, this.imageHeight)
-        const minF = maxDim * 0.5   // Very wide angle
-        const maxF = maxDim * 4.0   // Very telephoto
+        const minF = maxDim * 0.3   // Very wide angle (allows some fisheye)
+        const maxF = maxDim * 5.0   // Very telephoto
         const f = cameraValues.focalLength
 
         // Soft bounds: penalize when f goes outside reasonable range
         // The residual should be strong enough to prevent runaway focal length
         // Weight needs to be high enough to overcome ill-conditioned Jacobians
-        const weight = V.C(50.0)
+        // Using 500 because negative focal length must NEVER happen
+        const weight = V.C(500.0)
         const belowMin = V.max(V.sub(V.C(minF), f), V.C(0))
         const aboveMax = V.max(V.sub(f, V.C(maxF)), V.C(0))
         residuals.push(V.mul(V.div(belowMin, V.C(maxDim)), weight))
@@ -557,7 +558,13 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
 
         this.position = [cameraValues.position.x.data, cameraValues.position.y.data, cameraValues.position.z.data]
         this.rotation = [cameraValues.rotation.w.data, cameraValues.rotation.x.data, cameraValues.rotation.y.data, cameraValues.rotation.z.data]
-        this.focalLength = cameraValues.focalLength.data
+
+        // Apply focal length with hard bounds to prevent invalid values
+        const maxDim = Math.max(this.imageWidth, this.imageHeight)
+        const minF = maxDim * 0.3   // Very wide angle
+        const maxF = maxDim * 5.0   // Very telephoto
+        const rawFocalLength = cameraValues.focalLength.data
+        this.focalLength = Math.max(minF, Math.min(maxF, rawFocalLength))
         this.aspectRatio = cameraValues.aspectRatio.data
         // Only update principal point if the image might be cropped
         // For uncropped images, PP should stay at image center
@@ -589,7 +596,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
             id,
             name: this.name,
             filename: this.filename,
-            url: this.url,
+            url: context.options.excludeImages ? '' : this.url,
             imageWidth: this.imageWidth,
             imageHeight: this.imageHeight,
             focalLength: this.focalLength,

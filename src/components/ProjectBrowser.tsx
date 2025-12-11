@@ -14,12 +14,15 @@ import {
   faCamera,
   faCircle,
   faArrowRight,
-  faCopy
+  faCopy,
+  faFileExport
 } from '@fortawesome/free-solid-svg-icons'
 import { ProjectDB, ProjectSummary, Folder } from '../services/project-db'
 import { Project } from '../entities/project'
 import { useConfirm } from './ConfirmDialog'
 import { SessionStore } from '../services/session-store'
+import { Serialization } from '../entities/Serialization'
+import JSZip from 'jszip'
 
 interface ProjectBrowserProps {
   onOpenProject: (project: Project) => void
@@ -47,6 +50,9 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
   const [copyModalProject, setCopyModalProject] = useState<ProjectSummary | null>(null)
   const [copyName, setCopyName] = useState('')
   const [allFolders, setAllFolders] = useState<Folder[]>([])
+  const [showExportModal, setShowExportModal] = useState(false)
+  const [exportExcludeImages, setExportExcludeImages] = useState(true)
+  const [isExporting, setIsExporting] = useState(false)
 
   const setCurrentFolderId = useCallback((folderId: string | null) => {
     setCurrentFolderIdState(folderId)
@@ -207,6 +213,49 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
     setCopyName(project.name + ' (copy)')
   }
 
+  const handleExportFolder = async () => {
+    if (projects.length === 0) {
+      alert('No projects in this folder to export')
+      return
+    }
+
+    setIsExporting(true)
+    try {
+      const zip = new JSZip()
+      const folderName = currentFolderId
+        ? folderPath[folderPath.length - 1]?.name || 'projects'
+        : 'root'
+
+      for (const summary of projects) {
+        try {
+          const project = await ProjectDB.loadProject(summary.id)
+          const json = Serialization.serialize(project, { excludeImages: exportExcludeImages })
+          const safeName = summary.name.replace(/[<>:"/\\|?*]/g, '_')
+          zip.file(`${safeName}.json`, json)
+        } catch (error) {
+          console.error(`Failed to export project ${summary.name}:`, error)
+        }
+      }
+
+      const blob = await zip.generateAsync({ type: 'blob' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${folderName}-export.zip`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      setShowExportModal(false)
+    } catch (error) {
+      console.error('Export failed:', error)
+      alert('Export failed: ' + (error as Error).message)
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   const handleDragStart = (e: React.DragEvent, project: ProjectSummary) => {
     setDraggedProject(project)
     e.dataTransfer.effectAllowed = 'move'
@@ -285,6 +334,14 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
             onClick={() => setIsCreatingFolder(true)}
           >
             <FontAwesomeIcon icon={faFolderPlus} /> New Folder
+          </button>
+          <button
+            className="project-browser__btn"
+            onClick={() => setShowExportModal(true)}
+            disabled={projects.length === 0}
+            title="Export all projects in this folder"
+          >
+            <FontAwesomeIcon icon={faFileExport} /> Export Folder
           </button>
         </div>
       </header>
@@ -583,6 +640,39 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
                 className="project-browser__btn--primary"
               >
                 Copy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showExportModal && (
+        <div className="project-browser__modal-overlay" onClick={() => setShowExportModal(false)}>
+          <div className="project-browser__modal" onClick={e => e.stopPropagation()}>
+            <h3>Export {projects.length} Project{projects.length !== 1 ? 's' : ''}</h3>
+            <p style={{ marginBottom: '16px', color: '#888' }}>
+              Export all projects in this folder as a ZIP file.
+            </p>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={exportExcludeImages}
+                onChange={e => setExportExcludeImages(e.target.checked)}
+              />
+              Exclude images (smaller file size, for fixtures)
+            </label>
+            <div className="project-browser__modal-actions">
+              <button onClick={() => setShowExportModal(false)} disabled={isExporting}>Cancel</button>
+              <button
+                onClick={handleExportFolder}
+                disabled={isExporting}
+                className="project-browser__btn--primary"
+              >
+                {isExporting ? (
+                  <><FontAwesomeIcon icon={faSpinner} spin /> Exporting...</>
+                ) : (
+                  <>Export</>
+                )}
               </button>
             </div>
           </div>

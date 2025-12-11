@@ -4,7 +4,7 @@ import { Line } from './line/Line'
 import { ImagePoint } from './imagePoint/ImagePoint'
 import { Viewpoint } from './viewpoint/Viewpoint'
 import { deserializeConstraint } from './constraints/constraint-factory'
-import { SerializationContext } from './serialization/SerializationContext'
+import { SerializationContext, SerializationOptions } from './serialization/SerializationContext'
 import type { ProjectDto } from './project/ProjectDto'
 import { CURRENT_FORMAT_VERSION } from './project/ProjectDto'
 import type { VanishingLineDto } from './vanishing-line/VanishingLineDto'
@@ -14,8 +14,8 @@ import { migrateProject } from './migrations/migrate'
 
 export class Serialization {
 
-  static serialize(project: Project): string {
-    const context = new SerializationContext()
+  static serialize(project: Project, options: SerializationOptions = {}): string {
+    const context = new SerializationContext(options)
 
     const allVanishingLines: VanishingLine[] = []
     for (const vp of project.viewpoints) {

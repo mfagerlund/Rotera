@@ -21,7 +21,7 @@ import type { WorldPoint } from '../entities/world-point';
 import { ConstraintSystem } from './constraint-system';
 import { projectWorldPointToPixelQuaternion } from './camera-projection';
 import { V, Vec3, Vec4 } from 'scalar-autograd';
-import { log } from './optimization-logger';
+import { log, logOnce } from './optimization-logger';
 
 export interface PnPResult {
   position: [number, number, number];
@@ -932,7 +932,7 @@ export function initializeCameraWithPnP(
 
   // Need at least 3 constrained points for reliable centroid
   if (constrainedPoints.length < 3) {
-    log(`PnP: Camera ${vpConcrete.name} has only ${constrainedPoints.length} constrained points (need 3)`);
+    logOnce(`PnP: Camera ${vpConcrete.name} has only ${constrainedPoints.length} constrained points (need 3)`);
     return { success: false, reliable: false, reason: `Not enough constrained points (have ${constrainedPoints.length}, need 3)` };
   }
 

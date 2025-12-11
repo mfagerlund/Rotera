@@ -70,7 +70,7 @@ import { Viewpoint } from '../entities/viewpoint'
 import { WorldPoint } from '../entities/world-point'
 import { Line, LineDirection } from '../entities/line'
 import { Quaternion } from './Quaternion'
-import { log } from './optimization-logger'
+import { log, logOnce } from './optimization-logger'
 
 /**
  * Maps Line direction constraints to vanishing point axes.
@@ -313,7 +313,7 @@ export function computeVanishingPoint(
   }
 
   if (Math.abs(result.u) > 10000 || Math.abs(result.v) > 10000) {
-    log(`[VP] WARNING: VP very far from origin: ${JSON.stringify(result)} eigenvector: ${JSON.stringify(vp)}`)
+    logOnce(`[VP] WARNING: VP very far from origin (u=${result.u.toFixed(0)}, v=${result.v.toFixed(0)})`)
   }
 
   return result

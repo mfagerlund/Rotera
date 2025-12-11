@@ -2,6 +2,9 @@
 
 export const optimizationLogs: string[] = [];
 
+// Track messages that should only be logged once per optimization run
+const loggedOnceMessages = new Set<string>();
+
 // Debug flag - set to true to enable VP debug messages in console
 const VP_DEBUG_ENABLED = false;
 
@@ -29,4 +32,17 @@ export function log(message: string) {
 
 export function clearOptimizationLogs() {
   optimizationLogs.length = 0;
+  loggedOnceMessages.clear();
+}
+
+/**
+ * Log a message only once per optimization run. Useful for warnings that
+ * would otherwise spam the log (e.g., VP far from origin warnings).
+ */
+export function logOnce(message: string) {
+  if (loggedOnceMessages.has(message)) {
+    return;
+  }
+  loggedOnceMessages.add(message);
+  log(message);
 }

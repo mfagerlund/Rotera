@@ -1,7 +1,16 @@
+export interface SerializationOptions {
+  excludeImages?: boolean
+}
+
 export class SerializationContext {
   private entityToId = new Map<object, string>()
   private idToEntity = new Map<string, object>()
   private idCounter = 0
+  readonly options: SerializationOptions
+
+  constructor(options: SerializationOptions = {}) {
+    this.options = options
+  }
 
   registerEntity(entity: object, id?: string): string {
     const existing = this.entityToId.get(entity)
