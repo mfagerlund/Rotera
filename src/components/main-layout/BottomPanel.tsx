@@ -57,7 +57,9 @@ interface BottomPanelProps {
   onDeleteCoplanarConstraint?: (constraint: CoplanarPointsConstraint) => void
   onDeleteAllCoplanarConstraints?: () => void
   onSelectCoplanarConstraint?: (constraint: CoplanarPointsConstraint) => void
+  onHoverCoplanarConstraint?: (constraint: CoplanarPointsConstraint | null) => void
   selectedCoplanarConstraints?: CoplanarPointsConstraint[]
+  hoveredCoplanarConstraint?: CoplanarPointsConstraint | null
   project: Project | null
   onOptimizationComplete: (success: boolean, message: string) => void
   onSelectWorldPoint?: (worldPoint: WorldPoint) => void
@@ -112,7 +114,9 @@ export const BottomPanel: React.FC<BottomPanelProps> = observer(({
   onDeleteCoplanarConstraint,
   onDeleteAllCoplanarConstraints,
   onSelectCoplanarConstraint,
+  onHoverCoplanarConstraint,
   selectedCoplanarConstraints = [],
+  hoveredCoplanarConstraint,
   project,
   onOptimizationComplete,
   onSelectWorldPoint,
@@ -217,11 +221,16 @@ export const BottomPanel: React.FC<BottomPanelProps> = observer(({
           onOptimizationComplete={onOptimizationComplete}
           onSelectWorldPoint={onSelectWorldPoint}
           onSelectLine={onSelectLine}
+          onSelectCoplanarConstraint={onSelectCoplanarConstraint}
           onHoverWorldPoint={onHoverWorldPoint}
           onHoverLine={onHoverLine}
+          onHoverCoplanarConstraint={onHoverCoplanarConstraint}
           isWorldPointSelected={isWorldPointSelected}
           isLineSelected={isLineSelected}
+          isCoplanarConstraintSelected={(c) => selectedCoplanarConstraints.includes(c)}
           hoveredWorldPoint={hoveredWorldPoint}
+          hoveredCoplanarConstraint={hoveredCoplanarConstraint}
+          autoStart={true}
         />
       )}
 

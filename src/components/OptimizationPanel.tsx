@@ -1,7 +1,7 @@
 // Optimization panel - works with ENTITIES only
 // NO DTOs
 
-import React, { useState, useCallback, useMemo } from 'react'
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faBullseye, faGear, faStop, faClipboard } from '@fortawesome/free-solid-svg-icons'
 import { Project } from '../entities/project'
@@ -25,11 +25,17 @@ interface OptimizationPanelProps {
   onOptimizationComplete: (success: boolean, message: string) => void
   onSelectWorldPoint?: (worldPoint: WorldPoint) => void
   onSelectLine?: (line: Line) => void
+  onSelectCoplanarConstraint?: (constraint: CoplanarPointsConstraint) => void
   onHoverWorldPoint?: (worldPoint: WorldPoint | null) => void
   onHoverLine?: (line: Line | null) => void
+  onHoverCoplanarConstraint?: (constraint: CoplanarPointsConstraint | null) => void
   isWorldPointSelected?: (worldPoint: WorldPoint) => boolean
   isLineSelected?: (line: Line) => boolean
+  isCoplanarConstraintSelected?: (constraint: CoplanarPointsConstraint) => boolean
   hoveredWorldPoint?: WorldPoint | null
+  hoveredCoplanarConstraint?: CoplanarPointsConstraint | null
+  /** If true, automatically start optimization when panel opens */
+  autoStart?: boolean
 }
 
 function computeCameraReprojectionError(vp: Viewpoint): number {
@@ -97,11 +103,16 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
   onOptimizationComplete,
   onSelectWorldPoint,
   onSelectLine,
+  onSelectCoplanarConstraint,
   onHoverWorldPoint,
   onHoverLine,
+  onHoverCoplanarConstraint,
   isWorldPointSelected,
   isLineSelected,
-  hoveredWorldPoint
+  isCoplanarConstraintSelected,
+  hoveredWorldPoint,
+  hoveredCoplanarConstraint,
+  autoStart = false
 }) => {
   const [isOptimizing, setIsOptimizing] = useState(false)
   const [settings, setSettings] = useState(defaultOptimizationSettings)
@@ -109,8 +120,13 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [pnpResults, setPnpResults] = useState<{camera: string, before: number, after: number, iterations: number}[]>([])
   const [isInitializingCameras, setIsInitializingCameras] = useState(false)
+  const [statusMessage, setStatusMessage] = useState<string | null>(null)
+
+  // Track if we've auto-started for this open session
+  const hasAutoStartedRef = useRef(false)
 
   const clientSolver = useOptimization()
+  const { cancel: cancelOptimization } = clientSolver
 
   // Get optimization stats from actual entities
   const stats = React.useMemo(() => {
@@ -238,14 +254,30 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
     return stats.canOptimize
   }, [stats, isOptimizing])
 
+  // Reset auto-start tracking when panel closes
+  useEffect(() => {
+    if (!isOpen) {
+      hasAutoStartedRef.current = false
+    }
+  }, [isOpen])
+
   const handleOptimize = useCallback(async () => {
     if (!canOptimize()) return
 
     setIsOptimizing(true)
     setResults(null)
     setPnpResults([])
+    setStatusMessage('Initializing cameras and world points...')
 
     try {
+      // Update status before the blocking solver call
+      await new Promise<void>(resolve => {
+        requestAnimationFrame(() => {
+          setStatusMessage('Running Levenberg-Marquardt optimization...')
+          resolve()
+        })
+      })
+
       const solverResult = await clientSolver.optimize(
         project,
         {
@@ -255,6 +287,8 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
           verbose: settings.verbose
         }
       )
+
+      setStatusMessage('Processing results...')
 
       const result = {
         converged: solverResult.converged,
@@ -267,6 +301,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
       }
 
       setResults(result)
+      setStatusMessage(null)
 
       if (result.converged) {
         onOptimizationComplete(true, 'Optimization converged successfully')
@@ -285,15 +320,31 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
         iterations: 0,
         outliers: []
       })
+      setStatusMessage(null)
       onOptimizationComplete(false, errorMessage)
     } finally {
       setIsOptimizing(false)
+      setStatusMessage(null)
     }
   }, [canOptimize, project, settings, clientSolver, onOptimizationComplete])
 
   const handleStop = useCallback(() => {
+    cancelOptimization()
     setIsOptimizing(false)
-  }, [])
+    setStatusMessage(null)
+  }, [cancelOptimization])
+
+  // Auto-start optimization when panel opens (if autoStart is true)
+  useEffect(() => {
+    if (isOpen && autoStart && !hasAutoStartedRef.current && stats.canOptimize && !isOptimizing) {
+      hasAutoStartedRef.current = true
+      // Small delay to ensure UI is rendered first
+      const timer = setTimeout(() => {
+        handleOptimize()
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [isOpen, autoStart, stats.canOptimize, isOptimizing, handleOptimize])
 
   const handleInitializeCameras = useCallback(async () => {
     if (isOptimizing || isInitializingCameras) return
@@ -369,6 +420,20 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
     return value.toFixed(3);
   }
 
+  // Quality indicator based on total error (sum of squared residuals)
+  function getQualityInfo(totalError: number | undefined): { label: string; color: string; bgColor: string; icon: string } {
+    if (totalError === undefined) {
+      return { label: 'Unknown', color: '#666', bgColor: '#f0f0f0', icon: '?' };
+    }
+    if (totalError < 1) {
+      return { label: 'Excellent', color: '#155724', bgColor: '#d4edda', icon: '★★★' };
+    }
+    if (totalError < 5) {
+      return { label: 'Good', color: '#856404', bgColor: '#fff3cd', icon: '★★' };
+    }
+    return { label: 'Poor', color: '#721c24', bgColor: '#f8d7da', icon: '★' };
+  }
+
   const headerButtons: HeaderButton[] = useMemo(() => [
     {
       icon: <FontAwesomeIcon icon={faBullseye} />,
@@ -382,7 +447,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
       icon: <FontAwesomeIcon icon={faStop} />,
       onClick: handleStop,
       disabled: !isOptimizing,
-      title: 'Stop optimization'
+      title: 'Stop optimization (may take a moment to respond)'
     },
     {
       icon: <FontAwesomeIcon icon={faGear} />,
@@ -437,6 +502,42 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
           <span className="stat-value">{stats.netDOF} (vars: {stats.totalDOF}, constraints: {stats.constraintDOF})</span>
         </div>
       </div>
+
+      {/* Progress Status Display */}
+      {isOptimizing && statusMessage && (
+        <div style={{
+          padding: '12px 16px',
+          margin: '8px 0',
+          backgroundColor: '#e3f2fd',
+          border: '1px solid #2196f3',
+          borderRadius: '6px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+        }}>
+          <div style={{
+            width: '20px',
+            height: '20px',
+            border: '3px solid #2196f3',
+            borderTopColor: 'transparent',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+          }} />
+          <div>
+            <div style={{ fontWeight: 'bold', color: '#1565c0', fontSize: '14px' }}>
+              Optimizing...
+            </div>
+            <div style={{ color: '#1976d2', fontSize: '12px' }}>
+              {statusMessage}
+            </div>
+          </div>
+          <style>{`
+            @keyframes spin {
+              to { transform: rotate(360deg); }
+            }
+          `}</style>
+        </div>
+      )}
 
       {!canOptimize() && !isOptimizing && (
         <div className="optimization-requirements">
@@ -537,31 +638,70 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
         <div className={`optimization-results ${results.converged ? 'success' : 'error'}`}>
           <div className="results-header">
             <span className="results-status">
-              {results.converged ? '✅ Optimization converged' : `❌ ${results.error || 'Optimization failed'}`}
+              {results.converged ? '✅ Optimization converged' : `⚠️ ${results.error || 'Did not converge'}`}
             </span>
           </div>
-          {results.converged && (
-            <div className="results-details">
-              <div className="result-item">
-                <span>Total Error:</span>
-                <span>{formatNumber(results.totalError)}</span>
-              </div>
-              <div className="result-item">
-                <span>Point Accuracy:</span>
-                <span>{formatNumber(results.pointAccuracy)}</span>
-              </div>
-              <div className="result-item">
-                <span>Iterations:</span>
-                <span>{results.iterations}</span>
-              </div>
-              {results.medianReprojectionError !== undefined && (
-                <div className="result-item">
-                  <span>Median Reprojection Error:</span>
-                  <span>{formatNumber(results.medianReprojectionError)} px</span>
+          {/* Quality Indicator Badge - show even if not converged so user can assess quality */}
+          {results.totalError !== undefined && (() => {
+            const quality = getQualityInfo(results.totalError);
+            return (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '10px 14px',
+                margin: '8px 0',
+                backgroundColor: quality.bgColor,
+                border: `2px solid ${quality.color}`,
+                borderRadius: '6px',
+              }}>
+                <span style={{
+                  fontSize: '20px',
+                  lineHeight: 1,
+                }}>{quality.icon}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{
+                    fontWeight: 'bold',
+                    color: quality.color,
+                    fontSize: '14px',
+                  }}>
+                    {quality.label} Quality
+                    {!results.converged && <span style={{ fontWeight: 'normal', opacity: 0.8 }}> (not converged)</span>}
+                  </div>
+                  <div style={{
+                    fontSize: '12px',
+                    color: quality.color,
+                    opacity: 0.8,
+                  }}>
+                    Total error: {formatNumber(results.totalError)}
+                  </div>
                 </div>
-              )}
+                <div style={{
+                  fontSize: '11px',
+                  color: '#666',
+                  textAlign: 'right',
+                }}>
+                  {results.totalError < 1 && '<1'}
+                  {results.totalError >= 1 && results.totalError < 5 && '1-5'}
+                  {results.totalError >= 5 && '>5'}
+                </div>
+              </div>
+            );
+          })()}
+          <div className="results-details">
+            <div className="result-item">
+              <span>Total Error:</span>
+              <span>{formatNumber(results.totalError)}</span>
             </div>
-          )}
+            <div className="result-item">
+              <span>Point Accuracy:</span>
+              <span>{formatNumber(results.pointAccuracy)}</span>
+            </div>
+            <div className="result-item">
+              <span>Iterations:</span>
+              <span>{results.iterations}</span>
+            </div>
+          </div>
 
           {/* Outlier Detection */}
           {results && results.outliers && results.outliers.length > 0 && (() => {
@@ -631,8 +771,8 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
             );
           })()}
 
-          {/* Entity-level optimization information */}
-          {results.converged && (
+          {/* Entity-level optimization information - show even if not converged */}
+          {(results.converged || results.medianReprojectionError !== undefined) && (
             <div className="entity-optimization-info">
               <h4>Entity Optimization Results</h4>
 
@@ -738,8 +878,20 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                       <tbody>
                         {coplanarConstraints.map(constraint => {
                           const info = constraint.getOptimizationInfo()
+                          const isSelected = isCoplanarConstraintSelected?.(constraint) ?? false
+                          const isHovered = hoveredCoplanarConstraint === constraint
                           return (
-                            <tr key={constraint.getName()}>
+                            <tr
+                              key={constraint.getName()}
+                              onClick={() => onSelectCoplanarConstraint?.(constraint)}
+                              onMouseEnter={() => onHoverCoplanarConstraint?.(constraint)}
+                              onMouseLeave={() => onHoverCoplanarConstraint?.(null)}
+                              style={{
+                                cursor: 'pointer',
+                                backgroundColor: isSelected ? '#0696d7' : isHovered ? '#3a3a3a' : undefined,
+                                color: isSelected ? '#fff' : undefined
+                              }}
+                            >
                               <td>{constraint.getName()}</td>
                               <td>{constraint.points.length}</td>
                               <td>{formatNumber(info.rmsResidual)}</td>

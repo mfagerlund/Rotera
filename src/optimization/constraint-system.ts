@@ -416,8 +416,12 @@ export class ConstraintSystem {
 
     try {
       // Solve using Levenberg-Marquardt
+      // Use gradientTolerance for early stopping when progress stalls.
+      // This helps with weakly-constrained points (e.g., single-view coplanar)
+      // where the cost decreases very slowly but the solution is already good.
       const result = nonlinearLeastSquares(variables, residualFn, {
         costTolerance: this.tolerance,
+        gradientTolerance: this.tolerance * 10, // Stop when gradient is small
         maxIterations: this.maxIterations,
         initialDamping: this.damping,
         adaptiveDamping: true,

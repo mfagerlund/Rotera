@@ -3,7 +3,7 @@
  * Connects ConstraintSystem to the UI layer
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { ConstraintSystem, SolverResult } from '../optimization/constraint-system';
 import { WorldPoint } from '../entities/world-point/WorldPoint';
 import { Line } from '../entities/line/Line';
@@ -43,6 +43,9 @@ export const useOptimization = () => {
     result: null,
     constraintResiduals: [],
   });
+
+  // Ref to track cancellation requests
+  const cancelRequestedRef = useRef(false);
 
   /**
    * Compute residuals for all constraints without optimizing
@@ -111,6 +114,8 @@ export const useOptimization = () => {
       project: Project,
       options: OptimizationOptions = {}
     ): Promise<OptimizeProjectResult> => {
+      cancelRequestedRef.current = false;
+
       setState((prev) => ({
         ...prev,
         isRunning: true,
@@ -119,8 +124,30 @@ export const useOptimization = () => {
       }));
 
       try {
+        // Yield to event loop before starting heavy computation
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+        // Check for cancellation before starting
+        if (cancelRequestedRef.current) {
+          const cancelledResult: OptimizeProjectResult = {
+            converged: false,
+            iterations: 0,
+            residual: Infinity,
+            error: 'Cancelled by user',
+          };
+          setState({
+            isRunning: false,
+            currentIteration: 0,
+            currentResidual: Infinity,
+            result: cancelledResult,
+            constraintResiduals: [],
+          });
+          return cancelledResult;
+        }
+
         const result = await new Promise<OptimizeProjectResult>((resolve, reject) => {
-          setTimeout(() => {
+          // Use requestAnimationFrame to ensure UI updates before blocking
+          requestAnimationFrame(() => {
             try {
               const solverResult = optimizeProject(project, {
                 tolerance: options.tolerance ?? 1e-6,
@@ -134,8 +161,26 @@ export const useOptimization = () => {
             } catch (error) {
               reject(error);
             }
-          }, 0);
+          });
         });
+
+        // Check for cancellation after optimization completes
+        if (cancelRequestedRef.current) {
+          const cancelledResult: OptimizeProjectResult = {
+            converged: false,
+            iterations: result.iterations,
+            residual: result.residual,
+            error: 'Cancelled by user',
+          };
+          setState({
+            isRunning: false,
+            currentIteration: result.iterations,
+            currentResidual: result.residual,
+            result: cancelledResult,
+            constraintResiduals: [],
+          });
+          return cancelledResult;
+        }
 
         const points = Array.from(project.worldPoints);
         const lines = Array.from(project.lines);
@@ -174,9 +219,19 @@ export const useOptimization = () => {
     [computeResiduals]
   );
 
+  /**
+   * Request cancellation of the running optimization.
+   * Note: The optimization runs synchronously in the main thread,
+   * so cancellation will only take effect after the current solve completes.
+   */
+  const cancel = useCallback(() => {
+    cancelRequestedRef.current = true;
+  }, []);
+
   return {
     ...state,
     optimize,
+    cancel,
     computeResiduals,
   };
 };

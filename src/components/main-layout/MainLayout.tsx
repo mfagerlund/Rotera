@@ -162,6 +162,8 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
     cancelPlacementMode,
     hoveredWorldPoint,
     setHoveredWorldPoint,
+    hoveredCoplanarConstraint,
+    setHoveredCoplanarConstraint,
     leftSidebarWidth,
     setLeftSidebarWidth,
     imageHeights,
@@ -903,7 +905,9 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
         onSelectCoplanarConstraint={(constraint) => {
           handleEntityClick(constraint, false, false)
         }}
+        onHoverCoplanarConstraint={setHoveredCoplanarConstraint}
         selectedCoplanarConstraints={selectedCoplanarConstraints}
+        hoveredCoplanarConstraint={hoveredCoplanarConstraint}
         project={project}
         onOptimizationComplete={(success, message) => {
           saveProject()

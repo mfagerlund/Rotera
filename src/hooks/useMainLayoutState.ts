@@ -20,6 +20,8 @@ export interface MainLayoutState {
   // Hover state
   hoveredWorldPoint: WorldPoint | null
   setHoveredWorldPoint: (worldPoint: WorldPoint | null) => void
+  hoveredCoplanarConstraint: CoplanarPointsConstraint | null
+  setHoveredCoplanarConstraint: (constraint: CoplanarPointsConstraint | null) => void
 
   // Sidebar width
   leftSidebarWidth: number
@@ -90,6 +92,7 @@ export function useMainLayoutState(options: UseMainLayoutStateOptions = {}): Mai
 
   // Hover state
   const [hoveredWorldPoint, setHoveredWorldPoint] = useState<WorldPoint | null>(null)
+  const [hoveredCoplanarConstraint, setHoveredCoplanarConstraint] = useState<CoplanarPointsConstraint | null>(null)
 
   // Sidebar width with persistence
   const [leftSidebarWidth, setLeftSidebarWidth] = useState(() => {
@@ -176,6 +179,8 @@ export function useMainLayoutState(options: UseMainLayoutStateOptions = {}): Mai
     cancelPlacementMode,
     hoveredWorldPoint,
     setHoveredWorldPoint,
+    hoveredCoplanarConstraint,
+    setHoveredCoplanarConstraint,
     leftSidebarWidth,
     setLeftSidebarWidth,
     imageHeights,
