@@ -12,7 +12,7 @@ export type MeasurementUnits = 'meters' | 'feet' | 'inches'
 export type Theme = 'dark' | 'light'
 export type WorkspaceType = 'image' | 'world'
 export type VisualFeedbackLevel = 'minimal' | 'standard' | 'detailed'
-export type ImageSortOrder = 'name' | 'date'
+export type ImageSortOrder = string[]
 
 export type ProjectSettings = Pick<Project,
     'showPointNames' |

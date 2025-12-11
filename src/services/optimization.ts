@@ -445,7 +445,7 @@ export class OptimizationService {
 
 // Default optimization settings
 export const defaultOptimizationSettings = {
-  maxIterations: 10000,  // Essential Matrix + constraints may need many iterations
+  maxIterations: 500,
   tolerance: 1e-6,
   damping: 0.1,  // Higher damping for faster convergence
   verbose: false

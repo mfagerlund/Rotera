@@ -529,7 +529,26 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
         const cameraValues = valueMap.cameras.get(this as any)
         if (!cameraValues) return []
 
-        return [quaternionNormalizationResidual(cameraValues.rotation)]
+        const residuals: Value[] = [quaternionNormalizationResidual(cameraValues.rotation)]
+
+        // Focal length regularization: penalize deviation from reasonable range
+        // For most cameras, f is roughly 0.8x to 2.5x the max image dimension
+        // This prevents focal length from exploding during under-constrained solves
+        const maxDim = Math.max(this.imageWidth, this.imageHeight)
+        const minF = maxDim * 0.5   // Very wide angle
+        const maxF = maxDim * 4.0   // Very telephoto
+        const f = cameraValues.focalLength
+
+        // Soft bounds: penalize when f goes outside reasonable range
+        // The residual should be strong enough to prevent runaway focal length
+        // Weight needs to be high enough to overcome ill-conditioned Jacobians
+        const weight = V.C(50.0)
+        const belowMin = V.max(V.sub(V.C(minF), f), V.C(0))
+        const aboveMax = V.max(V.sub(f, V.C(maxF)), V.C(0))
+        residuals.push(V.mul(V.div(belowMin, V.C(maxDim)), weight))
+        residuals.push(V.mul(V.div(aboveMax, V.C(maxDim)), weight))
+
+        return residuals
     }
 
     applyOptimizationResultFromValueMap(valueMap: ValueMap): void {

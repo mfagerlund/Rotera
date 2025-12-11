@@ -306,7 +306,7 @@ export const ProjectDB = {
     return project
   },
 
-  async saveProject(project: Project, folderId: string | null = null): Promise<string> {
+  async saveProject(project: Project, folderId?: string | null): Promise<string> {
     const db = await openDatabase()
     console.log('[ProjectDB.saveProject] Saving project:', project.name, 'to folder:', folderId)
 
@@ -314,6 +314,16 @@ export const ProjectDB = {
     console.log('[ProjectDB.saveProject] Existing _dbId:', existingId)
     const id = existingId || generateId()
     console.log('[ProjectDB.saveProject] Using id:', id)
+
+    // If folderId is not explicitly provided and project already exists, preserve the existing folderId
+    let effectiveFolderId: string | null = folderId ?? null
+    if (folderId === undefined && existingId) {
+      const existingProject = await this.getStoredProject(id)
+      if (existingProject) {
+        effectiveFolderId = existingProject.folderId
+        console.log('[ProjectDB.saveProject] Preserving existing folderId:', effectiveFolderId)
+      }
+    }
     const now = new Date()
 
     const viewpointsArray = Array.from(project.viewpoints)
@@ -407,7 +417,7 @@ export const ProjectDB = {
     const storedProject: StoredProject = {
       id,
       name: project.name,
-      folderId,
+      folderId: effectiveFolderId,
       createdAt: existingId ? (await this.getProjectCreatedAt(id)) : now,
       updatedAt: now,
       data: projectData,
@@ -454,7 +464,7 @@ export const ProjectDB = {
     return id
   },
 
-  async getProjectCreatedAt(id: string): Promise<Date> {
+  async getStoredProject(id: string): Promise<StoredProject | null> {
     try {
       const db = await openDatabase()
       return new Promise((resolve, reject) => {
@@ -462,18 +472,19 @@ export const ProjectDB = {
         const store = tx.objectStore(PROJECTS_STORE)
         const request = store.get(id)
 
-        request.onerror = () => resolve(new Date())
+        request.onerror = () => resolve(null)
         request.onsuccess = () => {
-          if (request.result) {
-            resolve(new Date(request.result.createdAt))
-          } else {
-            resolve(new Date())
-          }
+          resolve(request.result || null)
         }
       })
     } catch {
-      return new Date()
+      return null
     }
+  },
+
+  async getProjectCreatedAt(id: string): Promise<Date> {
+    const stored = await this.getStoredProject(id)
+    return stored ? new Date(stored.createdAt) : new Date()
   },
 
   async deleteProject(id: string): Promise<void> {

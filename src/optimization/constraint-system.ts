@@ -75,6 +75,12 @@ export interface SolverOptions {
    * If false, intrinsics stay fixed.
    */
   optimizeCameraIntrinsics?: boolean | ((camera: Viewpoint) => boolean);
+  /**
+   * If > 0, adds soft regularization to prevent unconstrained points from diverging.
+   * The weight is multiplied by distance from initial position.
+   * Typical values: 0.01-0.1. Default: 0 (no regularization).
+   */
+  regularizationWeight?: number;
 }
 
 export class ConstraintSystem {
@@ -83,6 +89,7 @@ export class ConstraintSystem {
   private damping: number;
   private verbose: boolean;
   private optimizeCameraIntrinsics: boolean | ((camera: Viewpoint) => boolean);
+  private regularizationWeight: number;
 
   // Entities in the system
   private points: Set<WorldPoint> = new Set();
@@ -91,12 +98,16 @@ export class ConstraintSystem {
   private imagePoints: Set<ImagePoint> = new Set();
   private constraints: Set<Constraint> = new Set();
 
+  // Initial positions for regularization (captured at solve time)
+  private initialPositions: Map<WorldPoint, [number, number, number]> = new Map();
+
   constructor(options: SolverOptions = {}) {
     this.tolerance = options.tolerance ?? 1e-6;
-    this.maxIterations = options.maxIterations ?? 10000;
+    this.maxIterations = options.maxIterations ?? 500;
     this.damping = options.damping ?? 0.1;
     this.verbose = options.verbose ?? false;
     this.optimizeCameraIntrinsics = options.optimizeCameraIntrinsics ?? false;
+    this.regularizationWeight = options.regularizationWeight ?? 0;
   }
 
   /**
@@ -155,6 +166,17 @@ export class ConstraintSystem {
       points: new Map(),
       cameras: new Map(),
     };
+
+    // Capture initial positions for regularization BEFORE adding to ValueMap
+    // (since addToValueMap may create new Value objects)
+    this.initialPositions.clear();
+    if (this.regularizationWeight > 0) {
+      for (const point of this.points) {
+        if (point.optimizedXyz && !point.isFullyConstrained()) {
+          this.initialPositions.set(point, [...point.optimizedXyz] as [number, number, number]);
+        }
+      }
+    }
 
     // Add points
     let pointVarCount = 0;
@@ -280,6 +302,21 @@ export class ConstraintSystem {
             console.error(`[ConstraintSystem] Error computing residuals for constraint ${constraint.getName()}:`, error);
           }
           throw error;
+        }
+      }
+
+      // REGULARIZATION - penalize points moving far from their initial positions
+      // This prevents unconstrained points from diverging to infinity
+      if (this.regularizationWeight > 0 && this.initialPositions.size > 0) {
+        const regWeight = V.C(this.regularizationWeight);
+        for (const [point, initPos] of this.initialPositions) {
+          const pointVec = valueMap.points.get(point);
+          if (pointVec) {
+            // Penalize displacement from initial position (3 residuals per point)
+            residuals.push(V.mul(V.sub(pointVec.x, V.C(initPos[0])), regWeight));
+            residuals.push(V.mul(V.sub(pointVec.y, V.C(initPos[1])), regWeight));
+            residuals.push(V.mul(V.sub(pointVec.z, V.C(initPos[2])), regWeight));
+          }
         }
       }
 

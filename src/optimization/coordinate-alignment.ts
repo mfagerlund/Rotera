@@ -343,6 +343,109 @@ export function alignSceneToLineDirections(
     }
   }
 
+  // After aligning the line to the axis, there's still one DoF: rotation around that axis.
+  // Try to resolve this by examining the camera baseline.
+  // For a typical two-camera setup, we want the cameras to have reasonable positions
+  // (e.g., for Y-axis line, cameras should be mostly in the XZ plane)
+  if (cameras.length >= 2) {
+    const cam0Pos = cameras[0].position;
+    const cam1Pos = cameras[1].position;
+    const baseline = [cam1Pos[0] - cam0Pos[0], cam1Pos[1] - cam0Pos[1], cam1Pos[2] - cam0Pos[2]];
+    const baselineLen = Math.sqrt(baseline[0] ** 2 + baseline[1] ** 2 + baseline[2] ** 2);
+
+    if (baselineLen > 1e-6) {
+      // Compute the component of baseline along the target axis
+      const targetAxis = firstLine.targetAxis;
+      const axialComponent = baseline[0] * targetAxis[0] + baseline[1] * targetAxis[1] + baseline[2] * targetAxis[2];
+
+      // Compute the perpendicular component (in the plane perpendicular to the axis)
+      const perpendicular = [
+        baseline[0] - axialComponent * targetAxis[0],
+        baseline[1] - axialComponent * targetAxis[1],
+        baseline[2] - axialComponent * targetAxis[2]
+      ];
+      const perpLen = Math.sqrt(perpendicular[0] ** 2 + perpendicular[1] ** 2 + perpendicular[2] ** 2);
+
+      // If there's significant perpendicular component, rotate around the axis to align it
+      // with a "canonical" direction in that plane
+      if (perpLen > baselineLen * 0.1) {
+        // Choose canonical direction based on axis:
+        // Y-axis: align perpendicular to X direction
+        // Z-axis: align perpendicular to X direction
+        // X-axis: align perpendicular to Y direction
+        let canonicalDir: [number, number, number];
+        if (targetAxis[1] > 0.9) {
+          // Y-axis: canonical perpendicular is X
+          canonicalDir = [1, 0, 0];
+        } else if (targetAxis[2] > 0.9) {
+          // Z-axis: canonical perpendicular is X
+          canonicalDir = [1, 0, 0];
+        } else {
+          // X-axis: canonical perpendicular is Y
+          canonicalDir = [0, 1, 0];
+        }
+
+        // Compute rotation around the target axis to align perpendicular with canonical
+        const perpNorm = [perpendicular[0] / perpLen, perpendicular[1] / perpLen, perpendicular[2] / perpLen];
+
+        // Project canonical onto the plane perpendicular to target axis
+        const canonicalAxial = canonicalDir[0] * targetAxis[0] + canonicalDir[1] * targetAxis[1] + canonicalDir[2] * targetAxis[2];
+        const canonicalPerp = [
+          canonicalDir[0] - canonicalAxial * targetAxis[0],
+          canonicalDir[1] - canonicalAxial * targetAxis[1],
+          canonicalDir[2] - canonicalAxial * targetAxis[2]
+        ];
+        const canonicalPerpLen = Math.sqrt(canonicalPerp[0] ** 2 + canonicalPerp[1] ** 2 + canonicalPerp[2] ** 2);
+
+        if (canonicalPerpLen > 0.1) {
+          const canonicalPerpNorm = [canonicalPerp[0] / canonicalPerpLen, canonicalPerp[1] / canonicalPerpLen, canonicalPerp[2] / canonicalPerpLen];
+
+          // Compute angle between perpNorm and canonicalPerpNorm
+          const dot = perpNorm[0] * canonicalPerpNorm[0] + perpNorm[1] * canonicalPerpNorm[1] + perpNorm[2] * canonicalPerpNorm[2];
+          const cross = [
+            perpNorm[1] * canonicalPerpNorm[2] - perpNorm[2] * canonicalPerpNorm[1],
+            perpNorm[2] * canonicalPerpNorm[0] - perpNorm[0] * canonicalPerpNorm[2],
+            perpNorm[0] * canonicalPerpNorm[1] - perpNorm[1] * canonicalPerpNorm[0]
+          ];
+
+          // Check if cross product is aligned with target axis (determines rotation direction)
+          const crossDotAxis = cross[0] * targetAxis[0] + cross[1] * targetAxis[1] + cross[2] * targetAxis[2];
+
+          // Compute rotation angle
+          let angle = Math.acos(Math.max(-1, Math.min(1, dot)));
+          if (crossDotAxis < 0) {
+            angle = -angle;
+          }
+
+          // Create rotation quaternion around target axis
+          const halfAngle = angle / 2;
+          const axisRotation: number[] = [
+            Math.cos(halfAngle),
+            Math.sin(halfAngle) * targetAxis[0],
+            Math.sin(halfAngle) * targetAxis[1],
+            Math.sin(halfAngle) * targetAxis[2]
+          ];
+
+          // Apply this additional rotation
+          for (const cam of cameras) {
+            const newPos = quaternionRotateVector(axisRotation, cam.position);
+            const rotInverse = quaternionInverse(axisRotation);
+            const newRot = quaternionMultiply(cam.rotation, rotInverse);
+            cam.position = [newPos[0], newPos[1], newPos[2]];
+            cam.rotation = [newRot[0], newRot[1], newRot[2], newRot[3]];
+          }
+
+          for (const wp of allPoints) {
+            if (wp.optimizedXyz) {
+              const newXyz = quaternionRotateVector(axisRotation, wp.optimizedXyz);
+              wp.optimizedXyz = [newXyz[0], newXyz[1], newXyz[2]];
+            }
+          }
+        }
+      }
+    }
+  }
+
   log(`[Align] ${axisLines.length} axis lines aligned to ${firstLine.line.direction}-axis`);
   return true;
 }

@@ -304,6 +304,9 @@ export function optimizeProject(
   const lockedPointsForCheck = wpArrayForCheck.filter(wp => wp.isFullyConstrained());
   const usedEssentialMatrix = autoInitializeCameras && lockedPointsForCheck.length < 3;
 
+  // Track if we have under-constrained axis configuration (single axis = 1 unresolved DoF)
+  let hasSingleAxisConstraint = false;
+
   if (autoInitializeWorldPoints) {
     const pointArray = Array.from(project.worldPoints);
     const lineArray = Array.from(project.lines);
@@ -341,9 +344,119 @@ export function optimizeProject(
 
     if (axisConstrainedLines.length > 0) {
       alignSceneToLineDirections(viewpointArray, pointArray, lineArray);
+
+      // Apply scale from line target lengths
+      const linesWithTargetLength = axisConstrainedLines.filter(l => l.targetLength !== undefined);
+      if (linesWithTargetLength.length > 0 && usedEssentialMatrix) {
+        let sumScale = 0;
+        let count = 0;
+        for (const line of linesWithTargetLength) {
+          const posA = line.pointA.optimizedXyz;
+          const posB = line.pointB.optimizedXyz;
+          if (posA && posB && line.targetLength) {
+            const currentLength = Math.sqrt(
+              (posB[0] - posA[0]) ** 2 + (posB[1] - posA[1]) ** 2 + (posB[2] - posA[2]) ** 2
+            );
+            if (currentLength > 0.01) {
+              sumScale += line.targetLength / currentLength;
+              count++;
+            }
+          }
+        }
+        if (count > 0) {
+          const scale = sumScale / count;
+          log(`[Scale] Axis lines: scale=${scale.toFixed(3)} from ${count} lines`);
+          for (const wp of pointArray) {
+            if (wp.optimizedXyz) {
+              wp.optimizedXyz = [wp.optimizedXyz[0] * scale, wp.optimizedXyz[1] * scale, wp.optimizedXyz[2] * scale];
+            }
+          }
+          for (const vp of viewpointArray) {
+            vp.position = [vp.position[0] * scale, vp.position[1] * scale, vp.position[2] * scale];
+          }
+        }
+      }
+
+      // After axis alignment and scaling, translate scene to align with locked points
+      // This ensures locked points (especially origin) are at their correct positions
+      if (usedEssentialMatrix && lockedPointsForCheck.length >= 1) {
+        // Find the first fully-locked point with an optimized position
+        const anchorPoint = lockedPointsForCheck.find(wp => wp.optimizedXyz !== undefined);
+        if (anchorPoint && anchorPoint.optimizedXyz) {
+          const target = anchorPoint.getEffectiveXyz();
+          const current = anchorPoint.optimizedXyz;
+          const translation = [
+            target[0]! - current[0],
+            target[1]! - current[1],
+            target[2]! - current[2],
+          ];
+
+          // Only apply if translation is significant
+          const translationMag = Math.sqrt(translation[0]**2 + translation[1]**2 + translation[2]**2);
+          if (translationMag > 0.001) {
+            log(`[Translate] Aligning ${anchorPoint.name} by [${translation.map(t => t.toFixed(2)).join(', ')}]`);
+
+            // Translate all world points
+            for (const wp of pointArray) {
+              if (wp.optimizedXyz) {
+                wp.optimizedXyz = [
+                  wp.optimizedXyz[0] + translation[0],
+                  wp.optimizedXyz[1] + translation[1],
+                  wp.optimizedXyz[2] + translation[2],
+                ];
+              }
+            }
+
+            // Translate all cameras
+            for (const vp of viewpointArray) {
+              vp.position = [
+                vp.position[0] + translation[0],
+                vp.position[1] + translation[1],
+                vp.position[2] + translation[2],
+              ];
+            }
+          }
+        }
+      }
+
       const uniqueAxes = new Set(axisConstrainedLines.map(l => l.direction));
       if (usedEssentialMatrix && uniqueAxes.size < 2) {
         log('[WARN] Single axis constraint - one rotational DoF unresolved');
+        hasSingleAxisConstraint = true;
+      }
+
+      // Check for degenerate case: camera at same position as a LOCKED point it observes
+      // This causes numerical singularity (can't project a point at camera center)
+      for (const vp of viewpointArray) {
+        for (const wp of lockedPointsForCheck) {
+          // Check if this camera observes this world point
+          const observes = Array.from(vp.imagePoints).some(ip => (ip as ImagePoint).worldPoint === wp);
+          if (!observes) continue;
+
+          const target = wp.getEffectiveXyz();
+          const dx = vp.position[0] - target[0]!;
+          const dy = vp.position[1] - target[1]!;
+          const dz = vp.position[2] - target[2]!;
+          const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+
+          if (dist < 0.5) {
+            // Camera is AT the locked world point - move it back
+            // Camera viewing direction in world space (rotate [0,0,1] by camera rotation)
+            const q = vp.rotation;
+            const viewDir = [
+              2 * (q[1] * q[3] + q[0] * q[2]),
+              2 * (q[2] * q[3] - q[0] * q[1]),
+              q[0]*q[0] - q[1]*q[1] - q[2]*q[2] + q[3]*q[3],
+            ];
+            // Move camera backward (opposite view direction) by 10 units
+            vp.position = [
+              vp.position[0] - viewDir[0] * 10,
+              vp.position[1] - viewDir[1] * 10,
+              vp.position[2] - viewDir[2] * 10,
+            ];
+            log(`[Fix] Camera ${vp.name} at locked point ${wp.name} - moved back`);
+          }
+        }
       }
     } else if (usedEssentialMatrix && lockedPointsForCheck.length < 2) {
       log('[WARN] No axis constraints + <2 locked points - orientation arbitrary');
@@ -506,9 +619,17 @@ export function optimizeProject(
   }
 
   // TWO-STAGE OPTIMIZATION: First multi-camera points, then single-camera
-  if (singleCameraPoints.size > 0 && multiCameraPoints.size >= 4) {
+  // Run Stage1 when:
+  // 1. We have single-camera points that need stable cameras for initialization, OR
+  // 2. We used Essential Matrix (which needs refinement before adding constraints)
+  const needsStage1 = (singleCameraPoints.size > 0 || usedEssentialMatrix) && multiCameraPoints.size >= 4;
+  if (needsStage1) {
+    // Stage1 refines the Essential Matrix solution by optimizing multi-camera points
+    // Use moderate regularization (0.5) to prevent unconstrained points from diverging
+    // while allowing sufficient movement to find good solutions.
     const stage1System = new ConstraintSystem({
       tolerance, maxIterations, damping, verbose, optimizeCameraIntrinsics: false,
+      regularizationWeight: 0.5,
     });
 
     multiCameraPoints.forEach(p => stage1System.addPoint(p));
@@ -534,22 +655,55 @@ export function optimizeProject(
       }
     });
 
+    // Log world point positions BEFORE Stage1 for debugging
+    if (verbose) {
+      log(`[Stage1] WP positions BEFORE:`);
+      for (const wp of multiCameraPoints) {
+        const pos = wp.optimizedXyz;
+        if (pos) {
+          const dist = Math.sqrt(pos[0]**2 + pos[1]**2 + pos[2]**2);
+          log(`  ${wp.name}: dist=${dist.toFixed(1)}, pos=[${pos.map(x => x.toFixed(1)).join(', ')}]`);
+        }
+      }
+    }
+
     const stage1Result = stage1System.solve();
     log(`[Stage1] Multi-cam only: WP:${multiCameraPoints.size} L:${stage1Lines} IP:${stage1ImagePoints} -> conv=${stage1Result.converged}, iter=${stage1Result.iterations}, res=${stage1Result.residual.toFixed(3)}`);
 
-    // Clear stale single-camera points and re-initialize
-    for (const wp of singleCameraPoints) { wp.optimizedXyz = undefined; }
 
-    const initResult = initializeSingleCameraPoints(
-      worldPointArray, Array.from(project.lines), Array.from(project.constraints),
-      initializedViewpointSet, { verbose: false }
-    );
-    log(`[Stage2] Single-cam init: ${initResult.initialized} ok, ${initResult.failed} failed`);
+    // Log world point positions AFTER Stage1 for debugging
+    if (verbose) {
+      log(`[Stage1] WP positions AFTER:`);
+      for (const wp of multiCameraPoints) {
+        const pos = wp.optimizedXyz;
+        if (pos) {
+          const dist = Math.sqrt(pos[0]**2 + pos[1]**2 + pos[2]**2);
+          if (dist > 100) {
+            log(`  ${wp.name}: dist=${dist.toFixed(1)} [DIVERGED!]`);
+          }
+        }
+      }
+    }
+
+    // Clear stale single-camera points and re-initialize (if any)
+    if (singleCameraPoints.size > 0) {
+      for (const wp of singleCameraPoints) { wp.optimizedXyz = undefined; }
+
+      const initResult = initializeSingleCameraPoints(
+        worldPointArray, Array.from(project.lines), Array.from(project.constraints),
+        initializedViewpointSet, { verbose: false }
+      );
+      log(`[Stage2] Single-cam init: ${initResult.initialized} ok, ${initResult.failed} failed`);
+    }
   }
 
   // Full optimization with all points
+  // Use light regularization ONLY for single-axis constraint cases (under-constrained).
+  // Single-axis = 1 rotational DoF unresolved, causing unconstrained points to diverge.
+  // Other Essential Matrix cases (e.g., coplanar constraints) don't need this.
   const system = new ConstraintSystem({
     tolerance, maxIterations, damping, verbose, optimizeCameraIntrinsics: shouldOptimizeIntrinsics,
+    regularizationWeight: hasSingleAxisConstraint ? 0.1 : 0,
   });
 
   project.worldPoints.forEach(p => system.addPoint(p as WorldPoint));

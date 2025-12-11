@@ -1,0 +1,87 @@
+
+=== Y-AXIS BASELINE ===
+Result: converged=true, iter=18, median=0.07px
+[Optimize] WP:9 L:1 VP:2 IP:17 C:2
+[EssentialMatrix] 8 pts, t=[5.51,-4.42,7.08]
+[Init] EssentialMatrix: 1=[0.0,0.0,0.0], 2=[-7.3,-3.0,6.1]
+[Tri] baseline=10.00, maxDepth=1000
+[Step3] WP1: dist=7.4, pos=[0.8, -1.2, 7.2]
+[Tri] baseline=10.00, maxDepth=1000
+[Step3] WP2: dist=9.2, pos=[1.3, 1.0, 9.0]
+[Tri] baseline=10.00, maxDepth=1000
+[Step3] WP5: dist=7.0, pos=[-0.6, 0.5, 6.9]
+[Tri] baseline=10.00, maxDepth=1000
+[Step3] WP6: dist=5.6, pos=[-0.4, -1.1, 5.5]
+[Tri] baseline=10.00, maxDepth=1000
+[Step3] WP7: dist=8.6, pos=[1.8, 0.9, 8.4]
+[Tri] baseline=10.00, maxDepth=1000
+[Step3] WP8: dist=6.8, pos=[1.3, -1.2, 6.6]
+[Align] 1 axis lines aligned to y-axis
+[Scale] Axis lines: scale=1.000 from 1 lines
+[WARN] Single axis constraint - one rotational DoF unresolved
+[Fix] Camera 1 at locked point O - moved back
+[Stage1] Multi-cam only: WP:8 L:1 IP:16 -> conv=true, iter=94, res=27.123
+[Stage2] Single-cam init: 1 ok, 0 failed
+[Solve] conv=true, iter=18, median=0.07px | 1:f=1601 2:f=1431
+
+Camera positions:
+  1: pos=[-49.92, 63.95, -33.44] f=1601
+  2: pos=[-14.35, 28.43, 70.56] f=1431
+
+=== Z-AXIS TEST ===
+
+World point positions BEFORE optimization:
+  WP1: [-20.71, 35.27, -11.07]
+  WP2: [-35.71, -2.66, -17.50]
+  WP3: [-2.57, -158.96, -5.42]
+  O: [0.00, 0.00, 0.00]
+  WP5: [-6.00, -124.71, 22.60]
+  WP6: [0.00, 0.00, 15.00]
+  WP7: [-37.36, 5.53, -4.91]
+  WP8: [-22.11, 35.82, -1.49]
+
+Camera positions BEFORE optimization:
+  1: pos=[-16.53, 89.77, -34.42] f=1474
+  2: pos=[-61.36, 105.83, 7.55] f=1472
+
+Result: converged=true, iter=65, median=6.62px
+
+Optimization logs:
+[Optimize] WP:8 L:1 VP:2 IP:16 C:2
+[EssentialMatrix] 8 pts, t=[5.51,-4.42,7.08]
+[Init] EssentialMatrix: 1=[0.0,0.0,0.0], 2=[-7.3,-3.0,6.1]
+[Tri] baseline=10.00, maxDepth=1000
+[Step3] WP1: dist=7.4, pos=[0.8, -1.2, 7.2]
+[Tri] baseline=10.00, maxDepth=1000
+[Step3] WP2: dist=9.2, pos=[1.3, 1.0, 9.0]
+[Tri] baseline=10.00, maxDepth=1000
+[Step3] WP3: dist=7.6, pos=[-0.9, 0.7, 7.5]
+[Tri] baseline=10.00, maxDepth=1000
+[Step3] WP5: dist=7.0, pos=[-0.6, 0.5, 6.9]
+[Tri] baseline=10.00, maxDepth=1000
+[Step3] WP7: dist=8.6, pos=[1.8, 0.9, 8.4]
+[Tri] baseline=10.00, maxDepth=1000
+[Step3] WP8: dist=6.8, pos=[1.3, -1.2, 6.6]
+[Align] 1 axis lines aligned to z-axis
+[Scale] Axis lines: scale=1.000 from 1 lines
+[WARN] Single axis constraint - one rotational DoF unresolved
+[Fix] Camera 1 at locked point O - moved back
+[Stage1] Multi-cam only: WP:8 L:1 IP:16 -> conv=true, iter=297, res=73.290
+[Solve] conv=true, iter=65, median=6.62px | 1:f=1474 2:f=1472
+
+World point positions after optimization:
+  WP1: opt=[-20.71, 35.27, -11.07] locked=[null,null,null] inferred=[null,null,null]
+  WP2: opt=[-35.71, -2.66, -17.50] locked=[null,null,null] inferred=[null,null,null]
+  WP3: opt=[-2.57, -158.96, -5.42] locked=[null,null,null] inferred=[null,null,null]
+  O: opt=[0.00, 0.00, 0.00] locked=[0,0,0] inferred=[0,0,0]
+  WP5: opt=[-6.00, -124.71, 22.60] locked=[null,null,null] inferred=[null,null,null]
+  WP6: opt=[0.00, 0.00, 15.00] locked=[null,null,null] inferred=[0,0,null]
+  WP7: opt=[-37.36, 5.53, -4.91] locked=[null,null,null] inferred=[null,null,null]
+  WP8: opt=[-22.11, 35.82, -1.49] locked=[null,null,null] inferred=[null,null,null]
+
+Camera positions:
+  1: pos=[-16.53, 89.77, -34.42] f=1474
+  2: pos=[-61.36, 105.83, 7.55] f=1472
+
+Line: direction=z, target=15, actual=14.998
+Line direction: dx=0.0000, dy=0.0000, dz=14.9980

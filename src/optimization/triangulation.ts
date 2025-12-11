@@ -1,6 +1,7 @@
 import type { IViewpoint, IImagePoint, IWorldPoint } from '../entities/interfaces';
 import type { Viewpoint } from '../entities/viewpoint';
 import type { WorldPoint } from '../entities/world-point';
+import { log } from './optimization-logger';
 
 export interface TriangulationResult {
   worldPoint: [number, number, number];
@@ -83,15 +84,42 @@ export function triangulateRayRay(
   const denom = a * c - b * b;
   let t1, t2;
 
+  // Compute baseline distance for depth sanity check
+  const baselineLength = Math.sqrt(w_x * w_x + w_y * w_y + w_z * w_z);
+  // Maximum reasonable depth is 100x baseline (arbitrary but prevents infinity)
+  const maxReasonableDepth = Math.max(baselineLength * 100, fallbackDepth * 10);
+
+  // Debug: Log all triangulations to see what's happening
+  log(`[Tri] baseline=${baselineLength.toFixed(2)}, maxDepth=${maxReasonableDepth.toFixed(0)}`)
+
   if (Math.abs(denom) < 1e-10) {
+    // Rays are nearly parallel - use fallback
     t1 = fallbackDepth;
     t2 = fallbackDepth;
   } else {
     t1 = (b * e - c * d) / denom;
     t2 = (a * e - b * d) / denom;
 
+    const originalT1 = t1;
+    const originalT2 = t2;
+
+    // Log if depths are large (potential issue)
+    if (Math.abs(t1) > 100 || Math.abs(t2) > 100) {
+      log(`[Tri] LARGE DEPTH: t1=${t1.toFixed(0)}, t2=${t2.toFixed(0)}, maxDepth=${maxReasonableDepth.toFixed(0)}`);
+    }
+
     if (t1 < 0) t1 = fallbackDepth;
     if (t2 < 0) t2 = fallbackDepth;
+
+    // Clamp depths to prevent near-parallel rays producing points at infinity
+    if (t1 > maxReasonableDepth) {
+      log(`[Triangulation] Clamping t1 from ${originalT1.toFixed(1)} to ${maxReasonableDepth.toFixed(1)} (baseline=${baselineLength.toFixed(1)})`);
+      t1 = maxReasonableDepth;
+    }
+    if (t2 > maxReasonableDepth) {
+      log(`[Triangulation] Clamping t2 from ${originalT2.toFixed(1)} to ${maxReasonableDepth.toFixed(1)} (baseline=${baselineLength.toFixed(1)})`);
+      t2 = maxReasonableDepth;
+    }
   }
 
   const p1_x = o1_x + d1_x * t1;

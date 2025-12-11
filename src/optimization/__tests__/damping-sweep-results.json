@@ -1,0 +1,2994 @@
+[
+  {
+    "fixture": "bad-horizon-corrected.json",
+    "damping": 0.1,
+    "iterations": 6,
+    "medianError": 4.175242290869742,
+    "converged": true,
+    "elapsedMs": 90
+  },
+  {
+    "fixture": "bad-horizon-corrected.json",
+    "damping": 0.11,
+    "iterations": 6,
+    "medianError": 4.175242290741373,
+    "converged": true,
+    "elapsedMs": 52
+  },
+  {
+    "fixture": "bad-horizon-corrected.json",
+    "damping": 0.12,
+    "iterations": 6,
+    "medianError": 4.175242290615127,
+    "converged": true,
+    "elapsedMs": 45
+  },
+  {
+    "fixture": "bad-horizon-corrected.json",
+    "damping": 0.13,
+    "iterations": 6,
+    "medianError": 4.1752422904913855,
+    "converged": true,
+    "elapsedMs": 43
+  },
+  {
+    "fixture": "bad-horizon-corrected.json",
+    "damping": 0.14,
+    "iterations": 6,
+    "medianError": 4.175242290369953,
+    "converged": true,
+    "elapsedMs": 49
+  },
+  {
+    "fixture": "bad-horizon-corrected.json",
+    "damping": 0.15,
+    "iterations": 6,
+    "medianError": 4.1752422902506705,
+    "converged": true,
+    "elapsedMs": 70
+  },
+  {
+    "fixture": "bad-horizon-corrected.json",
+    "damping": 0.16,
+    "iterations": 6,
+    "medianError": 4.175242290134156,
+    "converged": true,
+    "elapsedMs": 48
+  },
+  {
+    "fixture": "bad-horizon-corrected.json",
+    "damping": 0.17,
+    "iterations": 6,
+    "medianError": 4.1752422900196215,
+    "converged": true,
+    "elapsedMs": 54
+  },
+  {
+    "fixture": "bad-horizon-corrected.json",
+    "damping": 0.18,
+    "iterations": 6,
+    "medianError": 4.175242289907673,
+    "converged": true,
+    "elapsedMs": 57
+  },
+  {
+    "fixture": "bad-horizon-corrected.json",
+    "damping": 0.19,
+    "iterations": 6,
+    "medianError": 4.175242289798042,
+    "converged": true,
+    "elapsedMs": 62
+  },
+  {
+    "fixture": "bad-horizon-corrected.json",
+    "damping": 0.2,
+    "iterations": 6,
+    "medianError": 4.175242289691091,
+    "converged": true,
+    "elapsedMs": 53
+  },
+  {
+    "fixture": "bad-horizon.json",
+    "damping": 0.1,
+    "iterations": 15,
+    "medianError": 12.898848805377717,
+    "converged": true,
+    "elapsedMs": 145
+  },
+  {
+    "fixture": "bad-horizon.json",
+    "damping": 0.11,
+    "iterations": 14,
+    "medianError": 12.898850000613944,
+    "converged": true,
+    "elapsedMs": 117
+  },
+  {
+    "fixture": "bad-horizon.json",
+    "damping": 0.12,
+    "iterations": 15,
+    "medianError": 12.898850404201061,
+    "converged": true,
+    "elapsedMs": 137
+  },
+  {
+    "fixture": "bad-horizon.json",
+    "damping": 0.13,
+    "iterations": 15,
+    "medianError": 12.898849971607145,
+    "converged": true,
+    "elapsedMs": 156
+  },
+  {
+    "fixture": "bad-horizon.json",
+    "damping": 0.14,
+    "iterations": 15,
+    "medianError": 12.898849735616613,
+    "converged": true,
+    "elapsedMs": 138
+  },
+  {
+    "fixture": "bad-horizon.json",
+    "damping": 0.15,
+    "iterations": 15,
+    "medianError": 12.898849561881406,
+    "converged": true,
+    "elapsedMs": 141
+  },
+  {
+    "fixture": "bad-horizon.json",
+    "damping": 0.16,
+    "iterations": 16,
+    "medianError": 12.898849929169629,
+    "converged": true,
+    "elapsedMs": 107
+  },
+  {
+    "fixture": "bad-horizon.json",
+    "damping": 0.17,
+    "iterations": 16,
+    "medianError": 12.898850064608363,
+    "converged": true,
+    "elapsedMs": 105
+  },
+  {
+    "fixture": "bad-horizon.json",
+    "damping": 0.18,
+    "iterations": 16,
+    "medianError": 12.898850476136774,
+    "converged": true,
+    "elapsedMs": 107
+  },
+  {
+    "fixture": "bad-horizon.json",
+    "damping": 0.19,
+    "iterations": 16,
+    "medianError": 12.898851292325922,
+    "converged": true,
+    "elapsedMs": 101
+  },
+  {
+    "fixture": "bad-horizon.json",
+    "damping": 0.2,
+    "iterations": 18,
+    "medianError": 12.898850127533212,
+    "converged": true,
+    "elapsedMs": 112
+  },
+  {
+    "fixture": "balcony-house-y-line.json",
+    "damping": 0.1,
+    "iterations": 19,
+    "medianError": 0.07407536091883721,
+    "converged": true,
+    "elapsedMs": 1085
+  },
+  {
+    "fixture": "balcony-house-y-line.json",
+    "damping": 0.11,
+    "iterations": 19,
+    "medianError": 0.07407536149601332,
+    "converged": true,
+    "elapsedMs": 1094
+  },
+  {
+    "fixture": "balcony-house-y-line.json",
+    "damping": 0.12,
+    "iterations": 20,
+    "medianError": 0.07407536146619269,
+    "converged": true,
+    "elapsedMs": 1151
+  },
+  {
+    "fixture": "balcony-house-y-line.json",
+    "damping": 0.13,
+    "iterations": 20,
+    "medianError": 0.07407536053589607,
+    "converged": true,
+    "elapsedMs": 1029
+  },
+  {
+    "fixture": "balcony-house-y-line.json",
+    "damping": 0.14,
+    "iterations": 21,
+    "medianError": 0.07407536251573509,
+    "converged": true,
+    "elapsedMs": 1089
+  },
+  {
+    "fixture": "balcony-house-y-line.json",
+    "damping": 0.15,
+    "iterations": 20,
+    "medianError": 0.0740753614217338,
+    "converged": true,
+    "elapsedMs": 1105
+  },
+  {
+    "fixture": "balcony-house-y-line.json",
+    "damping": 0.16,
+    "iterations": 10,
+    "medianError": 0.07407536114466318,
+    "converged": true,
+    "elapsedMs": 830
+  },
+  {
+    "fixture": "balcony-house-y-line.json",
+    "damping": 0.17,
+    "iterations": 10,
+    "medianError": 0.07407534986115145,
+    "converged": true,
+    "elapsedMs": 987
+  },
+  {
+    "fixture": "balcony-house-y-line.json",
+    "damping": 0.18,
+    "iterations": 10,
+    "medianError": 0.07407535906845997,
+    "converged": true,
+    "elapsedMs": 998
+  },
+  {
+    "fixture": "balcony-house-y-line.json",
+    "damping": 0.19,
+    "iterations": 10,
+    "medianError": 0.07407535745473236,
+    "converged": true,
+    "elapsedMs": 1125
+  },
+  {
+    "fixture": "balcony-house-y-line.json",
+    "damping": 0.2,
+    "iterations": 10,
+    "medianError": 0.0740753561763507,
+    "converged": true,
+    "elapsedMs": 1277
+  },
+  {
+    "fixture": "balcony-house-z-line.json",
+    "damping": 0.1,
+    "iterations": 77,
+    "medianError": 7.1151017409340405,
+    "converged": true,
+    "elapsedMs": 3342
+  },
+  {
+    "fixture": "balcony-house-z-line.json",
+    "damping": 0.11,
+    "iterations": 76,
+    "medianError": 7.1151075642734165,
+    "converged": true,
+    "elapsedMs": 3574
+  },
+  {
+    "fixture": "balcony-house-z-line.json",
+    "damping": 0.12,
+    "iterations": 77,
+    "medianError": 7.115111068680376,
+    "converged": true,
+    "elapsedMs": 3160
+  },
+  {
+    "fixture": "balcony-house-z-line.json",
+    "damping": 0.13,
+    "iterations": 79,
+    "medianError": 7.115095053936717,
+    "converged": true,
+    "elapsedMs": 2705
+  },
+  {
+    "fixture": "balcony-house-z-line.json",
+    "damping": 0.14,
+    "iterations": 500,
+    "medianError": 7.115193688734296,
+    "converged": false,
+    "elapsedMs": 5239
+  },
+  {
+    "fixture": "balcony-house-z-line.json",
+    "damping": 0.15,
+    "iterations": 251,
+    "medianError": 7.115113363367547,
+    "converged": true,
+    "elapsedMs": 3936
+  },
+  {
+    "fixture": "balcony-house-z-line.json",
+    "damping": 0.16,
+    "iterations": 198,
+    "medianError": 7.115091744793795,
+    "converged": true,
+    "elapsedMs": 3267
+  },
+  {
+    "fixture": "balcony-house-z-line.json",
+    "damping": 0.17,
+    "iterations": 158,
+    "medianError": 7.115094119298008,
+    "converged": true,
+    "elapsedMs": 3229
+  },
+  {
+    "fixture": "balcony-house-z-line.json",
+    "damping": 0.18,
+    "iterations": 140,
+    "medianError": 7.11510665243852,
+    "converged": true,
+    "elapsedMs": 2821
+  },
+  {
+    "fixture": "balcony-house-z-line.json",
+    "damping": 0.19,
+    "iterations": 110,
+    "medianError": 7.115096492472313,
+    "converged": true,
+    "elapsedMs": 2618
+  },
+  {
+    "fixture": "balcony-house-z-line.json",
+    "damping": 0.2,
+    "iterations": 129,
+    "medianError": 7.1151049484578,
+    "converged": true,
+    "elapsedMs": 3031
+  },
+  {
+    "fixture": "balcony-house.json",
+    "damping": 0.1,
+    "iterations": 11,
+    "medianError": 0.25801909579520194,
+    "converged": true,
+    "elapsedMs": 916
+  },
+  {
+    "fixture": "balcony-house.json",
+    "damping": 0.11,
+    "iterations": 29,
+    "medianError": 45.66171636627723,
+    "converged": true,
+    "elapsedMs": 1449
+  },
+  {
+    "fixture": "balcony-house.json",
+    "damping": 0.12,
+    "iterations": 8,
+    "medianError": 0.2652393923813251,
+    "converged": true,
+    "elapsedMs": 475
+  },
+  {
+    "fixture": "balcony-house.json",
+    "damping": 0.13,
+    "iterations": 42,
+    "medianError": 48.88764086477381,
+    "converged": true,
+    "elapsedMs": 1767
+  },
+  {
+    "fixture": "balcony-house.json",
+    "damping": 0.14,
+    "iterations": 44,
+    "medianError": 22.61757619210715,
+    "converged": true,
+    "elapsedMs": 1714
+  },
+  {
+    "fixture": "balcony-house.json",
+    "damping": 0.15,
+    "iterations": 52,
+    "medianError": 5.472322463526355,
+    "converged": true,
+    "elapsedMs": 1903
+  },
+  {
+    "fixture": "balcony-house.json",
+    "damping": 0.16,
+    "iterations": 32,
+    "medianError": 12.062008817470687,
+    "converged": true,
+    "elapsedMs": 1511
+  },
+  {
+    "fixture": "balcony-house.json",
+    "damping": 0.17,
+    "iterations": 35,
+    "medianError": 162.25073382319826,
+    "converged": true,
+    "elapsedMs": 1560
+  },
+  {
+    "fixture": "balcony-house.json",
+    "damping": 0.18,
+    "iterations": 18,
+    "medianError": 0.26332333971223487,
+    "converged": true,
+    "elapsedMs": 1121
+  },
+  {
+    "fixture": "balcony-house.json",
+    "damping": 0.19,
+    "iterations": 18,
+    "medianError": 0.29833303908286024,
+    "converged": true,
+    "elapsedMs": 784
+  },
+  {
+    "fixture": "balcony-house.json",
+    "damping": 0.2,
+    "iterations": 24,
+    "medianError": 0.29963059322083163,
+    "converged": true,
+    "elapsedMs": 1162
+  },
+  {
+    "fixture": "coordinate-sign-good.json",
+    "damping": 0.1,
+    "iterations": 6,
+    "medianError": 4.175241823642615,
+    "converged": true,
+    "elapsedMs": 26
+  },
+  {
+    "fixture": "coordinate-sign-good.json",
+    "damping": 0.11,
+    "iterations": 6,
+    "medianError": 4.175241823514077,
+    "converged": true,
+    "elapsedMs": 26
+  },
+  {
+    "fixture": "coordinate-sign-good.json",
+    "damping": 0.12,
+    "iterations": 6,
+    "medianError": 4.175241823387443,
+    "converged": true,
+    "elapsedMs": 28
+  },
+  {
+    "fixture": "coordinate-sign-good.json",
+    "damping": 0.13,
+    "iterations": 6,
+    "medianError": 4.175241823263405,
+    "converged": true,
+    "elapsedMs": 26
+  },
+  {
+    "fixture": "coordinate-sign-good.json",
+    "damping": 0.14,
+    "iterations": 6,
+    "medianError": 4.175241823141564,
+    "converged": true,
+    "elapsedMs": 27
+  },
+  {
+    "fixture": "coordinate-sign-good.json",
+    "damping": 0.15,
+    "iterations": 6,
+    "medianError": 4.175241823021918,
+    "converged": true,
+    "elapsedMs": 28
+  },
+  {
+    "fixture": "coordinate-sign-good.json",
+    "damping": 0.16,
+    "iterations": 6,
+    "medianError": 4.175241822905028,
+    "converged": true,
+    "elapsedMs": 26
+  },
+  {
+    "fixture": "coordinate-sign-good.json",
+    "damping": 0.17,
+    "iterations": 6,
+    "medianError": 4.175241822790068,
+    "converged": true,
+    "elapsedMs": 26
+  },
+  {
+    "fixture": "coordinate-sign-good.json",
+    "damping": 0.18,
+    "iterations": 6,
+    "medianError": 4.175241822677823,
+    "converged": true,
+    "elapsedMs": 25
+  },
+  {
+    "fixture": "coordinate-sign-good.json",
+    "damping": 0.19,
+    "iterations": 6,
+    "medianError": 4.175241822567841,
+    "converged": true,
+    "elapsedMs": 27
+  },
+  {
+    "fixture": "coordinate-sign-good.json",
+    "damping": 0.2,
+    "iterations": 6,
+    "medianError": 4.175241822460507,
+    "converged": true,
+    "elapsedMs": 24
+  },
+  {
+    "fixture": "coordinate-sign-posZ.json",
+    "damping": 0.1,
+    "iterations": 8,
+    "medianError": 19.17506598660193,
+    "converged": true,
+    "elapsedMs": 35
+  },
+  {
+    "fixture": "coordinate-sign-posZ.json",
+    "damping": 0.11,
+    "iterations": 8,
+    "medianError": 19.17506600693127,
+    "converged": true,
+    "elapsedMs": 33
+  },
+  {
+    "fixture": "coordinate-sign-posZ.json",
+    "damping": 0.12,
+    "iterations": 8,
+    "medianError": 19.175066033237666,
+    "converged": true,
+    "elapsedMs": 32
+  },
+  {
+    "fixture": "coordinate-sign-posZ.json",
+    "damping": 0.13,
+    "iterations": 8,
+    "medianError": 19.17506606297579,
+    "converged": true,
+    "elapsedMs": 37
+  },
+  {
+    "fixture": "coordinate-sign-posZ.json",
+    "damping": 0.14,
+    "iterations": 8,
+    "medianError": 19.175066094126972,
+    "converged": true,
+    "elapsedMs": 33
+  },
+  {
+    "fixture": "coordinate-sign-posZ.json",
+    "damping": 0.15,
+    "iterations": 8,
+    "medianError": 19.175066125151915,
+    "converged": true,
+    "elapsedMs": 32
+  },
+  {
+    "fixture": "coordinate-sign-posZ.json",
+    "damping": 0.16,
+    "iterations": 8,
+    "medianError": 19.17506615492425,
+    "converged": true,
+    "elapsedMs": 41
+  },
+  {
+    "fixture": "coordinate-sign-posZ.json",
+    "damping": 0.17,
+    "iterations": 8,
+    "medianError": 19.17506618266049,
+    "converged": true,
+    "elapsedMs": 40
+  },
+  {
+    "fixture": "coordinate-sign-posZ.json",
+    "damping": 0.18,
+    "iterations": 8,
+    "medianError": 19.17506620785493,
+    "converged": true,
+    "elapsedMs": 36
+  },
+  {
+    "fixture": "coordinate-sign-posZ.json",
+    "damping": 0.19,
+    "iterations": 8,
+    "medianError": 19.17506623021914,
+    "converged": true,
+    "elapsedMs": 33
+  },
+  {
+    "fixture": "coordinate-sign-posZ.json",
+    "damping": 0.2,
+    "iterations": 8,
+    "medianError": 19.175066249632607,
+    "converged": true,
+    "elapsedMs": 38
+  },
+  {
+    "fixture": "coordinate-sign-reflected.json",
+    "damping": 0.1,
+    "iterations": 6,
+    "medianError": 4.175241809066882,
+    "converged": true,
+    "elapsedMs": 35
+  },
+  {
+    "fixture": "coordinate-sign-reflected.json",
+    "damping": 0.11,
+    "iterations": 6,
+    "medianError": 4.175241808938763,
+    "converged": true,
+    "elapsedMs": 33
+  },
+  {
+    "fixture": "coordinate-sign-reflected.json",
+    "damping": 0.12,
+    "iterations": 6,
+    "medianError": 4.1752418088126335,
+    "converged": true,
+    "elapsedMs": 29
+  },
+  {
+    "fixture": "coordinate-sign-reflected.json",
+    "damping": 0.13,
+    "iterations": 6,
+    "medianError": 4.175241808688675,
+    "converged": true,
+    "elapsedMs": 30
+  },
+  {
+    "fixture": "coordinate-sign-reflected.json",
+    "damping": 0.14,
+    "iterations": 6,
+    "medianError": 4.1752418085673,
+    "converged": true,
+    "elapsedMs": 27
+  },
+  {
+    "fixture": "coordinate-sign-reflected.json",
+    "damping": 0.15,
+    "iterations": 6,
+    "medianError": 4.175241808448236,
+    "converged": true,
+    "elapsedMs": 24
+  },
+  {
+    "fixture": "coordinate-sign-reflected.json",
+    "damping": 0.16,
+    "iterations": 6,
+    "medianError": 4.17524180833159,
+    "converged": true,
+    "elapsedMs": 25
+  },
+  {
+    "fixture": "coordinate-sign-reflected.json",
+    "damping": 0.17,
+    "iterations": 6,
+    "medianError": 4.175241808217331,
+    "converged": true,
+    "elapsedMs": 26
+  },
+  {
+    "fixture": "coordinate-sign-reflected.json",
+    "damping": 0.18,
+    "iterations": 6,
+    "medianError": 4.175241808105312,
+    "converged": true,
+    "elapsedMs": 26
+  },
+  {
+    "fixture": "coordinate-sign-reflected.json",
+    "damping": 0.19,
+    "iterations": 6,
+    "medianError": 4.175241807995795,
+    "converged": true,
+    "elapsedMs": 24
+  },
+  {
+    "fixture": "coordinate-sign-reflected.json",
+    "damping": 0.2,
+    "iterations": 6,
+    "medianError": 4.175241807888704,
+    "converged": true,
+    "elapsedMs": 26
+  },
+  {
+    "fixture": "corre-essential-matrix-debug.json",
+    "damping": 0.1,
+    "iterations": 37,
+    "medianError": 0.3241210547712751,
+    "converged": true,
+    "elapsedMs": 691
+  },
+  {
+    "fixture": "corre-essential-matrix-debug.json",
+    "damping": 0.11,
+    "iterations": 35,
+    "medianError": 0.3241210470857735,
+    "converged": true,
+    "elapsedMs": 675
+  },
+  {
+    "fixture": "corre-essential-matrix-debug.json",
+    "damping": 0.12,
+    "iterations": 0,
+    "medianError": 42.072982595551444,
+    "converged": false,
+    "elapsedMs": 762
+  },
+  {
+    "fixture": "corre-essential-matrix-debug.json",
+    "damping": 0.13,
+    "iterations": 0,
+    "medianError": 42.58832625406359,
+    "converged": false,
+    "elapsedMs": 767
+  },
+  {
+    "fixture": "corre-essential-matrix-debug.json",
+    "damping": 0.14,
+    "iterations": 0,
+    "medianError": 41.48387193026006,
+    "converged": false,
+    "elapsedMs": 684
+  },
+  {
+    "fixture": "corre-essential-matrix-debug.json",
+    "damping": 0.15,
+    "iterations": 0,
+    "medianError": 39.65551469574072,
+    "converged": false,
+    "elapsedMs": 725
+  },
+  {
+    "fixture": "corre-essential-matrix-debug.json",
+    "damping": 0.16,
+    "iterations": 0,
+    "medianError": 41.88800126231705,
+    "converged": false,
+    "elapsedMs": 552
+  },
+  {
+    "fixture": "corre-essential-matrix-debug.json",
+    "damping": 0.17,
+    "iterations": 0,
+    "medianError": 42.436753223129166,
+    "converged": true,
+    "elapsedMs": 553
+  },
+  {
+    "fixture": "corre-essential-matrix-debug.json",
+    "damping": 0.18,
+    "iterations": 0,
+    "medianError": 42.484995295826515,
+    "converged": true,
+    "elapsedMs": 832
+  },
+  {
+    "fixture": "corre-essential-matrix-debug.json",
+    "damping": 0.19,
+    "iterations": 0,
+    "medianError": 42.520130106169844,
+    "converged": true,
+    "elapsedMs": 1006
+  },
+  {
+    "fixture": "corre-essential-matrix-debug.json",
+    "damping": 0.2,
+    "iterations": 0,
+    "medianError": 39.8586464914133,
+    "converged": false,
+    "elapsedMs": 634
+  },
+  {
+    "fixture": "cube-2vps-4wps.json",
+    "damping": 0.1,
+    "iterations": 500,
+    "medianError": 0.6899605046019153,
+    "converged": false,
+    "elapsedMs": 1715
+  },
+  {
+    "fixture": "cube-2vps-4wps.json",
+    "damping": 0.11,
+    "iterations": 500,
+    "medianError": 0.9787361801148807,
+    "converged": false,
+    "elapsedMs": 1771
+  },
+  {
+    "fixture": "cube-2vps-4wps.json",
+    "damping": 0.12,
+    "iterations": 250,
+    "medianError": 0.3432929327389372,
+    "converged": true,
+    "elapsedMs": 872
+  },
+  {
+    "fixture": "cube-2vps-4wps.json",
+    "damping": 0.13,
+    "iterations": 180,
+    "medianError": 0.2941138671512191,
+    "converged": true,
+    "elapsedMs": 627
+  },
+  {
+    "fixture": "cube-2vps-4wps.json",
+    "damping": 0.14,
+    "iterations": 119,
+    "medianError": 0.36017778761059027,
+    "converged": true,
+    "elapsedMs": 387
+  },
+  {
+    "fixture": "cube-2vps-4wps.json",
+    "damping": 0.15,
+    "iterations": 349,
+    "medianError": 0.9293675130561421,
+    "converged": true,
+    "elapsedMs": 1178
+  },
+  {
+    "fixture": "cube-2vps-4wps.json",
+    "damping": 0.16,
+    "iterations": 174,
+    "medianError": 0.32025405394389156,
+    "converged": true,
+    "elapsedMs": 596
+  },
+  {
+    "fixture": "cube-2vps-4wps.json",
+    "damping": 0.17,
+    "iterations": 205,
+    "medianError": 0.4526370472123324,
+    "converged": true,
+    "elapsedMs": 670
+  },
+  {
+    "fixture": "cube-2vps-4wps.json",
+    "damping": 0.18,
+    "iterations": 500,
+    "medianError": 0.8642715796099764,
+    "converged": false,
+    "elapsedMs": 1735
+  },
+  {
+    "fixture": "cube-2vps-4wps.json",
+    "damping": 0.19,
+    "iterations": 304,
+    "medianError": 0.3480116807481928,
+    "converged": true,
+    "elapsedMs": 1077
+  },
+  {
+    "fixture": "cube-2vps-4wps.json",
+    "damping": 0.2,
+    "iterations": 350,
+    "medianError": 0.49198357082944644,
+    "converged": true,
+    "elapsedMs": 1227
+  },
+  {
+    "fixture": "cube-2vps-exaggerated.json",
+    "damping": 0.1,
+    "iterations": 500,
+    "medianError": 0.000023924530113590493,
+    "converged": false,
+    "elapsedMs": 1806
+  },
+  {
+    "fixture": "cube-2vps-exaggerated.json",
+    "damping": 0.11,
+    "iterations": 500,
+    "medianError": 0.000020360992086451535,
+    "converged": false,
+    "elapsedMs": 1797
+  },
+  {
+    "fixture": "cube-2vps-exaggerated.json",
+    "damping": 0.12,
+    "iterations": 500,
+    "medianError": 0.000017011802505359054,
+    "converged": false,
+    "elapsedMs": 1752
+  },
+  {
+    "fixture": "cube-2vps-exaggerated.json",
+    "damping": 0.13,
+    "iterations": 500,
+    "medianError": 0.00001478421187519772,
+    "converged": false,
+    "elapsedMs": 1833
+  },
+  {
+    "fixture": "cube-2vps-exaggerated.json",
+    "damping": 0.14,
+    "iterations": 500,
+    "medianError": 0.00001297801858260293,
+    "converged": false,
+    "elapsedMs": 1749
+  },
+  {
+    "fixture": "cube-2vps-exaggerated.json",
+    "damping": 0.15,
+    "iterations": 500,
+    "medianError": 0.000011453945369147596,
+    "converged": false,
+    "elapsedMs": 1780
+  },
+  {
+    "fixture": "cube-2vps-exaggerated.json",
+    "damping": 0.16,
+    "iterations": 500,
+    "medianError": 0.000010122451822827596,
+    "converged": false,
+    "elapsedMs": 1758
+  },
+  {
+    "fixture": "cube-2vps-exaggerated.json",
+    "damping": 0.17,
+    "iterations": 500,
+    "medianError": 0.000009051716133987624,
+    "converged": false,
+    "elapsedMs": 1768
+  },
+  {
+    "fixture": "cube-2vps-exaggerated.json",
+    "damping": 0.18,
+    "iterations": 453,
+    "medianError": 0.000008156744958514104,
+    "converged": true,
+    "elapsedMs": 1606
+  },
+  {
+    "fixture": "cube-2vps-exaggerated.json",
+    "damping": 0.19,
+    "iterations": 52,
+    "medianError": 0.000008130062663985776,
+    "converged": true,
+    "elapsedMs": 191
+  },
+  {
+    "fixture": "cube-2vps-exaggerated.json",
+    "damping": 0.2,
+    "iterations": 500,
+    "medianError": 0.0002562403817756242,
+    "converged": false,
+    "elapsedMs": 1764
+  },
+  {
+    "fixture": "cube-2vps-original.json",
+    "damping": 0.1,
+    "iterations": 5,
+    "medianError": 0.01011936566691991,
+    "converged": true,
+    "elapsedMs": 13
+  },
+  {
+    "fixture": "cube-2vps-original.json",
+    "damping": 0.11,
+    "iterations": 5,
+    "medianError": 0.010119365710800632,
+    "converged": true,
+    "elapsedMs": 12
+  },
+  {
+    "fixture": "cube-2vps-original.json",
+    "damping": 0.12,
+    "iterations": 5,
+    "medianError": 0.010119365753100578,
+    "converged": true,
+    "elapsedMs": 14
+  },
+  {
+    "fixture": "cube-2vps-original.json",
+    "damping": 0.13,
+    "iterations": 5,
+    "medianError": 0.010119365794484721,
+    "converged": true,
+    "elapsedMs": 13
+  },
+  {
+    "fixture": "cube-2vps-original.json",
+    "damping": 0.14,
+    "iterations": 5,
+    "medianError": 0.010119365834252584,
+    "converged": true,
+    "elapsedMs": 14
+  },
+  {
+    "fixture": "cube-2vps-original.json",
+    "damping": 0.15,
+    "iterations": 5,
+    "medianError": 0.010119365872323718,
+    "converged": true,
+    "elapsedMs": 14
+  },
+  {
+    "fixture": "cube-2vps-original.json",
+    "damping": 0.16,
+    "iterations": 5,
+    "medianError": 0.010119365909367828,
+    "converged": true,
+    "elapsedMs": 11
+  },
+  {
+    "fixture": "cube-2vps-original.json",
+    "damping": 0.17,
+    "iterations": 5,
+    "medianError": 0.010119365945285515,
+    "converged": true,
+    "elapsedMs": 13
+  },
+  {
+    "fixture": "cube-2vps-original.json",
+    "damping": 0.18,
+    "iterations": 5,
+    "medianError": 0.010119365979733648,
+    "converged": true,
+    "elapsedMs": 14
+  },
+  {
+    "fixture": "cube-2vps-original.json",
+    "damping": 0.19,
+    "iterations": 5,
+    "medianError": 0.010119366012854228,
+    "converged": true,
+    "elapsedMs": 13
+  },
+  {
+    "fixture": "cube-2vps-original.json",
+    "damping": 0.2,
+    "iterations": 5,
+    "medianError": 0.010119366044687465,
+    "converged": true,
+    "elapsedMs": 13
+  },
+  {
+    "fixture": "fails-c2-pnp.json",
+    "damping": 0.1,
+    "iterations": 19,
+    "medianError": 2.042541157254187,
+    "converged": true,
+    "elapsedMs": 700
+  },
+  {
+    "fixture": "fails-c2-pnp.json",
+    "damping": 0.11,
+    "iterations": 20,
+    "medianError": 2.0425411088918124,
+    "converged": true,
+    "elapsedMs": 673
+  },
+  {
+    "fixture": "fails-c2-pnp.json",
+    "damping": 0.12,
+    "iterations": 20,
+    "medianError": 2.042541059412793,
+    "converged": true,
+    "elapsedMs": 696
+  },
+  {
+    "fixture": "fails-c2-pnp.json",
+    "damping": 0.13,
+    "iterations": 20,
+    "medianError": 2.042541009480274,
+    "converged": true,
+    "elapsedMs": 711
+  },
+  {
+    "fixture": "fails-c2-pnp.json",
+    "damping": 0.14,
+    "iterations": 19,
+    "medianError": 2.0425408522687016,
+    "converged": true,
+    "elapsedMs": 665
+  },
+  {
+    "fixture": "fails-c2-pnp.json",
+    "damping": 0.15,
+    "iterations": 20,
+    "medianError": 2.0425408026430127,
+    "converged": true,
+    "elapsedMs": 645
+  },
+  {
+    "fixture": "fails-c2-pnp.json",
+    "damping": 0.16,
+    "iterations": 19,
+    "medianError": 2.042540752815684,
+    "converged": true,
+    "elapsedMs": 648
+  },
+  {
+    "fixture": "fails-c2-pnp.json",
+    "damping": 0.17,
+    "iterations": 20,
+    "medianError": 2.04254140990184,
+    "converged": true,
+    "elapsedMs": 647
+  },
+  {
+    "fixture": "fails-c2-pnp.json",
+    "damping": 0.18,
+    "iterations": 21,
+    "medianError": 2.042541408252903,
+    "converged": true,
+    "elapsedMs": 651
+  },
+  {
+    "fixture": "fails-c2-pnp.json",
+    "damping": 0.19,
+    "iterations": 21,
+    "medianError": 2.042541406466664,
+    "converged": true,
+    "elapsedMs": 719
+  },
+  {
+    "fixture": "fails-c2-pnp.json",
+    "damping": 0.2,
+    "iterations": 21,
+    "medianError": 2.0425414045750085,
+    "converged": true,
+    "elapsedMs": 673
+  },
+  {
+    "fixture": "good-horizon.json",
+    "damping": 0.1,
+    "iterations": 6,
+    "medianError": 4.175242276500727,
+    "converged": true,
+    "elapsedMs": 22
+  },
+  {
+    "fixture": "good-horizon.json",
+    "damping": 0.11,
+    "iterations": 6,
+    "medianError": 4.175242276371976,
+    "converged": true,
+    "elapsedMs": 25
+  },
+  {
+    "fixture": "good-horizon.json",
+    "damping": 0.12,
+    "iterations": 6,
+    "medianError": 4.1752422762457275,
+    "converged": true,
+    "elapsedMs": 26
+  },
+  {
+    "fixture": "good-horizon.json",
+    "damping": 0.13,
+    "iterations": 6,
+    "medianError": 4.17524227612141,
+    "converged": true,
+    "elapsedMs": 26
+  },
+  {
+    "fixture": "good-horizon.json",
+    "damping": 0.14,
+    "iterations": 6,
+    "medianError": 4.175242275999516,
+    "converged": true,
+    "elapsedMs": 23
+  },
+  {
+    "fixture": "good-horizon.json",
+    "damping": 0.15,
+    "iterations": 6,
+    "medianError": 4.175242275879897,
+    "converged": true,
+    "elapsedMs": 24
+  },
+  {
+    "fixture": "good-horizon.json",
+    "damping": 0.16,
+    "iterations": 6,
+    "medianError": 4.175242275762674,
+    "converged": true,
+    "elapsedMs": 26
+  },
+  {
+    "fixture": "good-horizon.json",
+    "damping": 0.17,
+    "iterations": 6,
+    "medianError": 4.175242275647967,
+    "converged": true,
+    "elapsedMs": 25
+  },
+  {
+    "fixture": "good-horizon.json",
+    "damping": 0.18,
+    "iterations": 6,
+    "medianError": 4.175242275535336,
+    "converged": true,
+    "elapsedMs": 24
+  },
+  {
+    "fixture": "good-horizon.json",
+    "damping": 0.19,
+    "iterations": 6,
+    "medianError": 4.175242275425501,
+    "converged": true,
+    "elapsedMs": 26
+  },
+  {
+    "fixture": "good-horizon.json",
+    "damping": 0.2,
+    "iterations": 6,
+    "medianError": 4.175242275318126,
+    "converged": true,
+    "elapsedMs": 23
+  },
+  {
+    "fixture": "no-axis-no-lines-8-8.json",
+    "damping": 0.1,
+    "iterations": 500,
+    "medianError": 0.06744982661539048,
+    "converged": false,
+    "elapsedMs": 4919
+  },
+  {
+    "fixture": "no-axis-no-lines-8-8.json",
+    "damping": 0.11,
+    "iterations": 500,
+    "medianError": 0.06741927166541697,
+    "converged": false,
+    "elapsedMs": 3867
+  },
+  {
+    "fixture": "no-axis-no-lines-8-8.json",
+    "damping": 0.12,
+    "iterations": 500,
+    "medianError": 0.06737116477175138,
+    "converged": false,
+    "elapsedMs": 3865
+  },
+  {
+    "fixture": "no-axis-no-lines-8-8.json",
+    "damping": 0.13,
+    "iterations": 500,
+    "medianError": 0.06736732395339028,
+    "converged": false,
+    "elapsedMs": 3980
+  },
+  {
+    "fixture": "no-axis-no-lines-8-8.json",
+    "damping": 0.14,
+    "iterations": 500,
+    "medianError": 0.06736342406831815,
+    "converged": false,
+    "elapsedMs": 4022
+  },
+  {
+    "fixture": "no-axis-no-lines-8-8.json",
+    "damping": 0.15,
+    "iterations": 500,
+    "medianError": 0.0673594827509098,
+    "converged": false,
+    "elapsedMs": 3992
+  },
+  {
+    "fixture": "no-axis-no-lines-8-8.json",
+    "damping": 0.16,
+    "iterations": 500,
+    "medianError": 0.06735547377040277,
+    "converged": false,
+    "elapsedMs": 4054
+  },
+  {
+    "fixture": "no-axis-no-lines-8-8.json",
+    "damping": 0.17,
+    "iterations": 500,
+    "medianError": 0.0673514978091257,
+    "converged": false,
+    "elapsedMs": 4077
+  },
+  {
+    "fixture": "no-axis-no-lines-8-8.json",
+    "damping": 0.18,
+    "iterations": 500,
+    "medianError": 0.06734749046525157,
+    "converged": false,
+    "elapsedMs": 4154
+  },
+  {
+    "fixture": "no-axis-no-lines-8-8.json",
+    "damping": 0.19,
+    "iterations": 500,
+    "medianError": 0.06734352066715765,
+    "converged": false,
+    "elapsedMs": 4210
+  },
+  {
+    "fixture": "no-axis-no-lines-8-8.json",
+    "damping": 0.2,
+    "iterations": 500,
+    "medianError": 0.06733956128680407,
+    "converged": false,
+    "elapsedMs": 4307
+  },
+  {
+    "fixture": "no-axis-no-lines-one-coplanar-one-free-point.json",
+    "damping": 0.1,
+    "iterations": 500,
+    "medianError": 0.06608094661288541,
+    "converged": false,
+    "elapsedMs": 3618
+  },
+  {
+    "fixture": "no-axis-no-lines-one-coplanar-one-free-point.json",
+    "damping": 0.11,
+    "iterations": 500,
+    "medianError": 0.06606696522181756,
+    "converged": false,
+    "elapsedMs": 3641
+  },
+  {
+    "fixture": "no-axis-no-lines-one-coplanar-one-free-point.json",
+    "damping": 0.12,
+    "iterations": 500,
+    "medianError": 0.0660649600958876,
+    "converged": false,
+    "elapsedMs": 3651
+  },
+  {
+    "fixture": "no-axis-no-lines-one-coplanar-one-free-point.json",
+    "damping": 0.13,
+    "iterations": 500,
+    "medianError": 0.06606522972835381,
+    "converged": false,
+    "elapsedMs": 3621
+  },
+  {
+    "fixture": "no-axis-no-lines-one-coplanar-one-free-point.json",
+    "damping": 0.14,
+    "iterations": 500,
+    "medianError": 0.06605888737223428,
+    "converged": false,
+    "elapsedMs": 3633
+  },
+  {
+    "fixture": "no-axis-no-lines-one-coplanar-one-free-point.json",
+    "damping": 0.15,
+    "iterations": 500,
+    "medianError": 0.06605268471517589,
+    "converged": false,
+    "elapsedMs": 3758
+  },
+  {
+    "fixture": "no-axis-no-lines-one-coplanar-one-free-point.json",
+    "damping": 0.16,
+    "iterations": 500,
+    "medianError": 0.06604666941478696,
+    "converged": false,
+    "elapsedMs": 3689
+  },
+  {
+    "fixture": "no-axis-no-lines-one-coplanar-one-free-point.json",
+    "damping": 0.17,
+    "iterations": 500,
+    "medianError": 0.0660329574661327,
+    "converged": false,
+    "elapsedMs": 3604
+  },
+  {
+    "fixture": "no-axis-no-lines-one-coplanar-one-free-point.json",
+    "damping": 0.18,
+    "iterations": 500,
+    "medianError": 0.06602735819075663,
+    "converged": false,
+    "elapsedMs": 3683
+  },
+  {
+    "fixture": "no-axis-no-lines-one-coplanar-one-free-point.json",
+    "damping": 0.19,
+    "iterations": 500,
+    "medianError": 0.06602193379759436,
+    "converged": false,
+    "elapsedMs": 3594
+  },
+  {
+    "fixture": "no-axis-no-lines-one-coplanar-one-free-point.json",
+    "damping": 0.2,
+    "iterations": 500,
+    "medianError": 0.06599143855578961,
+    "converged": false,
+    "elapsedMs": 3641
+  },
+  {
+    "fixture": "no-axis-simple-8-8.json",
+    "damping": 0.1,
+    "iterations": 48,
+    "medianError": 0.07942208411507133,
+    "converged": true,
+    "elapsedMs": 953
+  },
+  {
+    "fixture": "no-axis-simple-8-8.json",
+    "damping": 0.11,
+    "iterations": 50,
+    "medianError": 0.07942208411951965,
+    "converged": true,
+    "elapsedMs": 962
+  },
+  {
+    "fixture": "no-axis-simple-8-8.json",
+    "damping": 0.12,
+    "iterations": 51,
+    "medianError": 0.07942208414299937,
+    "converged": true,
+    "elapsedMs": 1009
+  },
+  {
+    "fixture": "no-axis-simple-8-8.json",
+    "damping": 0.13,
+    "iterations": 52,
+    "medianError": 0.07942208414923292,
+    "converged": true,
+    "elapsedMs": 1022
+  },
+  {
+    "fixture": "no-axis-simple-8-8.json",
+    "damping": 0.14,
+    "iterations": 54,
+    "medianError": 0.07942208415008249,
+    "converged": true,
+    "elapsedMs": 1061
+  },
+  {
+    "fixture": "no-axis-simple-8-8.json",
+    "damping": 0.15,
+    "iterations": 21,
+    "medianError": 0.07942208418044204,
+    "converged": true,
+    "elapsedMs": 860
+  },
+  {
+    "fixture": "no-axis-simple-8-8.json",
+    "damping": 0.16,
+    "iterations": 22,
+    "medianError": 0.07942208417989054,
+    "converged": true,
+    "elapsedMs": 852
+  },
+  {
+    "fixture": "no-axis-simple-8-8.json",
+    "damping": 0.17,
+    "iterations": 23,
+    "medianError": 0.07942208417782716,
+    "converged": true,
+    "elapsedMs": 856
+  },
+  {
+    "fixture": "no-axis-simple-8-8.json",
+    "damping": 0.18,
+    "iterations": 23,
+    "medianError": 0.07942208419962839,
+    "converged": true,
+    "elapsedMs": 813
+  },
+  {
+    "fixture": "no-axis-simple-8-8.json",
+    "damping": 0.19,
+    "iterations": 24,
+    "medianError": 0.0794220841933585,
+    "converged": true,
+    "elapsedMs": 860
+  },
+  {
+    "fixture": "no-axis-simple-8-8.json",
+    "damping": 0.2,
+    "iterations": 24,
+    "medianError": 0.07942208419640166,
+    "converged": true,
+    "elapsedMs": 872
+  },
+  {
+    "fixture": "plus-y-up-actual.json",
+    "damping": 0.1,
+    "iterations": 8,
+    "medianError": 6.820061659646393,
+    "converged": true,
+    "elapsedMs": 47
+  },
+  {
+    "fixture": "plus-y-up-actual.json",
+    "damping": 0.11,
+    "iterations": 9,
+    "medianError": 6.820061925025078,
+    "converged": true,
+    "elapsedMs": 52
+  },
+  {
+    "fixture": "plus-y-up-actual.json",
+    "damping": 0.12,
+    "iterations": 9,
+    "medianError": 6.820060997716908,
+    "converged": true,
+    "elapsedMs": 50
+  },
+  {
+    "fixture": "plus-y-up-actual.json",
+    "damping": 0.13,
+    "iterations": 9,
+    "medianError": 6.820060669800335,
+    "converged": true,
+    "elapsedMs": 51
+  },
+  {
+    "fixture": "plus-y-up-actual.json",
+    "damping": 0.14,
+    "iterations": 10,
+    "medianError": 6.8200628356206305,
+    "converged": true,
+    "elapsedMs": 48
+  },
+  {
+    "fixture": "plus-y-up-actual.json",
+    "damping": 0.15,
+    "iterations": 9,
+    "medianError": 6.820060346074772,
+    "converged": true,
+    "elapsedMs": 47
+  },
+  {
+    "fixture": "plus-y-up-actual.json",
+    "damping": 0.16,
+    "iterations": 10,
+    "medianError": 6.820062886537734,
+    "converged": true,
+    "elapsedMs": 61
+  },
+  {
+    "fixture": "plus-y-up-actual.json",
+    "damping": 0.17,
+    "iterations": 10,
+    "medianError": 6.820062664796534,
+    "converged": true,
+    "elapsedMs": 64
+  },
+  {
+    "fixture": "plus-y-up-actual.json",
+    "damping": 0.18,
+    "iterations": 9,
+    "medianError": 6.8200619601211425,
+    "converged": true,
+    "elapsedMs": 57
+  },
+  {
+    "fixture": "plus-y-up-actual.json",
+    "damping": 0.19,
+    "iterations": 10,
+    "medianError": 6.820062205872218,
+    "converged": true,
+    "elapsedMs": 50
+  },
+  {
+    "fixture": "plus-y-up-actual.json",
+    "damping": 0.2,
+    "iterations": 10,
+    "medianError": 6.820061991660515,
+    "converged": true,
+    "elapsedMs": 50
+  },
+  {
+    "fixture": "scenario-01-simple-pnp.json",
+    "damping": 0.1,
+    "iterations": 0,
+    "medianError": 0.000004212203411651853,
+    "converged": true,
+    "elapsedMs": 11
+  },
+  {
+    "fixture": "scenario-01-simple-pnp.json",
+    "damping": 0.11,
+    "iterations": 0,
+    "medianError": 0.000004212203411651853,
+    "converged": true,
+    "elapsedMs": 10
+  },
+  {
+    "fixture": "scenario-01-simple-pnp.json",
+    "damping": 0.12,
+    "iterations": 0,
+    "medianError": 0.000004212203411651853,
+    "converged": true,
+    "elapsedMs": 11
+  },
+  {
+    "fixture": "scenario-01-simple-pnp.json",
+    "damping": 0.13,
+    "iterations": 0,
+    "medianError": 0.000004212203411651853,
+    "converged": true,
+    "elapsedMs": 11
+  },
+  {
+    "fixture": "scenario-01-simple-pnp.json",
+    "damping": 0.14,
+    "iterations": 0,
+    "medianError": 0.000004212203411651853,
+    "converged": true,
+    "elapsedMs": 10
+  },
+  {
+    "fixture": "scenario-01-simple-pnp.json",
+    "damping": 0.15,
+    "iterations": 0,
+    "medianError": 0.000004212203411651853,
+    "converged": true,
+    "elapsedMs": 10
+  },
+  {
+    "fixture": "scenario-01-simple-pnp.json",
+    "damping": 0.16,
+    "iterations": 0,
+    "medianError": 0.000004212203411651853,
+    "converged": true,
+    "elapsedMs": 10
+  },
+  {
+    "fixture": "scenario-01-simple-pnp.json",
+    "damping": 0.17,
+    "iterations": 0,
+    "medianError": 0.000004212203411651853,
+    "converged": true,
+    "elapsedMs": 10
+  },
+  {
+    "fixture": "scenario-01-simple-pnp.json",
+    "damping": 0.18,
+    "iterations": 0,
+    "medianError": 0.000004212203411651853,
+    "converged": true,
+    "elapsedMs": 11
+  },
+  {
+    "fixture": "scenario-01-simple-pnp.json",
+    "damping": 0.19,
+    "iterations": 0,
+    "medianError": 0.000004212203411651853,
+    "converged": true,
+    "elapsedMs": 11
+  },
+  {
+    "fixture": "scenario-01-simple-pnp.json",
+    "damping": 0.2,
+    "iterations": 0,
+    "medianError": 0.000004212203411651853,
+    "converged": true,
+    "elapsedMs": 11
+  },
+  {
+    "fixture": "scenario-02-pnp-bundle-adjustment.json",
+    "damping": 0.1,
+    "iterations": 3,
+    "medianError": 4.4494441034092094e-7,
+    "converged": true,
+    "elapsedMs": 12
+  },
+  {
+    "fixture": "scenario-02-pnp-bundle-adjustment.json",
+    "damping": 0.11,
+    "iterations": 2,
+    "medianError": 0.000023300540595779337,
+    "converged": true,
+    "elapsedMs": 14
+  },
+  {
+    "fixture": "scenario-02-pnp-bundle-adjustment.json",
+    "damping": 0.12,
+    "iterations": 3,
+    "medianError": 0.0000015551721751643986,
+    "converged": true,
+    "elapsedMs": 14
+  },
+  {
+    "fixture": "scenario-02-pnp-bundle-adjustment.json",
+    "damping": 0.13,
+    "iterations": 2,
+    "medianError": 0.000014170172290982205,
+    "converged": true,
+    "elapsedMs": 12
+  },
+  {
+    "fixture": "scenario-02-pnp-bundle-adjustment.json",
+    "damping": 0.14,
+    "iterations": 3,
+    "medianError": 0.000004467245802883313,
+    "converged": true,
+    "elapsedMs": 14
+  },
+  {
+    "fixture": "scenario-02-pnp-bundle-adjustment.json",
+    "damping": 0.15,
+    "iterations": 3,
+    "medianError": 0.0000018577272601039951,
+    "converged": true,
+    "elapsedMs": 16
+  },
+  {
+    "fixture": "scenario-02-pnp-bundle-adjustment.json",
+    "damping": 0.16,
+    "iterations": 3,
+    "medianError": 2.770933972055727e-7,
+    "converged": true,
+    "elapsedMs": 15
+  },
+  {
+    "fixture": "scenario-02-pnp-bundle-adjustment.json",
+    "damping": 0.17,
+    "iterations": 3,
+    "medianError": 4.976781999543984e-7,
+    "converged": true,
+    "elapsedMs": 14
+  },
+  {
+    "fixture": "scenario-02-pnp-bundle-adjustment.json",
+    "damping": 0.18,
+    "iterations": 3,
+    "medianError": 0.000002143509583354243,
+    "converged": true,
+    "elapsedMs": 14
+  },
+  {
+    "fixture": "scenario-02-pnp-bundle-adjustment.json",
+    "damping": 0.19,
+    "iterations": 3,
+    "medianError": 0.0000026317063625583948,
+    "converged": true,
+    "elapsedMs": 14
+  },
+  {
+    "fixture": "scenario-02-pnp-bundle-adjustment.json",
+    "damping": 0.2,
+    "iterations": 3,
+    "medianError": 0.000005596655432056841,
+    "converged": true,
+    "elapsedMs": 13
+  },
+  {
+    "fixture": "scenario-05-essential-matrix.json",
+    "damping": 0.1,
+    "iterations": 0,
+    "medianError": 2.200183400023103e-10,
+    "converged": true,
+    "elapsedMs": 35
+  },
+  {
+    "fixture": "scenario-05-essential-matrix.json",
+    "damping": 0.11,
+    "iterations": 0,
+    "medianError": 2.200183400023103e-10,
+    "converged": true,
+    "elapsedMs": 35
+  },
+  {
+    "fixture": "scenario-05-essential-matrix.json",
+    "damping": 0.12,
+    "iterations": 0,
+    "medianError": 2.200183400023103e-10,
+    "converged": true,
+    "elapsedMs": 34
+  },
+  {
+    "fixture": "scenario-05-essential-matrix.json",
+    "damping": 0.13,
+    "iterations": 0,
+    "medianError": 2.200183400023103e-10,
+    "converged": true,
+    "elapsedMs": 40
+  },
+  {
+    "fixture": "scenario-05-essential-matrix.json",
+    "damping": 0.14,
+    "iterations": 0,
+    "medianError": 2.200183400023103e-10,
+    "converged": true,
+    "elapsedMs": 32
+  },
+  {
+    "fixture": "scenario-05-essential-matrix.json",
+    "damping": 0.15,
+    "iterations": 0,
+    "medianError": 2.200183400023103e-10,
+    "converged": true,
+    "elapsedMs": 31
+  },
+  {
+    "fixture": "scenario-05-essential-matrix.json",
+    "damping": 0.16,
+    "iterations": 0,
+    "medianError": 2.200183400023103e-10,
+    "converged": true,
+    "elapsedMs": 34
+  },
+  {
+    "fixture": "scenario-05-essential-matrix.json",
+    "damping": 0.17,
+    "iterations": 0,
+    "medianError": 2.200183400023103e-10,
+    "converged": true,
+    "elapsedMs": 32
+  },
+  {
+    "fixture": "scenario-05-essential-matrix.json",
+    "damping": 0.18,
+    "iterations": 0,
+    "medianError": 2.200183400023103e-10,
+    "converged": true,
+    "elapsedMs": 32
+  },
+  {
+    "fixture": "scenario-05-essential-matrix.json",
+    "damping": 0.19,
+    "iterations": 0,
+    "medianError": 2.200183400023103e-10,
+    "converged": true,
+    "elapsedMs": 34
+  },
+  {
+    "fixture": "scenario-05-essential-matrix.json",
+    "damping": 0.2,
+    "iterations": 0,
+    "medianError": 2.200183400023103e-10,
+    "converged": true,
+    "elapsedMs": 33
+  },
+  {
+    "fixture": "scenario-06-two-cameras-with-scale.json",
+    "damping": 0.1,
+    "iterations": 20,
+    "medianError": 0.00002147624476003065,
+    "converged": true,
+    "elapsedMs": 195
+  },
+  {
+    "fixture": "scenario-06-two-cameras-with-scale.json",
+    "damping": 0.11,
+    "iterations": 22,
+    "medianError": 1.724096521553335e-9,
+    "converged": true,
+    "elapsedMs": 183
+  },
+  {
+    "fixture": "scenario-06-two-cameras-with-scale.json",
+    "damping": 0.12,
+    "iterations": 23,
+    "medianError": 2.547688005694988e-9,
+    "converged": true,
+    "elapsedMs": 180
+  },
+  {
+    "fixture": "scenario-06-two-cameras-with-scale.json",
+    "damping": 0.13,
+    "iterations": 24,
+    "medianError": 3.6572879298022124e-9,
+    "converged": true,
+    "elapsedMs": 181
+  },
+  {
+    "fixture": "scenario-06-two-cameras-with-scale.json",
+    "damping": 0.14,
+    "iterations": 25,
+    "medianError": 4.910658084476351e-9,
+    "converged": true,
+    "elapsedMs": 187
+  },
+  {
+    "fixture": "scenario-06-two-cameras-with-scale.json",
+    "damping": 0.15,
+    "iterations": 25,
+    "medianError": 6.901346635000019e-9,
+    "converged": true,
+    "elapsedMs": 208
+  },
+  {
+    "fixture": "scenario-06-two-cameras-with-scale.json",
+    "damping": 0.16,
+    "iterations": 26,
+    "medianError": 8.439362238845548e-9,
+    "converged": true,
+    "elapsedMs": 195
+  },
+  {
+    "fixture": "scenario-06-two-cameras-with-scale.json",
+    "damping": 0.17,
+    "iterations": 27,
+    "medianError": 1.0255744111809051e-8,
+    "converged": true,
+    "elapsedMs": 196
+  },
+  {
+    "fixture": "scenario-06-two-cameras-with-scale.json",
+    "damping": 0.18,
+    "iterations": 27,
+    "medianError": 1.6962103510316237e-8,
+    "converged": true,
+    "elapsedMs": 201
+  },
+  {
+    "fixture": "scenario-06-two-cameras-with-scale.json",
+    "damping": 0.19,
+    "iterations": 28,
+    "medianError": 2.1794479137417888e-8,
+    "converged": true,
+    "elapsedMs": 214
+  },
+  {
+    "fixture": "scenario-06-two-cameras-with-scale.json",
+    "damping": 0.2,
+    "iterations": 28,
+    "medianError": 3.124595298594667e-8,
+    "converged": true,
+    "elapsedMs": 234
+  },
+  {
+    "fixture": "scenario-07-mixed-vp-pnp.json",
+    "damping": 0.1,
+    "iterations": 4,
+    "medianError": 4.547473508864641e-13,
+    "converged": true,
+    "elapsedMs": 24
+  },
+  {
+    "fixture": "scenario-07-mixed-vp-pnp.json",
+    "damping": 0.11,
+    "iterations": 4,
+    "medianError": 0,
+    "converged": true,
+    "elapsedMs": 22
+  },
+  {
+    "fixture": "scenario-07-mixed-vp-pnp.json",
+    "damping": 0.12,
+    "iterations": 4,
+    "medianError": 1.6077746776921858e-13,
+    "converged": true,
+    "elapsedMs": 20
+  },
+  {
+    "fixture": "scenario-07-mixed-vp-pnp.json",
+    "damping": 0.13,
+    "iterations": 4,
+    "medianError": 2.5421149729252077e-13,
+    "converged": true,
+    "elapsedMs": 24
+  },
+  {
+    "fixture": "scenario-07-mixed-vp-pnp.json",
+    "damping": 0.14,
+    "iterations": 4,
+    "medianError": 9.165725883006586e-13,
+    "converged": true,
+    "elapsedMs": 22
+  },
+  {
+    "fixture": "scenario-07-mixed-vp-pnp.json",
+    "damping": 0.15,
+    "iterations": 4,
+    "medianError": 4.687428401686771e-13,
+    "converged": true,
+    "elapsedMs": 22
+  },
+  {
+    "fixture": "scenario-07-mixed-vp-pnp.json",
+    "damping": 0.16,
+    "iterations": 4,
+    "medianError": 2.5421149729252077e-13,
+    "converged": true,
+    "elapsedMs": 24
+  },
+  {
+    "fixture": "scenario-07-mixed-vp-pnp.json",
+    "damping": 0.17,
+    "iterations": 4,
+    "medianError": 2.2737367544323206e-13,
+    "converged": true,
+    "elapsedMs": 22
+  },
+  {
+    "fixture": "scenario-07-mixed-vp-pnp.json",
+    "damping": 0.18,
+    "iterations": 4,
+    "medianError": 5.684341886080802e-14,
+    "converged": true,
+    "elapsedMs": 23
+  },
+  {
+    "fixture": "scenario-07-mixed-vp-pnp.json",
+    "damping": 0.19,
+    "iterations": 4,
+    "medianError": 2.2737367544323206e-13,
+    "converged": true,
+    "elapsedMs": 23
+  },
+  {
+    "fixture": "scenario-07-mixed-vp-pnp.json",
+    "damping": 0.2,
+    "iterations": 4,
+    "medianError": 1.1368683772161603e-13,
+    "converged": true,
+    "elapsedMs": 22
+  },
+  {
+    "fixture": "scenario-08-length-constraints.json",
+    "damping": 0.1,
+    "iterations": 13,
+    "medianError": 0.0000013531079130571241,
+    "converged": true,
+    "elapsedMs": 111
+  },
+  {
+    "fixture": "scenario-08-length-constraints.json",
+    "damping": 0.11,
+    "iterations": 13,
+    "medianError": 0.000003061380316269582,
+    "converged": true,
+    "elapsedMs": 96
+  },
+  {
+    "fixture": "scenario-08-length-constraints.json",
+    "damping": 0.12,
+    "iterations": 14,
+    "medianError": 0.0000031104173061900676,
+    "converged": true,
+    "elapsedMs": 91
+  },
+  {
+    "fixture": "scenario-08-length-constraints.json",
+    "damping": 0.13,
+    "iterations": 14,
+    "medianError": 0.0000061198080761252545,
+    "converged": true,
+    "elapsedMs": 100
+  },
+  {
+    "fixture": "scenario-08-length-constraints.json",
+    "damping": 0.14,
+    "iterations": 15,
+    "medianError": 0.000006096310251200132,
+    "converged": true,
+    "elapsedMs": 96
+  },
+  {
+    "fixture": "scenario-08-length-constraints.json",
+    "damping": 0.15,
+    "iterations": 15,
+    "medianError": 0.000010851420304537065,
+    "converged": true,
+    "elapsedMs": 113
+  },
+  {
+    "fixture": "scenario-08-length-constraints.json",
+    "damping": 0.16,
+    "iterations": 16,
+    "medianError": 0.000010683568097630852,
+    "converged": true,
+    "elapsedMs": 116
+  },
+  {
+    "fixture": "scenario-08-length-constraints.json",
+    "damping": 0.17,
+    "iterations": 16,
+    "medianError": 0.0000176419309927074,
+    "converged": true,
+    "elapsedMs": 96
+  },
+  {
+    "fixture": "scenario-08-length-constraints.json",
+    "damping": 0.18,
+    "iterations": 16,
+    "medianError": 0.00002782183545076159,
+    "converged": true,
+    "elapsedMs": 102
+  },
+  {
+    "fixture": "scenario-08-length-constraints.json",
+    "damping": 0.19,
+    "iterations": 17,
+    "medianError": 0.000026862381804094787,
+    "converged": true,
+    "elapsedMs": 103
+  },
+  {
+    "fixture": "scenario-08-length-constraints.json",
+    "damping": 0.2,
+    "iterations": 17,
+    "medianError": 0.000040335599592185444,
+    "converged": true,
+    "elapsedMs": 105
+  },
+  {
+    "fixture": "scenario-11-single-camera-inferred-coords.json",
+    "damping": 0.1,
+    "iterations": 6,
+    "medianError": 7.3528542083097275,
+    "converged": true,
+    "elapsedMs": 21
+  },
+  {
+    "fixture": "scenario-11-single-camera-inferred-coords.json",
+    "damping": 0.11,
+    "iterations": 6,
+    "medianError": 7.352854208456688,
+    "converged": true,
+    "elapsedMs": 23
+  },
+  {
+    "fixture": "scenario-11-single-camera-inferred-coords.json",
+    "damping": 0.12,
+    "iterations": 6,
+    "medianError": 7.352854208603424,
+    "converged": true,
+    "elapsedMs": 20
+  },
+  {
+    "fixture": "scenario-11-single-camera-inferred-coords.json",
+    "damping": 0.13,
+    "iterations": 6,
+    "medianError": 7.3528542087497595,
+    "converged": true,
+    "elapsedMs": 21
+  },
+  {
+    "fixture": "scenario-11-single-camera-inferred-coords.json",
+    "damping": 0.14,
+    "iterations": 6,
+    "medianError": 7.352854208895936,
+    "converged": true,
+    "elapsedMs": 20
+  },
+  {
+    "fixture": "scenario-11-single-camera-inferred-coords.json",
+    "damping": 0.15,
+    "iterations": 6,
+    "medianError": 7.3528542090419,
+    "converged": true,
+    "elapsedMs": 20
+  },
+  {
+    "fixture": "scenario-11-single-camera-inferred-coords.json",
+    "damping": 0.16,
+    "iterations": 6,
+    "medianError": 7.352854209187518,
+    "converged": true,
+    "elapsedMs": 23
+  },
+  {
+    "fixture": "scenario-11-single-camera-inferred-coords.json",
+    "damping": 0.17,
+    "iterations": 6,
+    "medianError": 7.352854209332803,
+    "converged": true,
+    "elapsedMs": 22
+  },
+  {
+    "fixture": "scenario-11-single-camera-inferred-coords.json",
+    "damping": 0.18,
+    "iterations": 6,
+    "medianError": 7.352854209477983,
+    "converged": true,
+    "elapsedMs": 22
+  },
+  {
+    "fixture": "scenario-11-single-camera-inferred-coords.json",
+    "damping": 0.19,
+    "iterations": 6,
+    "medianError": 7.352854209622899,
+    "converged": true,
+    "elapsedMs": 24
+  },
+  {
+    "fixture": "scenario-11-single-camera-inferred-coords.json",
+    "damping": 0.2,
+    "iterations": 6,
+    "medianError": 7.352854209767425,
+    "converged": true,
+    "elapsedMs": 23
+  },
+  {
+    "fixture": "scenario-12-two-locked-points.json",
+    "damping": 0.1,
+    "iterations": 6,
+    "medianError": 7.3528542083097275,
+    "converged": true,
+    "elapsedMs": 27
+  },
+  {
+    "fixture": "scenario-12-two-locked-points.json",
+    "damping": 0.11,
+    "iterations": 6,
+    "medianError": 7.352854208456688,
+    "converged": true,
+    "elapsedMs": 22
+  },
+  {
+    "fixture": "scenario-12-two-locked-points.json",
+    "damping": 0.12,
+    "iterations": 6,
+    "medianError": 7.352854208603424,
+    "converged": true,
+    "elapsedMs": 24
+  },
+  {
+    "fixture": "scenario-12-two-locked-points.json",
+    "damping": 0.13,
+    "iterations": 6,
+    "medianError": 7.3528542087497595,
+    "converged": true,
+    "elapsedMs": 23
+  },
+  {
+    "fixture": "scenario-12-two-locked-points.json",
+    "damping": 0.14,
+    "iterations": 6,
+    "medianError": 7.352854208895936,
+    "converged": true,
+    "elapsedMs": 24
+  },
+  {
+    "fixture": "scenario-12-two-locked-points.json",
+    "damping": 0.15,
+    "iterations": 6,
+    "medianError": 7.3528542090419,
+    "converged": true,
+    "elapsedMs": 29
+  },
+  {
+    "fixture": "scenario-12-two-locked-points.json",
+    "damping": 0.16,
+    "iterations": 6,
+    "medianError": 7.352854209187518,
+    "converged": true,
+    "elapsedMs": 32
+  },
+  {
+    "fixture": "scenario-12-two-locked-points.json",
+    "damping": 0.17,
+    "iterations": 6,
+    "medianError": 7.352854209332803,
+    "converged": true,
+    "elapsedMs": 26
+  },
+  {
+    "fixture": "scenario-12-two-locked-points.json",
+    "damping": 0.18,
+    "iterations": 6,
+    "medianError": 7.352854209477983,
+    "converged": true,
+    "elapsedMs": 30
+  },
+  {
+    "fixture": "scenario-12-two-locked-points.json",
+    "damping": 0.19,
+    "iterations": 6,
+    "medianError": 7.352854209622899,
+    "converged": true,
+    "elapsedMs": 25
+  },
+  {
+    "fixture": "scenario-12-two-locked-points.json",
+    "damping": 0.2,
+    "iterations": 6,
+    "medianError": 7.352854209767425,
+    "converged": true,
+    "elapsedMs": 21
+  },
+  {
+    "fixture": "scenario-13-user-vp-issue.json",
+    "damping": 0.1,
+    "iterations": 8,
+    "medianError": 0.3460106645059736,
+    "converged": true,
+    "elapsedMs": 36
+  },
+  {
+    "fixture": "scenario-13-user-vp-issue.json",
+    "damping": 0.11,
+    "iterations": 7,
+    "medianError": 0.3460079436929725,
+    "converged": true,
+    "elapsedMs": 32
+  },
+  {
+    "fixture": "scenario-13-user-vp-issue.json",
+    "damping": 0.12,
+    "iterations": 7,
+    "medianError": 0.34601062171002994,
+    "converged": true,
+    "elapsedMs": 32
+  },
+  {
+    "fixture": "scenario-13-user-vp-issue.json",
+    "damping": 0.13,
+    "iterations": 9,
+    "medianError": 0.3460106059076736,
+    "converged": true,
+    "elapsedMs": 38
+  },
+  {
+    "fixture": "scenario-13-user-vp-issue.json",
+    "damping": 0.14,
+    "iterations": 6,
+    "medianError": 0.34601058147591124,
+    "converged": true,
+    "elapsedMs": 23
+  },
+  {
+    "fixture": "scenario-13-user-vp-issue.json",
+    "damping": 0.15,
+    "iterations": 8,
+    "medianError": 0.34601063046135244,
+    "converged": true,
+    "elapsedMs": 37
+  },
+  {
+    "fixture": "scenario-13-user-vp-issue.json",
+    "damping": 0.16,
+    "iterations": 8,
+    "medianError": 0.34601066933604474,
+    "converged": true,
+    "elapsedMs": 34
+  },
+  {
+    "fixture": "scenario-13-user-vp-issue.json",
+    "damping": 0.17,
+    "iterations": 6,
+    "medianError": 0.34601061839291697,
+    "converged": true,
+    "elapsedMs": 26
+  },
+  {
+    "fixture": "scenario-13-user-vp-issue.json",
+    "damping": 0.18,
+    "iterations": 12,
+    "medianError": 0.3460107107213063,
+    "converged": true,
+    "elapsedMs": 49
+  },
+  {
+    "fixture": "scenario-13-user-vp-issue.json",
+    "damping": 0.19,
+    "iterations": 5,
+    "medianError": 0.3460107773492299,
+    "converged": true,
+    "elapsedMs": 22
+  },
+  {
+    "fixture": "scenario-13-user-vp-issue.json",
+    "damping": 0.2,
+    "iterations": 8,
+    "medianError": 0.3460106705746743,
+    "converged": true,
+    "elapsedMs": 31
+  },
+  {
+    "fixture": "scenario-14-y-axis-test.json",
+    "damping": 0.1,
+    "iterations": 12,
+    "medianError": 9.529039825853237,
+    "converged": true,
+    "elapsedMs": 80
+  },
+  {
+    "fixture": "scenario-14-y-axis-test.json",
+    "damping": 0.11,
+    "iterations": 12,
+    "medianError": 9.52904029047597,
+    "converged": true,
+    "elapsedMs": 68
+  },
+  {
+    "fixture": "scenario-14-y-axis-test.json",
+    "damping": 0.12,
+    "iterations": 12,
+    "medianError": 9.529040959616516,
+    "converged": true,
+    "elapsedMs": 65
+  },
+  {
+    "fixture": "scenario-14-y-axis-test.json",
+    "damping": 0.13,
+    "iterations": 13,
+    "medianError": 9.52903987507861,
+    "converged": true,
+    "elapsedMs": 77
+  },
+  {
+    "fixture": "scenario-14-y-axis-test.json",
+    "damping": 0.14,
+    "iterations": 13,
+    "medianError": 9.529040183006236,
+    "converged": true,
+    "elapsedMs": 70
+  },
+  {
+    "fixture": "scenario-14-y-axis-test.json",
+    "damping": 0.15,
+    "iterations": 13,
+    "medianError": 9.529040160721417,
+    "converged": true,
+    "elapsedMs": 73
+  },
+  {
+    "fixture": "scenario-14-y-axis-test.json",
+    "damping": 0.16,
+    "iterations": 14,
+    "medianError": 9.529040457833347,
+    "converged": true,
+    "elapsedMs": 94
+  },
+  {
+    "fixture": "scenario-14-y-axis-test.json",
+    "damping": 0.17,
+    "iterations": 13,
+    "medianError": 9.529040640169525,
+    "converged": true,
+    "elapsedMs": 77
+  },
+  {
+    "fixture": "scenario-14-y-axis-test.json",
+    "damping": 0.18,
+    "iterations": 14,
+    "medianError": 9.529040431362446,
+    "converged": true,
+    "elapsedMs": 73
+  },
+  {
+    "fixture": "scenario-14-y-axis-test.json",
+    "damping": 0.19,
+    "iterations": 500,
+    "medianError": 26.334348752607454,
+    "converged": false,
+    "elapsedMs": 1853
+  },
+  {
+    "fixture": "scenario-14-y-axis-test.json",
+    "damping": 0.2,
+    "iterations": 500,
+    "medianError": 26.33434847838432,
+    "converged": false,
+    "elapsedMs": 1874
+  },
+  {
+    "fixture": "should-be-good.json",
+    "damping": 0.1,
+    "iterations": 500,
+    "medianError": 36.681935922725444,
+    "converged": false,
+    "elapsedMs": 2097
+  },
+  {
+    "fixture": "should-be-good.json",
+    "damping": 0.11,
+    "iterations": 500,
+    "medianError": 36.68207594505942,
+    "converged": false,
+    "elapsedMs": 2169
+  },
+  {
+    "fixture": "should-be-good.json",
+    "damping": 0.12,
+    "iterations": 500,
+    "medianError": 36.68214810872725,
+    "converged": false,
+    "elapsedMs": 2037
+  },
+  {
+    "fixture": "should-be-good.json",
+    "damping": 0.13,
+    "iterations": 500,
+    "medianError": 36.68386273259876,
+    "converged": false,
+    "elapsedMs": 2104
+  },
+  {
+    "fixture": "should-be-good.json",
+    "damping": 0.14,
+    "iterations": 500,
+    "medianError": 36.685751153127356,
+    "converged": false,
+    "elapsedMs": 2061
+  },
+  {
+    "fixture": "should-be-good.json",
+    "damping": 0.15,
+    "iterations": 500,
+    "medianError": 36.683865561946675,
+    "converged": false,
+    "elapsedMs": 1997
+  },
+  {
+    "fixture": "should-be-good.json",
+    "damping": 0.16,
+    "iterations": 500,
+    "medianError": 36.6813032402378,
+    "converged": false,
+    "elapsedMs": 1989
+  },
+  {
+    "fixture": "should-be-good.json",
+    "damping": 0.17,
+    "iterations": 500,
+    "medianError": 36.68032626780739,
+    "converged": false,
+    "elapsedMs": 2155
+  },
+  {
+    "fixture": "should-be-good.json",
+    "damping": 0.18,
+    "iterations": 500,
+    "medianError": 36.680737313689626,
+    "converged": false,
+    "elapsedMs": 2198
+  },
+  {
+    "fixture": "should-be-good.json",
+    "damping": 0.19,
+    "iterations": 500,
+    "medianError": 36.68085312958274,
+    "converged": false,
+    "elapsedMs": 2175
+  },
+  {
+    "fixture": "should-be-good.json",
+    "damping": 0.2,
+    "iterations": 500,
+    "medianError": 36.681586966141715,
+    "converged": false,
+    "elapsedMs": 2150
+  },
+  {
+    "fixture": "ShouldBeSimple.json",
+    "damping": 0.1,
+    "iterations": 6,
+    "medianError": 3.9264538684459773,
+    "converged": true,
+    "elapsedMs": 29
+  },
+  {
+    "fixture": "ShouldBeSimple.json",
+    "damping": 0.11,
+    "iterations": 6,
+    "medianError": 3.9264538682877497,
+    "converged": true,
+    "elapsedMs": 27
+  },
+  {
+    "fixture": "ShouldBeSimple.json",
+    "damping": 0.12,
+    "iterations": 6,
+    "medianError": 3.92645386810487,
+    "converged": true,
+    "elapsedMs": 26
+  },
+  {
+    "fixture": "ShouldBeSimple.json",
+    "damping": 0.13,
+    "iterations": 6,
+    "medianError": 3.9264538678396694,
+    "converged": true,
+    "elapsedMs": 27
+  },
+  {
+    "fixture": "ShouldBeSimple.json",
+    "damping": 0.14,
+    "iterations": 6,
+    "medianError": 3.9264538678584566,
+    "converged": true,
+    "elapsedMs": 35
+  },
+  {
+    "fixture": "ShouldBeSimple.json",
+    "damping": 0.15,
+    "iterations": 6,
+    "medianError": 3.9264538674872944,
+    "converged": true,
+    "elapsedMs": 35
+  },
+  {
+    "fixture": "ShouldBeSimple.json",
+    "damping": 0.16,
+    "iterations": 6,
+    "medianError": 3.9264538677072585,
+    "converged": true,
+    "elapsedMs": 37
+  },
+  {
+    "fixture": "ShouldBeSimple.json",
+    "damping": 0.17,
+    "iterations": 6,
+    "medianError": 3.9264538674404523,
+    "converged": true,
+    "elapsedMs": 26
+  },
+  {
+    "fixture": "ShouldBeSimple.json",
+    "damping": 0.18,
+    "iterations": 6,
+    "medianError": 3.9264538672827434,
+    "converged": true,
+    "elapsedMs": 25
+  },
+  {
+    "fixture": "ShouldBeSimple.json",
+    "damping": 0.19,
+    "iterations": 6,
+    "medianError": 3.926453867199755,
+    "converged": true,
+    "elapsedMs": 25
+  },
+  {
+    "fixture": "ShouldBeSimple.json",
+    "damping": 0.2,
+    "iterations": 6,
+    "medianError": 3.9264538671376683,
+    "converged": true,
+    "elapsedMs": 25
+  },
+  {
+    "fixture": "simplest.json",
+    "damping": 0.1,
+    "iterations": 6,
+    "medianError": 4.158228572830512,
+    "converged": true,
+    "elapsedMs": 24
+  },
+  {
+    "fixture": "simplest.json",
+    "damping": 0.11,
+    "iterations": 6,
+    "medianError": 4.15822857282238,
+    "converged": true,
+    "elapsedMs": 24
+  },
+  {
+    "fixture": "simplest.json",
+    "damping": 0.12,
+    "iterations": 6,
+    "medianError": 4.158228572815691,
+    "converged": true,
+    "elapsedMs": 22
+  },
+  {
+    "fixture": "simplest.json",
+    "damping": 0.13,
+    "iterations": 6,
+    "medianError": 4.158228572810561,
+    "converged": true,
+    "elapsedMs": 24
+  },
+  {
+    "fixture": "simplest.json",
+    "damping": 0.14,
+    "iterations": 6,
+    "medianError": 4.158228572807051,
+    "converged": true,
+    "elapsedMs": 24
+  },
+  {
+    "fixture": "simplest.json",
+    "damping": 0.15,
+    "iterations": 6,
+    "medianError": 4.158228572805203,
+    "converged": true,
+    "elapsedMs": 25
+  },
+  {
+    "fixture": "simplest.json",
+    "damping": 0.16,
+    "iterations": 6,
+    "medianError": 4.158228572805077,
+    "converged": true,
+    "elapsedMs": 23
+  },
+  {
+    "fixture": "simplest.json",
+    "damping": 0.17,
+    "iterations": 6,
+    "medianError": 4.15822857280662,
+    "converged": true,
+    "elapsedMs": 24
+  },
+  {
+    "fixture": "simplest.json",
+    "damping": 0.18,
+    "iterations": 6,
+    "medianError": 4.158228572809811,
+    "converged": true,
+    "elapsedMs": 22
+  },
+  {
+    "fixture": "simplest.json",
+    "damping": 0.19,
+    "iterations": 6,
+    "medianError": 4.158228572814656,
+    "converged": true,
+    "elapsedMs": 23
+  },
+  {
+    "fixture": "simplest.json",
+    "damping": 0.2,
+    "iterations": 6,
+    "medianError": 4.158228572821345,
+    "converged": true,
+    "elapsedMs": 28
+  },
+  {
+    "fixture": "stillwrong-neg-y.json",
+    "damping": 0.1,
+    "iterations": 5,
+    "medianError": 1.847512189440231,
+    "converged": true,
+    "elapsedMs": 17
+  },
+  {
+    "fixture": "stillwrong-neg-y.json",
+    "damping": 0.11,
+    "iterations": 5,
+    "medianError": 1.8475121869984807,
+    "converged": true,
+    "elapsedMs": 16
+  },
+  {
+    "fixture": "stillwrong-neg-y.json",
+    "damping": 0.12,
+    "iterations": 5,
+    "medianError": 1.847512184581736,
+    "converged": true,
+    "elapsedMs": 11
+  },
+  {
+    "fixture": "stillwrong-neg-y.json",
+    "damping": 0.13,
+    "iterations": 5,
+    "medianError": 1.8475121821891756,
+    "converged": true,
+    "elapsedMs": 11
+  },
+  {
+    "fixture": "stillwrong-neg-y.json",
+    "damping": 0.14,
+    "iterations": 5,
+    "medianError": 1.8475121798208585,
+    "converged": true,
+    "elapsedMs": 11
+  },
+  {
+    "fixture": "stillwrong-neg-y.json",
+    "damping": 0.15,
+    "iterations": 5,
+    "medianError": 1.8475121774766232,
+    "converged": true,
+    "elapsedMs": 11
+  },
+  {
+    "fixture": "stillwrong-neg-y.json",
+    "damping": 0.16,
+    "iterations": 5,
+    "medianError": 1.8475121751561665,
+    "converged": true,
+    "elapsedMs": 10
+  },
+  {
+    "fixture": "stillwrong-neg-y.json",
+    "damping": 0.17,
+    "iterations": 5,
+    "medianError": 1.8475121728597528,
+    "converged": true,
+    "elapsedMs": 11
+  },
+  {
+    "fixture": "stillwrong-neg-y.json",
+    "damping": 0.18,
+    "iterations": 5,
+    "medianError": 1.8475121705864042,
+    "converged": true,
+    "elapsedMs": 12
+  },
+  {
+    "fixture": "stillwrong-neg-y.json",
+    "damping": 0.19,
+    "iterations": 5,
+    "medianError": 1.8475121683364337,
+    "converged": true,
+    "elapsedMs": 11
+  },
+  {
+    "fixture": "stillwrong-neg-y.json",
+    "damping": 0.2,
+    "iterations": 5,
+    "medianError": 1.847512166109431,
+    "converged": true,
+    "elapsedMs": 12
+  },
+  {
+    "fixture": "stillwrong-pos-y.json",
+    "damping": 0.1,
+    "iterations": 7,
+    "medianError": 6.665952751757086,
+    "converged": true,
+    "elapsedMs": 15
+  },
+  {
+    "fixture": "stillwrong-pos-y.json",
+    "damping": 0.11,
+    "iterations": 7,
+    "medianError": 6.6659526768619655,
+    "converged": true,
+    "elapsedMs": 17
+  },
+  {
+    "fixture": "stillwrong-pos-y.json",
+    "damping": 0.12,
+    "iterations": 7,
+    "medianError": 6.66595259772595,
+    "converged": true,
+    "elapsedMs": 15
+  },
+  {
+    "fixture": "stillwrong-pos-y.json",
+    "damping": 0.13,
+    "iterations": 7,
+    "medianError": 6.665952514420612,
+    "converged": true,
+    "elapsedMs": 16
+  },
+  {
+    "fixture": "stillwrong-pos-y.json",
+    "damping": 0.14,
+    "iterations": 7,
+    "medianError": 6.6659524270838855,
+    "converged": true,
+    "elapsedMs": 17
+  },
+  {
+    "fixture": "stillwrong-pos-y.json",
+    "damping": 0.15,
+    "iterations": 7,
+    "medianError": 6.665952335898599,
+    "converged": true,
+    "elapsedMs": 16
+  },
+  {
+    "fixture": "stillwrong-pos-y.json",
+    "damping": 0.16,
+    "iterations": 7,
+    "medianError": 6.665953266105905,
+    "converged": true,
+    "elapsedMs": 14
+  },
+  {
+    "fixture": "stillwrong-pos-y.json",
+    "damping": 0.17,
+    "iterations": 7,
+    "medianError": 6.665953259690731,
+    "converged": true,
+    "elapsedMs": 16
+  },
+  {
+    "fixture": "stillwrong-pos-y.json",
+    "damping": 0.18,
+    "iterations": 7,
+    "medianError": 6.665953253346009,
+    "converged": true,
+    "elapsedMs": 15
+  },
+  {
+    "fixture": "stillwrong-pos-y.json",
+    "damping": 0.19,
+    "iterations": 7,
+    "medianError": 6.665953247067874,
+    "converged": true,
+    "elapsedMs": 15
+  },
+  {
+    "fixture": "stillwrong-pos-y.json",
+    "damping": 0.2,
+    "iterations": 7,
+    "medianError": 6.665953240852206,
+    "converged": true,
+    "elapsedMs": 15
+  },
+  {
+    "fixture": "vp-positive-coords.json",
+    "damping": 0.1,
+    "iterations": 0,
+    "medianError": 1.2710574864626038e-13,
+    "converged": true,
+    "elapsedMs": 4
+  },
+  {
+    "fixture": "vp-positive-coords.json",
+    "damping": 0.11,
+    "iterations": 0,
+    "medianError": 1.2710574864626038e-13,
+    "converged": true,
+    "elapsedMs": 5
+  },
+  {
+    "fixture": "vp-positive-coords.json",
+    "damping": 0.12,
+    "iterations": 0,
+    "medianError": 1.2710574864626038e-13,
+    "converged": true,
+    "elapsedMs": 5
+  },
+  {
+    "fixture": "vp-positive-coords.json",
+    "damping": 0.13,
+    "iterations": 0,
+    "medianError": 1.2710574864626038e-13,
+    "converged": true,
+    "elapsedMs": 4
+  },
+  {
+    "fixture": "vp-positive-coords.json",
+    "damping": 0.14,
+    "iterations": 0,
+    "medianError": 1.2710574864626038e-13,
+    "converged": true,
+    "elapsedMs": 4
+  },
+  {
+    "fixture": "vp-positive-coords.json",
+    "damping": 0.15,
+    "iterations": 0,
+    "medianError": 1.2710574864626038e-13,
+    "converged": true,
+    "elapsedMs": 4
+  },
+  {
+    "fixture": "vp-positive-coords.json",
+    "damping": 0.16,
+    "iterations": 0,
+    "medianError": 1.2710574864626038e-13,
+    "converged": true,
+    "elapsedMs": 4
+  },
+  {
+    "fixture": "vp-positive-coords.json",
+    "damping": 0.17,
+    "iterations": 0,
+    "medianError": 1.2710574864626038e-13,
+    "converged": true,
+    "elapsedMs": 4
+  },
+  {
+    "fixture": "vp-positive-coords.json",
+    "damping": 0.18,
+    "iterations": 0,
+    "medianError": 1.2710574864626038e-13,
+    "converged": true,
+    "elapsedMs": 6
+  },
+  {
+    "fixture": "vp-positive-coords.json",
+    "damping": 0.19,
+    "iterations": 0,
+    "medianError": 1.2710574864626038e-13,
+    "converged": true,
+    "elapsedMs": 6
+  },
+  {
+    "fixture": "vp-positive-coords.json",
+    "damping": 0.2,
+    "iterations": 0,
+    "medianError": 1.2710574864626038e-13,
+    "converged": true,
+    "elapsedMs": 4
+  }
+]
