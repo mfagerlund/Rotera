@@ -1,4 +1,5 @@
 import type { BaseDto } from '../serialization/ISerializable'
+import type { ViewpointMetadata } from './ViewpointMetadata'
 
 export interface ViewpointDto extends BaseDto {
   id: string
@@ -22,8 +23,7 @@ export interface ViewpointDto extends BaseDto {
   calibrationNotes?: string
   isProcessed: boolean
   processingNotes?: string
-  metadata?: any
-  isVisible: boolean
+  metadata?: ViewpointMetadata
   opacity: number
   color: string
   isPoseLocked?: boolean

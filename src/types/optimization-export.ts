@@ -31,7 +31,6 @@ export interface ViewpointDtoLight {
   isProcessed: boolean
   processingNotes?: string
   metadata?: any
-  isVisible: boolean
   opacity: number
   color: string
   group?: string

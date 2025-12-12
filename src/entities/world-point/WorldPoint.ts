@@ -22,13 +22,11 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
     inferredXyz: [number | null, number | null, number | null]
     optimizedXyz?: [number, number, number]
     color: string
-    isVisible: boolean
 
     private constructor(
         name: string,
         lockedXyz: [number | null, number | null, number | null],
         color: string,
-        isVisible: boolean,
         optimizedXyz?: [number, number, number],
         inferredXyz?: [number | null, number | null, number | null]
     ) {
@@ -36,7 +34,6 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
         this.lockedXyz = lockedXyz
         this.inferredXyz = inferredXyz || [null, null, null]
         this.color = color
-        this.isVisible = isVisible
         this.optimizedXyz = optimizedXyz
 
         makeAutoObservable(this, {}, { autoBind: true })
@@ -53,7 +50,6 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
         name: string,
         lockedXyz: [number | null, number | null, number | null],
         color: string,
-        isVisible: boolean,
         optimizedXyz?: [number, number, number],
         inferredXyz?: [number | null, number | null, number | null]
     ): WorldPoint {
@@ -61,7 +57,6 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
             name,
             lockedXyz,
             color,
-            isVisible,
             optimizedXyz,
             inferredXyz
         )
@@ -72,7 +67,6 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
         options: {
             lockedXyz: [number | null, number | null, number | null]
             color?: string
-            isVisible?: boolean
             optimizedXyz?: [number, number, number]
         } = {
             lockedXyz: [null, null, null],
@@ -83,7 +77,6 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
             name,
             options.lockedXyz,
             options.color || '#ffffff',
-            options.isVisible ?? true,
             options.optimizedXyz
         )
     }
@@ -379,10 +372,7 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
     // ============================================================================
     // Utility methods
     // ============================================================================
-    setVisible(visible: boolean): void {
-        this.isVisible = visible
-    }
-    
+
     applyOptimizationResult(result: { xyz: [number, number, number], residual?: number }): void {
         this.optimizedXyz = [...result.xyz] as [number , number , number ]
     }
@@ -435,8 +425,6 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
 
         // Aggregate reprojection residuals for every observation of this world point
         for (const imagePoint of this.imagePoints) {
-            if (!imagePoint.isVisible) continue
-
             const cameraValues = valueMap.cameras.get(imagePoint.viewpoint as any)
             if (!cameraValues) continue
 
@@ -524,8 +512,7 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
             lockedXyz: [...this.lockedXyz] as [number | null, number | null, number | null],
             inferredXyz: [...this.inferredXyz] as [number | null, number | null, number | null],
             optimizedXyz: this.optimizedXyz ? [...this.optimizedXyz] as [number, number, number] : undefined,
-            color: this.color,
-            isVisible: this.isVisible
+            color: this.color
         }
     }
 
@@ -534,7 +521,6 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
             dto.name,
             dto.lockedXyz,
             dto.color,
-            dto.isVisible,
             dto.optimizedXyz,
             dto.inferredXyz
         )

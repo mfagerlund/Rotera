@@ -140,18 +140,6 @@ export const PlanesManager: React.FC<PlanesManagerProps> = ({
                     <td className="dir-cell">{getDefinitionType(plane)}</td>
                     <td className="points-cell">{getDefinitionEntities(plane)}</td>
                     <td className="actions-cell">
-                      {onTogglePlaneVisibility && (
-                        <button
-                          className="btn-icon"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            onTogglePlaneVisibility(plane)
-                          }}
-                          title={plane.isVisible ? 'Hide' : 'Show'}
-                        >
-                          <FontAwesomeIcon icon={plane.isVisible ? faEye : faEyeSlash} />
-                        </button>
-                      )}
                       {onEditPlane && (
                         <button
                           className="btn-icon"

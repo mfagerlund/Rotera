@@ -6,7 +6,6 @@ export class Plane implements ISelectable {
   name: string
   points: Set<WorldPoint>
   color: string
-  isVisible: boolean
   opacity: number
   fillStyle: 'solid' | 'wireframe' | 'transparent'
 
@@ -14,13 +13,11 @@ export class Plane implements ISelectable {
     name: string,
     points: Set<WorldPoint>,
     color: string,
-    isVisible: boolean,
     opacity: number,
     fillStyle: 'solid' | 'wireframe' | 'transparent') {
     this.name = name
     this.points = points
     this.color = color
-    this.isVisible = isVisible
     this.opacity = opacity
     this.fillStyle = fillStyle
   }
@@ -30,7 +27,6 @@ export class Plane implements ISelectable {
     points: WorldPoint[],
     options: {
       color?: string
-      isVisible?: boolean
       opacity?: number
       fillStyle?: 'solid' | 'wireframe' | 'transparent'
     } = {}
@@ -43,7 +39,6 @@ export class Plane implements ISelectable {
       name,
       new Set(points),
       options.color || '#cccccc',
-      options.isVisible ?? true,
       options.opacity ?? 0.5,
       options.fillStyle || 'transparent'
     )
@@ -103,14 +98,9 @@ export class Plane implements ISelectable {
       newName || `${this.name} (copy)`,
       new Set(this.points),
       this.color,
-      this.isVisible,
       this.opacity,
       this.fillStyle
     )
-  }
-
-  setVisible(visible: boolean): void {
-    this.isVisible = visible
   }
 
   getNormal(): [number, number, number] | null {

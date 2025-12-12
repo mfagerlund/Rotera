@@ -118,8 +118,6 @@ export function renderCameras(
   const frustumDepth = Math.max(sceneSize * 0.25, 0.5) // 25% of scene size, min 0.5
 
   project.viewpoints.forEach((viewpoint) => {
-    if (!viewpoint.isVisible) return
-
     const isSelected = selectedSet.has(viewpoint)
     const isHovered = hoveredViewpoint === viewpoint
 

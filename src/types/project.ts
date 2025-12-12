@@ -65,7 +65,6 @@ export interface Plane {
     pointId?: string                     // For line_point
   }
   equation?: [number, number, number, number]  // ax + by + cz + d = 0
-  isVisible: boolean   // Show/hide in UI
   color: string        // Visual distinction
   isConstruction?: boolean  // Construction vs driving geometry
   createdAt?: string   // Creation timestamp

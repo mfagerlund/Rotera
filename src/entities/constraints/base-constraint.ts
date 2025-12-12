@@ -37,7 +37,6 @@ export interface ConstraintRepository {
 export abstract class Constraint implements ISelectable, IValidatable, IResidualProvider, ISerializable<ConstraintDto> {
   lastResiduals: number[] = []
   selected = false
-  isVisible = true
   name: string
 
   protected constructor(name: string) {
@@ -46,7 +45,6 @@ export abstract class Constraint implements ISelectable, IValidatable, IResidual
     makeObservable(this, {
       lastResiduals: observable,
       selected: observable,
-      isVisible: observable,
       name: observable,
     })
   }

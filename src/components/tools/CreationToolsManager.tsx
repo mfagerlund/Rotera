@@ -23,7 +23,6 @@ type ToolType = 'select' | 'point' | 'line' | 'plane' | 'circle' | 'loop' | 'van
 interface LineConstraints {
   name?: string
   color?: string
-  isVisible?: boolean
   isConstruction?: boolean
   direction?: LineDirection
   targetLength?: number

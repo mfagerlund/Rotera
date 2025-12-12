@@ -9,7 +9,6 @@ import { useLoopTrace } from '../../hooks/useLoopTrace'
 interface LineConstraints {
   name?: string
   color?: string
-  isVisible?: boolean
   isConstruction?: boolean
   constraints?: {
     direction: LineDirection

@@ -37,20 +37,17 @@ const mockSettings: ProjectSettings = {
 // Mock world points for testing
 const mockPoint1 = WorldPoint.create('Test Point 1', {
   lockedXyz: [0, 0, 0],
-  color: '#2196F3',
-  isVisible: true
+  color: '#2196F3'
 })
 
 const mockPoint2 = WorldPoint.create('Test Point 2', {
   lockedXyz: [1, 0, 0],
-  color: '#2196F3',
-  isVisible: true
+  color: '#2196F3'
 })
 
 const mockPoint3 = WorldPoint.create('Test Point 3', {
   lockedXyz: [0, 1, 0],
-  color: '#2196F3',
-  isVisible: true
+  color: '#2196F3'
 })
 
 // Mock viewpoint for testing
@@ -63,28 +60,24 @@ const mockViewpoint1 = Viewpoint.create(
   {
     focalLength: 1000,
     principalPointX: 960,
-    principalPointY: 540,
-    isVisible: true
+    principalPointY: 540
   }
 )
 
 // Add image points to viewpoint
 const ip1 = ImagePoint.create(mockPoint1, mockViewpoint1, 100, 100, {
-  isVisible: true,
   confidence: 1.0
 })
 mockViewpoint1.addImagePoint(ip1)
 mockPoint1.addImagePoint(ip1)
 
 const ip2 = ImagePoint.create(mockPoint2, mockViewpoint1, 150, 100, {
-  isVisible: true,
   confidence: 1.0
 })
 mockViewpoint1.addImagePoint(ip2)
 mockPoint2.addImagePoint(ip2)
 
 const ip3 = ImagePoint.create(mockPoint3, mockViewpoint1, 100, 150, {
-  isVisible: true,
   confidence: 1.0
 })
 mockViewpoint1.addImagePoint(ip3)
@@ -138,8 +131,7 @@ export const mockProject = {
 
 export const mockWorldPoint = WorldPoint.create('Test Point', {
   lockedXyz: [1, 2, 3],
-  color: '#2196F3',
-  isVisible: true
+  color: '#2196F3'
 })
 
 export const mockConstraint = DistanceConstraint.create(
@@ -161,8 +153,7 @@ export const mockViewpoint = Viewpoint.create(
   {
     focalLength: 1000,
     principalPointX: 960,
-    principalPointY: 540,
-    isVisible: true
+    principalPointY: 540
   }
 )
 

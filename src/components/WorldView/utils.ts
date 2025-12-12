@@ -79,8 +79,6 @@ export function findCameraAt(
   project3DTo2D: (point: [number, number, number]) => ProjectedPoint
 ): Viewpoint | null {
   for (const viewpoint of project.viewpoints) {
-    if (!viewpoint.isVisible) continue
-
     const projected = project3DTo2D(viewpoint.position)
     const distance = Math.sqrt(
       Math.pow(projected.x - x, 2) + Math.pow(projected.y - y, 2)

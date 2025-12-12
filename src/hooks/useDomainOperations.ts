@@ -15,7 +15,6 @@ import { ImageUtils } from '../utils/imageUtils'
 export interface WorldPointOptions {
   lockedXyz?: [number | null, number | null, number | null]
   color?: string
-  isVisible?: boolean
 }
 
 export interface LineOptions {
@@ -267,7 +266,6 @@ export function useDomainOperations(
       u,
       v,
       {
-        isVisible: true,
         confidence: 1.0
       }
     )

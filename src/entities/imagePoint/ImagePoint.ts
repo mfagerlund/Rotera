@@ -21,7 +21,6 @@ export class ImagePoint implements ISelectable, IImagePoint, IResidualProvider, 
     viewpoint: Viewpoint
     u: number
     v: number
-    isVisible: boolean
     confidence: number
 
     public constructor(
@@ -29,14 +28,12 @@ export class ImagePoint implements ISelectable, IImagePoint, IResidualProvider, 
         viewpoint: Viewpoint,
         u: number,
         v: number,
-        isVisible: boolean,
         confidence: number,
     ) {
         this.worldPoint = worldPoint
         this.viewpoint = viewpoint
         this.u = u
         this.v = v
-        this.isVisible = isVisible
         this.confidence = confidence
 
         makeAutoObservable(this, {}, { autoBind: true })
@@ -49,7 +46,6 @@ export class ImagePoint implements ISelectable, IImagePoint, IResidualProvider, 
         v: number,
         options: {
             id?: string
-            isVisible?: boolean
             confidence?: number
         } = {}
     ): ImagePoint {
@@ -59,7 +55,6 @@ export class ImagePoint implements ISelectable, IImagePoint, IResidualProvider, 
             viewpoint,
             u,
             v,
-            options.isVisible ?? true,
             options.confidence ?? 1.0
         )
     }
@@ -95,10 +90,6 @@ export class ImagePoint implements ISelectable, IImagePoint, IResidualProvider, 
     setPosition(u: number, v: number): void {
         this.u = u
         this.v = v
-    }
-
-    setVisible(visible: boolean): void {
-        this.isVisible = visible
     }
 
     setConfidence(confidence: number): void {
@@ -210,7 +201,6 @@ export class ImagePoint implements ISelectable, IImagePoint, IResidualProvider, 
             viewpointId,
             u: this.u,
             v: this.v,
-            isVisible: this.isVisible,
             confidence: this.confidence
         }
     }
@@ -227,7 +217,6 @@ export class ImagePoint implements ISelectable, IImagePoint, IResidualProvider, 
         }
 
         const imagePoint = ImagePoint.create(worldPoint, viewpoint, dto.u, dto.v, {
-            isVisible: dto.isVisible,
             confidence: dto.confidence
         })
 

@@ -37,7 +37,6 @@ describe('ImagePoint Serialization', () => {
 
   test('round-trip preserves data and relationships', () => {
     const original = ImagePoint.create(worldPoint, viewpoint, 100, 200, {
-      isVisible: false,
       confidence: 0.8
     })
 
@@ -49,7 +48,6 @@ describe('ImagePoint Serialization', () => {
     expect(deserialized.viewpoint).toBe(viewpoint)
     expect(deserialized.u).toBe(100)
     expect(deserialized.v).toBe(200)
-    expect(deserialized.isVisible).toBe(false)
     expect(deserialized.confidence).toBe(0.8)
   })
 

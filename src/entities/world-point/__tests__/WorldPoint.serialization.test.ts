@@ -11,8 +11,7 @@ describe('WorldPoint Serialization', () => {
   test('serializes basic world point', () => {
     const point = WorldPoint.create('P1', {
       lockedXyz: [1, 2, 3],
-      color: '#ff0000',
-      isVisible: true
+      color: '#ff0000'
     })
 
     const dto = point.serialize(context)
@@ -21,7 +20,6 @@ describe('WorldPoint Serialization', () => {
     expect(dto.name).toBe('P1')
     expect(dto.lockedXyz).toEqual([1, 2, 3])
     expect(dto.color).toBe('#ff0000')
-    expect(dto.isVisible).toBe(true)
   })
 
   test('serializes point with optimized coordinates', () => {
@@ -39,7 +37,6 @@ describe('WorldPoint Serialization', () => {
     const original = WorldPoint.create('Origin', {
       lockedXyz: [0, 0, 0],
       color: '#00ff00',
-      isVisible: true,
       optimizedXyz: [0, 0, 0]
     })
 
@@ -50,7 +47,6 @@ describe('WorldPoint Serialization', () => {
     expect(deserialized.lockedXyz).toEqual(original.lockedXyz)
     expect(deserialized.optimizedXyz).toEqual(original.optimizedXyz)
     expect(deserialized.color).toBe(original.color)
-    expect(deserialized.isVisible).toBe(original.isVisible)
   })
 
   test('deserialized point is registered in context', () => {

@@ -26,8 +26,6 @@ export function renderWorldPoints(
   project3DTo2D: (point: [number, number, number]) => ProjectedPoint
 ) {
   project.worldPoints.forEach((point) => {
-    if (!point.isVisible) return
-
     const coords = point.optimizedXyz
     if (!coords) return
 

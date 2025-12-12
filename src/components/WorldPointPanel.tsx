@@ -613,16 +613,14 @@ const EnhancedWorldPointItem: React.FC<EnhancedWorldPointItemProps> = ({
         {showConstraints && involvedConstraints.length > 0 && (
           <div className="wp-constraints">
             {involvedConstraints.map(constraint => {
-              const isEnabled = constraint.isVisible
               const constraintType = constraint.getConstraintType()
               return (
                 <div
                   key={getEntityKey(constraint)}
-                  className={`wp-constraint-item ${!isEnabled ? 'disabled' : ''} ${isEnabled ? 'constraint-completion' : ''}`}
+                  className={`wp-constraint-item constraint-completion`}
                 >
                   <span className="constraint-icon">{getConstraintIcon(constraintType)}</span>
                   <span className="constraint-name">{getConstraintDisplayName(constraint)}</span>
-                  {!isEnabled && <span className="disabled-indicator">🚫</span>}
                 </div>
               )
             })}

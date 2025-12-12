@@ -38,8 +38,7 @@ describe('Real Data Optimization', () => {
         const entity = WorldPointEntity.create(wp.name, {
           lockedXyz: wp.isLocked ? (wp.xyz as [number, number, number]) : [null, null, null],
           optimizedXyz: wp.xyz as [number, number, number],
-          color: wp.color,
-          isVisible: wp.isVisible
+          color: wp.color
         });
         pointEntities.push(entity);
         pointMap.set(wp.id, entity);
@@ -85,8 +84,7 @@ describe('Real Data Optimization', () => {
         const entity = WorldPointEntity.create(wp.name, {
           lockedXyz: wp.isLocked ? (wp.xyz as [number, number, number]) : [null, null, null],
           optimizedXyz: wp.xyz as [number, number, number],
-          color: wp.color,
-          isVisible: wp.isVisible
+          color: wp.color
         });
         pointEntities.push(entity);
       }
@@ -108,8 +106,7 @@ describe('Real Data Optimization', () => {
         const entity = WorldPointEntity.create(wp.name, {
           lockedXyz: wp.isLocked ? (wp.xyz as [number, number, number]) : [null, null, null],
           optimizedXyz: wp.xyz as [number, number, number],
-          color: wp.color,
-          isVisible: wp.isVisible
+          color: wp.color
         });
         pointEntities.push(entity);
         pointMap.set(wp.id, entity);
@@ -198,8 +195,7 @@ describe('Real Data Optimization', () => {
         const entity = WorldPointEntity.create(wp.name, {
           lockedXyz: wp.isLocked ? (wp.xyz as [number, number, number]) : [null, null, null],
           optimizedXyz: wp.xyz as [number, number, number],
-          color: wp.color,
-          isVisible: wp.isVisible
+          color: wp.color
         });
         pointEntities.push(entity);
         pointMap.set(wp.id, entity);

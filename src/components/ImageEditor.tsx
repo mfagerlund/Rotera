@@ -32,8 +32,6 @@ export const ImageEditor: React.FC<ImageEditorProps> = observer(({
     let count = 0
 
     for (const ip of viewpoint.imagePoints) {
-      if (!ip.isVisible) continue
-
       let dx: number | null = null
       let dy: number | null = null
 

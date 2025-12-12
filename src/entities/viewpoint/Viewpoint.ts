@@ -10,6 +10,7 @@ import type { ISerializable } from '../serialization/ISerializable'
 import type { SerializationContext } from '../serialization/SerializationContext'
 import type { ViewpointDto } from './ViewpointDto'
 import type { VanishingLine } from '../vanishing-line'
+import type { ViewpointMetadata } from './ViewpointMetadata'
 import {makeAutoObservable} from 'mobx'
 
 export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint, ISerializable<ViewpointDto> {
@@ -50,8 +51,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
     calibrationNotes?: string
     isProcessed: boolean
     processingNotes?: string
-    metadata?: any
-    isVisible: boolean
+    metadata?: ViewpointMetadata
     opacity: number
     color: string
     imagePoints: Set<ImagePoint> = new Set()
@@ -79,8 +79,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
         calibrationNotes: string | undefined,
         isProcessed: boolean,
         processingNotes: string | undefined,
-        metadata: any | undefined,
-        isVisible: boolean,
+        metadata: ViewpointMetadata | undefined,
         opacity: number,
         color: string
     ) {
@@ -106,7 +105,6 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
         this.isProcessed = isProcessed
         this.processingNotes = processingNotes
         this.metadata = metadata
-        this.isVisible = isVisible
         this.opacity = opacity
         this.color = color
 
@@ -142,8 +140,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
         calibrationNotes: string | undefined,
         isProcessed: boolean,
         processingNotes: string | undefined,
-        metadata: any,
-        isVisible: boolean,
+        metadata: ViewpointMetadata | undefined,
         opacity: number,
         color: string
     ): Viewpoint {
@@ -170,7 +167,6 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
             isProcessed,
             processingNotes,
             metadata,
-            isVisible,
             opacity,
             color
         )
@@ -207,10 +203,9 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
             calibrationNotes?: string
             isProcessed?: boolean
             processingNotes?: string
-            metadata?: any
+            metadata?: ViewpointMetadata
 
             // Display
-            isVisible?: boolean
             opacity?: number
             color?: string
             group?: string
@@ -257,7 +252,6 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
             isProcessed: options.isProcessed ?? false,
             processingNotes: options.processingNotes,
             metadata: options.metadata,
-            isVisible: options.isVisible ?? true,
             opacity: options.opacity ?? 1.0,
             color: options.color || '#ffff00',
             group: options.group,
@@ -289,7 +283,6 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
             dto.isProcessed,
             dto.processingNotes,
             dto.metadata,
-            dto.isVisible,
             dto.opacity,
             dto.color
         )
@@ -365,10 +358,6 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
         return Array.from(this.imagePoints).filter(ip => ip.worldPoint === worldPoint)
     }
 
-    getVisibleImagePoints(): ImagePoint[] {
-        return Array.from(this.imagePoints).filter(ip => ip.isVisible)
-    }
-
     addVanishingLine(line: VanishingLine): void {
         this.vanishingLines.add(line)
     }
@@ -436,10 +425,6 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
 
     normalizedToPixel(u: number, v: number): [number, number] {
         return [u * this.imageWidth, v * this.imageHeight]
-    }
-
-    setVisible(visible: boolean): void {
-        this.isVisible = visible
     }
 
     setPoseLocked(locked: boolean): void {
@@ -616,7 +601,6 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
             isProcessed: this.isProcessed,
             processingNotes: this.processingNotes,
             metadata: this.metadata ? { ...this.metadata } : undefined,
-            isVisible: this.isVisible,
             opacity: this.opacity,
             color: this.color,
             isPoseLocked: this.isPoseLocked,
@@ -648,7 +632,6 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
             dto.isProcessed,
             dto.processingNotes,
             dto.metadata,
-            dto.isVisible,
             dto.opacity,
             dto.color
         )

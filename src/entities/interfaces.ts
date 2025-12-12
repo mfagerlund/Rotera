@@ -19,7 +19,6 @@ export interface IImagePoint {
     viewpoint: IViewpoint    // Concrete class has concrete types
     u: number
     v: number
-    isVisible: boolean
     confidence: number
     isOutlier: boolean
     reprojectedU?: number

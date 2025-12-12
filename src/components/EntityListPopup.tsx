@@ -13,7 +13,6 @@ export interface EntityListItem<T = any> {
   displayInfo?: string
   additionalInfo?: string[]
   color?: string
-  isVisible?: boolean
   isActive?: boolean
   entity: T  // The actual entity object - use this instead of ID lookups
 }
@@ -100,15 +99,6 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
         label: 'Edit',
         icon: faPencil,
         onClick: () => onEdit(entityItem.entity)
-      })
-    }
-
-    if (onToggleVisibility) {
-      items.push({
-        id: 'toggle-visibility',
-        label: entityItem.isVisible ? 'Hide' : 'Show',
-        icon: entityItem.isVisible ? faEyeSlash : faEye,
-        onClick: () => onToggleVisibility(entityItem.entity)
       })
     }
 

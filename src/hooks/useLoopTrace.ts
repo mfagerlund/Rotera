@@ -8,7 +8,6 @@ import { CoplanarPointsConstraint } from '../entities/constraints/coplanar-point
 interface LineConstraints {
   name?: string
   color?: string
-  isVisible?: boolean
   isConstruction?: boolean
   direction?: LineDirection
   targetLength?: number
@@ -135,7 +134,6 @@ export function useLoopTrace({
       const constraints: LineConstraints = {
         name: lineName,
         color: '#0696d7',
-        isVisible: true,
         isConstruction: false,
         direction: orientation,
         targetLength: undefined,

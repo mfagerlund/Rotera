@@ -335,7 +335,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
     setActiveTool('select')
   }, [setEditingLine, setActiveTool])
 
-  const handleEditLineSave = useCallback((lineEntity: LineEntity, updatedLine: { name?: string; color?: string; isVisible?: boolean }) => {
+  const handleEditLineSave = useCallback((lineEntity: LineEntity, updatedLine: { name?: string; color?: string }) => {
     updateLine(lineEntity, updatedLine)
     // Don't deactivate tool when using orientation paint (multi-use tool)
     if (activeTool !== 'orientationPaint') {

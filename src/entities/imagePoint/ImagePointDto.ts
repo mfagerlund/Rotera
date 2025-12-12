@@ -6,6 +6,5 @@ export interface ImagePointDto extends BaseDto {
   viewpointId: string
   u: number
   v: number
-  isVisible: boolean
   confidence: number
 }
