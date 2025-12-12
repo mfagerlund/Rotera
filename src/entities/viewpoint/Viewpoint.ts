@@ -619,7 +619,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
             isVisible: this.isVisible,
             opacity: this.opacity,
             color: this.color,
-            // NOTE: isPoseLocked is intentionally NOT serialized - it's a runtime-only flag
+            isPoseLocked: this.isPoseLocked,
             vanishingLineIds: vanishingLineIds.length > 0 ? vanishingLineIds : undefined
         }
     }
@@ -655,8 +655,9 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
 
         context.registerEntity(viewpoint, dto.id)
 
-        // NOTE: isPoseLocked is NOT deserialized - it's a runtime-only flag set during optimization
-        // Old JSON files may have this field, but we ignore it
+        if (dto.isPoseLocked !== undefined) {
+            viewpoint.isPoseLocked = dto.isPoseLocked
+        }
 
         return viewpoint
     }

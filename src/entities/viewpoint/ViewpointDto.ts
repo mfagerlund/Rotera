@@ -26,9 +26,7 @@ export interface ViewpointDto extends BaseDto {
   isVisible: boolean
   opacity: number
   color: string
-  // NOTE: isPoseLocked is a runtime-only flag, not persisted
-  // Kept optional in DTO for backwards compatibility (old JSON files may have it)
-  isPoseLocked?: boolean  // DEPRECATED - ignored on load, not written on save
+  isPoseLocked?: boolean
   isPossiblyCropped?: boolean  // If true, principal point can be optimized. Defaults to false (PP locked to center)
   vanishingLineIds?: string[]
 }

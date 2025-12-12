@@ -81,11 +81,6 @@ export interface SolverOptions {
    * Typical values: 0.01-0.1. Default: 0 (no regularization).
    */
   regularizationWeight?: number;
-  /**
-   * Set of cameras whose pose should be locked during optimization.
-   * Used for VP-initialized cameras that should not drift.
-   */
-  lockedCameras?: Set<Viewpoint>;
 }
 
 export class ConstraintSystem {
@@ -95,7 +90,6 @@ export class ConstraintSystem {
   private verbose: boolean;
   private optimizeCameraIntrinsics: boolean | ((camera: Viewpoint) => boolean);
   private regularizationWeight: number;
-  private lockedCameras: Set<Viewpoint>;
 
   // Entities in the system
   private points: Set<WorldPoint> = new Set();
@@ -114,7 +108,6 @@ export class ConstraintSystem {
     this.verbose = options.verbose ?? false;
     this.optimizeCameraIntrinsics = options.optimizeCameraIntrinsics ?? false;
     this.regularizationWeight = options.regularizationWeight ?? 0;
-    this.lockedCameras = options.lockedCameras ?? new Set();
   }
 
   /**
@@ -202,7 +195,7 @@ export class ConstraintSystem {
             ? this.optimizeCameraIntrinsics(camera)
             : this.optimizeCameraIntrinsics;
         const cameraVariables = (camera as any).addToValueMap(valueMap, {
-          optimizePose: !this.lockedCameras.has(camera),
+          optimizePose: !(camera as any).isPoseLocked,
           optimizeIntrinsics,
           optimizeDistortion: false,
         });

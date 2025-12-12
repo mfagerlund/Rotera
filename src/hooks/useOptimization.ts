@@ -19,7 +19,6 @@ export interface OptimizationOptions {
   tolerance?: number;
   damping?: number;
   verbose?: boolean;
-  lockVPCameras?: boolean;
 }
 
 export interface ConstraintResidual {
@@ -157,7 +156,6 @@ export const useOptimization = () => {
                 verbose: options.verbose ?? false,
                 autoInitializeCameras: true,
                 autoInitializeWorldPoints: true,
-                lockVPCameras: options.lockVPCameras ?? false,
               });
               resolve(solverResult);
             } catch (error) {

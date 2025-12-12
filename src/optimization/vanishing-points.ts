@@ -1420,40 +1420,10 @@ export function initializeCameraWithVanishingPoints(
     log(`[initializeCameraWithVanishingPoints] Using existing principal point: (${principalPoint.u.toFixed(1)}, ${principalPoint.v.toFixed(1)})`)
   }
 
-  // Estimate focal length from vanishing points using the orthogonality constraint.
-  // For orthogonal VPs, f^2 = -(u1*u2 + v1*v2) where u,v are relative to principal point.
-  // Try all pairs and average the valid estimates.
   let focalLength = viewpoint.focalLength
-  const focalEstimates: number[] = []
-
-  if (vps.x && vps.y) {
-    const f = estimateFocalLength(vps.x, vps.y, principalPoint)
-    if (f !== null && f > 0) focalEstimates.push(f)
-  }
-  if (vps.x && vps.z) {
-    const f = estimateFocalLength(vps.x, vps.z, principalPoint)
-    if (f !== null && f > 0) focalEstimates.push(f)
-  }
-  if (vps.y && vps.z) {
-    const f = estimateFocalLength(vps.y, vps.z, principalPoint)
-    if (f !== null && f > 0) focalEstimates.push(f)
-  }
-
-  if (focalEstimates.length > 0) {
-    // Average the estimates
-    const avgFocal = focalEstimates.reduce((a, b) => a + b, 0) / focalEstimates.length
-    // Sanity check: focal length should be reasonable (0.3x to 5x of image diagonal)
-    const minFocal = Math.min(viewpoint.imageWidth, viewpoint.imageHeight) * 0.3
-    const maxFocal = Math.max(viewpoint.imageWidth, viewpoint.imageHeight) * 5
-    if (avgFocal >= minFocal && avgFocal <= maxFocal) {
-      focalLength = avgFocal
-      log(`[initializeCameraWithVanishingPoints] Estimated focal length from VPs: ${focalLength.toFixed(1)} (from ${focalEstimates.length} estimate(s): ${focalEstimates.map(f => f.toFixed(1)).join(', ')})`)
-    } else {
-      log(`[initializeCameraWithVanishingPoints] VP focal estimate (${avgFocal.toFixed(1)}) outside valid range [${minFocal.toFixed(0)}, ${maxFocal.toFixed(0)}], using existing: ${focalLength.toFixed(1)}`)
-    }
-  } else {
-    log(`[initializeCameraWithVanishingPoints] Could not estimate focal length from VPs, using existing: ${focalLength.toFixed(1)}`)
-  }
+  // DON'T estimate focal length from VPs - it changes the projection math and breaks
+  // reprojection of locked points. The viewpoint's focal length is the actual camera intrinsic.
+  log(`[initializeCameraWithVanishingPoints] Using existing focal length: ${focalLength.toFixed(1)}`)
 
   const baseRotations = computeRotationsFromVPs(vps, focalLength, principalPoint)
   if (!baseRotations || baseRotations.length === 0) {

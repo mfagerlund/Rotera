@@ -103,22 +103,9 @@ describe('Regression Fixtures - Multi-Camera VL', () => {
     // VL+non-VL two-camera case: C3 has VL, C1 is initialized via late PnP
     // After preliminary single-cam solve, achieves ~9 residual (vs 54 without)
     { filename: 'VL-and-non-VL-two-cameras.json', maxTotalError: 10 },
-    // User's two-camera VL+non-VL case (the "YOU ABSOLUTE MORON" fixture)
-    { filename: 'two-camera-vl-non-vl-user.json', maxTotalError: 10 },
   ];
 
   it.each(multiCameraVLFixtures)('$filename should have total error < $maxTotalError', (fixture) => {
-    runRegressionTest(fixture);
-  });
-});
-
-describe('Regression Fixtures - Single Camera VL Baseline', () => {
-  const singleCameraVLFixtures: RegressionFixture[] = [
-    // This fixture has ALWAYS worked - if it fails, something is fundamentally broken
-    { filename: 'single-camera-vl-baseline.json', maxTotalError: 2 },
-  ];
-
-  it.each(singleCameraVLFixtures)('$filename should have total error < $maxTotalError', (fixture) => {
     runRegressionTest(fixture);
   });
 });

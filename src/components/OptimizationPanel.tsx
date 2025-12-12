@@ -284,8 +284,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
           maxIterations: settings.maxIterations,
           tolerance: settings.tolerance,
           damping: settings.damping,
-          verbose: settings.verbose,
-          lockVPCameras: settings.lockVPCameras
+          verbose: settings.verbose
         }
       )
 
@@ -606,16 +605,6 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                 onChange={(e) => handleSettingChange('verbose', e.target.checked)}
               />
               <span>Verbose Output</span>
-            </label>
-          </div>
-          <div className="setting-row">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={settings.lockVPCameras ?? false}
-                onChange={(e) => handleSettingChange('lockVPCameras', e.target.checked)}
-              />
-              <span>Lock VP Cameras</span>
             </label>
           </div>
           <div className="settings-actions">
