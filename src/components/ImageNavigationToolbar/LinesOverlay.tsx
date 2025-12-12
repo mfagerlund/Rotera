@@ -5,6 +5,7 @@ import { observer } from 'mobx-react-lite'
 import type { Viewpoint } from '../../entities/viewpoint'
 import type { ImageBounds } from './hooks/useImageBounds'
 import { project } from '../../store/project-store'
+import { getEntityKey } from '../../utils/entityKeys'
 
 interface LinesOverlayProps {
   image: Viewpoint
@@ -45,7 +46,7 @@ export const LinesOverlay: React.FC<LinesOverlayProps> = observer(({
 
     lineElements.push(
       <line
-        key={`line-${line.name}`}
+        key={getEntityKey(line)}
         x1={p1.x}
         y1={p1.y}
         x2={p2.x}

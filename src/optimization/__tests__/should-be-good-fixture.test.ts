@@ -130,12 +130,7 @@ function vpDirDot(
 }
 
 describe('Should Be Good fixture', () => {
-  // SKIPPED: This fixture has intentionally inconsistent vanishing lines that point
-  // opposite to what the pixel observations require. The test expectations were based
-  // on algorithm behavior that has since been corrected. The optimization still produces
-  // reasonable results, but WP5's exact position differs from the old expectations.
-  // TODO: Re-evaluate this fixture and update expectations if needed.
-  it.skip('prefers pixel observations when vanishing lines are sign-flipped', () => {
+  it('prefers pixel observations when vanishing lines are sign-flipped', () => {
     const project = loadFixture('should-be-good.json');
     const vp = Array.from(project.viewpoints)[0] as Viewpoint;
 

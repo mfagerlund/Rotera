@@ -896,6 +896,15 @@ export interface PnPInitializationResult {
   reason?: string;
 }
 
+export interface PnPOptions {
+  /**
+   * If true, use any point with optimizedXyz for PnP, not just fully constrained ones.
+   * Use this for "late PnP" cases where points have been triangulated from other cameras.
+   * Default: false (only use fully constrained points)
+   */
+  useTriangulatedPoints?: boolean;
+}
+
 /**
  * Initialize an additional camera using iterative PnP optimization.
  *
@@ -913,27 +922,35 @@ export interface PnPInitializationResult {
  */
 export function initializeCameraWithPnP(
   viewpoint: IViewpoint,
-  allWorldPoints: Set<IWorldPoint>
+  allWorldPoints: Set<IWorldPoint>,
+  options: PnPOptions = {}
 ): PnPInitializationResult {
+  const { useTriangulatedPoints = false } = options;
   const vpConcrete = viewpoint as Viewpoint;
 
-  // CRITICAL: For centroid/geometry calculation, ONLY use constrained points (locked or inferred coordinates)
-  // Unconstrained points may have garbage optimizedXyz from previous failed optimizations,
-  // which would cause wildly incorrect camera positions (millions of units away from origin)
+  // For centroid/geometry calculation:
+  // - Default mode (useTriangulatedPoints=false): Only use constrained points (locked or inferred coordinates)
+  //   Unconstrained points may have garbage optimizedXyz from previous failed optimizations.
+  // - Late PnP mode (useTriangulatedPoints=true): Use any point with optimizedXyz, since these
+  //   were triangulated from successfully initialized cameras and are reliable.
   const constrainedPoints: [number, number, number][] = [];
 
   for (const ip of vpConcrete.imagePoints) {
     const wp = ip.worldPoint as WorldPoint;
-    // Only use constrained points - they have reliable positions
-    if (wp.optimizedXyz && wp.isFullyConstrained()) {
+    const canUsePoint = useTriangulatedPoints
+      ? wp.optimizedXyz !== undefined && wp.optimizedXyz !== null
+      : wp.optimizedXyz && wp.isFullyConstrained();
+
+    if (canUsePoint && wp.optimizedXyz) {
       constrainedPoints.push(wp.optimizedXyz);
     }
   }
 
-  // Need at least 3 constrained points for reliable centroid
+  // Need at least 3 points for reliable centroid
   if (constrainedPoints.length < 3) {
-    logOnce(`PnP: Camera ${vpConcrete.name} has only ${constrainedPoints.length} constrained points (need 3)`);
-    return { success: false, reliable: false, reason: `Not enough constrained points (have ${constrainedPoints.length}, need 3)` };
+    const pointType = useTriangulatedPoints ? 'triangulated' : 'constrained';
+    logOnce(`PnP: Camera ${vpConcrete.name} has only ${constrainedPoints.length} ${pointType} points (need 3)`);
+    return { success: false, reliable: false, reason: `Not enough ${pointType} points (have ${constrainedPoints.length}, need 3)` };
   }
 
   // Use constrained points for centroid (reliable positions)
