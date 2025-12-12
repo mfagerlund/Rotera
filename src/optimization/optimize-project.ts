@@ -202,6 +202,19 @@ export function optimizeProject(
         if (v.focalLength < minFocalLength || v.focalLength > maxFocalLength) {
           v.focalLength = Math.max(v.imageWidth, v.imageHeight);
         }
+
+        // BUG FIX: Reset focal length for cameras without vanishing lines if it looks optimized
+        // Optimized focal lengths are typically 1.5x-3x the sensor-based default.
+        // If focal length is far from sensor-based default, reset it to avoid using stale values from previous solve.
+        if (v.getVanishingLineCount() === 0) {
+          const sensorBasedFocal = Math.max(v.imageWidth, v.imageHeight);
+          const ratio = v.focalLength / sensorBasedFocal;
+          // If focal length is 1.3x-3x the sensor-based default, it's probably optimized - reset it
+          if (ratio > 1.3 || ratio < 0.7) {
+            v.focalLength = sensorBasedFocal;
+          }
+        }
+
         // Principal point should be within image bounds
         if (v.principalPointX < 0 || v.principalPointX > v.imageWidth ||
             v.principalPointY < 0 || v.principalPointY > v.imageHeight) {
@@ -210,12 +223,11 @@ export function optimizeProject(
         }
       }
 
-      // Clear optimizedXyz on unconstrained world points
+      // BUG FIX: Clear optimizedXyz on ALL world points, not just unconstrained
+      // Stale optimizedXyz from previous solve can poison initialization
       const wpArray = Array.from(project.worldPoints) as WorldPoint[];
       for (const wp of wpArray) {
-        if (!wp.isFullyConstrained() && wp.optimizedXyz) {
-          wp.optimizedXyz = undefined;
-        }
+        wp.optimizedXyz = undefined;
       }
     }
 
