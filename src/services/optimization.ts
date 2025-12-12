@@ -448,7 +448,8 @@ export const defaultOptimizationSettings = {
   maxIterations: 500,
   tolerance: 1e-6,
   damping: 0.1,  // Higher damping for faster convergence
-  verbose: false
+  verbose: false,
+  lockVPCameras: false  // Keep VP-initialized cameras pose-locked during final solve (useful for mixed VP/non-VP scenes)
 }
 
 // Validation function

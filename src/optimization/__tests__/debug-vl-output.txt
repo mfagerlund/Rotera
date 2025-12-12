@@ -9,13 +9,14 @@ Viewpoints: 2
 === RESULT ===
 Converged: true
 Iterations: 20
-Residual: 1.3044547552164925
-Median reproj: 0.36321177871465316
+Residual: 1.3044547552165178
+Median reproj: 0.3632117787148935
 Cameras initialized: C3, C1
 Cameras excluded: none
 
 === OPTIMIZATION LOGS ===
 [Optimize] WP:6 L:7 VP:2 IP:12 C:0
+[Reset] C1: reset focal length to 1107 (no VL)
 [initializeCameraWithVanishingPoints] Starting vanishing point initialization...
 [validateVanishingPoints] Added 7 virtual VP lines from direction-constrained Lines
 [VP] WARNING: VP very far from origin (u=552, v=-117925)

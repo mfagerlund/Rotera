@@ -125,12 +125,6 @@ export interface OptimizeProjectOptions extends Omit<SolverOptions, 'optimizeCam
    * If 'auto' (default), optimize intrinsics only for cameras without vanishing lines.
    */
   optimizeCameraIntrinsics?: boolean | 'auto';
-  /**
-   * If true (default), cameras initialized via vanishing points will have their
-   * pose (position and rotation) locked during the final solve. VP initialization
-   * provides accurate calibration that shouldn't be disturbed by less-constrained cameras.
-   */
-  lockVPCameras?: boolean;
 }
 
 export interface OptimizeProjectResult extends SolverResult {
@@ -160,11 +154,10 @@ export function optimizeProject(
     detectOutliers: shouldDetectOutliers = true,
     outlierThreshold = 3.0,
     tolerance = 1e-6,
-    maxIterations = 10000,
-    damping = 0.1,
+    maxIterations = 100,
+    damping = 1e-3,
     verbose = false,
     optimizeCameraIntrinsics = 'auto',
-    lockVPCameras = false,
   } = options;
 
   // Clear logs and reset all cached state before solving
@@ -176,10 +169,6 @@ export function optimizeProject(
   const camerasInitialized: string[] = [];
   // Track cameras initialized via "late PnP" (using triangulated points) - these are vulnerable to degenerate solutions
   const camerasInitializedViaLatePnP = new Set<Viewpoint>();
-  // Track cameras initialized via vanishing points - these have reliable pose estimates
-  const camerasInitializedViaVP = new Set<Viewpoint>();
-  // Track whether Essential Matrix was actually used for initialization
-  let usedEssentialMatrix = false;
 
   if (autoInitializeCameras || autoInitializeWorldPoints) {
     const viewpointArray = Array.from(project.viewpoints);
@@ -210,12 +199,11 @@ export function optimizeProject(
         }
       }
 
-      // Clear optimizedXyz on unconstrained world points
+      // Clear optimizedXyz on ALL world points to ensure clean state for re-optimization
+      // This prevents stale optimizedXyz from causing bad local minima on subsequent runs
       const wpArray = Array.from(project.worldPoints) as WorldPoint[];
       for (const wp of wpArray) {
-        if (!wp.isFullyConstrained() && wp.optimizedXyz) {
-          wp.optimizedXyz = undefined;
-        }
+        wp.optimizedXyz = undefined;
       }
     }
 
@@ -259,7 +247,6 @@ export function optimizeProject(
             if (success) {
               log(`[Init] ${vpConcrete.name} via VP, f=${vpConcrete.focalLength.toFixed(0)}`);
               camerasInitialized.push(vpConcrete.name);
-              camerasInitializedViaVP.add(vpConcrete);
               continue;
             }
           }
@@ -304,7 +291,6 @@ export function optimizeProject(
         if (result.success) {
           log(`[Init] EssentialMatrix: ${vp1.name}=[${vp1.position.map(x => x.toFixed(1)).join(',')}], ${vp2.name}=[${vp2.position.map(x => x.toFixed(1)).join(',')}]`);
           camerasInitialized.push(vp1.name, vp2.name);
-          usedEssentialMatrix = true;
         } else {
           throw new Error(`Essential Matrix failed: ${result.error || 'Unknown'}. Need 7+ shared points.`);
         }
@@ -312,11 +298,10 @@ export function optimizeProject(
     }
   }
 
+  // Check if we used Essential Matrix (fewer than 3 locked points means no PnP)
   const wpArrayForCheck = Array.from(project.worldPoints) as WorldPoint[];
   const lockedPointsForCheck = wpArrayForCheck.filter(wp => wp.isFullyConstrained());
-
-  // Track if we have under-constrained axis configuration (single axis = 1 unresolved DoF)
-  let hasSingleAxisConstraint = false;
+  const usedEssentialMatrix = autoInitializeCameras && lockedPointsForCheck.length < 3;
 
   if (autoInitializeWorldPoints) {
     const pointArray = Array.from(project.worldPoints);
@@ -355,119 +340,9 @@ export function optimizeProject(
 
     if (axisConstrainedLines.length > 0) {
       alignSceneToLineDirections(viewpointArray, pointArray, lineArray);
-
-      // Apply scale from line target lengths
-      const linesWithTargetLength = axisConstrainedLines.filter(l => l.targetLength !== undefined);
-      if (linesWithTargetLength.length > 0 && usedEssentialMatrix) {
-        let sumScale = 0;
-        let count = 0;
-        for (const line of linesWithTargetLength) {
-          const posA = line.pointA.optimizedXyz;
-          const posB = line.pointB.optimizedXyz;
-          if (posA && posB && line.targetLength) {
-            const currentLength = Math.sqrt(
-              (posB[0] - posA[0]) ** 2 + (posB[1] - posA[1]) ** 2 + (posB[2] - posA[2]) ** 2
-            );
-            if (currentLength > 0.01) {
-              sumScale += line.targetLength / currentLength;
-              count++;
-            }
-          }
-        }
-        if (count > 0) {
-          const scale = sumScale / count;
-          log(`[Scale] Axis lines: scale=${scale.toFixed(3)} from ${count} lines`);
-          for (const wp of pointArray) {
-            if (wp.optimizedXyz) {
-              wp.optimizedXyz = [wp.optimizedXyz[0] * scale, wp.optimizedXyz[1] * scale, wp.optimizedXyz[2] * scale];
-            }
-          }
-          for (const vp of viewpointArray) {
-            vp.position = [vp.position[0] * scale, vp.position[1] * scale, vp.position[2] * scale];
-          }
-        }
-      }
-
-      // After axis alignment and scaling, translate scene to align with locked points
-      // This ensures locked points (especially origin) are at their correct positions
-      if (usedEssentialMatrix && lockedPointsForCheck.length >= 1) {
-        // Find the first fully-locked point with an optimized position
-        const anchorPoint = lockedPointsForCheck.find(wp => wp.optimizedXyz !== undefined);
-        if (anchorPoint && anchorPoint.optimizedXyz) {
-          const target = anchorPoint.getEffectiveXyz();
-          const current = anchorPoint.optimizedXyz;
-          const translation = [
-            target[0]! - current[0],
-            target[1]! - current[1],
-            target[2]! - current[2],
-          ];
-
-          // Only apply if translation is significant
-          const translationMag = Math.sqrt(translation[0]**2 + translation[1]**2 + translation[2]**2);
-          if (translationMag > 0.001) {
-            log(`[Translate] Aligning ${anchorPoint.name} by [${translation.map(t => t.toFixed(2)).join(', ')}]`);
-
-            // Translate all world points
-            for (const wp of pointArray) {
-              if (wp.optimizedXyz) {
-                wp.optimizedXyz = [
-                  wp.optimizedXyz[0] + translation[0],
-                  wp.optimizedXyz[1] + translation[1],
-                  wp.optimizedXyz[2] + translation[2],
-                ];
-              }
-            }
-
-            // Translate all cameras
-            for (const vp of viewpointArray) {
-              vp.position = [
-                vp.position[0] + translation[0],
-                vp.position[1] + translation[1],
-                vp.position[2] + translation[2],
-              ];
-            }
-          }
-        }
-      }
-
       const uniqueAxes = new Set(axisConstrainedLines.map(l => l.direction));
       if (usedEssentialMatrix && uniqueAxes.size < 2) {
         log('[WARN] Single axis constraint - one rotational DoF unresolved');
-        hasSingleAxisConstraint = true;
-      }
-
-      // Check for degenerate case: camera at same position as a LOCKED point it observes
-      // This causes numerical singularity (can't project a point at camera center)
-      for (const vp of viewpointArray) {
-        for (const wp of lockedPointsForCheck) {
-          // Check if this camera observes this world point
-          const observes = Array.from(vp.imagePoints).some(ip => (ip as ImagePoint).worldPoint === wp);
-          if (!observes) continue;
-
-          const target = wp.getEffectiveXyz();
-          const dx = vp.position[0] - target[0]!;
-          const dy = vp.position[1] - target[1]!;
-          const dz = vp.position[2] - target[2]!;
-          const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
-
-          if (dist < 0.5) {
-            // Camera is AT the locked world point - move it back
-            // Camera viewing direction in world space (rotate [0,0,1] by camera rotation)
-            const q = vp.rotation;
-            const viewDir = [
-              2 * (q[1] * q[3] + q[0] * q[2]),
-              2 * (q[2] * q[3] - q[0] * q[1]),
-              q[0]*q[0] - q[1]*q[1] - q[2]*q[2] + q[3]*q[3],
-            ];
-            // Move camera backward (opposite view direction) by 10 units
-            vp.position = [
-              vp.position[0] - viewDir[0] * 10,
-              vp.position[1] - viewDir[1] * 10,
-              vp.position[2] - viewDir[2] * 10,
-            ];
-            log(`[Fix] Camera ${vp.name} at locked point ${wp.name} - moved back`);
-          }
-        }
       }
     } else if (usedEssentialMatrix && lockedPointsForCheck.length < 2) {
       log('[WARN] No axis constraints + <2 locked points - orientation arbitrary');
@@ -573,105 +448,6 @@ export function optimizeProject(
       return !camerasInitialized.includes(vp.name);
     });
 
-    // Check if any uninitialized cameras will need late PnP (not enough constrained points for regular PnP)
-    const camerasNeedingLatePnP = stillUninitializedCameras.filter(vp => {
-      const vpConcrete = vp as Viewpoint;
-      const hasImagePoints = vpConcrete.imagePoints.size > 0;
-      const vpConstrainedPoints = Array.from(vpConcrete.imagePoints).filter(ip =>
-        (ip.worldPoint as WorldPoint).isFullyConstrained()
-      );
-      const canUseVP = vpConcrete.canInitializeWithVanishingPoints(worldPointSet);
-      // Needs late PnP if: has image points, not enough for regular PnP, and can't use VP
-      return hasImagePoints && vpConstrainedPoints.length < 3 && !canUseVP;
-    });
-
-    // Check if late-PnP cameras share enough points with each other for multi-camera triangulation.
-    // If they do, they can constrain each other and don't need preliminary solve.
-    let latePnPCamerasCanSelfConstrain = false;
-    if (camerasNeedingLatePnP.length >= 2) {
-      // Count shared world points between late-PnP cameras
-      const worldPointsSeenByLatePnP = new Map<WorldPoint, number>();
-      for (const vp of camerasNeedingLatePnP) {
-        const vpConcrete = vp as Viewpoint;
-        for (const ip of vpConcrete.imagePoints) {
-          const wp = ip.worldPoint as WorldPoint;
-          const count = worldPointsSeenByLatePnP.get(wp) ?? 0;
-          worldPointsSeenByLatePnP.set(wp, count + 1);
-        }
-      }
-      // Count how many world points are seen by 2+ late-PnP cameras
-      const sharedPoints = Array.from(worldPointsSeenByLatePnP.values()).filter(count => count >= 2).length;
-      // If 5+ shared points, they can triangulate together well
-      if (sharedPoints >= 5) {
-        latePnPCamerasCanSelfConstrain = true;
-        log(`[Prelim] Skip: ${camerasNeedingLatePnP.length} late-PnP cameras share ${sharedPoints} points`);
-      }
-    }
-
-    // If we have VP-initialized cameras and cameras that will need late PnP,
-    // run a preliminary solve with just the VP cameras to establish accurate
-    // world point positions BEFORE late PnP initialization.
-    // This is critical because single-camera triangulation gives unreliable depth.
-    // BUT: skip if late-PnP cameras share enough points to constrain each other.
-    if (camerasInitialized.length > 0 && camerasNeedingLatePnP.length > 0 && !latePnPCamerasCanSelfConstrain) {
-      log(`[Prelim] ${camerasInitialized.length} init camera(s), ${camerasNeedingLatePnP.length} need late PnP`);
-      const prelimSystem = new ConstraintSystem({
-        tolerance,
-        maxIterations: 500,
-        damping,
-        verbose: false,
-        optimizeCameraIntrinsics: false,
-      });
-
-      // Add world points visible in initialized cameras
-      // If only 1 camera is initialized, include all points visible in it
-      // If 2+ cameras are initialized, include only points visible in 2+ (for stability)
-      const worldPointArray = Array.from(project.worldPoints) as WorldPoint[];
-      const initializedCameraSet = new Set(camerasInitialized);
-      const prelimPoints = new Set<WorldPoint>();
-      const minVisibility = camerasInitialized.length === 1 ? 1 : 2;
-      for (const wp of worldPointArray) {
-        const visibleInCount = Array.from(wp.imagePoints).filter(ip =>
-          initializedCameraSet.has((ip as ImagePoint).viewpoint.name)
-        ).length;
-        if (visibleInCount >= minVisibility) {
-          prelimSystem.addPoint(wp);
-          prelimPoints.add(wp);
-        }
-      }
-
-      // Add lines where both endpoints are in prelimPoints
-      for (const line of project.lines) {
-        if (prelimPoints.has(line.pointA as WorldPoint) && prelimPoints.has(line.pointB as WorldPoint)) {
-          prelimSystem.addLine(line);
-        }
-      }
-
-      // Add only initialized cameras
-      for (const vp of viewpointArray) {
-        if (initializedCameraSet.has(vp.name)) {
-          prelimSystem.addCamera(vp as Viewpoint);
-        }
-      }
-
-      // Add image points only for points in prelimPoints AND initialized cameras
-      for (const ip of project.imagePoints) {
-        const ipConcrete = ip as ImagePoint;
-        if (prelimPoints.has(ipConcrete.worldPoint as WorldPoint) &&
-            initializedCameraSet.has(ipConcrete.viewpoint.name)) {
-          prelimSystem.addImagePoint(ipConcrete);
-        }
-      }
-
-      // Add constraints
-      for (const c of project.constraints) {
-        prelimSystem.addConstraint(c);
-      }
-
-      const prelimResult = prelimSystem.solve();
-      log(`[Prelim] Single-cam solve: conv=${prelimResult.converged}, iter=${prelimResult.iterations}, res=${prelimResult.residual.toFixed(3)}`);
-    }
-
     for (const vp of stillUninitializedCameras) {
       const vpConcrete = vp as Viewpoint;
       const hasImagePoints = vpConcrete.imagePoints.size > 0;
@@ -680,8 +456,7 @@ export function optimizeProject(
       );
 
       if (hasImagePoints && hasTriangulatedPoints) {
-        // Late PnP: use triangulated points from already-initialized cameras
-        const pnpResult = initializeCameraWithPnP(vpConcrete, worldPointSet, { useTriangulatedPoints: true });
+        const pnpResult = initializeCameraWithPnP(vpConcrete, worldPointSet);
         if (pnpResult.success && pnpResult.reliable) {
           camerasInitialized.push(vpConcrete.name);
           camerasInitializedViaLatePnP.add(vpConcrete);
@@ -699,16 +474,8 @@ export function optimizeProject(
     if (typeof optimizeCameraIntrinsics === 'boolean') {
       return optimizeCameraIntrinsics;
     }
-    // 'auto' mode:
-    // - For cameras with vanishing lines: don't optimize (VL anchors focal length)
-    // - For cameras initialized via late PnP: DO optimize focal length (PnP only gives pose, not focal)
-    // - For other cameras (e.g., essential matrix): allow optimization
-    if ((vp as Viewpoint).getVanishingLineCount() > 0) {
-      return false;
-    }
-    // Late PnP cameras need focal length optimization since PnP doesn't determine focal length.
-    // The pose is reasonably constrained by the multi-camera triangulated points.
-    return true;
+    // 'auto': optimize intrinsics when no vanishing lines are available to anchor the pose/focal length
+    return (vp as Viewpoint).getVanishingLineCount() === 0;
   };
 
   // Build set of initialized viewpoints
@@ -738,17 +505,9 @@ export function optimizeProject(
   }
 
   // TWO-STAGE OPTIMIZATION: First multi-camera points, then single-camera
-  // Run Stage1 when:
-  // 1. We have single-camera points that need stable cameras for initialization, OR
-  // 2. We used Essential Matrix (which needs refinement before adding constraints)
-  const needsStage1 = (singleCameraPoints.size > 0 || usedEssentialMatrix) && multiCameraPoints.size >= 4;
-  if (needsStage1) {
-    // Stage1 refines the Essential Matrix solution by optimizing multi-camera points
-    // Use moderate regularization (0.5) to prevent unconstrained points from diverging
-    // while allowing sufficient movement to find good solutions.
+  if (singleCameraPoints.size > 0 && multiCameraPoints.size >= 4) {
     const stage1System = new ConstraintSystem({
       tolerance, maxIterations, damping, verbose, optimizeCameraIntrinsics: false,
-      regularizationWeight: 0.5,
     });
 
     multiCameraPoints.forEach(p => stage1System.addPoint(p));
@@ -759,20 +518,11 @@ export function optimizeProject(
         stage1Lines++;
       }
     });
-    // CRITICAL: Only add INITIALIZED cameras to Stage1, not all cameras!
-    // Adding uninitialized cameras (position=[0,0,0]) corrupts the optimization.
-    for (const vp of project.viewpoints) {
-      if (initializedViewpointSet.has(vp as Viewpoint)) {
-        stage1System.addCamera(vp as Viewpoint);
-      }
-    }
+    project.viewpoints.forEach(v => stage1System.addCamera(v as Viewpoint));
     let stage1ImagePoints = 0;
     project.imagePoints.forEach(ip => {
-      const ipConcrete = ip as ImagePoint;
-      // Only add image points for multi-camera points AND initialized cameras
-      if (multiCameraPoints.has(ipConcrete.worldPoint as WorldPoint) &&
-          initializedViewpointSet.has(ipConcrete.viewpoint as Viewpoint)) {
-        stage1System.addImagePoint(ipConcrete);
+      if (multiCameraPoints.has((ip as ImagePoint).worldPoint as WorldPoint)) {
+        stage1System.addImagePoint(ip as ImagePoint);
         stage1ImagePoints++;
       }
     });
@@ -783,71 +533,28 @@ export function optimizeProject(
       }
     });
 
-    // Log world point positions BEFORE Stage1 for debugging
-    if (verbose) {
-      log(`[Stage1] WP positions BEFORE:`);
-      for (const wp of multiCameraPoints) {
-        const pos = wp.optimizedXyz;
-        if (pos) {
-          const dist = Math.sqrt(pos[0]**2 + pos[1]**2 + pos[2]**2);
-          log(`  ${wp.name}: dist=${dist.toFixed(1)}, pos=[${pos.map(x => x.toFixed(1)).join(', ')}]`);
-        }
-      }
-    }
-
     const stage1Result = stage1System.solve();
     log(`[Stage1] Multi-cam only: WP:${multiCameraPoints.size} L:${stage1Lines} IP:${stage1ImagePoints} -> conv=${stage1Result.converged}, iter=${stage1Result.iterations}, res=${stage1Result.residual.toFixed(3)}`);
 
+    // Clear stale single-camera points and re-initialize
+    for (const wp of singleCameraPoints) { wp.optimizedXyz = undefined; }
 
-    // Log world point positions AFTER Stage1 for debugging
-    if (verbose) {
-      log(`[Stage1] WP positions AFTER:`);
-      for (const wp of multiCameraPoints) {
-        const pos = wp.optimizedXyz;
-        if (pos) {
-          const dist = Math.sqrt(pos[0]**2 + pos[1]**2 + pos[2]**2);
-          if (dist > 100) {
-            log(`  ${wp.name}: dist=${dist.toFixed(1)} [DIVERGED!]`);
-          }
-        }
-      }
-    }
-
-    // Clear stale single-camera points and re-initialize (if any)
-    if (singleCameraPoints.size > 0) {
-      for (const wp of singleCameraPoints) { wp.optimizedXyz = undefined; }
-
-      const initResult = initializeSingleCameraPoints(
-        worldPointArray, Array.from(project.lines), Array.from(project.constraints),
-        initializedViewpointSet, { verbose: false }
-      );
-      log(`[Stage2] Single-cam init: ${initResult.initialized} ok, ${initResult.failed} failed`);
-    }
+    const initResult = initializeSingleCameraPoints(
+      worldPointArray, Array.from(project.lines), Array.from(project.constraints),
+      initializedViewpointSet, { verbose: false }
+    );
+    log(`[Stage2] Single-cam init: ${initResult.initialized} ok, ${initResult.failed} failed`);
   }
 
   // Full optimization with all points
-  // Use light regularization ONLY for single-axis constraint cases (under-constrained).
-  // Single-axis = 1 rotational DoF unresolved, causing unconstrained points to diverge.
-  // Other Essential Matrix cases (e.g., coplanar constraints) don't need this.
   const system = new ConstraintSystem({
     tolerance, maxIterations, damping, verbose, optimizeCameraIntrinsics: shouldOptimizeIntrinsics,
-    regularizationWeight: hasSingleAxisConstraint ? 0.1 : 0,
   });
 
   project.worldPoints.forEach(p => system.addPoint(p as WorldPoint));
   project.lines.forEach(l => system.addLine(l));
   const excludedCameras = new Set<Viewpoint>();
   const excludedCameraNames: string[] = [];
-
-  // Lock VP-initialized cameras if requested - their pose is well-calibrated
-  // and shouldn't be disturbed by less-constrained cameras during joint solve
-  if (lockVPCameras && camerasInitializedViaVP.size > 0) {
-    for (const vp of camerasInitializedViaVP) {
-      vp.isPoseLocked = true;
-    }
-    log(`[Lock] ${camerasInitializedViaVP.size} VP camera(s) pose-locked for final solve`);
-  }
-
   project.viewpoints.forEach(v => system.addCamera(v as Viewpoint));
 
   project.imagePoints.forEach(ip => {
