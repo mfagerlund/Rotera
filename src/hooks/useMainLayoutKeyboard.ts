@@ -4,8 +4,17 @@ import { WorldPoint } from '../entities/world-point'
 import { Line as LineEntity } from '../entities/line'
 import { VanishingLine } from '../entities/vanishing-line'
 import { Viewpoint } from '../entities/viewpoint'
+import { Plane } from '../entities/plane'
+import { Constraint } from '../entities/constraint'
 import { ActiveTool } from './useMainLayoutState'
 import { ISelectable, SelectableType } from '../types/selectable'
+
+interface ConfirmOptions {
+  variant?: 'danger' | 'primary'
+  confirmLabel?: string
+  cancelLabel?: string
+  showMessage?: boolean
+}
 
 interface UseMainLayoutKeyboardParams {
   isConfirmDialogOpen: boolean
@@ -15,11 +24,11 @@ interface UseMainLayoutKeyboardParams {
   setActiveTool: (tool: ActiveTool) => void
   selectedPointEntities: WorldPoint[]
   selectedLineEntities: LineEntity[]
-  selectedPlaneEntities: any[]
+  selectedPlaneEntities: Plane[]
   selectedVanishingLineEntities: VanishingLine[]
   getSelectedByType: <T extends ISelectable>(type: SelectableType) => T[]
-  confirm: (message: string, options?: any) => Promise<boolean>
-  deleteConstraint: (constraint: any) => void
+  confirm: (message: string, options?: ConfirmOptions) => Promise<boolean>
+  deleteConstraint: (constraint: Constraint) => void
   deleteLine: (line: LineEntity) => void
   deleteWorldPoint: (point: WorldPoint) => void
   deleteImagePointFromViewpoint: (worldPoint: WorldPoint, viewpoint: Viewpoint) => boolean
@@ -107,10 +116,10 @@ export function useMainLayoutKeyboard({
         const message = `Delete ${parts.join(', ')}?`
 
         if (await confirm(message, { variant: 'danger', confirmLabel: 'Delete', cancelLabel: 'Cancel' })) {
-          selectedConstraints.forEach(constraint => deleteConstraint(constraint))
+          selectedConstraints.forEach(constraint => deleteConstraint(constraint as Constraint))
           selectedLineEntities.forEach(line => deleteLine(line))
           selectedVanishingLineEntities.forEach(vl => deleteVanishingLine(vl))
-          selectedPlanes.forEach(id => {
+          selectedPlanes.forEach(() => {
             console.warn('Plane deletion not yet implemented')
           })
 

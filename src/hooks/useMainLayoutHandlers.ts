@@ -4,13 +4,14 @@ import { WorldPoint } from '../entities/world-point'
 import { Line as LineEntity } from '../entities/line'
 import { Plane } from '../entities/plane'
 import { ActiveTool } from './useMainLayoutState'
+import { ISelectable } from '../types/selectable'
 
 interface UseMainLayoutHandlersParams {
   activeTool: ActiveTool
   setActiveTool: (tool: ActiveTool) => void
   selectedPointEntities: WorldPoint[]
-  addToSelection: (entity: any) => void
-  handleEntityClick: (entity: any, ctrlKey: boolean, shiftKey: boolean) => void
+  addToSelection: (entity: ISelectable) => void
+  handleEntityClick: (entity: ISelectable, ctrlKey: boolean, shiftKey: boolean) => void
   clearSelection: () => void
   editingLine: LineEntity | null
   setEditingLine: (line: LineEntity | null) => void

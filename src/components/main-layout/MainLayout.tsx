@@ -12,6 +12,7 @@ import { ConstructionPreview } from '../image-viewer/types'
 import { Line as LineEntity } from '../../entities/line'
 import { WorldPoint } from '../../entities/world-point'
 import { VanishingLine } from '../../entities/vanishing-line'
+import { Plane } from '../../entities/plane'
 import type { Constraint } from '../../entities/constraints'
 import { CoplanarPointsConstraint } from '../../entities/constraints/coplanar-points-constraint'
 import type { ISelectable } from '../../types/selectable'
@@ -322,7 +323,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
 
   const selectedLineEntities = getSelectedByType<LineEntity>('line')
   const selectedPointEntities = getSelectedByType<WorldPoint>('point')
-  const selectedPlaneEntities = getSelectedByType('plane')
+  const selectedPlaneEntities = getSelectedByType<Plane>('plane')
   const selectedVanishingLineEntities = getSelectedByType<VanishingLine>('vanishingLine')
   const selectedConstraintEntities = getSelectedByType<Constraint>('constraint')
   const selectedCoplanarConstraints = selectedConstraintEntities.filter(

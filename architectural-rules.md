@@ -537,11 +537,11 @@ All clarifying questions have been resolved:
 **Status**: ✅ APPROVED - All decisions finalized, DTO consolidation COMPLETE
 
 **Recent Updates (v1.2)**:
-- ✅ **COMPLETED**: DTO Consolidation - All separate DTO files deleted, toDto/fromDto methods added to entities
+- ✅ **COMPLETED**: DTO Consolidation - toDto/fromDto methods added to entities (DTO interface files remain for type definitions)
 - ✅ **COMPLETED**: Set-based collections - Converted all entity collections from Maps to Sets
 - ✅ **COMPLETED**: Object references everywhere - Fixed all ID-based lookups to use entity references
 - All 46 files updated following architectural rules
-- 3 DTO files deleted (LineDto.ts, ViewpointDto.ts, WorldPointDto.ts)
+- DTO interface files (*Dto.ts) preserved for type definitions only - entities use toDto/fromDto methods
 - 39 TypeScript errors fixed
 - Zero violations of architectural principles remain
 

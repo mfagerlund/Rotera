@@ -1,7 +1,7 @@
 // Loop Trace Tool Logic Hook
 
 import { useCallback, useMemo } from 'react'
-import { LineDirection } from '../entities/line'
+import { Line, LineDirection } from '../entities/line'
 import { WorldPoint } from '../entities/world-point'
 import { CoplanarPointsConstraint } from '../entities/constraints/coplanar-points-constraint'
 
@@ -17,9 +17,9 @@ interface LineConstraints {
 interface UseLoopTraceProps {
   selectedPoints: WorldPoint[]
   allWorldPoints: WorldPoint[]
-  existingLines: Map<string, any>
+  existingLines: Map<string, Line>
   onCreateLine: (pointA: WorldPoint, pointB: WorldPoint, constraints?: LineConstraints) => void
-  onCreateConstraint?: (constraint: any) => void
+  onCreateConstraint?: (constraint: CoplanarPointsConstraint) => void
   orientation: LineDirection
   setOrientation: (orientation: LineDirection) => void
   coplanarEnabled: boolean
@@ -32,7 +32,7 @@ interface SegmentStatus {
   pointA: WorldPoint
   pointB: WorldPoint
   status: 'new' | 'exists' | 'building'
-  existingLineId?: string
+  existingLineName?: string
 }
 
 export function useLoopTrace({
@@ -50,14 +50,14 @@ export function useLoopTrace({
 }: UseLoopTraceProps) {
 
   // Check if a line exists between two points (bidirectional)
-  const lineExists = useCallback((pointA: WorldPoint, pointB: WorldPoint): { exists: boolean; lineId?: string } => {
+  const lineExists = useCallback((pointA: WorldPoint, pointB: WorldPoint): { exists: boolean; lineName?: string } => {
     const existingLine = Array.from(existingLines.values()).find(line =>
       (line.pointA === pointA && line.pointB === pointB) ||
       (line.pointA === pointB && line.pointB === pointA)
     )
     return {
       exists: !!existingLine,
-      lineId: existingLine?.id
+      lineName: existingLine?.name
     }
   }, [existingLines])
 
@@ -69,13 +69,13 @@ export function useLoopTrace({
       const pointA = selectedPoints[i]
       const pointB = selectedPoints[i + 1]
 
-      const { exists, lineId } = lineExists(pointA, pointB)
+      const { exists, lineName } = lineExists(pointA, pointB)
 
       result.push({
         pointA,
         pointB,
         status: exists ? 'exists' : 'new',
-        existingLineId: lineId
+        existingLineName: lineName
       })
     }
 
@@ -83,13 +83,13 @@ export function useLoopTrace({
     if (closedLoop && selectedPoints.length >= 3) {
       const pointA = selectedPoints[selectedPoints.length - 1]
       const pointB = selectedPoints[0]
-      const { exists, lineId } = lineExists(pointA, pointB)
+      const { exists, lineName } = lineExists(pointA, pointB)
 
       result.push({
         pointA,
         pointB,
         status: exists ? 'exists' : 'new',
-        existingLineId: lineId
+        existingLineName: lineName
       })
     }
 
@@ -119,10 +119,10 @@ export function useLoopTrace({
       const pointB = selectedPoints[(i + 1) % selectedPoints.length]
 
       // Check if line exists (bidirectional)
-      const { exists, lineId } = lineExists(pointA, pointB)
+      const { exists, lineName: existingName } = lineExists(pointA, pointB)
 
       if (exists) {
-        skipped.push(lineId!)
+        skipped.push(existingName!)
         continue
       }
 

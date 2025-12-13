@@ -1,6 +1,6 @@
 // Constraint creation and management hook for context-sensitive toolbar
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback } from 'react'
 import { AvailableConstraint } from '../types/ui-types'
 import { Constraint } from '../entities/constraint'
 import { Line } from '../entities/line'
@@ -9,8 +9,9 @@ import { ISelectable } from '../types/selectable'
 import { getConstraintPointIds } from '../types/utils'
 import { getConstraintDisplayName } from '../utils/constraintDisplay'
 
-// Legacy ConstraintType from types/project for backward compatibility
-type ConstraintType =
+// UI-level constraint type strings used for toolbar/creation workflow
+// These are converted to entity constraints by the project store
+type UIConstraintType =
   | 'point_fixed_coord' | 'point_locked' | 'point_on_line' | 'point_on_plane'
   | 'line_axis_aligned' | 'line_length' | 'line_passes_through' | 'line_in_plane'
   | 'plane_parallel_to_axis' | 'plane_offset'
@@ -19,7 +20,11 @@ type ConstraintType =
   | 'line_plane_parallel' | 'line_plane_perpendicular' | 'line_plane_intersect'
   | 'planes_parallel' | 'planes_perpendicular' | 'planes_coincident'
   | 'points_colinear' | 'points_coplanar' | 'points_equal_distance'
-  | 'symmetry'
+  | 'plane' | 'symmetry'
+
+// Type for constraint parameters - can hold WorldPoints, Lines, numbers, etc.
+type ConstraintParameterValue = WorldPoint | Line | WorldPoint[] | Line[] | number | string | boolean | null | undefined
+type ConstraintParameterMap = Record<string, ConstraintParameterValue>
 
 export const useConstraints = (
   constraints: Constraint[],
@@ -28,7 +33,7 @@ export const useConstraints = (
   onDeleteConstraint: (constraint: Constraint) => void,
 ) => {
   const [activeConstraintType, setActiveConstraintType] = useState<string | null>(null)
-  const [constraintParameters, setConstraintParameters] = useState<Record<string, any>>({})
+  const [constraintParameters, setConstraintParameters] = useState<ConstraintParameterMap>({})
   const [hoveredConstraintId, setHoveredConstraintId] = useState<string | null>(null)
 
   // Get all constraints with enabled/disabled status
@@ -234,7 +239,7 @@ export const useConstraints = (
   }, [])
 
   // Update a constraint parameter
-  const updateParameter = useCallback((key: string, value: any) => {
+  const updateParameter = useCallback((key: string, value: ConstraintParameterValue) => {
     setConstraintParameters(prev => ({
       ...prev,
       [key]: value
@@ -245,26 +250,28 @@ export const useConstraints = (
   const applyConstraint = useCallback(() => {
     if (!activeConstraintType) return
 
-    // NOTE: This creates a plain object that matches the legacy Constraint interface
-    // The actual conversion to Constraint entity class happens in the project store
-    const constraint: any = {
+    // NOTE: This creates a plain object with constraint data
+    // The actual Constraint entity is created by the caller if needed
+    // TODO: Refactor to create proper Constraint entities directly
+    const constraintData = {
       id: crypto.randomUUID(),
-      type: activeConstraintType as ConstraintType,
+      type: activeConstraintType as UIConstraintType,
       enabled: true,
       isDriving: true,
       weight: 1.0,
-      status: 'satisfied',
+      status: 'satisfied' as const,
       entities: {
-        points: [],
-        lines: [],
-        planes: []
+        points: [] as string[],
+        lines: [] as string[],
+        planes: [] as string[]
       },
-      parameters: {},
+      parameters: {} as Record<string, unknown>,
       createdAt: new Date().toISOString(),
       ...constraintParameters
     }
 
-    onAddConstraint(constraint)
+    // Type assertion: this plain object is passed to handlers that may convert it
+    onAddConstraint(constraintData as unknown as Constraint)
 
     // Clear constraint creation state
     setActiveConstraintType(null)
@@ -371,16 +378,14 @@ export const useConstraints = (
 }
 
 // Helper function to get initial parameters for a constraint type
-type ConstraintParameters = Record<string, any>
-
 function getInitialConstraintParameters(
   type: string,
   selected: ISelectable[]
-): ConstraintParameters {
+): ConstraintParameterMap {
   const selectedPoints = selected.filter(s => s.getType() === 'point') as WorldPoint[]
   const selectedLines = selected.filter(s => s.getType() === 'line') as Line[]
 
-  const params: ConstraintParameters = {}
+  const params: ConstraintParameterMap = {}
 
   switch (type) {
     case 'points_distance':

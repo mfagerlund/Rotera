@@ -55,8 +55,8 @@ export interface ProjectHistoryEntry {
   timestamp: string
   action: string
   description: string
-  before?: any
-  after?: any
+  before?: unknown
+  after?: unknown
 }
 
 // ============================================================================

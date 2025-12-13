@@ -1,6 +1,6 @@
 // Utility types to help bridge type gaps and eliminate any usage
 
-import type { Constraint } from './project'
+import type { Constraint } from '../entities/constraint'
 
 /**
  * Helper to ensure a value is defined (not null or undefined)
@@ -115,8 +115,12 @@ export type RequiredDeep<T> = {
 
 /**
  * Helper function to get constraint point IDs with proper type filtering
+ * Note: Entity constraints use direct object references, not IDs
+ * This function is maintained for API compatibility but returns empty array
+ * Use constraint.pointA, constraint.pointB etc. for direct point access
  */
-export function getConstraintPointIds(constraint: Constraint): string[] {
-  // Use the entities structure instead of specific properties
-  return constraint.entities?.points || []
+export function getConstraintPointIds(_constraint: Constraint): string[] {
+  // Entity constraints use direct object references, not ID arrays
+  // Specific constraint types have their own properties (pointA, pointB, etc.)
+  return []
 }

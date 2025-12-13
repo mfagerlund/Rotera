@@ -168,7 +168,7 @@ export const BottomPanel: React.FC<BottomPanelProps> = observer(({
       <PlanesManager
         isOpen={entityPopups.showPlanesPopup}
         onClose={() => onClosePopup('showPlanesPopup')}
-        planes={{}}
+        planes={[]}
         allWorldPoints={allWorldPoints}
         selectedPlanes={selectedPlanes}
         onEditPlane={onEditPlane}
