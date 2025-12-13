@@ -1,14 +1,5 @@
 import { useRef, useState, useCallback } from 'react'
-
-interface ImageCoords {
-  u: number
-  v: number
-}
-
-interface CanvasPoint {
-  x: number
-  y: number
-}
+import { ImageCoords, CanvasPoint } from '../components/image-viewer/types'
 
 const PRECISION_DRAG_RATIO = 0.12
 const SHIFT_TAP_THRESHOLD_MS = 250

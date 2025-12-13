@@ -1,5 +1,5 @@
 import type { ISelectable, SelectableType } from '../../types/selectable'
-import type { IValidatable, ValidationContext, ValidationResult, ValidationError } from '../../validation/validator'
+import type { IValidatable, ValidationContext, EntityValidationResult, EntityValidationError } from '../../validation/validator'
 import type { ValueMap, IResidualProvider } from '../../optimization/IOptimizable'
 import type { Value } from 'scalar-autograd'
 import * as vec3 from '../../utils/vec3'
@@ -51,7 +51,7 @@ export abstract class Constraint implements ISelectable, IValidatable, IResidual
 
   abstract getConstraintType(): string
   abstract evaluate(): ConstraintEvaluation
-  abstract validateConstraintSpecific(): ValidationResult
+  abstract validateConstraintSpecific(): EntityValidationResult
   abstract computeResiduals(valueMap: ValueMap): Value[]
   abstract serialize(context: SerializationContext): ConstraintDto
 
@@ -99,9 +99,9 @@ export abstract class Constraint implements ISelectable, IValidatable, IResidual
   }
 
   // IValidatable implementation
-  validate(context: ValidationContext): ValidationResult {
-    const errors: ValidationError[] = []
-    const warnings: ValidationError[] = []
+  validate(context: ValidationContext): EntityValidationResult {
+    const errors: EntityValidationError[] = []
+    const warnings: EntityValidationError[] = []
 
     // Common validation
     const nameError = ValidationHelpers.validateRequiredField(

@@ -12,6 +12,7 @@ import ContextMenu, { ContextMenuItem } from './ContextMenu'
 import { useConfirm } from './ConfirmDialog'
 import { getEntityKey } from '../utils/entityKeys'
 import { setDraggingWorldPoint, clearDraggingWorldPoint } from '../utils/dragContext'
+import { getConstraintDisplayName } from '../utils/constraintDisplay'
 
 interface WorldPointPanelProps {
   worldPoints: Map<string, WorldPoint>
@@ -631,36 +632,6 @@ const EnhancedWorldPointItem: React.FC<EnhancedWorldPointItemProps> = ({
 }
 
 // Helper functions (same as original, but with enhanced UI feedback)
-function getConstraintDisplayName(constraint: Constraint): string {
-  const type = constraint.getConstraintType()
-  const name = constraint.getName()
-
-  // Handle specific constraint types
-  if (type === 'distance') {
-    return `Distance Constraint`
-  } else if (type === 'angle') {
-    return `Angle Constraint`
-  } else if (type === 'perpendicular') {
-    return `Perpendicular Lines`
-  } else if (type === 'parallel') {
-    return `Parallel Lines`
-  } else if (type === 'collinear') {
-    return `Collinear Points`
-  } else if (type === 'coplanar') {
-    return `Rectangle Shape`
-  } else if (type === 'fixed-point') {
-    return `Fixed Position`
-  } else if (type === 'equal-distances') {
-    return `Equal Distances`
-  } else if (type === 'equal-angles') {
-    return `Equal Angles`
-  } else if (type === 'projection') {
-    return `Projection Constraint`
-  } else {
-    return name || `${type.charAt(0).toUpperCase()}${type.slice(1)} Constraint`
-  }
-}
-
 function getConstraintIcon(type: string): React.ReactNode {
   const icons: Record<string, React.ReactNode> = {
     distance: '↔',

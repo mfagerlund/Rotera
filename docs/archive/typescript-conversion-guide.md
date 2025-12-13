@@ -1,5 +1,9 @@
 # TypeScript Bundle Adjustment Conversion Guide
 
+## Status: ARCHIVED FEASIBILITY STUDY
+
+This document was a feasibility analysis for porting Python optimization to TypeScript. The TypeScript optimization system has since been implemented separately.
+
 ## Executive Summary
 
 **Good News:** The optimization code is remarkably small and self-contained (~7,200 LOC total). You're using an **extremely minimal subset** of Python's scientific stack.

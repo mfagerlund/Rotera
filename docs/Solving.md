@@ -1,4 +1,10 @@
-Here’s a robust, minimal-drama way to seed a hand-picked SfM:
+## Status: REFERENCE MATERIAL
+
+This document describes general SfM (Structure from Motion) theory and best practices. It does not document the current Pictorigo implementation, which uses vanishing points and coordinate inference.
+
+---
+
+Here's a robust, minimal-drama way to seed a hand-picked SfM:
 
 1. Intrinsics first
 

@@ -1,6 +1,6 @@
 // Equal angles constraint
 
-import type { ValidationResult, ValidationError } from '../../validation/validator'
+import type { EntityValidationResult, EntityValidationError } from '../../validation/validator'
 import type { ValueMap } from '../../optimization/IOptimizable'
 import { V, Vec3, type Value } from 'scalar-autograd'
 import { ValidationHelpers } from '../../validation/validator'
@@ -84,9 +84,9 @@ export class EqualAnglesConstraint extends Constraint {
     }
   }
 
-  validateConstraintSpecific(): ValidationResult {
-    const errors: ValidationError[] = []
-    const warnings: ValidationError[] = []
+  validateConstraintSpecific(): EntityValidationResult {
+    const errors: EntityValidationError[] = []
+    const warnings: EntityValidationError[] = []
 
     if (this.angleTriplets.length < 2) {
       errors.push(ValidationHelpers.createError(

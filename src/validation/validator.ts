@@ -3,7 +3,7 @@
 // EntityId is just a string (entity names are used as unique IDs)
 export type EntityId = string
 
-export interface ValidationError {
+export interface EntityValidationError {
   code: string
   message: string
   entityId?: EntityId
@@ -12,15 +12,15 @@ export interface ValidationError {
   severity: 'error' | 'warning'
 }
 
-export interface ValidationResult {
+export interface EntityValidationResult {
   isValid: boolean
-  errors: ValidationError[]
-  warnings: ValidationError[]
+  errors: EntityValidationError[]
+  warnings: EntityValidationError[]
   summary: string
 }
 
 export interface IValidatable {
-  validate(context: ValidationContext): ValidationResult
+  validate(context: ValidationContext): EntityValidationResult
 }
 
 export interface ValidationContext {
@@ -46,9 +46,9 @@ export interface ValidationContext {
 }
 
 export class ValidationEngine {
-  static validateProject(entities: IValidatable[], context: ValidationContext): ValidationResult {
-    const allErrors: ValidationError[] = []
-    const allWarnings: ValidationError[] = []
+  static validateProject(entities: IValidatable[], context: ValidationContext): EntityValidationResult {
+    const allErrors: EntityValidationError[] = []
+    const allWarnings: EntityValidationError[] = []
 
     // Validate each entity
     for (const entity of entities) {
@@ -73,9 +73,9 @@ export class ValidationEngine {
     }
   }
 
-  private static validateProjectIntegrity(context: ValidationContext): ValidationResult {
-    const errors: ValidationError[] = []
-    const warnings: ValidationError[] = []
+  private static validateProjectIntegrity(context: ValidationContext): EntityValidationResult {
+    const errors: EntityValidationError[] = []
+    const warnings: EntityValidationError[] = []
 
     // Check for orphaned entities
     this.checkOrphanedConstraints(context, errors)
@@ -91,7 +91,7 @@ export class ValidationEngine {
     }
   }
 
-  private static checkOrphanedConstraints(context: ValidationContext, errors: ValidationError[]): void {
+  private static checkOrphanedConstraints(context: ValidationContext, errors: EntityValidationError[]): void {
     for (const constraintId of context.getAllConstraintIds()) {
       const dependencies = context.getDependencies(constraintId)
       for (const depId of dependencies) {
@@ -108,7 +108,7 @@ export class ValidationEngine {
     }
   }
 
-  private static checkOrphanedLines(context: ValidationContext, errors: ValidationError[]): void {
+  private static checkOrphanedLines(context: ValidationContext, errors: EntityValidationError[]): void {
     for (const lineId of context.getAllLineIds()) {
       const dependencies = context.getDependencies(lineId)
       for (const depId of dependencies) {
@@ -125,7 +125,7 @@ export class ValidationEngine {
     }
   }
 
-  private static checkCircularDependencies(context: ValidationContext, errors: ValidationError[]): void {
+  private static checkCircularDependencies(context: ValidationContext, errors: EntityValidationError[]): void {
     const visited = new Set<EntityId>()
     const stack = new Set<EntityId>()
 
@@ -150,7 +150,7 @@ export class ValidationEngine {
     context: ValidationContext,
     visited: Set<EntityId>,
     stack: Set<EntityId>,
-    errors: ValidationError[]
+    errors: EntityValidationError[]
   ): void {
     visited.add(id)
     stack.add(id)
@@ -172,7 +172,7 @@ export class ValidationEngine {
     stack.delete(id)
   }
 
-  private static checkDanglingReferences(context: ValidationContext, errors: ValidationError[]): void {
+  private static checkDanglingReferences(context: ValidationContext, errors: EntityValidationError[]): void {
     // Check that all referenced entities exist
     const allIds = [
       ...context.getAllPointIds(),
@@ -209,7 +209,7 @@ export class ValidationEngine {
     )
   }
 
-  private static createSummary(errors: ValidationError[], warnings: ValidationError[]): string {
+  private static createSummary(errors: EntityValidationError[], warnings: EntityValidationError[]): string {
     if (errors.length === 0 && warnings.length === 0) {
       return 'Project validation passed successfully'
     }
@@ -259,7 +259,7 @@ export class ValidationHelpers {
     entityId?: EntityId,
     entityType?: string,
     field?: string
-  ): ValidationError {
+  ): EntityValidationError {
     return {
       code,
       message,
@@ -276,7 +276,7 @@ export class ValidationHelpers {
     entityId?: EntityId,
     entityType?: string,
     field?: string
-  ): ValidationError {
+  ): EntityValidationError {
     return {
       code,
       message,
@@ -292,7 +292,7 @@ export class ValidationHelpers {
     fieldName: string,
     entityId: EntityId,
     entityType: string
-  ): ValidationError | null {
+  ): EntityValidationError | null {
     if (value === null || value === undefined || value === '') {
       return this.createError(
         ValidationErrorCodes.MISSING_REQUIRED_FIELD,
@@ -305,7 +305,7 @@ export class ValidationHelpers {
     return null
   }
 
-  static validateIdFormat(id: string, entityType: string): ValidationError | null {
+  static validateIdFormat(id: string, entityType: string): EntityValidationError | null {
     if (!id || typeof id !== 'string' || id.trim().length === 0) {
       return this.createError(
         ValidationErrorCodes.INVALID_ID_FORMAT,
@@ -318,8 +318,8 @@ export class ValidationHelpers {
     return null
   }
 
-  static validateNoDuplicateIds(ids: EntityId[], entityType: string): ValidationError[] {
-    const errors: ValidationError[] = []
+  static validateNoDuplicateIds(ids: EntityId[], entityType: string): EntityValidationError[] {
+    const errors: EntityValidationError[] = []
     const seen = new Set<EntityId>()
 
     for (const id of ids) {

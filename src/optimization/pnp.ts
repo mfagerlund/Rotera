@@ -22,14 +22,7 @@ import { ConstraintSystem } from './constraint-system';
 import { projectWorldPointToPixelQuaternion } from './camera-projection';
 import { V, Vec3, Vec4 } from 'scalar-autograd';
 import { log, logOnce } from './optimization-logger';
-
-export interface PnPResult {
-  position: [number, number, number];
-  rotation: [number, number, number, number];
-  success: boolean;
-  reprojectionError?: number;
-  inlierCount?: number;
-}
+import type { PnPResult } from './pnp/types';
 
 /**
  * Solve Perspective-n-Point (PnP) problem.

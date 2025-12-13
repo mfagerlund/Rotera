@@ -1,6 +1,6 @@
 // Angle constraint between three points
 
-import type { ValidationResult, ValidationError } from '../../validation/validator'
+import type { EntityValidationResult, EntityValidationError } from '../../validation/validator'
 import type { ValueMap } from '../../optimization/IOptimizable'
 import { V, Vec3, type Value } from 'scalar-autograd'
 import { ValidationHelpers } from '../../validation/validator'
@@ -81,9 +81,9 @@ export class AngleConstraint extends Constraint {
     return { value: 0, satisfied: false }
   }
 
-  validateConstraintSpecific(): ValidationResult {
-    const errors: ValidationError[] = []
-    const warnings: ValidationError[] = []
+  validateConstraintSpecific(): EntityValidationResult {
+    const errors: EntityValidationError[] = []
+    const warnings: EntityValidationError[] = []
 
     if (this.targetAngle < 0 || this.targetAngle > 360) {
       warnings.push(ValidationHelpers.createError(

@@ -7,6 +7,7 @@ import { Line } from '../entities/line'
 import { WorldPoint } from '../entities/world-point'
 import { ISelectable } from '../types/selectable'
 import { getConstraintPointIds } from '../types/utils'
+import { getConstraintDisplayName } from '../utils/constraintDisplay'
 
 // Legacy ConstraintType from types/project for backward compatibility
 type ConstraintType =
@@ -305,33 +306,8 @@ export const useConstraints = (
   }, [activeConstraintType, constraintParameters])
 
   // Constraint display helpers
-  const getConstraintDisplayName = useCallback((constraint: Constraint) => {
-    const constraintType = constraint.getConstraintType()
-
-    switch (constraintType) {
-      case 'distance_point_point':
-        return `Distance Constraint`
-      case 'angle_point_point_point':
-        return `Angle Constraint`
-      case 'perpendicular_lines':
-        return `Perpendicular Lines`
-      case 'parallel_lines':
-        return `Parallel Lines`
-      case 'collinear_points':
-        return `Collinear Points`
-      case 'coplanar_points':
-        return `Coplanar Points`
-      case 'fixed_point':
-        return `Fixed Point`
-      case 'equal_distances':
-        return `Equal Distances`
-      case 'equal_angles':
-        return `Equal Angles`
-      case 'projection':
-        return `Projection Constraint`
-      default:
-        return `${constraintType} Constraint`
-    }
+  const getConstraintDisplayNameCallback = useCallback((constraint: Constraint) => {
+    return getConstraintDisplayName(constraint)
   }, [])
 
   const getConstraintSummary = useCallback((constraint: Constraint) => {
@@ -387,7 +363,7 @@ export const useConstraints = (
 
     // Utilities
     isConstraintComplete,
-    getConstraintDisplayName,
+    getConstraintDisplayName: getConstraintDisplayNameCallback,
     getConstraintSummary,
     getConstraintPointIds: getConstraintPointIdsCallback,
     isCreatingConstraint: !!activeConstraintType

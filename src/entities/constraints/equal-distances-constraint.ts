@@ -1,6 +1,6 @@
 // Equal distances constraint
 
-import type { ValidationResult, ValidationError } from '../../validation/validator'
+import type { EntityValidationResult, EntityValidationError } from '../../validation/validator'
 import type { ValueMap } from '../../optimization/IOptimizable'
 import { V, type Value } from 'scalar-autograd'
 import { ValidationHelpers } from '../../validation/validator'
@@ -86,9 +86,9 @@ export class EqualDistancesConstraint extends Constraint {
     }
   }
 
-  validateConstraintSpecific(): ValidationResult {
-    const errors: ValidationError[] = []
-    const warnings: ValidationError[] = []
+  validateConstraintSpecific(): EntityValidationResult {
+    const errors: EntityValidationError[] = []
+    const warnings: EntityValidationError[] = []
 
     if (this.distancePairs.length < 2) {
       errors.push(ValidationHelpers.createError(

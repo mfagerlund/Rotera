@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
 import FloatingWindow from './FloatingWindow'
 import type { Constraint } from '../entities/constraints'
+import { getConstraintDisplayName } from '../utils/constraintDisplay'
 import {
   DistanceConstraint,
   AngleConstraint,
@@ -47,20 +48,6 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
 
   // Filter out CoplanarPointsConstraint - they have their own dedicated manager
   const filteredConstraints = constraints.filter(c => !(c instanceof CoplanarPointsConstraint))
-
-  const getConstraintDisplayName = (type: string) => {
-    const names: Record<string, string> = {
-      'distance': 'Distance',
-      'angle': 'Angle',
-      'parallel_lines': 'Parallel',
-      'perpendicular_lines': 'Perpendicular',
-      'fixed_point': 'Fixed Point',
-      'collinear_points': 'Collinear',
-      'equal_distances': 'Equal Dist',
-      'equal_angles': 'Equal Angles'
-    }
-    return names[type] || type
-  }
 
   const getConstraintEntities = (constraint: Constraint): string => {
     if (constraint instanceof DistanceConstraint) {

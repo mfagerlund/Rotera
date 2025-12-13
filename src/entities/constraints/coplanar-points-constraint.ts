@@ -1,6 +1,6 @@
 // Coplanar points constraint
 
-import type { ValidationResult } from '../../validation/validator'
+import type { EntityValidationResult } from '../../validation/validator'
 import type { ValueMap } from '../../optimization/IOptimizable'
 import { V, Vec3, type Value } from 'scalar-autograd'
 import * as vec3 from '../../utils/vec3'
@@ -121,7 +121,7 @@ export class CoplanarPointsConstraint extends Constraint {
     return { value: 1, satisfied: false }
   }
 
-  validateConstraintSpecific(): ValidationResult {
+  validateConstraintSpecific(): EntityValidationResult {
     const errors = []
 
     if (this.points.length < 4) {

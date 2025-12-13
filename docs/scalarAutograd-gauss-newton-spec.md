@@ -1,5 +1,9 @@
 # ScalarAutograd Extension: Gauss-Newton Solver for Sparse Nonlinear Least Squares
 
+## Status: PROPOSAL - NOT IMPLEMENTED
+
+This document describes a potential future enhancement that has not been implemented.
+
 ## Executive Summary
 
 This document proposes adding a **Gauss-Newton least squares solver** to ScalarAutograd that leverages automatic differentiation to efficiently solve sparse nonlinear optimization problems. This could be significantly faster than traditional matrix-based approaches for problems with sparse Jacobian structure.

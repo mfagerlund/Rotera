@@ -1,6 +1,6 @@
 // Perpendicular lines constraint
 
-import type { ValidationResult } from '../../validation/validator'
+import type { EntityValidationResult } from '../../validation/validator'
 import type { ValueMap } from '../../optimization/IOptimizable'
 import type { Value } from 'scalar-autograd'
 import * as vec3 from '../../utils/vec3'
@@ -68,7 +68,7 @@ export class PerpendicularLinesConstraint extends Constraint {
     return { value: 1, satisfied: false }
   }
 
-  validateConstraintSpecific(): ValidationResult {
+  validateConstraintSpecific(): EntityValidationResult {
     return {
       isValid: true,
       errors: [],

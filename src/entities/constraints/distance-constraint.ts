@@ -1,4 +1,4 @@
-import type { ValidationResult } from '../../validation/validator'
+import type { EntityValidationResult } from '../../validation/validator'
 import type { ValueMap } from '../../optimization/IOptimizable'
 import { V, type Value } from 'scalar-autograd'
 import { ValidationHelpers } from '../../validation/validator'
@@ -74,7 +74,7 @@ export class DistanceConstraint extends Constraint {
     return { value: 0, satisfied: false }
   }
 
-  validateConstraintSpecific(): ValidationResult {
+  validateConstraintSpecific(): EntityValidationResult {
     const errors = []
 
     if (this.targetDistance < 0) {

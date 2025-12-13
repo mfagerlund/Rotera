@@ -1,6 +1,6 @@
 // Fixed point constraint
 
-import type { ValidationResult } from '../../validation/validator'
+import type { EntityValidationResult } from '../../validation/validator'
 import type { ValueMap } from '../../optimization/IOptimizable'
 import { V, type Value } from 'scalar-autograd'
 import { ValidationHelpers } from '../../validation/validator'
@@ -74,7 +74,7 @@ export class FixedPointConstraint extends Constraint {
     return { value: Infinity, satisfied: false }
   }
 
-  validateConstraintSpecific(): ValidationResult {
+  validateConstraintSpecific(): EntityValidationResult {
     const errors = []
 
     if (!this.targetXyz || this.targetXyz.length !== 3) {

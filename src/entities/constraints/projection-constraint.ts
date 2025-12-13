@@ -1,7 +1,7 @@
 // Projection constraint - projects 3D world point to 2D image pixel
 // This is the fundamental constraint in photogrammetry and bundle adjustment
 
-import type { ValidationResult } from '../../validation/validator'
+import type { EntityValidationResult } from '../../validation/validator'
 import type { ValueMap } from '../../optimization/IOptimizable'
 import { V, type Value } from 'scalar-autograd'
 import { projectWorldPointToPixel } from '../../optimization/camera-projection'
@@ -74,7 +74,7 @@ export class ProjectionConstraint extends Constraint {
     return { value: 0, satisfied: true }
   }
 
-  validateConstraintSpecific(): ValidationResult {
+  validateConstraintSpecific(): EntityValidationResult {
     const errors = []
 
     // Validate observed coordinates are finite

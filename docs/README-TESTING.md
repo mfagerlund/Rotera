@@ -1,38 +1,8 @@
-# 🧪 Testing Guide for Pictorigo
+# Testing Guide for Pictorigo
 
-This document provides comprehensive information about the testing infrastructure implemented for the Pictorigo photogrammetry application.
+This document describes the testing infrastructure for the Pictorigo photogrammetry application.
 
-## Test Coverage Overview
-
-We have implemented **comprehensive automated testing** covering all major features:
-
-### ✅ **Test Categories Implemented**
-
-1. **🧪 Component Unit Tests** - Testing individual React components
-2. **🧪 Service Integration Tests** - Testing business logic and API services
-3. **🧪 Hook Tests** - Testing custom React hooks
-4. **🧪 End-to-End Workflow Tests** - Testing complete user workflows
-5. **🧪 Visual Regression Tests** - Testing UI consistency
-
-## Test Structure
-
-```
-src/
-├── tests/
-│   ├── setup.ts                    # Test configuration
-│   ├── testUtils.tsx               # Test utilities and mock data
-│   ├── __mocks__/                  # Mock files
-│   ├── e2e/                        # End-to-end tests
-│   └── visual/                     # Visual regression tests
-├── components/
-│   └── __tests__/                  # Component tests
-├── services/
-│   └── __tests__/                  # Service tests
-└── hooks/
-    └── __tests__/                  # Hook tests
-```
-
-## Test Commands
+## Running Tests
 
 ```bash
 # Run all tests
@@ -44,241 +14,132 @@ npm run test:watch
 # Run with coverage report
 npm run test:coverage
 
-# Run CI tests (no watch, coverage)
+# Run CI tests (no watch, with coverage)
 npm run test:ci
-
-# Run specific test categories
-npm run test:components     # Component tests only
-npm run test:services       # Service tests only
-npm run test:hooks          # Hook tests only
-npm run test:e2e           # End-to-end tests only
-npm run test:visual        # Visual regression tests only
 ```
 
-## Detailed Test Coverage
+## Test Suite Overview
 
-### 🧪 Component Tests (4 major components tested)
+**Current Status: 56 test files, 202 passing tests**
 
-**CoordinateSystemPanel** (`src/components/__tests__/CoordinateSystemPanel.test.tsx`)
-- ✅ Renders coordinate system panel correctly
-- ✅ Displays current origin point
-- ✅ Allows setting origin from selected point
-- ✅ Updates scale and unit values
-- ✅ Shows coordinate preview
-- ✅ Handles reset origin action
+The test suite focuses on core optimization and entity serialization logic:
 
-**ConstraintEditor** (`src/components/__tests__/ConstraintEditor.test.tsx`)
-- ✅ Renders constraint editor modal
-- ✅ Updates constraint properties (name, distance, tolerance, weight)
-- ✅ Allows point reassignment
-- ✅ Validates required fields
-- ✅ Handles different constraint types
-- ✅ Modal open/close functionality
+### 1. Optimization Tests (47 files)
+**Location:** `src/optimization/__tests__/`
 
-**PointSearchFilter** (`src/components/__tests__/PointSearchFilter.test.tsx`)
-- ✅ Renders search and filter interface
-- ✅ Filters points by search query
-- ✅ Displays point statistics
-- ✅ Filters by constraint count and 3D status
-- ✅ Sorts points by different criteria
-- ✅ Handles point selection (single and multi-select)
-- ✅ Shows point coordinates and constraint info
+These tests validate the photogrammetry solver and constraint system:
 
-**Viewer3D** (`src/components/__tests__/Viewer3D.test.tsx`)
-- ✅ Renders 3D canvas correctly
-- ✅ Initializes canvas context
-- ✅ Renders 3D points and highlights selected ones
-- ✅ Handles mouse interactions (click, drag, wheel)
-- ✅ Renders constraint lines and point labels
-- ✅ Coordinate conversion functions
-- ✅ Camera position controls
+- **Golden scenario tests**: End-to-end solving with known good solutions
+  - Single camera scenarios (vanishing points, direction constraints)
+  - Two-camera scenarios (bundle adjustment, mixed constraints)
+  - Complex scenarios (coplanarity, intrinsic constraints)
+- **Mathematical correctness**: Projection, triangulation, PnP, quaternion math
+- **Constraint validation**: Distance, angle, coplanarity, direction constraints
+- **Regression tests**: Fixtures from production bugs to prevent re-occurrence
+- **Determinism tests**: Ensures optimization produces consistent results
 
-### 🧪 Service Tests (3 major services tested)
+Key test files:
+- `solving-scenarios.test.ts` - Main scenario test suite (10 scenarios)
+- `golden-bundle-adjustment.test.ts` - Multi-camera bundle adjustment
+- `all-constraints.test.ts` - Comprehensive constraint testing
+- `pnp.test.ts` - Perspective-n-Point camera pose estimation
 
-**OptimizationService** (`src/services/__tests__/optimization.test.ts`)
-- ✅ Bundle adjustment with progress tracking
-- ✅ Optimization cancellation
-- ✅ Parameter validation
-- ✅ Point cloud alignment
-- ✅ Constraint optimization
-- ✅ Camera calibration
-- ✅ Error handling and fallback simulation
-- ✅ Statistics and convergence analysis
+### 2. Entity Serialization Tests (6 files)
+**Location:** `src/entities/__tests__/` and `src/entities/*/__tests__/`
 
-**ExportService** (`src/services/__tests__/export.test.ts`)
-- ✅ JSON, CSV, PLY, OBJ, DXF, PDF, XML export formats
-- ✅ Export options and filtering
-- ✅ Coordinate transformation
-- ✅ Progress tracking and cancellation
-- ✅ Error handling
-- ✅ Filename generation and validation
+Tests for JSON serialization/deserialization of entity classes:
+- `WorldPoint.serialization.test.ts`
+- `ImagePoint.serialization.test.ts`
+- `Line.serialization.test.ts`
+- `Viewpoint.serialization.test.ts`
+- `SerializationContext.test.ts`
+- `Serialization.integration.test.ts`
 
-**ConstraintValidator** (`src/services/__tests__/validation.test.ts`)
-- ✅ Distance constraint validation
-- ✅ Parallel/perpendicular constraint validation
-- ✅ Coplanar constraint validation
-- ✅ Project-wide validation
-- ✅ Constraint conflict detection
-- ✅ Geometric calculations
-- ✅ Error reporting and suggestions
-- ✅ Performance testing
+### 3. Hook Tests (1 file)
+**Location:** `src/hooks/__tests__/`
 
-### 🧪 Hook Tests (3 hooks tested)
+- `entity-deletion.test.ts` - 16 tests validating cascading entity deletion logic
 
-**useHistory** (`src/hooks/__tests__/useHistory.test.ts`)
-- ✅ History initialization and entry addition
-- ✅ Undo/redo operations
-- ✅ History limit (50 entries)
-- ✅ Future history clearing
-- ✅ Current entry access
-- ✅ History clearing
-- ✅ Edge case handling
+### 4. Service Tests (1 file)
+**Location:** `src/services/__tests__/`
 
-**useImageViewport** (`src/hooks/__tests__/useImageViewport.test.ts`)
-- ✅ Viewport initialization
-- ✅ Zoom in/out with limits
-- ✅ Fit-to-screen calculations
-- ✅ Panning with bounds checking
-- ✅ Selection and point-based zooming
-- ✅ Coordinate conversions
-- ✅ Mouse wheel handling
-- ✅ Responsive container updates
+- `optimization.test.ts` - 14 tests for the optimization service wrapper
 
-**useKeyboardNavigation** (`src/hooks/__tests__/useKeyboardNavigation.test.ts`)
-- ✅ Keyboard shortcut setup
-- ✅ All standard shortcuts (Ctrl+Z, Ctrl+Y, Ctrl+S, etc.)
-- ✅ Modifier key combinations
-- ✅ Input field exclusion
-- ✅ Event listener cleanup
-- ✅ Shortcut information access
+### 5. Simple Smoke Test (1 file)
+**Location:** `src/tests/`
 
-### 🧪 End-to-End Workflow Tests (`src/tests/e2e/workflow.test.tsx`)
+- `simple.test.ts` - Basic test to verify Jest is working
 
-- ✅ **Project Management**: Creation, loading, saving
-- ✅ **Point and Constraint Workflow**: Adding points, creating constraints
-- ✅ **Optimization Workflow**: Running optimization with progress
-- ✅ **Measurement and Export**: Measurements, data export
-- ✅ **Undo/Redo Workflow**: History operations
-- ✅ **Keyboard Shortcuts**: Integration testing
-- ✅ **Error Handling**: Graceful error recovery
+## Test Categories NOT Yet Implemented
 
-### 🧪 Visual Regression Tests (`src/tests/visual/VisualRegression.test.tsx`)
+### Component Tests
+**Status:** Not implemented
 
-- ✅ **Component Visual States**: All major components
-- ✅ **Responsive Layouts**: Desktop and mobile
-- ✅ **Theme Testing**: Dark and light themes
-- ✅ **State-based Visuals**: Loading, error, success states
-- ✅ **Cross-browser Compatibility**: CSS feature testing
+The application has **46 React components** in `src/components/` with **zero component tests**.
+
+Components that would benefit from testing:
+- UI panels (CoordinateSystemPanel, ConstraintEditor, etc.)
+- 3D viewer (Viewer3D)
+- Point and line editors
+- Search and filter components
+
+### End-to-End Tests
+**Status:** Not implemented
+
+No E2E workflow tests exist (despite the npm scripts referencing them).
+
+### Visual Regression Tests
+**Status:** Not implemented
+
+No visual regression tests exist.
 
 ## Test Configuration
 
-### Jest Configuration (`jest.config.js`)
-- **Environment**: jsdom for browser simulation
-- **Setup**: Custom test setup with mocks
-- **Coverage**: 80% threshold for branches, functions, lines, statements
-- **Module mapping**: CSS and static file mocks
+### Jest Configuration
+**File:** `jest.config.cjs`
 
-### Test Utilities (`src/tests/testUtils.tsx`)
-- **Mock Data**: Complete project, points, constraints, images
-- **Mock Handlers**: Event handlers for testing
-- **Helper Functions**: File creation, canvas mocking, async waiting
-- **Custom Render**: Project context wrapper
+- **Environment:** jsdom for browser simulation
+- **Transform:** Uses SWC for fast TypeScript compilation
+- **Module mapping:** CSS and asset file mocks
+- **Test pattern:** `**/__tests__/**/*.test.ts(x)`
 
-### Mocking Strategy
-- **Canvas API**: Complete 2D context mocking
-- **File API**: File, Blob, URL mocking
-- **LocalStorage**: Complete localStorage mock
-- **Crypto**: UUID generation mock
-- **ResizeObserver**: Browser API mock
+### Test Utilities
+**File:** `src/tests/testUtils.tsx`
 
-## Coverage Targets
+Provides mock data and helper functions for testing.
 
-We maintain **high test coverage standards**:
+## Coverage
 
-- ✅ **Branches**: 80%
-- ✅ **Functions**: 80%
-- ✅ **Lines**: 80%
-- ✅ **Statements**: 80%
+The project does **not** enforce coverage thresholds. Coverage is primarily in:
+- Optimization solver logic (excellent coverage)
+- Entity serialization (good coverage)
+- Hook logic for entity deletion (covered)
 
-## Running Tests
+Gaps:
+- UI components (0% coverage)
+- User interaction flows (0% coverage)
+- Services beyond optimization (minimal coverage)
 
-### Development Workflow
+## Development Workflow
+
 ```bash
 # Start development with tests
 npm run dev
 npm run test:watch  # In another terminal
 ```
 
-### CI/CD Pipeline
-```bash
-# Run all tests for CI
-npm run test:ci
-
-# Run with coverage for deployment
-npm run test:coverage
-```
-
-### Specific Feature Testing
-```bash
-# Test specific component
-npm test -- CoordinateSystemPanel
-
-# Test specific service
-npm test -- optimization
-
-# Test specific workflow
-npm test -- workflow
-```
-
 ## Test Benefits
 
-### 🔒 **Quality Assurance**
-- Prevents regressions when adding new features
-- Ensures all components work as expected
-- Validates complex mathematical calculations
-- Tests error handling and edge cases
+The current test suite provides:
+- **Solver reliability**: Mathematical correctness of optimization algorithms
+- **Regression prevention**: Golden scenario tests catch solver breakage
+- **Entity integrity**: Serialization tests ensure save/load works correctly
+- **Fast feedback**: 202 tests run in seconds
 
-### 🚀 **Development Speed**
-- Quick feedback on code changes
-- Automated testing of all features
-- Confidence in refactoring
-- Documentation through tests
+## Next Steps
 
-### 📊 **Coverage Insights**
-- Identifies untested code paths
-- Ensures critical functionality is tested
-- Provides metrics for code quality
-- Guides development priorities
-
-## Testing Best Practices
-
-### ✅ **What We Test**
-- Component rendering and behavior
-- User interactions and events
-- Service functionality and error handling
-- Hook state management
-- Complete user workflows
-- Visual consistency
-
-### ✅ **Test Patterns Used**
-- Arrange-Act-Assert pattern
-- Mock external dependencies
-- Test user behavior, not implementation
-- Comprehensive error scenario testing
-- Performance and edge case testing
-
-### ✅ **Maintenance**
-- Tests are updated with feature changes
-- Mock data reflects real-world scenarios
-- Test utilities are reusable
-- Clear test descriptions and documentation
-
-## Conclusion
-
-This comprehensive testing suite ensures the **Pictorigo photogrammetry system** is:
-- ✅ **Reliable**: All features work as expected
-- ✅ **Maintainable**: Changes can be made confidently
-- ✅ **User-friendly**: Workflows are tested end-to-end
-- ✅ **Professional**: High-quality code standards
-
-The testing infrastructure covers **100% of implemented features** and provides a solid foundation for continued development and maintenance.
+To improve test coverage, consider adding:
+1. Component tests for critical UI (3D viewer, constraint editor)
+2. Integration tests for user workflows
+3. Service tests for export, validation, and utilities
+4. Coverage thresholds once baseline is established

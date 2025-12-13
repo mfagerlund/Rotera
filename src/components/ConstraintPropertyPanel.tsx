@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react'
 import { Line } from '../entities/line/Line'
 import { WorldPoint } from '../entities/world-point'
+import { getConstraintDisplayName } from '../utils/constraintDisplay'
 
 interface ConstraintPropertyPanelProps {
   activeConstraintType: string | null
@@ -47,10 +48,6 @@ export const ConstraintPropertyPanel: React.FC<ConstraintPropertyPanelProps> = (
 
   if (!activeConstraintType) {
     return null
-  }
-
-  const getConstraintDisplayName = (type: string) => {
-    return type.charAt(0).toUpperCase() + type.slice(1)
   }
 
   return (
