@@ -253,10 +253,6 @@ export const WorldView = observer(React.forwardRef<WorldViewRef, WorldViewProps>
   // Expose ref methods
   React.useImperativeHandle(ref, () => ({
     zoomFit,
-    zoomSelection: () => {
-      // Zoom to selected entities
-      // TODO: Implement selection-based zoom
-    },
     resetView,
     lookFromCamera
   }))

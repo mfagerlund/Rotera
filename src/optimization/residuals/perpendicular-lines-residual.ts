@@ -12,13 +12,13 @@ export function computePerpendicularLinesResiduals(
   constraint: PerpendicularLinesConstraint,
   valueMap: ValueMap
 ): Value[] {
-  // Lines are defined by their start and end points
-  // We need to find the points for each line
-  // For now, we'll need to extend the system to track lines in valueMap
-  // TODO: Add line support to valueMap
-
+  // Not yet implemented: Lines are not tracked in valueMap
+  // Would need to:
+  // 1. Add lines Map to ValueMap
+  // 2. Compute line direction vectors from endpoint Values
+  // 3. Enforce perpendicularity via dot product = 0 constraint
   if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
     console.warn('Perpendicular lines constraint not yet implemented - requires line support in valueMap');
-    }
+  }
   return [];
 }

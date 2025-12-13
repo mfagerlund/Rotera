@@ -9,6 +9,18 @@ import { faCircle } from '@fortawesome/free-regular-svg-icons'
 import type { WorldPoint } from '../entities/world-point'
 import type { Viewpoint } from '../entities/viewpoint'
 import type { Constraint } from '../entities/constraints/base-constraint'
+import {
+  isDistanceConstraint,
+  isAngleConstraint,
+  isCollinearPointsConstraint,
+  isCoplanarPointsConstraint,
+  isParallelLinesConstraint,
+  isPerpendicularLinesConstraint,
+  isFixedPointConstraint,
+  isEqualDistancesConstraint,
+  isEqualAnglesConstraint,
+  isProjectionConstraint
+} from '../entities/constraints'
 import ContextMenu, { ContextMenuItem } from './ContextMenu'
 import { useConfirm } from './ConfirmDialog'
 import { getEntityKey } from '../utils/entityKeys'
@@ -111,53 +123,43 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = observer(({
 
   // Helper: Get all points from a constraint
   const getConstraintPoints = (constraint: Constraint): WorldPoint[] => {
-    const type = constraint.getConstraintType()
-
-    // Type guard for constraints with different point properties
-    if (type === 'distance_point_point') {
-      const c = constraint as any
-      return [c.pointA, c.pointB]
-    } else if (type === 'angle_point_point_point') {
-      const c = constraint as any
-      return [c.pointA, c.vertex, c.pointC]
-    } else if (type === 'collinear_points' || type === 'coplanar_points') {
-      const c = constraint as any
-      return c.points || []
-    } else if (type === 'parallel_lines' || type === 'perpendicular_lines') {
-      const c = constraint as any
+    // Use type guards instead of 'as any' casts
+    if (isDistanceConstraint(constraint)) {
+      return [constraint.pointA, constraint.pointB]
+    } else if (isAngleConstraint(constraint)) {
+      return [constraint.pointA, constraint.vertex, constraint.pointC]
+    } else if (isCollinearPointsConstraint(constraint) || isCoplanarPointsConstraint(constraint)) {
+      return constraint.points || []
+    } else if (isParallelLinesConstraint(constraint) || isPerpendicularLinesConstraint(constraint)) {
       // Lines have pointA and pointB
       const points: WorldPoint[] = []
-      if (c.lineA) {
-        points.push(c.lineA.pointA, c.lineA.pointB)
+      if (constraint.lineA) {
+        points.push(constraint.lineA.pointA, constraint.lineA.pointB)
       }
-      if (c.lineB) {
-        points.push(c.lineB.pointA, c.lineB.pointB)
+      if (constraint.lineB) {
+        points.push(constraint.lineB.pointA, constraint.lineB.pointB)
       }
       return points
-    } else if (type === 'fixed_point') {
-      const c = constraint as any
-      return [c.point]
-    } else if (type === 'equal_distances') {
-      const c = constraint as any
+    } else if (isFixedPointConstraint(constraint)) {
+      return [constraint.point]
+    } else if (isEqualDistancesConstraint(constraint)) {
       const points: WorldPoint[] = []
-      if (c.distancePairs) {
-        c.distancePairs.forEach((pair: [WorldPoint, WorldPoint]) => {
+      if (constraint.distancePairs) {
+        constraint.distancePairs.forEach((pair: [WorldPoint, WorldPoint]) => {
           points.push(pair[0], pair[1])
         })
       }
       return points
-    } else if (type === 'equal_angles') {
-      const c = constraint as any
+    } else if (isEqualAnglesConstraint(constraint)) {
       const points: WorldPoint[] = []
-      if (c.angleTriplets) {
-        c.angleTriplets.forEach((triplet: [WorldPoint, WorldPoint, WorldPoint]) => {
+      if (constraint.angleTriplets) {
+        constraint.angleTriplets.forEach((triplet: [WorldPoint, WorldPoint, WorldPoint]) => {
           points.push(triplet[0], triplet[1], triplet[2])
         })
       }
       return points
-    } else if (type === 'projection_point_camera') {
-      const c = constraint as any
-      return [c.worldPoint]
+    } else if (isProjectionConstraint(constraint)) {
+      return [constraint.worldPoint]
     }
 
     return []

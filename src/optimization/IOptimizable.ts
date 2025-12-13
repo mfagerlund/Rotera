@@ -123,3 +123,50 @@ export interface IOptimizable extends
   IResidualProvider,
   IOptimizationResultReceiver {
 }
+
+/**
+ * Interface for camera entities that can participate in optimization.
+ * Cameras have additional options for controlling pose and intrinsic optimization.
+ */
+export interface IOptimizableCamera {
+  /**
+   * Add this camera's values to the ValueMap.
+   * Returns an array of Value objects that are variables (should be optimized).
+   *
+   * @param valueMap - The map to add values to
+   * @param options - Options controlling what gets optimized
+   * @returns Array of Value objects that are optimization variables
+   */
+  addToValueMap(
+    valueMap: ValueMap,
+    options: {
+      optimizePose?: boolean;
+      optimizeIntrinsics?: boolean;
+      optimizeDistortion?: boolean;
+    }
+  ): Value[];
+
+  /**
+   * Compute residuals for this camera's constraints.
+   * @param valueMap - The ValueMap containing all entity values
+   * @returns Array of Value objects (residuals that should be zero)
+   */
+  computeResiduals(valueMap: ValueMap): Value[];
+
+  /**
+   * Apply optimization results back to this camera.
+   * @param valueMap - The ValueMap with solved values
+   */
+  applyOptimizationResultFromValueMap(valueMap: ValueMap): void;
+
+  /**
+   * Whether the camera pose (position and rotation) is locked.
+   * When true, pose will not be optimized.
+   */
+  isPoseLocked: boolean;
+
+  /**
+   * Set of vanishing lines associated with this camera.
+   */
+  vanishingLines: Set<any>;
+}

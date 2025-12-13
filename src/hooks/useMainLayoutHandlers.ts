@@ -93,8 +93,8 @@ export function useMainLayoutHandlers({
     ctrlKey: boolean,
     shiftKey: boolean
   ) => {
-    // TODO: Implement plane selection/editing
-  }, [])
+    handleEntityClick(plane, ctrlKey, shiftKey)
+  }, [handleEntityClick])
 
   // Empty space click handler
   const handleEmptySpaceClick = useCallback((shiftKey: boolean) => {

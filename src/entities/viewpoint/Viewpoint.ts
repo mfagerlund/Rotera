@@ -1,5 +1,5 @@
 import type {ISelectable, SelectableType} from '../../types/selectable'
-import type {IValueMapContributor, ValueMap, CameraValues} from '../../optimization/IOptimizable'
+import type {IValueMapContributor, ValueMap, CameraValues, IOptimizableCamera} from '../../optimization/IOptimizable'
 import type {IWorldPoint, IViewpoint} from '../interfaces'
 import type {ImagePoint} from '../imagePoint'
 import {V, Value, Vec3} from 'scalar-autograd'
@@ -13,7 +13,7 @@ import type { VanishingLine } from '../vanishing-line'
 import type { ViewpointMetadata } from './ViewpointMetadata'
 import {makeAutoObservable} from 'mobx'
 
-export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint, ISerializable<ViewpointDto> {
+export class Viewpoint implements ISelectable, IValueMapContributor, IOptimizableCamera, IViewpoint, ISerializable<ViewpointDto> {
     selected = false
     isPoseLocked = false
     lastResiduals: number[] = []
@@ -56,12 +56,6 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
     color: string
     imagePoints: Set<ImagePoint> = new Set()
     vanishingLines: Set<VanishingLine> = new Set()
-    /**
-     * Internal reference to IndexedDB image ID.
-     * Only used during serialization/deserialization for image storage lookup.
-     * Not part of the core Viewpoint data model.
-     */
-    _imageId?: string
 
     private constructor(
         name: string,

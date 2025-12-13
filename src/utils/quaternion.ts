@@ -1,5 +1,9 @@
 /**
- * Quaternion utilities for 3D rotations
+ * Simple quaternion utilities for UI and display operations.
+ * These work with regular numbers for non-optimization code.
+ *
+ * For optimization/autodiff operations that require automatic differentiation,
+ * use `src/optimization/Quaternion.ts` instead (works with scalar-autograd Values).
  */
 
 /**

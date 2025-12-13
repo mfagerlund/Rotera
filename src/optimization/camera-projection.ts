@@ -15,11 +15,9 @@ import { Quaternion } from './Quaternion';
  * Convert Euler angles (rx, ry, rz) to rotation matrix.
  * Uses ZYX convention: R = Rz * Ry * Rx
  *
- * TODO: ScalarAutograd has Matrix3x3 class (C:\Dev\ScalarAutograd\src\Matrix3x3.ts)
- * but it only supports eigenvalue operations for symmetric matrices.
- * Consider adding general matrix operations (rotation matrix construction,
- * matrix-vector multiply, matrix-matrix multiply) to ScalarAutograd to avoid
- * reimplementing matrix math in every project.
+ * Note: ScalarAutograd has Matrix3x3 class but only supports eigenvalue operations
+ * for symmetric matrices. General matrix operations could be added to ScalarAutograd
+ * in the future to avoid reimplementing matrix math in every project.
  *
  * @param rx - Rotation around X axis (radians)
  * @param ry - Rotation around Y axis (radians)

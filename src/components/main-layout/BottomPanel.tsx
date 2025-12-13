@@ -25,7 +25,7 @@ interface BottomPanelProps {
     showCoplanarConstraintsPopup: boolean
     showOptimizationPanel: boolean
   }
-  onClosePopup: (popup: string) => void
+  onClosePopup: (popup: keyof BottomPanelProps['entityPopups']) => void
   linesMap: Map<string, LineEntity>
   allWorldPoints: WorldPoint[]
   selectedLines: LineEntity[]

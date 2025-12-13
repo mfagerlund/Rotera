@@ -292,8 +292,7 @@ export const ProjectDB = {
     for (const image of images) {
       const dataUrl = await blobToDataUrl(image.blob)
       for (const viewpoint of project.viewpoints) {
-        if (viewpoint.filename === image.metadata.originalFilename ||
-            viewpoint._imageId === image.id) {
+        if (viewpoint.filename === image.metadata.originalFilename) {
           viewpoint.url = dataUrl
           break
         }

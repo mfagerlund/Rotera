@@ -79,8 +79,8 @@ export class PerpendicularLinesConstraint extends Constraint {
 
   /**
    * Compute residuals for perpendicular lines constraint.
-   * TODO: Requires line support in valueMap.
-   * For now, returns empty array as lines are not yet supported in optimization.
+   * Not yet implemented - requires line support in valueMap.
+   * Lines are not currently tracked in optimization system.
    */
   computeResiduals(valueMap: ValueMap): Value[] {
     console.warn(`Perpendicular lines constraint ${this.getName()}: not yet implemented - requires line support in valueMap`)

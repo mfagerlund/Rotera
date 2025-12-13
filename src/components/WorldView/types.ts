@@ -24,7 +24,6 @@ export interface WorldViewProps {
 
 export interface WorldViewRef {
   zoomFit: () => void
-  zoomSelection: () => void
   resetView: () => void
   lookFromCamera: (viewpoint: Viewpoint) => void
 }

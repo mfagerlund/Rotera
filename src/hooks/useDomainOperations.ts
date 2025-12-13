@@ -39,10 +39,6 @@ export interface LineUpdates {
   thickness?: number
 }
 
-export interface ConstraintUpdates {
-  name?: string
-  parameters?: Record<string, unknown>
-}
 
 export interface DomainOperations {
   // World Points
@@ -73,7 +69,6 @@ export interface DomainOperations {
 
   // Constraints
   addConstraint: (constraint: Constraint) => void
-  updateConstraint: (constraint: Constraint, updates: ConstraintUpdates) => void
   deleteConstraint: (constraint: Constraint) => void
 
   // Project
@@ -298,7 +293,8 @@ export function useDomainOperations(
   }
 
   const getSelectedPointsInImage = (viewpoint: Viewpoint): WorldPoint[] => {
-    // TODO: Implement selection tracking
+    // Image point selection not yet implemented - only world point selection is tracked
+    // Would require tracking which image points are selected per viewpoint
     return []
   }
 
@@ -330,11 +326,6 @@ export function useDomainOperations(
   const addConstraint = (constraint: Constraint) => {
     if (!project) return
     project.addConstraint(constraint)
-  }
-
-  const updateConstraint = (constraint: Constraint, updates: ConstraintUpdates) => {
-    if (!project) return
-    // TODO: Implement constraint updates
   }
 
   const deleteConstraint = (constraint: Constraint) => {
@@ -406,7 +397,6 @@ export function useDomainOperations(
     getSelectedPointsInImage,
     copyPointsFromImageToImage,
     addConstraint,
-    updateConstraint,
     deleteConstraint,
     clearProject,
     exportOptimizationDto,

@@ -1,7 +1,11 @@
 import { V, Vec3, Vec4, Value } from 'scalar-autograd';
 
 /**
- * Quaternion operations for 3D rotations.
+ * Quaternion operations for optimization using scalar-autograd.
+ * These work with Value objects for automatic differentiation.
+ *
+ * For simple UI/display operations that don't need autodiff,
+ * use `src/utils/quaternion.ts` instead (works with regular numbers).
  *
  * Quaternion representation: q = (w, x, y, z) where w is the scalar part.
  * For rotations, quaternions must be unit quaternions (|q| = 1).

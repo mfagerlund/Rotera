@@ -11,7 +11,7 @@
  */
 
 import { Value, V, nonlinearLeastSquares } from 'scalar-autograd';
-import type { ValueMap } from './IOptimizable';
+import type { ValueMap, IOptimizableCamera } from './IOptimizable';
 import type { WorldPoint } from '../entities/world-point/WorldPoint';
 import type { Line } from '../entities/line/Line';
 import type { Viewpoint } from '../entities/viewpoint/Viewpoint';
@@ -186,7 +186,7 @@ export class ConstraintSystem {
       variables.push(...pointVariables);
     }
 
-    // Add cameras (if they implement IValueMapContributor)
+    // Add cameras (if they implement IOptimizableCamera)
     let cameraVarCount = 0;
     for (const camera of this.cameras) {
       if ('addToValueMap' in camera && typeof camera.addToValueMap === 'function') {
@@ -194,8 +194,9 @@ export class ConstraintSystem {
           typeof this.optimizeCameraIntrinsics === 'function'
             ? this.optimizeCameraIntrinsics(camera)
             : this.optimizeCameraIntrinsics;
-        const cameraVariables = (camera as any).addToValueMap(valueMap, {
-          optimizePose: !(camera as any).isPoseLocked,
+        const optimizableCamera = camera as unknown as IOptimizableCamera;
+        const cameraVariables = optimizableCamera.addToValueMap(valueMap, {
+          optimizePose: !optimizableCamera.isPoseLocked,
           optimizeIntrinsics,
           optimizeDistortion: false,
         });
@@ -232,14 +233,16 @@ export class ConstraintSystem {
       // CAMERA INTRINSIC CONSTRAINTS (quaternion normalization)
       for (const camera of this.cameras) {
         if ('computeResiduals' in camera && typeof camera.computeResiduals === 'function') {
-          const cameraResiduals = (camera as any).computeResiduals(valueMap);
+          const optimizableCamera = camera as unknown as IOptimizableCamera;
+          const cameraResiduals = optimizableCamera.computeResiduals(valueMap);
           residuals.push(...cameraResiduals);
         }
 
         // VANISHING POINT CONSTRAINTS - use angular error (not pixel error)
         // This avoids huge residuals from distant vanishing points
-        const cameraValues = valueMap.cameras.get(camera as any);
-        if (cameraValues && (camera as any).vanishingLines && (camera as any).vanishingLines.size > 0) {
+        const optimizableCamera = camera as unknown as IOptimizableCamera;
+        const cameraValues = valueMap.cameras.get(camera);
+        if (cameraValues && optimizableCamera.vanishingLines && optimizableCamera.vanishingLines.size > 0) {
           const axisDirs: Record<VanishingLineAxis, [number, number, number]> = {
             x: [1, 0, 0],
             y: [0, 1, 0],
@@ -247,7 +250,7 @@ export class ConstraintSystem {
           };
 
           (['x', 'y', 'z'] as VanishingLineAxis[]).forEach(axis => {
-            const linesForAxis = Array.from((camera as any).vanishingLines as Set<VanishingLine>).filter(
+            const linesForAxis = Array.from(optimizableCamera.vanishingLines as Set<VanishingLine>).filter(
               (l: VanishingLine) => l.axis === axis
             );
             if (linesForAxis.length < 2) return;
@@ -368,7 +371,8 @@ export class ConstraintSystem {
 
       for (const camera of this.cameras) {
         if ('computeResiduals' in camera && typeof camera.computeResiduals === 'function') {
-          const cameraResiduals = (camera as any).computeResiduals(valueMap);
+          const optimizableCamera = camera as unknown as IOptimizableCamera;
+          const cameraResiduals = optimizableCamera.computeResiduals(valueMap);
           allResiduals.push(...cameraResiduals);
         }
       }
@@ -436,7 +440,8 @@ export class ConstraintSystem {
       // Update cameras with solved values
       for (const camera of this.cameras) {
         if ('applyOptimizationResultFromValueMap' in camera && typeof camera.applyOptimizationResultFromValueMap === 'function') {
-          (camera as any).applyOptimizationResultFromValueMap(valueMap);
+          const optimizableCamera = camera as unknown as IOptimizableCamera;
+          optimizableCamera.applyOptimizationResultFromValueMap(valueMap);
         }
       }
 
@@ -511,10 +516,11 @@ export class ConstraintSystem {
     // Count pushed residuals for cameras
     for (const camera of this.cameras) {
       if ('computeResiduals' in camera && typeof camera.computeResiduals === 'function') {
-        const residuals = (camera as any).computeResiduals(valueMap);
+        const optimizableCamera = camera as unknown as IOptimizableCamera;
+        const residuals = optimizableCamera.computeResiduals(valueMap);
         pushCounts.set(camera, {
           count: residuals.length,
-          name: (camera as any).name || 'Camera'
+          name: camera.name || 'Camera'
         });
       }
     }
@@ -563,14 +569,6 @@ export class ConstraintSystem {
     }
 
     // All entities have symmetric push/pop residuals
-  }
-
-  /**
-   * Check if all constraints are satisfied (within tolerance).
-   */
-  isValid(): boolean {
-    // TODO: Implement validation without modifying state
-    return true;
   }
 
   /**

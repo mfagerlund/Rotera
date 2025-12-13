@@ -5,6 +5,7 @@ import { Line as LineEntity } from '../entities/line'
 import { VanishingLine } from '../entities/vanishing-line'
 import { Viewpoint } from '../entities/viewpoint'
 import { ActiveTool } from './useMainLayoutState'
+import { ISelectable, SelectableType } from '../types/selectable'
 
 interface UseMainLayoutKeyboardParams {
   isConfirmDialogOpen: boolean
@@ -16,7 +17,7 @@ interface UseMainLayoutKeyboardParams {
   selectedLineEntities: LineEntity[]
   selectedPlaneEntities: any[]
   selectedVanishingLineEntities: VanishingLine[]
-  getSelectedByType: (type: string) => any[]
+  getSelectedByType: <T extends ISelectable>(type: SelectableType) => T[]
   confirm: (message: string, options?: any) => Promise<boolean>
   deleteConstraint: (constraint: any) => void
   deleteLine: (line: LineEntity) => void
@@ -78,7 +79,7 @@ export function useMainLayoutKeyboard({
         const selectedLines = selectedLineEntities
         const selectedPlanes = selectedPlaneEntities
         const selectedVanishingLines = selectedVanishingLineEntities
-        const selectedConstraints = getSelectedByType('constraint' as any)
+        const selectedConstraints = getSelectedByType('constraint')
 
         const totalSelected = selectedPoints.length + selectedLines.length + selectedPlanes.length + selectedVanishingLines.length + selectedConstraints.length
 

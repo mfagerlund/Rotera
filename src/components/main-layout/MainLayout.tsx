@@ -74,12 +74,22 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
     getSelectedPointsInImage,
     copyPointsFromImageToImage,
     addConstraint,
-    updateConstraint,
     deleteConstraint,
     clearProject,
     exportOptimizationDto,
     removeDuplicateImagePoints
   } = useDomainOperations(project, setProject)
+
+  // Constraint update function - constraints are MobX observables, so we just mutate them
+  const updateConstraint = useCallback((constraint: Constraint, updates: { name?: string; parameters?: Record<string, unknown> }) => {
+    if (updates.name !== undefined) {
+      constraint.name = updates.name
+    }
+    if (updates.parameters !== undefined) {
+      // Constraints don't have a generic parameters field - this is a legacy interface
+      // In practice, we update specific constraint properties directly
+    }
+  }, [])
 
   // Dirty state tracking
   const [isDirty, setIsDirtyState] = useState(false)
@@ -127,12 +137,12 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
     if (!project) return
     try {
       // Get the current project's DB ID
-      const currentDbId = (project as any)._dbId as string | undefined
+      const currentDbId = (project as unknown as { _dbId?: string })._dbId
       if (!currentDbId) {
         // If the current project hasn't been saved yet, save it first
         await ProjectDB.saveProject(project)
       }
-      const dbId = (project as any)._dbId as string
+      const dbId = (project as unknown as { _dbId: string })._dbId
       // Copy the project with the new name
       const newId = await ProjectDB.copyProject(dbId, newName)
       // Load the new project
@@ -218,10 +228,10 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
 
   useEffect(() => {
     if (project) {
-      (window as any).removeDuplicateImagePoints = removeDuplicateImagePoints
+      (window as unknown as { removeDuplicateImagePoints?: typeof removeDuplicateImagePoints }).removeDuplicateImagePoints = removeDuplicateImagePoints
     }
     return () => {
-      delete (window as any).removeDuplicateImagePoints
+      delete (window as unknown as { removeDuplicateImagePoints?: typeof removeDuplicateImagePoints }).removeDuplicateImagePoints
     }
   }, [project, removeDuplicateImagePoints])
 
@@ -276,7 +286,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
     hoveredConstraintId,
     setHoveredConstraintId
   } = useConstraints(
-    constraints as any,
+    constraints,
     addConstraint,
     updateConstraint,
     deleteConstraint,
@@ -399,7 +409,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
     if (currentImage) {
       const imagePoint = currentImage.getImagePointsForWorldPoint(worldPoint)[0]
       if (imagePoint) {
-        moveImagePoint(imagePoint as any, u, v)
+        moveImagePoint(imagePoint, u, v)
       } else {
         // No ImagePoint on this image - create one
         addImagePointToWorldPoint(worldPoint, currentImage, u, v)
@@ -456,7 +466,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
     selectedLineEntities,
     selectedPlaneEntities,
     selectedVanishingLineEntities,
-    getSelectedByType: getSelectedByType as any,
+    getSelectedByType,
     confirm,
     deleteConstraint,
     deleteLine,
@@ -569,7 +579,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
   const handleSplitRatioChange = useCallback((ratio: number) => {
     updateWorkspaceState({
       splitWorkspace: { ...workspaceState.splitWorkspace, splitRatio: ratio }
-    } as any)
+    })
   }, [updateWorkspaceState, workspaceState.splitWorkspace])
 
   const renderSplitWorkspace = useCallback(() => (
@@ -596,7 +606,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
       {dialog}
       <WorkspaceManager
         workspaceState={workspaceState}
-        onWorkspaceStateChange={(updates) => updateWorkspaceState(updates as any)}
+        onWorkspaceStateChange={(updates) => updateWorkspaceState(updates)}
       >
         {(currentWorkspace, workspaceActions) => (
           <div className="app-layout enhanced-layout">
@@ -605,7 +615,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
               onWorkspaceChange={workspaceActions.setWorkspace}
               imageHasContent={imageInfo.totalImages > 0}
               worldHasContent={worldInfo.totalPoints > 0}
-              project={project as any}
+              project={project}
               onExportOptimization={exportOptimizationDto}
               onClearProject={clearProject}
               confirm={confirm}
@@ -733,7 +743,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
                 onCancelConstraintCreation={cancelConstraintCreation}
                 worldPointsMap={worldPointsMap}
                 viewpointsMap={viewpointsMap}
-                constraints={constraints as any}
+                constraints={constraints}
                 selectedWorldPoints={selectedPointEntities}
                 hoveredWorldPoint={hoveredWorldPoint}
                 placementMode={placementMode}
@@ -851,7 +861,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
 
       <BottomPanel
         entityPopups={entityPopups}
-        onClosePopup={(popup) => setEntityPopup(popup as any, false)}
+        onClosePopup={(popup) => setEntityPopup(popup, false)}
         linesMap={linesMap}
         allWorldPoints={worldPointsArray}
         selectedLines={selectedLineEntities}
@@ -885,7 +895,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
           }
         }}
         onSelectImagePoint={(ref) => {}}
-        constraints={constraints as any}
+        constraints={constraints}
         allLines={linesArray}
         onEditConstraint={(constraint) => {}}
         onDeleteConstraint={(constraint) => deleteConstraint(constraint)}

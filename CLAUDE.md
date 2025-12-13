@@ -1,3 +1,5 @@
+<!-- TODO: Consider renaming project to "grammagon" (gramma=drawing + gon=angle) -->
+
 - Dev server: `npm run dev` (runs on http://localhost:5173)
 - Before we're done with a task, run `bash check.sh`
 - This project should currently have NO backward compability and NO legacy code. Keep it CLEAN.

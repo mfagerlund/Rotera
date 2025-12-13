@@ -69,8 +69,9 @@ export class ProjectionConstraint extends Constraint {
   }
 
   evaluate(): ConstraintEvaluation {
-    // TODO: Implement non-optimized projection evaluation
-    // This would require accessing the Camera entity
+    // Note: Not implemented for ProjectionConstraint - residuals are computed during optimization
+    // via computeResiduals(). A standalone evaluation would require duplicating camera projection
+    // logic, but this is not needed in practice since constraints are only evaluated during solving.
     return { value: 0, satisfied: true }
   }
 

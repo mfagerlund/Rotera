@@ -1,4 +1,5 @@
 # Pictorigo
+<!-- TODO: Consider renaming to "grammagon" (gramma=drawing + gon=angle) -->
 Poor Man's Photogrammetry
 
 ## 🚀 Current Status
