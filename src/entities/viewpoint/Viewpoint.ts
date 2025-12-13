@@ -56,6 +56,12 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IViewpoint,
     color: string
     imagePoints: Set<ImagePoint> = new Set()
     vanishingLines: Set<VanishingLine> = new Set()
+    /**
+     * Internal reference to IndexedDB image ID.
+     * Only used during serialization/deserialization for image storage lookup.
+     * Not part of the core Viewpoint data model.
+     */
+    _imageId?: string
 
     private constructor(
         name: string,

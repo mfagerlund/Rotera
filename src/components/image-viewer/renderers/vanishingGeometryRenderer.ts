@@ -34,8 +34,8 @@ export function renderVanishingLines(params: RenderParams): void {
       const x2 = vanishingLine.p2.u * scale + offset.x
       const y2 = vanishingLine.p2.v * scale + offset.y
 
-      const isSelected = selectedVanishingLines.some(vl => vl.id === vanishingLine.id)
-      const isBeingDragged = isDraggingVanishingLine && draggedVanishingLine?.id === vanishingLine.id
+      const isSelected = selectedVanishingLines.some(vl => vl === vanishingLine)
+      const isBeingDragged = isDraggingVanishingLine && draggedVanishingLine === vanishingLine
 
       const axisColor = vanishingLine.getColor()
       const lineWidth = isSelected ? 4 : 3

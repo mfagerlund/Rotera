@@ -1325,7 +1325,7 @@ export function validateLineQuality(
   // Only check parallel lines when there are exactly 2 lines on axis.
   // With 3+ lines, overdetermined least-squares handles parallel pairs well.
   if (allLinesForAxis.length === 2) {
-    const otherLines = allLinesForAxis.filter(l => l.id !== line.id)
+    const otherLines = allLinesForAxis.filter(l => l !== line)
     if (otherLines.length > 0) {
       const minAngle = Math.min(...otherLines.map(other => computeAngleBetweenLines(line, other)))
 
