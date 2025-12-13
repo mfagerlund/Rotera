@@ -1,6 +1,7 @@
 // Enhanced World Point Panel with delightful micro-interactions
 
 import React, { useState, useEffect } from 'react'
+import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowsLeftRight, faBullseye, faCamera, faDraftingCompass, faGear, faLocationDot, faPencil, faRocket, faTrash, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
 import { faCircle } from '@fortawesome/free-regular-svg-icons'
@@ -32,7 +33,7 @@ interface WorldPointPanelProps {
   onCancelPlacement: () => void
 }
 
-export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
+export const WorldPointPanel: React.FC<WorldPointPanelProps> = observer(({
   worldPoints,
   viewpoints,
   constraints,
@@ -423,7 +424,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = ({
     </div>
     </>
   )
-}
+})
 
 interface EnhancedWorldPointItemProps {
   worldPoint: WorldPoint

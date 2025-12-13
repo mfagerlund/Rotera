@@ -1,6 +1,8 @@
 # ScalarAutograd Extension: Gauss-Newton Solver for Sparse Nonlinear Least Squares
 
-## Status: PROPOSAL - NOT IMPLEMENTED
+## Status: REFERENCE
+**Last Updated:** 2025-12-13
+**Applies to:** Potential future enhancement (not implemented)
 
 This document describes a potential future enhancement that has not been implemented.
 

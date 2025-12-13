@@ -1,6 +1,7 @@
 // Lines Management Popup
 
 import React, { useState } from 'react'
+import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
 import FloatingWindow from './FloatingWindow'
@@ -24,7 +25,7 @@ interface LinesManagerProps {
   onCreateLine?: (pointA: WorldPoint, pointB: WorldPoint, constraints?: any) => void
 }
 
-export const LinesManager: React.FC<LinesManagerProps> = ({
+export const LinesManager: React.FC<LinesManagerProps> = observer(({
   isOpen,
   onClose,
   lines,
@@ -211,6 +212,6 @@ export const LinesManager: React.FC<LinesManagerProps> = ({
       )}
     </>
   )
-}
+})
 
 export default LinesManager

@@ -1,6 +1,7 @@
 // World point overlay for image thumbnails
 
 import React from 'react'
+import { observer } from 'mobx-react-lite'
 import type { Viewpoint } from '../../entities/viewpoint'
 import type { WorldPoint } from '../../entities/world-point'
 import type { ImageBounds } from './hooks/useImageBounds'
@@ -16,7 +17,7 @@ interface WorldPointOverlayProps {
   onWorldPointClick?: (worldPoint: WorldPoint, ctrlKey: boolean, shiftKey: boolean) => void
 }
 
-export const WorldPointOverlay: React.FC<WorldPointOverlayProps> = ({
+export const WorldPointOverlay: React.FC<WorldPointOverlayProps> = observer(({
   image,
   imgRef,
   imgBounds,
@@ -79,4 +80,4 @@ export const WorldPointOverlay: React.FC<WorldPointOverlayProps> = ({
       })}
     </div>
   )
-}
+})

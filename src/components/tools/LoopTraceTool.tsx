@@ -2,6 +2,7 @@
 // Loop Trace Tool - String together points and batch-create lines
 
 import React, { useEffect, useState, useRef } from 'react'
+import { observer } from 'mobx-react-lite'
 import { LineDirection } from '../../entities/line'
 import { WorldPoint } from '../../entities/world-point'
 import { useLoopTrace } from '../../hooks/useLoopTrace'
@@ -33,7 +34,7 @@ interface LoopTraceToolProps {
   showActionButtons?: boolean
 }
 
-export const LoopTraceTool: React.FC<LoopTraceToolProps> = ({
+export const LoopTraceTool: React.FC<LoopTraceToolProps> = observer(({
   selectedPoints,
   allWorldPoints,
   existingLines,
@@ -334,6 +335,6 @@ export const LoopTraceTool: React.FC<LoopTraceToolProps> = ({
       )}
     </div>
   )
-}
+})
 
 export default LoopTraceTool

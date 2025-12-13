@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useImperativeHandle, forwardRef, useMemo } from 'react'
+import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faLocationDot } from '@fortawesome/free-solid-svg-icons'
 import { useImageViewerRenderer } from './image-viewer/useImageViewerRenderer'
@@ -44,7 +45,7 @@ interface ImageViewerProps extends ImageViewerPropsBase {
   onEscapePressed?: () => void
 }
 
-export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
+export const ImageViewer = observer(forwardRef<ImageViewerRef, ImageViewerProps>(({
   image,
   worldPoints,
   lineEntities = new Map(),
@@ -316,7 +317,7 @@ export const ImageViewer = forwardRef<ImageViewerRef, ImageViewerProps>(({
       )}
     </div>
   )
-})
+}))
 
 ImageViewer.displayName = 'ImageViewer'
 

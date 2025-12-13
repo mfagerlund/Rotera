@@ -1,5 +1,6 @@
 // Orientation Paint Tool - Click lines to apply a selected orientation
 import React, { useState, useEffect, useCallback } from 'react'
+import { observer } from 'mobx-react-lite'
 import { Line, LineDirection } from '../../entities/line'
 
 interface OrientationPaintToolProps {
@@ -8,7 +9,7 @@ interface OrientationPaintToolProps {
   onPaintLine: (line: Line, direction: LineDirection) => void
 }
 
-export const OrientationPaintTool: React.FC<OrientationPaintToolProps> = ({
+export const OrientationPaintTool: React.FC<OrientationPaintToolProps> = observer(({
   isActive,
   onCancel,
   onPaintLine
@@ -82,6 +83,6 @@ export const OrientationPaintTool: React.FC<OrientationPaintToolProps> = ({
       </div>
     </div>
   )
-}
+})
 
 export default OrientationPaintTool

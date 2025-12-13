@@ -1,6 +1,7 @@
 // Enhanced workspace management with better separation and state management
 
 import React, { useState, useCallback, useEffect } from 'react'
+import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCamera, faCheck, faCircleXmark } from '@fortawesome/free-solid-svg-icons'
 import { faCircle } from '@fortawesome/free-regular-svg-icons'
@@ -62,7 +63,7 @@ interface WorkspaceSwitcherProps {
   className?: string
 }
 
-export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
+export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = observer(({
   currentWorkspace,
   onWorkspaceChange,
   imageHasContent,
@@ -163,7 +164,7 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
       </div>
     </div>
   )
-}
+})
 
 // Workspace status indicator
 interface WorkspaceStatusProps {
@@ -180,7 +181,7 @@ interface WorkspaceStatusProps {
   }
 }
 
-export const WorkspaceStatus: React.FC<WorkspaceStatusProps> = ({
+export const WorkspaceStatus: React.FC<WorkspaceStatusProps> = observer(({
   workspace,
   imageInfo,
   worldInfo
@@ -224,10 +225,10 @@ export const WorkspaceStatus: React.FC<WorkspaceStatusProps> = ({
       )}
     </div>
   )
-}
+})
 
 // Enhanced workspace manager with better state management
-export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
+export const WorkspaceManager: React.FC<WorkspaceManagerProps> = observer(({
   workspaceState,
   onWorkspaceStateChange,
   children
@@ -342,7 +343,7 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
       {children(workspaceState.currentWorkspace, workspaceActions)}
     </div>
   )
-}
+})
 
 // Split view container for side-by-side layout
 interface SplitViewContainerProps {
@@ -354,7 +355,7 @@ interface SplitViewContainerProps {
   className?: string
 }
 
-export const SplitViewContainer: React.FC<SplitViewContainerProps> = ({
+export const SplitViewContainer: React.FC<SplitViewContainerProps> = observer(({
   splitDirection,
   splitRatio,
   onSplitRatioChange,
@@ -429,6 +430,6 @@ export const SplitViewContainer: React.FC<SplitViewContainerProps> = ({
       </div>
     </div>
   )
-}
+})
 
 export default WorkspaceManager

@@ -1,6 +1,7 @@
 // World Points Management Popup
 
 import React from 'react'
+import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPencil, faTrash, faCamera } from '@fortawesome/free-solid-svg-icons'
 import FloatingWindow from './FloatingWindow'
@@ -20,7 +21,7 @@ interface WorldPointsManagerProps {
   onSelectWorldPoint?: (worldPoint: WorldPoint) => void
 }
 
-export const WorldPointsManager: React.FC<WorldPointsManagerProps> = ({
+export const WorldPointsManager: React.FC<WorldPointsManagerProps> = observer(({
   isOpen,
   onClose,
   worldPoints,
@@ -155,6 +156,6 @@ export const WorldPointsManager: React.FC<WorldPointsManagerProps> = ({
       </FloatingWindow>
     </>
   )
-}
+})
 
 export default WorldPointsManager

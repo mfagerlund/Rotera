@@ -16,10 +16,10 @@ import { solveQuartic } from './polynomial-solvers';
 import {
   computePoseFrom3Points,
   computeReprojectionErrorForPose,
-  distance3D,
   dot3D,
   invert3x3
 } from './math-utils';
+import { distance } from '../../utils/vec3';
 
 export function solveP3P(
   points3D: [number, number, number][],
@@ -47,9 +47,9 @@ export function solveP3P(
   const P2 = points3D[1];
   const P3 = points3D[2];
 
-  const d12 = distance3D(P1, P2);
-  const d13 = distance3D(P1, P3);
-  const d23 = distance3D(P2, P3);
+  const d12 = distance(P1, P2);
+  const d13 = distance(P1, P3);
+  const d23 = distance(P2, P3);
 
   const cosAlpha = dot3D(bearingVectors[1], bearingVectors[2]);
   const cosBeta = dot3D(bearingVectors[0], bearingVectors[2]);

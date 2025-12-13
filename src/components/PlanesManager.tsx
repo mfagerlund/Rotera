@@ -1,6 +1,7 @@
 // Planes Management Popup
 
 import React from 'react'
+import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPencil, faTrash, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons'
 import FloatingWindow from './FloatingWindow'
@@ -22,7 +23,7 @@ interface PlanesManagerProps {
   onSelectPlane?: (plane: Plane) => void
 }
 
-export const PlanesManager: React.FC<PlanesManagerProps> = ({
+export const PlanesManager: React.FC<PlanesManagerProps> = observer(({
   isOpen,
   onClose,
   planes,
@@ -174,6 +175,6 @@ export const PlanesManager: React.FC<PlanesManagerProps> = ({
       </FloatingWindow>
     </>
   )
-}
+})
 
 export default PlanesManager

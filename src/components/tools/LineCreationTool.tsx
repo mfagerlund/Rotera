@@ -1,6 +1,7 @@
 // Line Creation Tool with slot-based selection
 
 import React, { useState, useCallback, useEffect, useRef } from 'react'
+import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowRight, faBullseye, faMagnifyingGlass, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
 import { useConfirm } from '../ConfirmDialog'
@@ -56,7 +57,7 @@ interface LineConstraints {
 }
 
 // RENAME_TO: LineEditor
-export const LineCreationTool: React.FC<LineCreationToolProps> = ({
+export const LineCreationTool: React.FC<LineCreationToolProps> = observer(({
   selectedPoints,
   allWorldPoints,
   existingLines,
@@ -571,6 +572,6 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = ({
 
     </>
   )
-}
+})
 
 export default LineCreationTool

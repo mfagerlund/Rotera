@@ -1,5 +1,9 @@
 # Testing Guide for Pictorigo
 
+## Status: ACTIVE
+**Last Updated:** 2025-12-13
+**Applies to:** Current test suite and testing infrastructure
+
 This document describes the testing infrastructure for the Pictorigo photogrammetry application.
 
 ## Running Tests

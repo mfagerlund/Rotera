@@ -1,6 +1,7 @@
 // Constraints Management Popup
 
 import React from 'react'
+import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
 import FloatingWindow from './FloatingWindow'
@@ -34,7 +35,7 @@ interface ConstraintsPopupProps {
   onSelectConstraint?: (constraint: Constraint) => void
 }
 
-export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
+export const ConstraintsManager: React.FC<ConstraintsPopupProps> = observer(({
   isOpen,
   onClose,
   constraints,
@@ -170,6 +171,6 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = ({
       </FloatingWindow>
     </>
   )
-}
+})
 
 export default ConstraintsManager

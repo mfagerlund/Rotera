@@ -1,6 +1,7 @@
 // Individual image navigation item component
 
 import React from 'react'
+import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowsUpDown, faCheck, faPencil, faTrash, faCopy, faVideo, faImage } from '@fortawesome/free-solid-svg-icons'
 import { faCircle } from '@fortawesome/free-regular-svg-icons'
@@ -11,7 +12,7 @@ import { LinesOverlay } from './LinesOverlay'
 import { VanishingLinesOverlay } from './VanishingLinesOverlay'
 import { WorldPointOverlay } from './WorldPointOverlay'
 
-export const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
+export const ImageNavigationItem: React.FC<ImageNavigationItemProps> = observer(({
   image,
   worldPoints,
   selectedWorldPoints,
@@ -234,4 +235,4 @@ export const ImageNavigationItem: React.FC<ImageNavigationItemProps> = ({
       </div>
     </div>
   )
-}
+})

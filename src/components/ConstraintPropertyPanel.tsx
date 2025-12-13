@@ -1,6 +1,7 @@
 // Context-aware constraint property panel
 
 import React, { useEffect } from 'react'
+import { observer } from 'mobx-react-lite'
 import { Line } from '../entities/line/Line'
 import { WorldPoint } from '../entities/world-point'
 import { getConstraintDisplayName } from '../utils/constraintDisplay'
@@ -17,7 +18,7 @@ interface ConstraintPropertyPanelProps {
   onCancel: () => void
 }
 
-export const ConstraintPropertyPanel: React.FC<ConstraintPropertyPanelProps> = ({
+export const ConstraintPropertyPanel: React.FC<ConstraintPropertyPanelProps> = observer(({
   activeConstraintType,
   selectedPoints,
   selectedLines,
@@ -77,7 +78,7 @@ export const ConstraintPropertyPanel: React.FC<ConstraintPropertyPanelProps> = (
       </div>
     </div>
   )
-}
+})
 
 interface ConstraintParameterFormProps {
   type: string

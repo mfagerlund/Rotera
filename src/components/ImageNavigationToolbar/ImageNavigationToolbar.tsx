@@ -1,6 +1,7 @@
 // Left sidebar image navigation toolbar
 
 import React, { useRef, useMemo, forwardRef, useImperativeHandle } from 'react'
+import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPlus } from '@fortawesome/free-solid-svg-icons'
 import { ImageUtils } from '../../utils/imageUtils'
@@ -12,7 +13,7 @@ import type { Viewpoint } from '../../entities/viewpoint'
 import type { WorldPoint } from '../../entities/world-point'
 import { getEntityKey } from '../../utils/entityKeys'
 
-export const ImageNavigationToolbar = forwardRef<ImageNavigationToolbarRef, ImageNavigationToolbarProps>(({
+export const ImageNavigationToolbar = observer(forwardRef<ImageNavigationToolbarRef, ImageNavigationToolbarProps>(({
   images,
   currentViewpoint,
   worldPoints,
@@ -222,6 +223,6 @@ export const ImageNavigationToolbar = forwardRef<ImageNavigationToolbarRef, Imag
       </div>
     </>
   )
-})
+}))
 
 export default ImageNavigationToolbar

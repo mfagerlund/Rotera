@@ -2,6 +2,7 @@
 // Extracted from MainLayout for better maintainability
 
 import React from 'react'
+import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faFloppyDisk,
@@ -42,7 +43,7 @@ interface MainToolbarProps {
   isDirty?: boolean
 }
 
-export const MainToolbar: React.FC<MainToolbarProps> = ({
+export const MainToolbar: React.FC<MainToolbarProps> = observer(({
   currentWorkspace,
   onWorkspaceChange,
   imageHasContent,
@@ -287,4 +288,4 @@ export const MainToolbar: React.FC<MainToolbarProps> = ({
       </div>
     </div>
   )
-}
+})

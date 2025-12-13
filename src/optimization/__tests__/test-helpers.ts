@@ -6,6 +6,7 @@ import { expect } from '@jest/globals';
 import { WorldPoint } from '../../entities/world-point';
 import { Viewpoint } from '../../entities/viewpoint';
 import { OptimizeProjectResult } from '../optimize-project';
+import { distance } from '../../utils/vec3';
 
 /**
  * Test tolerances for different precision levels
@@ -68,24 +69,10 @@ export function expectQuatClose(
 }
 
 /**
- * Calculate Euclidean distance between two 3D points
- */
-export function distance3D(
-  p1: [number, number, number] | number[],
-  p2: [number, number, number] | number[]
-): number {
-  return Math.sqrt(
-    Math.pow(p2[0] - p1[0], 2) +
-    Math.pow(p2[1] - p1[1], 2) +
-    Math.pow(p2[2] - p1[2], 2)
-  );
-}
-
-/**
  * Calculate distance between two viewpoints based on their positions
  */
 export function calculateCameraDistance(camera1: Viewpoint, camera2: Viewpoint): number {
-  return distance3D(camera1.position, camera2.position);
+  return distance(camera1.position, camera2.position);
 }
 
 /**
@@ -95,7 +82,7 @@ export function calculateLineLength(pointA: WorldPoint, pointB: WorldPoint): num
   if (!pointA.optimizedXyz || !pointB.optimizedXyz) {
     return null;
   }
-  return distance3D(pointA.optimizedXyz, pointB.optimizedXyz);
+  return distance(pointA.optimizedXyz, pointB.optimizedXyz);
 }
 
 /**
@@ -213,7 +200,7 @@ export function expectCameraInitializedAwayFromOrigin(
   camera: Viewpoint,
   minDistance: number = 1.0
 ): void {
-  const distanceFromOrigin = distance3D(camera.position, [0, 0, 0]);
+  const distanceFromOrigin = distance(camera.position, [0, 0, 0]);
   expect(distanceFromOrigin).toBeGreaterThan(minDistance);
 }
 

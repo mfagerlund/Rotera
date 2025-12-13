@@ -1,6 +1,7 @@
 // Reusable Entity List Popup Component
 
 import React, { useState } from 'react'
+import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faEye, faEyeSlash, faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
 import FloatingWindow from './FloatingWindow'
@@ -36,7 +37,7 @@ interface EntityListPopupProps<T = any> {
   renderEntityDetails?: (entity: EntityListItem<T>) => React.ReactNode
 }
 
-export const EntityListPopup: React.FC<EntityListPopupProps> = ({
+export const EntityListPopup: React.FC<EntityListPopupProps> = observer(({
   title,
   isOpen,
   onClose,
@@ -244,6 +245,6 @@ export const EntityListPopup: React.FC<EntityListPopupProps> = ({
     </FloatingWindow>
     </>
   )
-}
+})
 
 export default EntityListPopup

@@ -23,6 +23,7 @@ import { projectWorldPointToPixelQuaternion } from './camera-projection';
 import { V, Vec3, Vec4 } from 'scalar-autograd';
 import { log, logOnce } from './optimization-logger';
 import type { PnPResult } from './pnp/types';
+import { distance } from '../utils/vec3';
 
 /**
  * Solve Perspective-n-Point (PnP) problem.
@@ -143,9 +144,9 @@ function solveP3P(
   const P2 = points3D[1];
   const P3 = points3D[2];
 
-  const d12 = distance3D(P1, P2);
-  const d13 = distance3D(P1, P3);
-  const d23 = distance3D(P2, P3);
+  const d12 = distance(P1, P2);
+  const d13 = distance(P1, P3);
+  const d23 = distance(P2, P3);
 
   const cosAlpha = dot3D(bearingVectors[1], bearingVectors[2]);
   const cosBeta = dot3D(bearingVectors[0], bearingVectors[2]);
@@ -488,13 +489,6 @@ function transpose3x3(M: number[][]): number[][] {
     [M[0][1], M[1][1], M[2][1]],
     [M[0][2], M[1][2], M[2][2]]
   ];
-}
-
-function distance3D(a: [number, number, number], b: [number, number, number]): number {
-  const dx = a[0] - b[0];
-  const dy = a[1] - b[1];
-  const dz = a[2] - b[2];
-  return Math.sqrt(dx * dx + dy * dy + dz * dz);
 }
 
 function dot3D(a: [number, number, number], b: [number, number, number]): number {

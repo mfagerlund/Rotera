@@ -1,6 +1,7 @@
 // Creation Tools Manager - Handles all geometry creation tools
 
 import React, { useState, useCallback, useMemo } from 'react'
+import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faLocationDot, faRuler, faSquare, faPaintBrush } from '@fortawesome/free-solid-svg-icons'
 import LineCreationTool from './LineCreationTool'
@@ -56,7 +57,7 @@ interface CreationToolsManagerProps {
   onClearEditingCoplanarConstraint?: () => void
 }
 
-export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
+export const CreationToolsManager: React.FC<CreationToolsManagerProps> = observer(({
   selectedEntities,
   activeTool,
   onToolChange,
@@ -625,6 +626,6 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = ({
       </FloatingWindow>
     </div>
   )
-}
+})
 
 export default CreationToolsManager

@@ -1,4 +1,5 @@
 import React from 'react'
+import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
 import FloatingWindow from './FloatingWindow'
@@ -24,7 +25,7 @@ interface ImagePointsManagerProps {
   onSelectImagePoint?: (ref: ImagePointReference) => void
 }
 
-export const ImagePointsManager: React.FC<ImagePointsManagerProps> = ({
+export const ImagePointsManager: React.FC<ImagePointsManagerProps> = observer(({
   isOpen,
   onClose,
   worldPoints,
@@ -160,6 +161,6 @@ export const ImagePointsManager: React.FC<ImagePointsManagerProps> = ({
       </FloatingWindow>
     </>
   )
-}
+})
 
 export default ImagePointsManager

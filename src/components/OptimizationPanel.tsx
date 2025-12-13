@@ -2,6 +2,7 @@
 // NO DTOs
 
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
+import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faBullseye, faGear, faStop, faClipboard } from '@fortawesome/free-solid-svg-icons'
 import { Project } from '../entities/project'
@@ -96,7 +97,7 @@ function computeCameraReprojectionError(vp: Viewpoint): number {
   return count > 0 ? totalError / count : 0
 }
 
-export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
+export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
   isOpen,
   onClose,
   project,
@@ -910,6 +911,6 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
     </div>
     </FloatingWindow>
   )
-}
+})
 
 export default OptimizationPanel

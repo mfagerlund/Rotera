@@ -1,6 +1,8 @@
-## Status: REFERENCE MATERIAL
+## Status: REFERENCE
+**Last Updated:** 2025-12-13
+**Applies to:** General SfM (Structure from Motion) theory and best practices
 
-This document describes general SfM (Structure from Motion) theory and best practices. It does not document the current Pictorigo implementation, which uses vanishing points and coordinate inference.
+This document describes general SfM theory and best practices. It does not document the current Pictorigo implementation, which uses vanishing points and coordinate inference.
 
 ---
 

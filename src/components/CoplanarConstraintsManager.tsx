@@ -1,6 +1,7 @@
 // Coplanar Constraints Management Popup
 
 import React from 'react'
+import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
 import FloatingWindow from './FloatingWindow'
@@ -18,7 +19,7 @@ interface CoplanarConstraintsManagerProps {
   onSelectConstraint?: (constraint: CoplanarPointsConstraint) => void
 }
 
-export const CoplanarConstraintsManager: React.FC<CoplanarConstraintsManagerProps> = ({
+export const CoplanarConstraintsManager: React.FC<CoplanarConstraintsManagerProps> = observer(({
   isOpen,
   onClose,
   constraints,
@@ -126,6 +127,6 @@ export const CoplanarConstraintsManager: React.FC<CoplanarConstraintsManagerProp
       </FloatingWindow>
     </>
   )
-}
+})
 
 export default CoplanarConstraintsManager
