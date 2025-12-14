@@ -1,9 +1,9 @@
 // Creation Tools Manager - Handles all geometry creation tools
 
-import React, { useState, useCallback, useMemo } from 'react'
+import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faLocationDot, faRuler, faSquare, faPaintBrush } from '@fortawesome/free-solid-svg-icons'
+import { faLocationDot, faRuler, faSquare, faPaintBrush, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons'
 import LineCreationTool from './LineCreationTool'
 import LoopTraceTool from './LoopTraceTool'
 import OrientationPaintTool from './OrientationPaintTool'
@@ -57,6 +57,8 @@ interface CreationToolsManagerProps {
   onClearEditingCoplanarConstraint?: () => void
 }
 
+const COLLAPSED_STORAGE_KEY = 'creation-tools-collapsed'
+
 export const CreationToolsManager: React.FC<CreationToolsManagerProps> = observer(({
   selectedEntities,
   activeTool,
@@ -85,6 +87,18 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = observe
 }) => {
   const [toolMessage, setToolMessage] = useState<string>('')
   const [isRightHandGuideOpen, setIsRightHandGuideOpen] = useState(false)
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    const stored = localStorage.getItem(COLLAPSED_STORAGE_KEY)
+    return stored === 'true'
+  })
+
+  useEffect(() => {
+    localStorage.setItem(COLLAPSED_STORAGE_KEY, String(isCollapsed))
+  }, [isCollapsed])
+
+  const toggleCollapsed = useCallback(() => {
+    setIsCollapsed(prev => !prev)
+  }, [])
 
   // Split selected entities by type
   const selectedPoints = useMemo(() =>
@@ -217,10 +231,17 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = observe
   }
 
   return (
-    <div className="creation-tools-panel">
+    <div className={`creation-tools-panel ${isCollapsed ? 'collapsed' : ''}`}>
       <div className="tools-header">
-        <h4>Creation Tools</h4>
-        {toolMessage && (
+        {!isCollapsed && <h4>Tools</h4>}
+        <button
+          className="collapse-toggle"
+          onClick={toggleCollapsed}
+          title={isCollapsed ? 'Expand toolbar' : 'Collapse toolbar'}
+        >
+          <FontAwesomeIcon icon={isCollapsed ? faChevronRight : faChevronLeft} />
+        </button>
+        {!isCollapsed && toolMessage && (
           <div className="tool-status-message">
             {toolMessage}
           </div>
@@ -231,227 +252,229 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = observe
         <button
           className={`tool-button ${activeTool === 'point' ? 'active' : ''}`}
           onClick={() => handleToolActivation('point')}
-          title="Create point in image view"
+          title="Create point in image view (W)"
         >
           <span className="tool-icon"><FontAwesomeIcon icon={faLocationDot} /></span>
-          <span className="tool-label">Point</span>
-          <span className="tool-shortcut">W</span>
+          {!isCollapsed && <span className="tool-label">Point</span>}
+          {!isCollapsed && <span className="tool-shortcut">W</span>}
         </button>
 
         <button
           className={`tool-button ${activeTool === 'line' ? 'active' : ''} ${!canCreateLine() ? 'disabled' : ''}`}
           onClick={() => canCreateLine() && handleToolActivation('line')}
           disabled={!canCreateLine()}
-          title={getLineButtonTooltip()}
+          title={isCollapsed ? `${getLineButtonTooltip()} (L)` : getLineButtonTooltip()}
         >
           <span className="tool-icon"><FontAwesomeIcon icon={faRuler} /></span>
-          <span className="tool-label">Line</span>
-          <span className="tool-shortcut">L</span>
+          {!isCollapsed && <span className="tool-label">Line</span>}
+          {!isCollapsed && <span className="tool-shortcut">L</span>}
         </button>
 
         <button
           className={`tool-button ${activeTool === 'plane' ? 'active' : ''} ${!canCreatePlane() ? 'disabled' : ''}`}
           onClick={() => canCreatePlane() && handleToolActivation('plane')}
           disabled={!canCreatePlane()}
-          title={getPlaneButtonTooltip()}
+          title={isCollapsed ? `${getPlaneButtonTooltip()} (P)` : getPlaneButtonTooltip()}
         >
           <span className="tool-icon"><FontAwesomeIcon icon={faSquare} /></span>
-          <span className="tool-label">Coplanar</span>
-          <span className="tool-shortcut">P</span>
+          {!isCollapsed && <span className="tool-label">Coplanar</span>}
+          {!isCollapsed && <span className="tool-shortcut">P</span>}
         </button>
 
         <button
           className={`tool-button ${activeTool === 'circle' ? 'active' : ''}`}
           onClick={() => handleToolActivation('circle')}
-          title="Create circle (center + radius or 3 points)"
+          title="Create circle (center + radius or 3 points) (C)"
         >
           <span className="tool-icon">⭕</span>
-          <span className="tool-label">Circle</span>
-          <span className="tool-shortcut">C</span>
+          {!isCollapsed && <span className="tool-label">Circle</span>}
+          {!isCollapsed && <span className="tool-shortcut">C</span>}
         </button>
 
         <button
           className={`tool-button ${activeTool === 'loop' ? 'active' : ''}`}
           onClick={() => handleToolActivation('loop')}
-          title="Loop trace - String together points and create lines"
+          title="Loop trace - String together points and create lines (O)"
         >
           <span className="tool-icon">🔗</span>
-          <span className="tool-label">Loop</span>
-          <span className="tool-shortcut">O</span>
+          {!isCollapsed && <span className="tool-label">Loop</span>}
+          {!isCollapsed && <span className="tool-shortcut">O</span>}
         </button>
 
         <button
           className={`tool-button ${activeTool === 'vanishing' ? 'active' : ''}`}
           onClick={() => handleToolActivation('vanishing')}
-          title="Draw vanishing lines for camera initialization"
+          title="Draw vanishing lines for camera initialization (V)"
         >
           <span className="tool-icon">📐</span>
-          <span className="tool-label">Vanishing</span>
-          <span className="tool-shortcut">V</span>
+          {!isCollapsed && <span className="tool-label">Vanishing</span>}
+          {!isCollapsed && <span className="tool-shortcut">V</span>}
         </button>
 
         <button
           className={`tool-button ${activeTool === 'orientationPaint' ? 'active' : ''}`}
           onClick={() => handleToolActivation('orientationPaint')}
-          title="Paint line orientations - click lines to apply selected direction"
+          title="Paint line orientations - click lines to apply selected direction (D)"
         >
           <span className="tool-icon"><FontAwesomeIcon icon={faPaintBrush} /></span>
-          <span className="tool-label">Orient</span>
-          <span className="tool-shortcut">D</span>
+          {!isCollapsed && <span className="tool-label">Orient</span>}
+          {!isCollapsed && <span className="tool-shortcut">D</span>}
         </button>
       </div>
 
-      {/* Active Tool Panel */}
-      <div className="active-tool-panel">
-        {activeTool === 'line' && (
-          <div className="tool-placeholder">
-            <div className="tool-message">
-              Use the floating Line Creation window.
-            </div>
-          </div>
-        )}
-
-        {activeTool === 'point' && (
-          <div className="point-creation-tool">
-            <div className="tool-header">
-              <h4>Create Point</h4>
-              <button className="btn-cancel" onClick={handleToolCancel}>✕</button>
-            </div>
-            <div className="tool-message">
-              Click on an image to place a point
-            </div>
-            <div className="tool-help">
-              <div className="help-text">
-                • Switch to Image View to place points
-                • Press Esc to cancel
+      {/* Active Tool Panel - hidden when collapsed */}
+      {!isCollapsed && (
+        <div className="active-tool-panel">
+          {activeTool === 'line' && (
+            <div className="tool-placeholder">
+              <div className="tool-message">
+                Use the floating Line Creation window.
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {activeTool === 'plane' && (
-          <div className="tool-placeholder">
-            <div className="tool-message">
-              Use the floating Coplanar Constraint window.
-            </div>
-          </div>
-        )}
-
-        {activeTool === 'circle' && (
-          <div className="circle-creation-tool">
-            <div className="tool-header">
-              <h4>Create Circle</h4>
-              <button className="btn-cancel" onClick={handleToolCancel}>✕</button>
-            </div>
-            <div className="tool-message">
-              Circle creation tool - Coming soon
-            </div>
-          </div>
-        )}
-
-        {activeTool === 'vanishing' && (
-          <div className="vanishing-line-tool">
-            <div className="tool-header">
-              <h4>Vanishing Lines</h4>
-              <button className="btn-cancel" onClick={handleToolCancel}>✕</button>
-            </div>
-            <div className="tool-message">
-              Click two points to draw a vanishing line
-            </div>
-            <div style={{ margin: '10px 0' }}>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '12px' }}>Axis:</label>
-              <div style={{ display: 'flex', gap: '5px' }}>
-                <button
-                  onClick={() => onVanishingLineAxisChange?.('x')}
-                  style={{
-                    backgroundColor: currentVanishingLineAxis === 'x' ? '#333' : '#1a1a1a',
-                    border: currentVanishingLineAxis === 'x' ? '2px solid #ff0000' : '1px solid #555',
-                    padding: '8px',
-                    cursor: 'pointer',
-                    flex: 1,
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center'
-                  }}
-                >
-                  <span style={{ color: '#ff0000', fontSize: '18px', fontWeight: 'bold' }}>X</span>
-                </button>
-                <button
-                  onClick={() => onVanishingLineAxisChange?.('y')}
-                  style={{
-                    backgroundColor: currentVanishingLineAxis === 'y' ? '#333' : '#1a1a1a',
-                    border: currentVanishingLineAxis === 'y' ? '2px solid #00ff00' : '1px solid #555',
-                    padding: '8px',
-                    cursor: 'pointer',
-                    flex: 1,
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center'
-                  }}
-                >
-                  <span style={{ color: '#00ff00', fontSize: '18px', fontWeight: 'bold' }}>Y</span>
-                </button>
-                <button
-                  onClick={() => onVanishingLineAxisChange?.('z')}
-                  style={{
-                    backgroundColor: currentVanishingLineAxis === 'z' ? '#333' : '#1a1a1a',
-                    border: currentVanishingLineAxis === 'z' ? '2px solid #0000ff' : '1px solid #555',
-                    padding: '8px',
-                    cursor: 'pointer',
-                    flex: 1,
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center'
-                  }}
-                >
-                  <span style={{ color: '#0000ff', fontSize: '18px', fontWeight: 'bold' }}>Z</span>
-                </button>
+          {activeTool === 'point' && (
+            <div className="point-creation-tool">
+              <div className="tool-header">
+                <h4>Create Point</h4>
+                <button className="btn-cancel" onClick={handleToolCancel}>✕</button>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px' }}>
-                <button
-                  type="button"
-                  title="Show right-hand rule guide"
-                  onClick={openRightHandGuide}
-                  style={{
-                    backgroundColor: '#1a1a1a',
-                    border: '1px solid #555',
-                    borderRadius: '4px',
-                    width: '32px',
-                    height: '32px',
-                    color: '#fff',
-                    fontWeight: 'bold',
-                    cursor: 'pointer'
-                  }}
-                >
-                  ?
-                </button>
+              <div className="tool-message">
+                Click on an image to place a point
+              </div>
+              <div className="tool-help">
+                <div className="help-text">
+                  • Switch to Image View to place points
+                  • Press Esc to cancel
+                </div>
               </div>
             </div>
-            <div className="tool-help">
-              <div className="help-text">
-                • Draw lines parallel to world axes
-                • Need 2+ lines per axis for vanishing point
-                • Press Esc to cancel
+          )}
+
+          {activeTool === 'plane' && (
+            <div className="tool-placeholder">
+              <div className="tool-message">
+                Use the floating Coplanar Constraint window.
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {activeTool === 'orientationPaint' && (
-          <OrientationPaintTool
-            isActive={activeTool === 'orientationPaint'}
-            onCancel={handleToolCancel}
-            onPaintLine={(line, direction) => {
-              if (onUpdateLine) {
-                onUpdateLine(line, { direction })
-              }
-            }}
-          />
-        )}
-      </div>
+          {activeTool === 'circle' && (
+            <div className="circle-creation-tool">
+              <div className="tool-header">
+                <h4>Create Circle</h4>
+                <button className="btn-cancel" onClick={handleToolCancel}>✕</button>
+              </div>
+              <div className="tool-message">
+                Circle creation tool - Coming soon
+              </div>
+            </div>
+          )}
 
-      {/* Selected Vanishing Lines Panel */}
-      {selectedVanishingLines.length > 0 && activeTool !== 'vanishing' && (
+          {activeTool === 'vanishing' && (
+            <div className="vanishing-line-tool">
+              <div className="tool-header">
+                <h4>Vanishing Lines</h4>
+                <button className="btn-cancel" onClick={handleToolCancel}>✕</button>
+              </div>
+              <div className="tool-message">
+                Click two points to draw a vanishing line
+              </div>
+              <div style={{ margin: '10px 0' }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '12px' }}>Axis:</label>
+                <div style={{ display: 'flex', gap: '5px' }}>
+                  <button
+                    onClick={() => onVanishingLineAxisChange?.('x')}
+                    style={{
+                      backgroundColor: currentVanishingLineAxis === 'x' ? '#333' : '#1a1a1a',
+                      border: currentVanishingLineAxis === 'x' ? '2px solid #ff0000' : '1px solid #555',
+                      padding: '8px',
+                      cursor: 'pointer',
+                      flex: 1,
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <span style={{ color: '#ff0000', fontSize: '18px', fontWeight: 'bold' }}>X</span>
+                  </button>
+                  <button
+                    onClick={() => onVanishingLineAxisChange?.('y')}
+                    style={{
+                      backgroundColor: currentVanishingLineAxis === 'y' ? '#333' : '#1a1a1a',
+                      border: currentVanishingLineAxis === 'y' ? '2px solid #00ff00' : '1px solid #555',
+                      padding: '8px',
+                      cursor: 'pointer',
+                      flex: 1,
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <span style={{ color: '#00ff00', fontSize: '18px', fontWeight: 'bold' }}>Y</span>
+                  </button>
+                  <button
+                    onClick={() => onVanishingLineAxisChange?.('z')}
+                    style={{
+                      backgroundColor: currentVanishingLineAxis === 'z' ? '#333' : '#1a1a1a',
+                      border: currentVanishingLineAxis === 'z' ? '2px solid #0000ff' : '1px solid #555',
+                      padding: '8px',
+                      cursor: 'pointer',
+                      flex: 1,
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <span style={{ color: '#0000ff', fontSize: '18px', fontWeight: 'bold' }}>Z</span>
+                  </button>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px' }}>
+                  <button
+                    type="button"
+                    title="Show right-hand rule guide"
+                    onClick={openRightHandGuide}
+                    style={{
+                      backgroundColor: '#1a1a1a',
+                      border: '1px solid #555',
+                      borderRadius: '4px',
+                      width: '32px',
+                      height: '32px',
+                      color: '#fff',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ?
+                  </button>
+                </div>
+              </div>
+              <div className="tool-help">
+                <div className="help-text">
+                  • Draw lines parallel to world axes
+                  • Need 2+ lines per axis for vanishing point
+                  • Press Esc to cancel
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTool === 'orientationPaint' && (
+            <OrientationPaintTool
+              isActive={activeTool === 'orientationPaint'}
+              onCancel={handleToolCancel}
+              onPaintLine={(line, direction) => {
+                if (onUpdateLine) {
+                  onUpdateLine(line, { direction })
+                }
+              }}
+            />
+          )}
+        </div>
+      )}
+
+      {/* Selected Vanishing Lines Panel - also hidden when collapsed */}
+      {!isCollapsed && selectedVanishingLines.length > 0 && activeTool !== 'vanishing' && (
         <div className="active-tool-panel" style={{ marginTop: '10px' }}>
           <div className="vanishing-line-tool">
             <div className="tool-header">

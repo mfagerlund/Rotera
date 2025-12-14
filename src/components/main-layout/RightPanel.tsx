@@ -3,15 +3,11 @@ import { observer } from 'mobx-react-lite'
 import { WorldPoint } from '../../entities/world-point'
 import { Line as LineEntity } from '../../entities/line'
 import { Viewpoint } from '../../entities/viewpoint'
-import { Plane } from '../../entities/plane'
-import { VanishingLine } from '../../entities/vanishing-line'
 import type { ISelectable } from '../../types/selectable'
 import { ConstructionPreview } from '../image-viewer/types'
 import { ActiveTool } from '../../hooks/useMainLayoutState'
 import CreationToolsManager from '../tools/CreationToolsManager'
 import ConstraintPropertyPanel from '../ConstraintPropertyPanel'
-import WorldPointPanel from '../WorldPointPanel'
-import { Project } from '../../entities/project'
 import { CoplanarPointsConstraint } from '../../entities/constraints/coplanar-points-constraint'
 
 interface RightPanelProps {
@@ -47,21 +43,6 @@ interface RightPanelProps {
   onParameterChange: (key: string, value: any) => void
   onApplyConstraint: () => void
   onCancelConstraintCreation: () => void
-  worldPointsMap: Set<WorldPoint>
-  viewpointsMap: Map<string, Viewpoint>
-  constraints: any[]
-  selectedWorldPoints: WorldPoint[]
-  hoveredWorldPoint: WorldPoint | null
-  placementMode: { active: boolean; worldPoint: WorldPoint | null }
-  onSelectWorldPoint: (worldPoint: WorldPoint, ctrlKey: boolean, shiftKey: boolean) => void
-  onHighlightWorldPoint: (worldPoint: WorldPoint | null) => void
-  onHoverWorldPoint: (worldPoint: WorldPoint | null) => void
-  onRenameWorldPoint: (worldPoint: WorldPoint, newName: string) => void
-  onDeleteWorldPoint: (worldPoint: WorldPoint) => void
-  onEditWorldPoint: (worldPoint: WorldPoint) => void
-  onStartPlacement: (worldPoint: WorldPoint) => void
-  onCancelPlacement: () => void
-  project: Project
 }
 
 export const RightPanel: React.FC<RightPanelProps> = observer(({
@@ -96,22 +77,7 @@ export const RightPanel: React.FC<RightPanelProps> = observer(({
   isConstraintComplete,
   onParameterChange,
   onApplyConstraint,
-  onCancelConstraintCreation,
-  worldPointsMap,
-  viewpointsMap,
-  constraints,
-  selectedWorldPoints,
-  hoveredWorldPoint,
-  placementMode,
-  onSelectWorldPoint,
-  onHighlightWorldPoint,
-  onHoverWorldPoint,
-  onRenameWorldPoint,
-  onDeleteWorldPoint,
-  onEditWorldPoint,
-  onStartPlacement,
-  onCancelPlacement,
-  project
+  onCancelConstraintCreation
 }) => {
   return (
     <div className="sidebar-right">
@@ -152,24 +118,6 @@ export const RightPanel: React.FC<RightPanelProps> = observer(({
         onParameterChange={onParameterChange}
         onApply={onApplyConstraint}
         onCancel={onCancelConstraintCreation}
-      />
-
-      <WorldPointPanel
-        worldPoints={worldPointsMap}
-        viewpoints={viewpointsMap}
-        constraints={constraints}
-        selectedWorldPoints={selectedWorldPoints}
-        hoveredWorldPoint={hoveredWorldPoint}
-        currentViewpoint={currentViewpoint ?? null}
-        placementMode={placementMode}
-        onSelectWorldPoint={onSelectWorldPoint}
-        onHighlightWorldPoint={onHighlightWorldPoint}
-        onHoverWorldPoint={onHoverWorldPoint}
-        onRenameWorldPoint={onRenameWorldPoint}
-        onDeleteWorldPoint={onDeleteWorldPoint}
-        onEditWorldPoint={onEditWorldPoint}
-        onStartPlacement={onStartPlacement}
-        onCancelPlacement={onCancelPlacement}
       />
     </div>
   )

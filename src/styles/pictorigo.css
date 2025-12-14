@@ -1104,6 +1104,11 @@ body {
   display: flex;
   flex-direction: column;
   height: var(--content-height);
+  transition: width 0.2s ease;
+}
+
+.sidebar-right:has(.creation-tools-panel.collapsed) {
+  width: fit-content;
 }
 
 .sidebar-right > * {

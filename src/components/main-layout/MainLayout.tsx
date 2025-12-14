@@ -737,23 +737,6 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
                 onParameterChange={updateParameter}
                 onApplyConstraint={applyConstraint}
                 onCancelConstraintCreation={cancelConstraintCreation}
-                worldPointsMap={worldPointsMap}
-                viewpointsMap={viewpointsMap}
-                constraints={constraints}
-                selectedWorldPoints={selectedPointEntities}
-                hoveredWorldPoint={hoveredWorldPoint}
-                placementMode={placementMode}
-                onSelectWorldPoint={(worldPoint: WorldPoint, ctrlKey: boolean, shiftKey: boolean) => {
-                  handleEntityClick(worldPoint, ctrlKey, shiftKey)
-                }}
-                onHighlightWorldPoint={setHoveredWorldPoint}
-                onHoverWorldPoint={setHoveredWorldPoint}
-                onRenameWorldPoint={renameWorldPoint}
-                onDeleteWorldPoint={deleteWorldPoint}
-                onEditWorldPoint={openWorldPointEdit}
-                onStartPlacement={startPlacementMode}
-                onCancelPlacement={cancelPlacementMode}
-                project={project}
               />
             </div>
 

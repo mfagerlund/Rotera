@@ -179,6 +179,13 @@
   padding: 12px;
   border-radius: 8px;
   border: 1px solid var(--border);
+  transition: width 0.2s ease, padding 0.2s ease;
+}
+
+.creation-tools-panel.collapsed {
+  padding: 8px;
+  gap: 8px;
+  width: fit-content;
 }
 
 .tools-header {
@@ -187,10 +194,39 @@
   gap: 6px;
 }
 
+.creation-tools-panel.collapsed .tools-header {
+  flex-direction: row;
+  justify-content: center;
+}
+
 .tools-header h4 {
   margin: 0;
   font-size: 14px;
   font-weight: 600;
+  color: var(--text-primary);
+}
+
+.collapse-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: auto;
+}
+
+.creation-tools-panel.collapsed .collapse-toggle {
+  margin-left: 0;
+}
+
+.collapse-toggle:hover {
+  background: var(--surface-3);
   color: var(--text-primary);
 }
 
@@ -204,9 +240,13 @@
 }
 
 .tool-buttons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.creation-tools-panel.collapsed .tool-buttons {
+  align-items: center;
 }
 
 .active-tool-panel {
@@ -267,6 +307,12 @@
   color: var(--text-primary);
 }
 
+.creation-tools-panel.collapsed .tool-button {
+  padding: 8px;
+  justify-content: center;
+  width: fit-content;
+}
+
 .tool-button:hover {
   background: var(--surface-3);
   border-color: var(--border-hover);
@@ -288,6 +334,11 @@
   font-size: 14px;
   width: 16px;
   text-align: center;
+}
+
+.creation-tools-panel.collapsed .tool-icon {
+  font-size: 16px;
+  width: auto;
 }
 
 .tool-label {
