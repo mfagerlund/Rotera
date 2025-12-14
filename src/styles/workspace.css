@@ -24,6 +24,11 @@
   color: var(--text-primary);
 }
 
+.workspace-btn:active {
+  transform: scale(0.97);
+  transition: transform 0.05s ease;
+}
+
 .workspace-btn.active {
   background: var(--accent-blue);
   color: #fff;

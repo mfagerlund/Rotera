@@ -4134,6 +4134,11 @@ body {
   color: var(--text-primary);
 }
 
+.btn-file-menu:active {
+  transform: scale(0.97);
+  transition: transform 0.05s ease;
+}
+
 .btn-file-menu .chevron {
   font-size: 10px;
   opacity: 0.6;
@@ -4149,7 +4154,7 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--border-radius);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  z-index: 1000;
+  z-index: 10001;
   padding: 4px 0;
 }
 
@@ -4170,6 +4175,11 @@ body {
 
 .file-menu-item:hover:not(:disabled) {
   background: var(--surface-2);
+}
+
+.file-menu-item:active:not(:disabled) {
+  background: var(--surface-1);
+  transform: scale(0.99);
 }
 
 .file-menu-item:disabled {
@@ -5938,6 +5948,11 @@ body {
 
 .btn-optimize:hover {
   background: var(--warning-hover);
+}
+
+.btn-optimize:active {
+  transform: scale(0.97);
+  transition: transform 0.05s ease;
 }
 
 .btn-optimize svg {
