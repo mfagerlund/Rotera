@@ -27,6 +27,7 @@ function computeHandedness(project3DTo2D: (p: [number, number, number]) => Proje
   
   // Determinant of [vx, vy, vz]
   const det = vx[0]*(vy[1]*vz[2] - vy[2]*vz[1]) - vx[1]*(vy[0]*vz[2] - vy[2]*vz[0]) + vx[2]*(vy[0]*vz[1] - vy[1]*vz[0])
+  console.log('[Handedness] vx:', vx, 'vy:', vy, 'vz:', vz, 'det:', det, '->', det > 0 ? 'R' : 'L')
   return det > 0 ? 'R' : 'L'
 }
 

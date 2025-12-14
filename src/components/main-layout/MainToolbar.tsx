@@ -15,8 +15,10 @@ import {
   faFile,
   faChevronDown,
   faImage,
-  faFileLines
+  faFileLines,
+  faCube
 } from '@fortawesome/free-solid-svg-icons'
+import { downloadBlenderScript } from '../../services/blender-export'
 import { WorkspaceSwitcher } from '../WorkspaceManager'
 import { AppBranding } from '../AppBranding'
 import type { Project } from '../../entities/project'
@@ -308,6 +310,19 @@ export const MainToolbar: React.FC<MainToolbarProps> = observer(({
             >
               <FontAwesomeIcon icon={faFileLines} />
               <span>Export without Images</span>
+            </button>
+            <button
+              className="file-menu-item"
+              onClick={() => {
+                if (project) {
+                  downloadBlenderScript(project)
+                  setFileMenuOpen(false)
+                }
+              }}
+              disabled={!project}
+            >
+              <FontAwesomeIcon icon={faCube} />
+              <span>Export to Blender</span>
             </button>
             <div className="file-menu-divider" />
             <button

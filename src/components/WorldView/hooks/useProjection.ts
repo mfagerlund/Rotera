@@ -78,12 +78,9 @@ export function useProjection(canvasRef: React.RefObject<HTMLCanvasElement>, vie
     const sin = Math.sin
 
     // Apply rotation: first X (pitch), then Y (yaw), then Z (roll)
-    // Negate Z for right-handed display (so +Z points toward viewer)
-    const zRH = -z
-
     let rotX = x
-    let rotY = y * cos(rotation.x) - zRH * sin(rotation.x)
-    let rotZ = y * sin(rotation.x) + zRH * cos(rotation.x)
+    let rotY = y * cos(rotation.x) - z * sin(rotation.x)
+    let rotZ = y * sin(rotation.x) + z * cos(rotation.x)
 
     let rotX2 = rotX * cos(rotation.y) + rotZ * sin(rotation.y)
     let rotY2 = rotY
