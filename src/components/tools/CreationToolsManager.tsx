@@ -254,6 +254,7 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = observe
       </div>
 
       <div className="tool-buttons">
+        {/* Create Group */}
         <button
           className={`tool-button ${activeTool === 'point' ? 'active' : ''}`}
           onClick={() => handleToolActivation('point')}
@@ -276,17 +277,6 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = observe
         </button>
 
         <button
-          className={`tool-button ${activeTool === 'plane' ? 'active' : ''} ${!canCreatePlane() ? 'disabled' : ''}`}
-          onClick={() => canCreatePlane() && handleToolActivation('plane')}
-          disabled={!canCreatePlane()}
-          title={isCollapsed ? `${getPlaneButtonTooltip()} (P)` : getPlaneButtonTooltip()}
-        >
-          <span className="tool-icon"><FontAwesomeIcon icon={faSquare} /></span>
-          {!isCollapsed && <span className="tool-label">Coplanar</span>}
-          {!isCollapsed && <span className="tool-shortcut">P</span>}
-        </button>
-
-        <button
           className={`tool-button ${activeTool === 'circle' ? 'active' : ''}`}
           onClick={() => handleToolActivation('circle')}
           title="Create circle (center + radius or 3 points) (C)"
@@ -296,6 +286,10 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = observe
           {!isCollapsed && <span className="tool-shortcut">C</span>}
         </button>
 
+        {/* Divider */}
+        {!isCollapsed && <div className="tool-divider" />}
+
+        {/* Trace Group */}
         <button
           className={`tool-button ${activeTool === 'loop' ? 'active' : ''}`}
           onClick={() => handleToolActivation('loop')}
@@ -314,6 +308,21 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = observe
           <span className="tool-icon"><FontAwesomeIcon icon={faDraftingCompass} /></span>
           {!isCollapsed && <span className="tool-label">Vanishing</span>}
           {!isCollapsed && <span className="tool-shortcut">V</span>}
+        </button>
+
+        {/* Divider */}
+        {!isCollapsed && <div className="tool-divider" />}
+
+        {/* Constrain Group */}
+        <button
+          className={`tool-button ${activeTool === 'plane' ? 'active' : ''} ${!canCreatePlane() ? 'disabled' : ''}`}
+          onClick={() => canCreatePlane() && handleToolActivation('plane')}
+          disabled={!canCreatePlane()}
+          title={isCollapsed ? `${getPlaneButtonTooltip()} (P)` : getPlaneButtonTooltip()}
+        >
+          <span className="tool-icon"><FontAwesomeIcon icon={faSquare} /></span>
+          {!isCollapsed && <span className="tool-label">Coplanar</span>}
+          {!isCollapsed && <span className="tool-shortcut">P</span>}
         </button>
 
         <button

@@ -249,6 +249,13 @@
   align-items: center;
 }
 
+.tool-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 6px 0;
+  opacity: 0.5;
+}
+
 .active-tool-panel {
   min-height: 0;
 }
