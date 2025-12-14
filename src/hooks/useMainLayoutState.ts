@@ -55,6 +55,10 @@ export interface MainLayoutState {
   }
   setEntityPopup: (popup: keyof MainLayoutState['entityPopups'], value: boolean) => void
 
+  // Optimization trigger - increments to signal OptimizationPanel to run
+  optimizeTrigger: number
+  triggerOptimization: () => void
+
   // World point edit window
   worldPointEditWindow: { isOpen: boolean; worldPoint: WorldPoint | null }
   openWorldPointEdit: (worldPoint: WorldPoint) => void
@@ -145,6 +149,13 @@ export function useMainLayoutState(options: UseMainLayoutStateOptions = {}): Mai
     setEntityPopups(prev => ({ ...prev, [popup]: value }))
   }, [])
 
+  // Optimization trigger
+  const [optimizeTrigger, setOptimizeTrigger] = useState(0)
+  const triggerOptimization = useCallback(() => {
+    setEntityPopups(prev => ({ ...prev, showOptimizationPanel: true }))
+    setOptimizeTrigger(prev => prev + 1)
+  }, [])
+
   // World point edit window
   const [worldPointEditWindow, setWorldPointEditWindow] = useState<{
     isOpen: boolean
@@ -193,6 +204,8 @@ export function useMainLayoutState(options: UseMainLayoutStateOptions = {}): Mai
     setEditingCoplanarConstraint,
     entityPopups,
     setEntityPopup,
+    optimizeTrigger,
+    triggerOptimization,
     worldPointEditWindow,
     openWorldPointEdit,
     closeWorldPointEdit,

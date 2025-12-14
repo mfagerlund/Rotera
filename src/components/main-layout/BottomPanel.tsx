@@ -26,6 +26,7 @@ interface BottomPanelProps {
     showOptimizationPanel: boolean
   }
   onClosePopup: (popup: keyof BottomPanelProps['entityPopups']) => void
+  optimizeTrigger?: number
   linesMap: Map<string, LineEntity>
   allWorldPoints: WorldPoint[]
   selectedLines: LineEntity[]
@@ -83,6 +84,7 @@ interface BottomPanelProps {
 export const BottomPanel: React.FC<BottomPanelProps> = observer(({
   entityPopups,
   onClosePopup,
+  optimizeTrigger,
   linesMap,
   allWorldPoints,
   selectedLines,
@@ -231,6 +233,7 @@ export const BottomPanel: React.FC<BottomPanelProps> = observer(({
           hoveredWorldPoint={hoveredWorldPoint}
           hoveredCoplanarConstraint={hoveredCoplanarConstraint}
           autoStart={true}
+          optimizeTrigger={optimizeTrigger}
         />
       )}
 

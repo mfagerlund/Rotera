@@ -4,7 +4,7 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faBullseye, faGear, faStop, faClipboard } from '@fortawesome/free-solid-svg-icons'
+import { faBolt, faGear, faStop, faClipboard } from '@fortawesome/free-solid-svg-icons'
 import { Project } from '../entities/project'
 import FloatingWindow, { HeaderButton } from './FloatingWindow'
 import { useOptimization } from '../hooks/useOptimization'
@@ -37,6 +37,8 @@ interface OptimizationPanelProps {
   hoveredCoplanarConstraint?: CoplanarPointsConstraint | null
   /** If true, automatically start optimization when panel opens */
   autoStart?: boolean
+  /** Counter that triggers optimization when incremented (used by toolbar button) */
+  optimizeTrigger?: number
 }
 
 function computeCameraReprojectionError(vp: Viewpoint): number {
@@ -114,7 +116,8 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
   isCoplanarConstraintSelected,
   hoveredWorldPoint,
   hoveredCoplanarConstraint,
-  autoStart = false
+  autoStart = false,
+  optimizeTrigger
 }) => {
   const [isOptimizing, setIsOptimizing] = useState(false)
   const [settings, setSettings] = useState(defaultOptimizationSettings)
@@ -347,6 +350,26 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
     }
   }, [isOpen, autoStart, stats.canOptimize, isOptimizing, handleOptimize])
 
+  // Track previous optimizeTrigger value
+  const prevOptimizeTriggerRef = useRef(optimizeTrigger)
+
+  // Trigger optimization when optimizeTrigger changes (toolbar button clicked)
+  useEffect(() => {
+    if (optimizeTrigger !== undefined &&
+        optimizeTrigger !== prevOptimizeTriggerRef.current &&
+        isOpen &&
+        stats.canOptimize &&
+        !isOptimizing) {
+      prevOptimizeTriggerRef.current = optimizeTrigger
+      // Small delay to ensure UI is rendered first
+      const timer = setTimeout(() => {
+        handleOptimize()
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+    prevOptimizeTriggerRef.current = optimizeTrigger
+  }, [optimizeTrigger, isOpen, stats.canOptimize, isOptimizing, handleOptimize])
+
   const handleInitializeCameras = useCallback(async () => {
     if (isOptimizing || isInitializingCameras) return
 
@@ -437,12 +460,12 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
 
   const headerButtons: HeaderButton[] = useMemo(() => [
     {
-      icon: <FontAwesomeIcon icon={faBullseye} />,
+      icon: <FontAwesomeIcon icon={faBolt} />,
       label: 'Optimize',
       onClick: handleOptimize,
       disabled: !canOptimize() || isOptimizing,
       title: 'Run bundle adjustment optimization',
-      className: 'btn-primary'
+      className: 'btn-optimize'
     },
     {
       icon: <FontAwesomeIcon icon={faStop} />,
@@ -659,6 +682,8 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
                 <span style={{
                   fontSize: '20px',
                   lineHeight: 1,
+                  color: quality.color,
+                  textShadow: `0 0 2px ${quality.bgColor}, 0 0 1px rgba(0,0,0,0.3)`,
                 }}>{quality.icon}</span>
                 <div style={{ flex: 1 }}>
                   <div style={{

@@ -187,6 +187,8 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
     setEditingCoplanarConstraint,
     entityPopups,
     setEntityPopup,
+    optimizeTrigger,
+    triggerOptimization,
     worldPointEditWindow,
     openWorldPointEdit,
     closeWorldPointEdit,
@@ -618,7 +620,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
               onReturnToBrowser={onReturnToBrowser}
               onSaveProject={handleSaveProject}
               onSaveAsProject={handleSaveAsProject}
-              onOpenOptimization={() => setEntityPopup('showOptimizationPanel', true)}
+              onOpenOptimization={triggerOptimization}
               isDirty={isDirty}
             />
 
@@ -841,6 +843,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
       <BottomPanel
         entityPopups={entityPopups}
         onClosePopup={(popup) => setEntityPopup(popup, false)}
+        optimizeTrigger={optimizeTrigger}
         linesMap={linesMap}
         allWorldPoints={worldPointsArray}
         selectedLines={selectedLineEntities}
