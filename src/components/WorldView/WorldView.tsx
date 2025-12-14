@@ -11,6 +11,11 @@ import { renderLines } from './renderers/lineRenderer'
 import { renderAxes } from './renderers/axesRenderer'
 import { renderCameras } from './renderers/cameraRenderer'
 import { findPointAt, findLineAt, findCameraAt } from './utils'
+// Display handedness is LEFT-handed due to Y-flip in screen projection
+// (screenY = cy - scaledY, which flips the Y axis for screen coordinates)
+// This is a fixed property of the projection, not view-dependent.
+const DISPLAY_HANDEDNESS: 'L' | 'R' = 'L'
+
 
 export const WorldView = observer(React.forwardRef<WorldViewRef, WorldViewProps>(({
   project,
@@ -61,6 +66,7 @@ export const WorldView = observer(React.forwardRef<WorldViewRef, WorldViewProps>
   const { dragState, startDrag, updateDrag, endDrag } = useDragState()
   const { hoverState, setHoverState, clearHover } = useHoverState()
   const { project3DTo2D } = useProjection(canvasRef, viewMatrix)
+
 
   // Main render function
   const render = useCallback(() => {
@@ -366,7 +372,7 @@ export const WorldView = observer(React.forwardRef<WorldViewRef, WorldViewProps>
           {viewMatrix.cameraPosition ? (
             <>Cam: {viewMatrix.cameraPosition[0].toFixed(1)}, {viewMatrix.cameraPosition[1].toFixed(1)}, {viewMatrix.cameraPosition[2].toFixed(1)} • </>
           ) : null}
-          View rot.x: {(viewMatrix.rotation.x * 180 / Math.PI).toFixed(1)}° • rot.y: {(viewMatrix.rotation.y * 180 / Math.PI).toFixed(1)}° • rot.z: {(viewMatrix.rotation.z * 180 / Math.PI).toFixed(1)}° • Zoom: {viewMatrix.scale.toFixed(0)}
+          View rot.x: {(viewMatrix.rotation.x * 180 / Math.PI).toFixed(1)}° • rot.y: {(viewMatrix.rotation.y * 180 / Math.PI).toFixed(1)}° • rot.z: {(viewMatrix.rotation.z * 180 / Math.PI).toFixed(1)}° • Zoom: {viewMatrix.scale.toFixed(0)} • {DISPLAY_HANDEDNESS}H
         </div>
         <div className="controls-hint">
           Drag: Rotate • Middle/Ctrl+Drag: Pan • Scroll: Zoom • Click camera: Focus
