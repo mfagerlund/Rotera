@@ -2,28 +2,23 @@
 
 import type { EntityValidationResult, EntityValidationError } from '../../validation/validator'
 import type { ValueMap } from '../../optimization/IOptimizable'
-import { V, Vec3, type Value } from 'scalar-autograd'
+import { Vec3, type Value } from 'scalar-autograd'
 import { ValidationHelpers } from '../../validation/validator'
 import type { WorldPoint } from '../world-point/WorldPoint'
-import {
-  Constraint,
-  type ConstraintEvaluation
-} from './base-constraint'
 import type { SerializationContext } from '../serialization/SerializationContext'
 import type { EqualAnglesConstraintDto } from './ConstraintDto'
+import { EqualityConstraintBase } from './equality-constraint-base'
 
-export class EqualAnglesConstraint extends Constraint {
+export class EqualAnglesConstraint extends EqualityConstraintBase<[WorldPoint, WorldPoint, WorldPoint]> {
   readonly angleTriplets: [WorldPoint, WorldPoint, WorldPoint][]
-  tolerance: number
 
   private constructor(
     name: string,
     angleTriplets: [WorldPoint, WorldPoint, WorldPoint][],
     tolerance: number
   ) {
-    super(name)
+    super(name, tolerance)
     this.angleTriplets = angleTriplets
-    this.tolerance = tolerance
 
     // Register with all points
     const allPoints = new Set<WorldPoint>()
@@ -57,31 +52,31 @@ export class EqualAnglesConstraint extends Constraint {
     return 'equal_angles'
   }
 
-  evaluate(): ConstraintEvaluation {
-    const angles: number[] = []
+  protected getItems(): [WorldPoint, WorldPoint, WorldPoint][] {
+    return this.angleTriplets
+  }
 
-    // Calculate all angles
-    for (const triplet of this.angleTriplets) {
-      const [pointA, vertex, pointC] = triplet
-      if (pointA.hasCoordinates() && vertex.hasCoordinates() && pointC.hasCoordinates()) {
-        const angle = this.calculateAngleBetweenPoints(pointA, vertex, pointC)
-        angles.push(angle)
-      }
+  protected computeValue(triplet: [WorldPoint, WorldPoint, WorldPoint]): number | null {
+    const [pointA, vertex, pointC] = triplet
+    if (pointA.hasCoordinates() && vertex.hasCoordinates() && pointC.hasCoordinates()) {
+      return this.calculateAngleBetweenPoints(pointA, vertex, pointC)
     }
+    return null
+  }
 
-    if (angles.length < 2) {
-      return { value: Infinity, satisfied: false }
-    }
+  protected computeAutogradValue(triplet: [WorldPoint, WorldPoint, WorldPoint], valueMap: ValueMap): Value | undefined {
+    const [pointA, vertex, pointC] = triplet
 
-    // Calculate the variance of angles (measure of how different they are)
-    const mean = angles.reduce((sum, a) => sum + a, 0) / angles.length
-    const variance = angles.reduce((sum, a) => sum + Math.pow(a - mean, 2), 0) / angles.length
-    const standardDeviation = Math.sqrt(variance)
+    const pointAVec = valueMap.points.get(pointA)
+    const vertexVec = valueMap.points.get(vertex)
+    const pointCVec = valueMap.points.get(pointC)
 
-    return {
-      value: standardDeviation,
-      satisfied: Math.abs(standardDeviation - 0) <= this.tolerance
-    }
+    if (!pointAVec || !vertexVec || !pointCVec) return undefined
+
+    const v1 = pointAVec.sub(vertexVec)
+    const v2 = pointCVec.sub(vertexVec)
+
+    return Vec3.angleBetween(v1, v2)
   }
 
   validateConstraintSpecific(): EntityValidationResult {
@@ -132,59 +127,8 @@ export class EqualAnglesConstraint extends Constraint {
     }
   }
 
-  /**
-   * Compute residuals for equal angles constraint.
-   * Residual: All angles should be equal.
-   * Returns (n-1) residuals where n is the number of angle triplets,
-   * each residual = angle_i - angle_0 in radians.
-   */
   computeResiduals(valueMap: ValueMap): Value[] {
-    if (this.angleTriplets.length < 2) {
-      console.warn('Equal angles constraint requires at least 2 triplets')
-      return []
-    }
-
-    // Calculate angle for a triplet [pointA, vertex, pointC] using Vec3 API
-    const calculateAngle = (triplet: [WorldPoint, WorldPoint, WorldPoint]): Value | undefined => {
-      const [pointA, vertex, pointC] = triplet
-
-      const pointAVec = valueMap.points.get(pointA)
-      const vertexVec = valueMap.points.get(vertex)
-      const pointCVec = valueMap.points.get(pointC)
-
-      if (!pointAVec || !vertexVec || !pointCVec) return undefined
-
-      // Calculate vectors from vertex using Vec3 API
-      const v1 = pointAVec.sub(vertexVec)
-      const v2 = pointCVec.sub(vertexVec)
-
-      // Calculate angle using Vec3.angleBetween
-      return Vec3.angleBetween(v1, v2)
-    }
-
-    // Calculate all angles
-    const angles: Value[] = []
-    for (const triplet of this.angleTriplets) {
-      const angle = calculateAngle(triplet)
-      if (angle) {
-        angles.push(angle)
-      }
-    }
-
-    if (angles.length < 2) {
-      console.warn(`Equal angles constraint ${this.getName()}: not enough valid triplets found`)
-      return []
-    }
-
-    // Create residuals: angle_i - angle_0 should all be 0
-    const residuals: Value[] = []
-    const referenceAngle = angles[0]
-
-    for (let i = 1; i < angles.length; i++) {
-      residuals.push(V.sub(angles[i], referenceAngle))
-    }
-
-    return residuals
+    return this.computeResidualValues(valueMap)
   }
 
   serialize(context: SerializationContext): EqualAnglesConstraintDto {

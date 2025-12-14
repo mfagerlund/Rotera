@@ -425,7 +425,7 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
 
         // Aggregate reprojection residuals for every observation of this world point
         for (const imagePoint of this.imagePoints) {
-            const cameraValues = valueMap.cameras.get(imagePoint.viewpoint as any)
+            const cameraValues = valueMap.cameras.get(imagePoint.viewpoint)
             if (!cameraValues) continue
 
             const projection = projectWorldPointToPixelQuaternion(

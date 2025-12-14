@@ -1,4 +1,5 @@
 import { RenderParams } from './types'
+import { imagePointToCanvas } from './renderUtils'
 
 export function renderWorldPoints(params: RenderParams): void {
   const {
@@ -26,8 +27,7 @@ export function renderWorldPoints(params: RenderParams): void {
       return
     }
 
-    const x = imagePoint.u * scale + offset.x
-    const y = imagePoint.v * scale + offset.y
+    const { x, y } = imagePointToCanvas(imagePoint, scale, offset)
 
     const isSelected = selectedPoints.includes(wp)
     const isConstraintHighlighted = constraintHighlightedPoints.includes(wp)

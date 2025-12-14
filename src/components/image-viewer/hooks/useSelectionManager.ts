@@ -9,7 +9,7 @@ import { ToolContext } from '../../../types/tool-context'
 
 export interface UseSelectionManagerParams {
   image: Viewpoint
-  worldPoints: Map<string, WorldPoint>
+  worldPoints: Set<WorldPoint>
   lineEntities: Map<string, Line>
   scale: number
   offset: CanvasOffset

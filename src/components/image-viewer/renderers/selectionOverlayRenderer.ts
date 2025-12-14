@@ -1,4 +1,5 @@
 import { RenderParams } from './types'
+import { imagePointToCanvas } from './renderUtils'
 
 export function renderSelectionOverlay(params: RenderParams): void {
   const {
@@ -18,8 +19,7 @@ export function renderSelectionOverlay(params: RenderParams): void {
       return
     }
 
-    const x = imagePoint.u * scale + offset.x
-    const y = imagePoint.v * scale + offset.y
+    const { x, y } = imagePointToCanvas(imagePoint, scale, offset)
 
     const time = Date.now() * 0.003
     const pulseRadius = 12 + Math.sin(time) * 2

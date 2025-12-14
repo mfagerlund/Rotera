@@ -11,10 +11,23 @@ import { initializeWorldPoints as unifiedInitialize } from './unified-initializa
 import { initializeSingleCameraPoints } from './single-camera-initialization';
 import { initializeCameraWithVanishingPoints } from './vanishing-points';
 import { alignSceneToLineDirections, alignSceneToLockedPoints } from './coordinate-alignment';
+import type { IOptimizableCamera } from './IOptimizable';
 import { log, clearOptimizationLogs, optimizationLogs } from './optimization-logger';
 
 // Re-export for backwards compatibility
 export { log, clearOptimizationLogs, optimizationLogs } from './optimization-logger';
+
+// WeakMaps for temporary storage during optimization (avoid polluting entity objects)
+const viewpointInitialVps = new WeakMap<Viewpoint, Record<string, { u: number; v: number }>>();
+const worldPointSavedInferredXyz = new WeakMap<WorldPoint, [number | null, number | null, number | null]>();
+
+// Export for use in vanishing-points.ts
+export { viewpointInitialVps };
+
+// Type guard to check if constraint has points field
+function hasPointsField(c: any): c is { points: WorldPoint[] } {
+  return 'points' in c && Array.isArray(c.points);
+}
 
 /**
  * Reset all cached optimization state on project entities.
@@ -38,7 +51,7 @@ export function resetOptimizationState(project: Project) {
     const viewpoint = vp as Viewpoint;
     viewpoint.lastResiduals = [];
     // Clear hidden VP cache
-    delete (viewpoint as any).__initialCameraVps;
+    viewpointInitialVps.delete(viewpoint);
   }
 
   // Reset image points
@@ -493,7 +506,7 @@ export function optimizeProject(
       for (const wp of lockedPointsForCheck) {
         savedLockedXyz.set(wp, [...wp.lockedXyz] as [number | null, number | null, number | null]);
         wp.lockedXyz = [null, null, null];
-        (wp as any).savedInferredXyz = [...wp.inferredXyz];
+        worldPointSavedInferredXyz.set(wp, [...wp.inferredXyz] as [number | null, number | null, number | null]);
         wp.inferredXyz = [null, null, null];
       }
 
@@ -522,9 +535,10 @@ export function optimizeProject(
       // Restore locks
       for (const [wp, lockedXyz] of savedLockedXyz) {
         wp.lockedXyz = lockedXyz;
-        if ((wp as any).savedInferredXyz) {
-          wp.inferredXyz = (wp as any).savedInferredXyz;
-          delete (wp as any).savedInferredXyz;
+        const savedInferred = worldPointSavedInferredXyz.get(wp);
+        if (savedInferred) {
+          wp.inferredXyz = savedInferred;
+          worldPointSavedInferredXyz.delete(wp);
         }
       }
     }
@@ -707,7 +721,7 @@ export function optimizeProject(
     }
   }
 
-  const shouldOptimizeIntrinsics = (vp: Viewpoint) => {
+  const shouldOptimizeIntrinsics = (vp: IOptimizableCamera) => {
     if (typeof optimizeCameraIntrinsics === 'boolean') {
       return optimizeCameraIntrinsics;
     }
@@ -715,7 +729,7 @@ export function optimizeProject(
     // - For cameras with vanishing lines: don't optimize (VL anchors focal length)
     // - For cameras initialized via late PnP: DO optimize focal length (PnP only gives pose, not focal)
     // - For other cameras (e.g., essential matrix): allow optimization
-    if ((vp as Viewpoint).getVanishingLineCount() > 0) {
+    if (vp.vanishingLines.size > 0) {
       return false;
     }
     // Late PnP cameras need focal length optimization since PnP doesn't determine focal length.
@@ -789,7 +803,7 @@ export function optimizeProject(
       }
     });
     project.constraints.forEach(c => {
-      const points = 'points' in c ? (c as any).points as WorldPoint[] : [];
+      const points = hasPointsField(c) ? c.points : [];
       if (points.length === 0 || points.every(p => multiCameraPoints.has(p))) {
         stage1System.addConstraint(c);
       }

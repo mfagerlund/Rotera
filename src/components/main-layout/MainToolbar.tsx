@@ -1,7 +1,7 @@
 // Main application toolbar component
 // Extracted from MainLayout for better maintainability
 
-import React from 'react'
+import React, { useRef, useEffect } from 'react'
 import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
@@ -9,14 +9,18 @@ import {
   faCopy,
   faFileExport,
   faTrash,
-  faHome,
   faPencil,
   faCheck,
-  faBolt
+  faBolt,
+  faFile,
+  faChevronDown,
+  faImage,
+  faFileLines
 } from '@fortawesome/free-solid-svg-icons'
 import { WorkspaceSwitcher } from '../WorkspaceManager'
+import { AppBranding } from '../AppBranding'
 import type { Project } from '../../entities/project'
-import type { OptimizationExportDto } from '../../types/optimization-export'
+import type { ProjectDto } from '../../entities/project/ProjectDto'
 
 interface MainToolbarProps {
   // Workspace
@@ -27,7 +31,7 @@ interface MainToolbarProps {
 
   // Project
   project: Project | null
-  onExportOptimization: () => OptimizationExportDto | null
+  onExportOptimization: () => ProjectDto | null
   onClearProject: () => void
 
   // Confirm dialog
@@ -58,9 +62,7 @@ export const MainToolbar: React.FC<MainToolbarProps> = observer(({
   onOpenOptimization,
   isDirty
 }) => {
-  const [excludeImageUrls, setExcludeImageUrls] = React.useState(true)
-
-  const handleExport = () => {
+  const handleExport = (includeImages: boolean) => {
     const exportData = onExportOptimization()
     if (!exportData) {
       alert('No project data to export')
@@ -69,7 +71,7 @@ export const MainToolbar: React.FC<MainToolbarProps> = observer(({
 
     let filteredData = exportData
 
-    if (excludeImageUrls && exportData.viewpoints) {
+    if (!includeImages && exportData.viewpoints) {
       filteredData = {
         ...exportData,
         viewpoints: exportData.viewpoints.map((vp: any) => ({
@@ -85,14 +87,17 @@ export const MainToolbar: React.FC<MainToolbarProps> = observer(({
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `${project?.name || 'project'}-optimization-${new Date().toISOString().split('T')[0]}.json`
+    const suffix = includeImages ? 'with-images' : 'data-only'
+    link.download = `${project?.name || 'project'}-${suffix}-${new Date().toISOString().split('T')[0]}.json`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
+    setFileMenuOpen(false)
   }
 
   const handleClearProject = async () => {
+    setFileMenuOpen(false)
     const confirmed = await confirm(
       'Are you sure you want to clear the entire project?\n\n' +
       'This will remove all world points, images, lines, planes, and constraints. ' +
@@ -109,6 +114,22 @@ export const MainToolbar: React.FC<MainToolbarProps> = observer(({
   const [saveAsName, setSaveAsName] = React.useState('')
   const [isEditingName, setIsEditingName] = React.useState(false)
   const [editedName, setEditedName] = React.useState(project?.name || '')
+  const [fileMenuOpen, setFileMenuOpen] = React.useState(false)
+  const fileMenuRef = useRef<HTMLDivElement>(null)
+
+  // Close file menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (fileMenuRef.current && !fileMenuRef.current.contains(event.target as Node)) {
+        setFileMenuOpen(false)
+        setShowSaveAsInput(false)
+      }
+    }
+    if (fileMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [fileMenuOpen])
 
   const handleNameSubmit = (e?: React.FormEvent) => {
     e?.preventDefault()
@@ -121,6 +142,7 @@ export const MainToolbar: React.FC<MainToolbarProps> = observer(({
   const handleSave = async () => {
     if (!onSaveProject || isSaving) return
     setIsSaving(true)
+    setFileMenuOpen(false)
     try {
       await onSaveProject()
     } finally {
@@ -140,6 +162,7 @@ export const MainToolbar: React.FC<MainToolbarProps> = observer(({
     try {
       await onSaveAsProject(saveAsName.trim())
       setShowSaveAsInput(false)
+      setFileMenuOpen(false)
     } finally {
       setIsSavingAs(false)
     }
@@ -164,13 +187,10 @@ export const MainToolbar: React.FC<MainToolbarProps> = observer(({
   return (
     <div className="top-toolbar">
       {onReturnToBrowser && (
-        <button
-          className="btn-tool btn-home"
+        <AppBranding
           onClick={handleReturnToBrowser}
-          title="Return to project browser"
-        >
-          <FontAwesomeIcon icon={faHome} />
-        </button>
+          size="small"
+        />
       )}
 
       {project && (
@@ -227,64 +247,78 @@ export const MainToolbar: React.FC<MainToolbarProps> = observer(({
         <span>Optimize</span>
       </button>
 
-      <div className="toolbar-section">
+      <div className="file-menu-container" ref={fileMenuRef}>
         <button
-          className="btn-tool"
-          onClick={handleSave}
-          disabled={!onSaveProject || isSaving}
-          title="Save project to browser storage"
+          className="btn-file-menu"
+          onClick={() => setFileMenuOpen(!fileMenuOpen)}
+          title="File menu"
         >
-          <FontAwesomeIcon icon={faFloppyDisk} /> {isSaving ? 'Saving...' : 'Save'}
+          <FontAwesomeIcon icon={faFile} />
+          <span>File</span>
+          <FontAwesomeIcon icon={faChevronDown} className="chevron" />
         </button>
-        {showSaveAsInput ? (
-          <form onSubmit={handleSaveAsSubmit} className="save-as-form">
-            <input
-              type="text"
-              value={saveAsName}
-              onChange={(e) => setSaveAsName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') handleSaveAsCancel()
-              }}
-              autoFocus
-              className="save-as-input"
-              placeholder="New project name"
-            />
-            <button type="submit" className="btn-tool btn-small" disabled={isSavingAs || !saveAsName.trim()} title="Save as new project">
-              <FontAwesomeIcon icon={faCheck} />
+        {fileMenuOpen && (
+          <div className="file-menu-dropdown">
+            <button
+              className="file-menu-item"
+              onClick={handleSave}
+              disabled={!onSaveProject || isSaving}
+            >
+              <FontAwesomeIcon icon={faFloppyDisk} />
+              <span>{isSaving ? 'Saving...' : 'Save'}</span>
+              <span className="shortcut">Ctrl+S</span>
             </button>
-          </form>
-        ) : (
-          <button
-            className="btn-tool"
-            onClick={handleSaveAsClick}
-            disabled={!onSaveAsProject}
-            title="Save as a new project"
-          >
-            <FontAwesomeIcon icon={faCopy} /> Save As
-          </button>
+            {showSaveAsInput ? (
+              <form onSubmit={handleSaveAsSubmit} className="file-menu-save-as-form">
+                <input
+                  type="text"
+                  value={saveAsName}
+                  onChange={(e) => setSaveAsName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') handleSaveAsCancel()
+                  }}
+                  autoFocus
+                  placeholder="New project name"
+                />
+                <button type="submit" disabled={isSavingAs || !saveAsName.trim()}>
+                  <FontAwesomeIcon icon={faCheck} />
+                </button>
+              </form>
+            ) : (
+              <button
+                className="file-menu-item"
+                onClick={handleSaveAsClick}
+                disabled={!onSaveAsProject}
+              >
+                <FontAwesomeIcon icon={faCopy} />
+                <span>Save As...</span>
+              </button>
+            )}
+            <div className="file-menu-divider" />
+            <button
+              className="file-menu-item"
+              onClick={() => handleExport(true)}
+            >
+              <FontAwesomeIcon icon={faImage} />
+              <span>Export with Images</span>
+            </button>
+            <button
+              className="file-menu-item"
+              onClick={() => handleExport(false)}
+            >
+              <FontAwesomeIcon icon={faFileLines} />
+              <span>Export without Images</span>
+            </button>
+            <div className="file-menu-divider" />
+            <button
+              className="file-menu-item file-menu-item-danger"
+              onClick={handleClearProject}
+            >
+              <FontAwesomeIcon icon={faTrash} />
+              <span>Clear Project</span>
+            </button>
+          </div>
         )}
-        <button
-          className="btn-tool"
-          onClick={handleExport}
-          title={excludeImageUrls ? "Export project data without image URLs" : "Export project data with image URLs"}
-        >
-          <FontAwesomeIcon icon={faFileExport} /> Export
-        </button>
-        <label className="toolbar-toggle" title="Exclude image data URLs from export to reduce file size">
-          <input
-            type="checkbox"
-            checked={excludeImageUrls}
-            onChange={(e) => setExcludeImageUrls(e.target.checked)}
-          />
-          Exclude Images
-        </label>
-        <button
-          className="btn-tool btn-clear-project"
-          onClick={handleClearProject}
-          title="Clear entire project"
-        >
-          <FontAwesomeIcon icon={faTrash} /> Clear
-        </button>
       </div>
     </div>
   )

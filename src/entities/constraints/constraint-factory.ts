@@ -18,26 +18,28 @@ import { ProjectionConstraint } from './projection-constraint'
 export function deserializeConstraint(dto: ConstraintDto, context: SerializationContext): Constraint {
   switch (dto.type) {
     case 'distance_point_point':
-      return DistanceConstraint.deserialize(dto as any, context)
+      return DistanceConstraint.deserialize(dto, context)
     case 'angle_point_point_point':
-      return AngleConstraint.deserialize(dto as any, context)
+      return AngleConstraint.deserialize(dto, context)
     case 'parallel_lines':
-      return ParallelLinesConstraint.deserialize(dto as any, context)
+      return ParallelLinesConstraint.deserialize(dto, context)
     case 'perpendicular_lines':
-      return PerpendicularLinesConstraint.deserialize(dto as any, context)
+      return PerpendicularLinesConstraint.deserialize(dto, context)
     case 'fixed_point':
-      return FixedPointConstraint.deserialize(dto as any, context)
+      return FixedPointConstraint.deserialize(dto, context)
     case 'collinear_points':
-      return CollinearPointsConstraint.deserialize(dto as any, context)
+      return CollinearPointsConstraint.deserialize(dto, context)
     case 'coplanar_points':
-      return CoplanarPointsConstraint.deserialize(dto as any, context)
+      return CoplanarPointsConstraint.deserialize(dto, context)
     case 'equal_distances':
-      return EqualDistancesConstraint.deserialize(dto as any, context)
+      return EqualDistancesConstraint.deserialize(dto, context)
     case 'equal_angles':
-      return EqualAnglesConstraint.deserialize(dto as any, context)
+      return EqualAnglesConstraint.deserialize(dto, context)
     case 'projection':
-      return ProjectionConstraint.deserialize(dto as any, context)
-    default:
-      throw new Error(`Unknown constraint type: ${(dto as any).type}`)
+      return ProjectionConstraint.deserialize(dto, context)
+    default: {
+      const exhaustiveCheck: never = dto
+      throw new Error(`Unknown constraint type: ${(exhaustiveCheck as ConstraintDto).type}`)
+    }
   }
 }

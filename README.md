@@ -1,5 +1,5 @@
 # Pictorigo
-<!-- TODO: Consider renaming to "grammagon" (gramma=drawing + gon=angle) -->
+<!-- Rename to "Gramzo" - for sale on BrandBucket - see scratch/naming-research.md -->
 Poor Man's Photogrammetry
 
 ## 🚀 Current Status

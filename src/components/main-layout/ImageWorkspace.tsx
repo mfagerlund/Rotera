@@ -16,7 +16,7 @@ interface ImageWorkspaceProps {
   currentVanishingLineAxis?: 'x' | 'y' | 'z'
   image: Viewpoint | null
   imageViewerRef: React.RefObject<ImageViewerRef>
-  worldPoints: Map<string, WorldPoint>
+  worldPoints: Set<WorldPoint>
   lines: Map<string, LineEntity>
   selectedPoints: WorldPoint[]
   selectedLines: LineEntity[]

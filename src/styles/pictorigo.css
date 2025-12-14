@@ -1,60 +1,189 @@
-﻿/* Fusion 360-inspired styling for Pictorigo */
+﻿/* Pictorigo - Main stylesheet with consolidated CSS variables */
 
 :root {
-  /* Fusion 360-inspired color scheme */
-  --bg-primary: #393939;
-  --bg-secondary: #2d2d2d;
-  --bg-panel: #454545;
-  --text-primary: #ffffff;
-  --text-secondary: #cccccc;
-  --text-muted: #999999;
+  /* ===========================================
+     CORE THEME COLORS - Dark Mode (GitHub Dark)
+     =========================================== */
 
-  /* Accent colors */
+  /* Background hierarchy (darkest to lightest) */
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-panel: #21262d;
+
+  /* Surface system (aliases for consistency) */
+  --surface-dark: #010409;
+  --surface-1: var(--bg-primary);
+  --surface-2: var(--bg-secondary);
+  --surface-3: var(--bg-panel);
+  --surface-primary: var(--bg-panel);
+
+  /* Material Design style aliases (used by workspace.css) */
+  --background: var(--surface-dark);
+  --surface: var(--surface-1);
+  --surface-variant: var(--surface-2);
+
+  /* ===========================================
+     TEXT COLORS
+     =========================================== */
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --text-muted: #6e7681;
+  --text-disabled: #484f58;
+
+  /* Material Design style aliases */
+  --on-surface: var(--text-primary);
+  --on-surface-variant: var(--text-secondary);
+  --on-primary: #ffffff;
+
+  /* ===========================================
+     ACCENT COLORS
+     =========================================== */
   --accent-blue: #0696d7;
   --accent-orange: #ff8c00;
   --accent-green: #5cb85c;
   --accent-red: #d9534f;
 
-  /* Enhanced workspace system colors */
-  --surface-1: #2d2d2d;
-  --surface-2: #393939;
-  --surface-3: #454545;
-  --surface-primary: var(--bg-panel);
-  --surface-dark: #1a1a1a;
-
-  --border: #555555;
-  --border-hover: #666666;
-
-  --primary: #0696d7;
+  /* Primary action color */
+  --primary: var(--accent-blue);
   --primary-hover: #0578b8;
   --primary-text: #ffffff;
-  --success: #5cb85c;
-  --warning: #ff8c00;
-  --error: #d9534f;
 
-  /* Spacing */
+  /* Semantic colors */
+  --success: var(--accent-green);
+  --warning: var(--accent-orange);
+  --error: var(--accent-red);
+
+  /* Hover variants */
+  --accent-hover: #0578b8;
+  --success-hover: #4a9d4a;
+  --warning-hover: #e07800;
+  --error-hover: #c9443f;
+
+  /* Background variants for subtle highlighting */
+  --success-bg: rgba(92, 184, 92, 0.15);
+  --warning-bg: rgba(255, 140, 0, 0.15);
+  --error-bg: rgba(217, 83, 79, 0.15);
+
+  /* Aliases used by some CSS files */
+  --accent-color: var(--accent-blue);
+  --success-color: var(--success);
+  --warning-color: var(--warning);
+  --error-color: var(--error);
+
+  /* ===========================================
+     BORDERS
+     =========================================== */
+  --border: #30363d;
+  --border-hover: #484f58;
+  --border-color: var(--border);
+
+  /* Material Design style aliases */
+  --outline: #30363d;
+  --outline-variant: #21262d;
+
+  /* ===========================================
+     ENTITY COLORS (for canvas rendering)
+     =========================================== */
+  --entity-point-default: #2196F3;
+  --entity-point-selected: #FFC107;
+  --entity-point-highlighted: #FF9800;
+  --entity-point-construction: #9E9E9E;
+
+  --entity-line-default: #4CAF50;
+  --entity-line-selected: #FFC107;
+  --entity-line-highlighted: #FF9800;
+  --entity-line-construction: #9E9E9E;
+
+  --entity-plane-default: #9C27B0;
+  --entity-plane-selected: #FFC107;
+  --entity-plane-highlighted: #FF9800;
+  --entity-plane-construction: #9E9E9E;
+
+  --entity-circle-default: #FF5722;
+  --entity-circle-selected: #FFC107;
+  --entity-circle-highlighted: #FF9800;
+  --entity-circle-construction: #9E9E9E;
+
+  /* ===========================================
+     CONSTRAINT STATUS COLORS
+     =========================================== */
+  --constraint-satisfied: #4CAF50;
+  --constraint-warning: #FF9800;
+  --constraint-violated: #F44336;
+  --constraint-conflicting: #9C27B0;
+  --constraint-redundant: #9E9E9E;
+  --constraint-undefined: #2196F3;
+
+  /* Canvas rendering colors */
+  --color-satisfied: var(--constraint-satisfied);
+  --color-warning: var(--constraint-warning);
+  --color-violated: var(--constraint-violated);
+  --color-world-geometry: #2196F3;
+  --color-image-guides: #FF5722;
+  --color-construction: #9E9E9E;
+  --color-selection: #FFC107;
+
+  /* ===========================================
+     STATE COLORS
+     =========================================== */
+  --state-active: #FFC107;
+  --state-inactive: #757575;
+  --state-processing: #FF9800;
+  --state-error: #F44336;
+  --state-success: #4CAF50;
+
+  /* ===========================================
+     WORKSPACE COLORS
+     =========================================== */
+  --workspace-image: #2196F3;
+  --workspace-world: #4CAF50;
+  --workspace-split: #9C27B0;
+
+  /* ===========================================
+     VISUAL FEEDBACK LEVELS
+     =========================================== */
+  --feedback-subtle: 0.1;
+  --feedback-moderate: 0.3;
+  --feedback-strong: 0.6;
+  --feedback-intense: 0.9;
+
+  /* ===========================================
+     SPACING
+     =========================================== */
   --spacing-xs: 4px;
   --spacing-sm: 8px;
   --spacing-md: 16px;
   --spacing-lg: 24px;
   --spacing-xl: 32px;
 
-  /* Layout - EXACT PIXEL VALUES */
+  /* ===========================================
+     LAYOUT
+     =========================================== */
   --sidebar-left-width: 180px;
   --sidebar-right-width: 250px;
   --top-toolbar-height: 56px;
   --status-bar-height: 24px;
-  --content-height: calc(100vh - 80px); /* 56px + 24px = 80px */
+  --content-height: calc(100vh - 80px);
 
-  /* Form elements */
+  /* ===========================================
+     FORM ELEMENTS
+     =========================================== */
   --border-radius: 3px;
+  --border-radius-sm: 2px;
   --input-height: 32px;
 
-  /* Context menu */
+  /* ===========================================
+     CONTEXT MENU
+     =========================================== */
   --context-menu-bg: var(--surface-3);
   --context-menu-border: var(--border);
   --context-menu-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   --context-menu-item-hover: var(--surface-2);
+
+  /* ===========================================
+     PANEL ALIASES (used by some CSS files)
+     =========================================== */
+  --panel-bg: var(--bg-panel);
 }
 
 /* Entity List Popup Styles */
@@ -932,12 +1061,12 @@ body {
 
 .top-toolbar {
   height: var(--top-toolbar-height);
-  background: var(--bg-panel);
-  border-bottom: 1px solid #666;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  padding: 0 var(--spacing-md);
-  gap: var(--spacing-lg);
+  padding: 0 16px;
+  gap: 16px;
   flex-shrink: 0;
 }
 
@@ -3911,6 +4040,139 @@ body {
   cursor: not-allowed;
 }
 
+/* File Menu Dropdown */
+.file-menu-container {
+  position: relative;
+}
+
+.btn-file-menu {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 13px;
+  transition: all 0.15s ease;
+}
+
+.btn-file-menu:hover {
+  background: var(--bg-panel);
+  color: var(--text-primary);
+}
+
+.btn-file-menu .chevron {
+  font-size: 10px;
+  opacity: 0.6;
+  margin-left: 2px;
+}
+
+.file-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 220px;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  padding: 4px 0;
+}
+
+.file-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  text-align: left;
+}
+
+.file-menu-item:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.file-menu-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.file-menu-item svg {
+  width: 14px;
+  opacity: 0.8;
+}
+
+.file-menu-item .shortcut {
+  margin-left: auto;
+  font-size: 11px;
+  opacity: 0.5;
+}
+
+.file-menu-item-danger {
+  color: var(--error);
+}
+
+.file-menu-item-danger:hover:not(:disabled) {
+  background: var(--error-bg);
+}
+
+.file-menu-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+.file-menu-save-as-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+}
+
+.file-menu-save-as-form input {
+  flex: 1;
+  padding: 6px 8px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.file-menu-save-as-form input:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+}
+
+.file-menu-save-as-form button {
+  padding: 6px 10px;
+  background: var(--accent-blue);
+  border: none;
+  border-radius: var(--border-radius);
+  color: white;
+  cursor: pointer;
+}
+
+.file-menu-save-as-form button:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.file-menu-save-as-form button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .btn-stop {
   background: var(--accent-red, #dc3545);
   color: white;
@@ -5593,33 +5855,24 @@ body {
 .btn-optimize {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  margin: 0 12px;
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  gap: 6px;
+  padding: 6px 14px;
+  background: var(--accent-orange);
   border: none;
-  border-radius: 6px;
+  border-radius: 4px;
   color: #fff;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: all 0.15s ease;
 }
 
 .btn-optimize:hover {
-  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-
-.btn-optimize:active {
-  transform: translateY(0);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  background: var(--warning-hover);
 }
 
 .btn-optimize svg {
-  font-size: 16px;
+  font-size: 14px;
 }
 
 /* Modal styles */
@@ -5702,4 +5955,37 @@ body {
   color: #ff6b6b;
   font-weight: bold;
   margin-left: 4px;
+}
+
+/* ===========================================
+   APP BRANDING
+   =========================================== */
+
+.app-branding {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.app-branding--clickable {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: background-color 0.15s ease;
+}
+
+.app-branding--clickable:hover {
+  background: var(--bg-panel);
+}
+
+.app-branding__icon {
+  flex-shrink: 0;
+}
+
+.app-branding__name {
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
 }

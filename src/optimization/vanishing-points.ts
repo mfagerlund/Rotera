@@ -71,6 +71,7 @@ import { WorldPoint } from '../entities/world-point'
 import { Line, LineDirection } from '../entities/line'
 import { Quaternion } from './Quaternion'
 import { log, logOnce } from './optimization-logger'
+import { viewpointInitialVps } from './optimize-project'
 
 /**
  * Maps Line direction constraints to vanishing point axes.
@@ -732,7 +733,7 @@ export function computeRotationsFromVPs(
     return null
   }
 
-  const directions: Record<VanishingLineAxis, number[]> = {} as any
+  const directions: Partial<Record<VanishingLineAxis, number[]>> = {}
 
   availableAxes.forEach(axis => {
     const vp = vanishingPoints[axis]!
@@ -1655,7 +1656,7 @@ export function initializeCameraWithVanishingPoints(
     log(`  ${axis.toUpperCase()} axis -> VP at (${vp.u.toFixed(2)}, ${vp.v.toFixed(2)})`)
   })
 
-  ;(viewpoint as any).__initialCameraVps = cameraVps
+  viewpointInitialVps.set(viewpoint, cameraVps)
 
   log(
     `[initializeCameraWithVanishingPoints] Success! Position: [${position.map(p => p.toFixed(2)).join(', ')}], ` +

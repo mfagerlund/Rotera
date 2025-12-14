@@ -99,10 +99,11 @@ export class OptimizationService {
         return false
       }
 
+      // Note: timeout is not standard in fetch, but may be supported in test environments
       const response = await fetchFn(`${this.baseUrl}/healthz`, {
         method: 'GET',
         timeout: 5000
-      } as any)
+      } as RequestInit & { timeout?: number })
       return response.ok
     } catch (error) {
       // Only log warnings if not in test environment

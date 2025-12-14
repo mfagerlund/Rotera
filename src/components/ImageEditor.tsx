@@ -41,8 +41,9 @@ export const ImageEditor: React.FC<ImageEditorProps> = observer(({
         dy = ip.lastResiduals[1]
       } else {
         // Fallback: reproject with current pose/point to estimate loss on the fly
-        const wp = ip.worldPoint as any
-        const xyz = wp.optimizedXyz ?? wp.getEffectiveXyz?.()
+        const wp = ip.worldPoint
+        const optimizationInfo = wp.getOptimizationInfo()
+        const xyz = optimizationInfo.optimizedXyz ?? wp.getEffectiveXyz()
         if (xyz && xyz[0] !== null && xyz[1] !== null && xyz[2] !== null) {
           try {
             const worldVec = new Vec3(V.C(xyz[0]), V.C(xyz[1]), V.C(xyz[2]))

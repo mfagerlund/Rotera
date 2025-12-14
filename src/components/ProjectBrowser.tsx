@@ -22,6 +22,7 @@ import { Project } from '../entities/project'
 import { useConfirm } from './ConfirmDialog'
 import { SessionStore } from '../services/session-store'
 import { Serialization } from '../entities/Serialization'
+import { AppBranding } from './AppBranding'
 import JSZip from 'jszip'
 
 interface ProjectBrowserProps {
@@ -320,8 +321,8 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
 
   return (
     <div className="project-browser">
-      <header className="project-browser__header">
-        <h1>Pictorigo Projects</h1>
+      <div className="top-toolbar">
+        <AppBranding size="small" />
         <div className="project-browser__actions">
           <button
             className="project-browser__btn project-browser__btn--primary"
@@ -344,7 +345,7 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
             <FontAwesomeIcon icon={faFileExport} /> Export Folder
           </button>
         </div>
-      </header>
+      </div>
 
       <nav className="project-browser__breadcrumb">
         <button

@@ -200,8 +200,8 @@ export class FileManagerService {
         ctx.textAlign = 'center'
 
         const pointCount = project.worldPoints.size
-        const imageCount = (project as any).images ? Object.keys((project as any).images).length : project.viewpoints.size
-        const constraintCount = project.constraints?.size || 0
+        const imageCount = project.viewpoints.size
+        const constraintCount = project.constraints.size
 
         ctx.fillText(project.name || 'Untitled', 100, 30)
         ctx.font = '12px Arial'

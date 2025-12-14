@@ -12,7 +12,7 @@ import { useConfirm } from './ConfirmDialog'
 interface WorldPointsManagerProps {
   isOpen: boolean
   onClose: () => void
-  worldPoints: Map<string, WorldPoint>
+  worldPoints: Set<WorldPoint>
   viewpoints: Map<string, Viewpoint>
   selectedWorldPoints?: WorldPoint[]
   onEditWorldPoint?: (worldPoint: WorldPoint) => void

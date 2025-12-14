@@ -61,6 +61,9 @@ export class Project {
     imageSortOrder?: ImageSortOrder
     viewSettings: ViewSettings
 
+    // Internal database ID (used by ProjectDB service only)
+    _dbId?: string
+
     private constructor(
         name: string,
         worldPoints: Set<WorldPoint>,

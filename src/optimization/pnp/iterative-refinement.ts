@@ -88,7 +88,7 @@ export function initializeCameraWithPnP(
   system.addCamera(vpConcrete);
 
   for (const ip of vpConcrete.imagePoints) {
-    system.addImagePoint(ip as any);
+    system.addImagePoint(ip);
   }
 
   const result = system.solve();

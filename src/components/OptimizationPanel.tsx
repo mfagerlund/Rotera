@@ -44,14 +44,15 @@ function computeCameraReprojectionError(vp: Viewpoint): number {
   let count = 0
 
   for (const ip of vp.imagePoints) {
-    const wp = ip.worldPoint as any
-    if (!wp.optimizedXyz) continue
+    const wp = ip.worldPoint
+    if (!wp.getOptimizationInfo().optimizedXyz) continue
 
     try {
+      const optimizedXyz = wp.getOptimizationInfo().optimizedXyz!
       const worldPoint = new Vec3(
-        V.C(wp.optimizedXyz[0]),
-        V.C(wp.optimizedXyz[1]),
-        V.C(wp.optimizedXyz[2])
+        V.C(optimizedXyz[0]),
+        V.C(optimizedXyz[1]),
+        V.C(optimizedXyz[2])
       )
 
       const cameraPosition = new Vec3(
@@ -160,9 +161,8 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
     // Count image observations from fully locked world points (valid for PnP)
     let pnpObservationCount = 0
     for (const vp of viewpointArray) {
-      const vpConcrete = vp as Viewpoint
-      for (const ip of vpConcrete.imagePoints) {
-        if ((ip.worldPoint as WorldPoint).isFullyLocked()) {
+      for (const ip of vp.imagePoints) {
+        if (ip.worldPoint.isFullyLocked()) {
           pnpObservationCount++
         }
       }
@@ -360,7 +360,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
       const camerasToInitialize = viewpointArray.filter(vp => {
         const hasImagePoints = vp.imagePoints.size > 0
         const hasTriangulatedPoints = Array.from(vp.imagePoints).some(ip =>
-          (ip.worldPoint as any).optimizedXyz !== null
+          ip.worldPoint.getOptimizationInfo().optimizedXyz !== null
         )
         return hasImagePoints && hasTriangulatedPoints
       })

@@ -37,7 +37,7 @@ export interface CameraValues {
  */
 export interface ValueMap {
   points: Map<WorldPoint, Vec3>;
-  cameras: Map<Viewpoint, CameraValues>;
+  cameras: Map<IOptimizableCamera, CameraValues>;
 }
 
 /**
@@ -164,6 +164,11 @@ export interface IOptimizableCamera {
    * When true, pose will not be optimized.
    */
   isPoseLocked: boolean;
+
+  /**
+   * Camera name for debugging and display.
+   */
+  name: string;
 
   /**
    * Set of vanishing lines associated with this camera.

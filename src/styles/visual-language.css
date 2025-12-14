@@ -1,54 +1,5 @@
 /* Visual Language and Color Coding System for Enhanced UI Paradigm */
-
-/* Entity Color System */
-:root {
-  /* Primary entity colors */
-  --entity-point-default: #2196F3;
-  --entity-point-selected: #FFC107;
-  --entity-point-highlighted: #FF9800;
-  --entity-point-construction: #9E9E9E;
-
-  --entity-line-default: #4CAF50;
-  --entity-line-selected: #FFC107;
-  --entity-line-highlighted: #FF9800;
-  --entity-line-construction: #9E9E9E;
-
-  --entity-plane-default: #9C27B0;
-  --entity-plane-selected: #FFC107;
-  --entity-plane-highlighted: #FF9800;
-  --entity-plane-construction: #9E9E9E;
-
-  --entity-circle-default: #FF5722;
-  --entity-circle-selected: #FFC107;
-  --entity-circle-highlighted: #FF9800;
-  --entity-circle-construction: #9E9E9E;
-
-  /* Constraint status colors */
-  --constraint-satisfied: #4CAF50;
-  --constraint-warning: #FF9800;
-  --constraint-violated: #F44336;
-  --constraint-conflicting: #9C27B0;
-  --constraint-redundant: #9E9E9E;
-  --constraint-undefined: #2196F3;
-
-  /* State colors */
-  --state-active: #FFC107;
-  --state-inactive: #757575;
-  --state-processing: #FF9800;
-  --state-error: #F44336;
-  --state-success: #4CAF50;
-
-  /* Workspace colors */
-  --workspace-image: #2196F3;
-  --workspace-world: #4CAF50;
-  --workspace-split: #9C27B0;
-
-  /* Visual feedback levels */
-  --feedback-subtle: 0.1;
-  --feedback-moderate: 0.3;
-  --feedback-strong: 0.6;
-  --feedback-intense: 0.9;
-}
+/* All CSS variables now consolidated in pictorigo.css */
 
 /* Entity State Classes */
 .entity-point {

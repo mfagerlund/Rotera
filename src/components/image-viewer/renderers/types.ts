@@ -10,7 +10,7 @@ export interface RenderParams {
   canvasEl: HTMLCanvasElement
   imageEl: HTMLImageElement
   viewpoint: Viewpoint
-  worldPoints: Map<string, WorldPoint>
+  worldPoints: Set<WorldPoint>
   lines: Map<string, Line>
   scale: number
   offset: { x: number; y: number }

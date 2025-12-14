@@ -12,7 +12,7 @@ interface PrecisionState {
 
 interface ImageCanvasProps {
   canvasRef: RefObject<HTMLCanvasElement>
-  worldPoints: Map<string, WorldPoint>
+  worldPoints: Set<WorldPoint>
   isDragging: boolean
   isDraggingVanishingLine: boolean
   isDraggingPoint: boolean

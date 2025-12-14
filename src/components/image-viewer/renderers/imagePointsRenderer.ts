@@ -1,5 +1,6 @@
 import { RenderParams, AXIS_COLORS } from './types'
 import type { LineDirection } from '../../../entities/line'
+import { imagePointToCanvas } from './renderUtils'
 
 /**
  * Returns the axis color for direction-constrained lines, or null for non-axis-aligned lines.
@@ -42,10 +43,8 @@ export function renderLines(params: RenderParams): void {
       return
     }
 
-    const x1 = ipA.u * scale + offset.x
-    const y1 = ipA.v * scale + offset.y
-    const x2 = ipB.u * scale + offset.x
-    const y2 = ipB.v * scale + offset.y
+    const { x: x1, y: y1 } = imagePointToCanvas(ipA, scale, offset)
+    const { x: x2, y: y2 } = imagePointToCanvas(ipB, scale, offset)
 
     const isSelected = selectedLines.some(l => l.pointA === line.pointA && l.pointB === line.pointB)
     const isHovered = hoveredLine && hoveredLine.pointA === line.pointA && hoveredLine.pointB === line.pointB

@@ -47,7 +47,7 @@ interface RightPanelProps {
   onParameterChange: (key: string, value: any) => void
   onApplyConstraint: () => void
   onCancelConstraintCreation: () => void
-  worldPointsMap: Map<string, WorldPoint>
+  worldPointsMap: Set<WorldPoint>
   viewpointsMap: Map<string, Viewpoint>
   constraints: any[]
   selectedWorldPoints: WorldPoint[]

@@ -8,6 +8,13 @@ import { WorldPoint } from '../entities/world-point'
 import { ISelectable } from '../types/selectable'
 import { getConstraintPointIds } from '../types/utils'
 import { getConstraintDisplayName } from '../utils/constraintDisplay'
+import { DistanceConstraint } from '../entities/constraints/distance-constraint'
+import { AngleConstraint } from '../entities/constraints/angle-constraint'
+import { ParallelLinesConstraint } from '../entities/constraints/parallel-lines-constraint'
+import { PerpendicularLinesConstraint } from '../entities/constraints/perpendicular-lines-constraint'
+import { FixedPointConstraint } from '../entities/constraints/fixed-point-constraint'
+import { CollinearPointsConstraint } from '../entities/constraints/collinear-points-constraint'
+import { CoplanarPointsConstraint } from '../entities/constraints/coplanar-points-constraint'
 
 // UI-level constraint type strings used for toolbar/creation workflow
 // These are converted to entity constraints by the project store
@@ -250,28 +257,156 @@ export const useConstraints = (
   const applyConstraint = useCallback(() => {
     if (!activeConstraintType) return
 
-    // NOTE: This creates a plain object with constraint data
-    // The actual Constraint entity is created by the caller if needed
-    // TODO: Refactor to create proper Constraint entities directly
-    const constraintData = {
-      id: crypto.randomUUID(),
-      type: activeConstraintType as UIConstraintType,
-      enabled: true,
-      isDriving: true,
-      weight: 1.0,
-      status: 'satisfied' as const,
-      entities: {
-        points: [] as string[],
-        lines: [] as string[],
-        planes: [] as string[]
-      },
-      parameters: {} as Record<string, unknown>,
-      createdAt: new Date().toISOString(),
-      ...constraintParameters
+    let constraint: Constraint | null = null
+
+    // Create proper Constraint entities based on type
+    switch (activeConstraintType) {
+      case 'points_distance': {
+        const pointA = constraintParameters.pointA as WorldPoint
+        const pointB = constraintParameters.pointB as WorldPoint
+        const distance = constraintParameters.distance as number
+        if (pointA && pointB && distance !== undefined) {
+          constraint = DistanceConstraint.create(
+            `Distance ${pointA.getName()}-${pointB.getName()}`,
+            pointA,
+            pointB,
+            distance
+          )
+        }
+        break
+      }
+
+      case 'points_equal_distance': {
+        const angle = constraintParameters.angle as number
+        // Check if this is an angle constraint (3 points)
+        if (constraintParameters.vertex && constraintParameters.line1_end && constraintParameters.line2_end) {
+          const vertex = constraintParameters.vertex as WorldPoint
+          const line1End = constraintParameters.line1_end as WorldPoint
+          const line2End = constraintParameters.line2_end as WorldPoint
+          if (angle !== undefined) {
+            constraint = AngleConstraint.create(
+              `Angle at ${vertex.getName()}`,
+              line1End,
+              vertex,
+              line2End,
+              angle
+            )
+          }
+        }
+        // Check if this is an angle between two lines
+        else if (constraintParameters.line1 && constraintParameters.line2) {
+          const line1 = constraintParameters.line1 as Line
+          const line2 = constraintParameters.line2 as Line
+          if (angle !== undefined) {
+            constraint = AngleConstraint.create(
+              `Angle ${line1.getName()}-${line2.getName()}`,
+              line1.pointA,
+              line1.pointB,
+              line2.pointA,
+              angle
+            )
+          }
+        }
+        // TODO: Add support for circle/equal distances constraint
+        break
+      }
+
+      case 'lines_parallel': {
+        const line1 = constraintParameters.line1 as Line
+        const line2 = constraintParameters.line2 as Line
+        if (line1 && line2) {
+          constraint = ParallelLinesConstraint.create(
+            `Parallel ${line1.getName()}-${line2.getName()}`,
+            line1,
+            line2,
+            {}
+          )
+        }
+        break
+      }
+
+      case 'lines_perpendicular': {
+        const line1 = constraintParameters.line1 as Line
+        const line2 = constraintParameters.line2 as Line
+        if (line1 && line2) {
+          constraint = PerpendicularLinesConstraint.create(
+            `Perpendicular ${line1.getName()}-${line2.getName()}`,
+            line1,
+            line2,
+            {}
+          )
+        }
+        break
+      }
+
+      case 'point_fixed_coord': {
+        const point = constraintParameters.point as WorldPoint
+        const x = constraintParameters.x as number | undefined
+        const y = constraintParameters.y as number | undefined
+        const z = constraintParameters.z as number | undefined
+        if (point && (x !== undefined || y !== undefined || z !== undefined)) {
+          // Use existing coordinates if not specified
+          const currentXyz = point.getEffectiveXyz()
+          const targetXyz: [number, number, number] = [
+            x !== undefined ? x : (currentXyz[0] ?? 0),
+            y !== undefined ? y : (currentXyz[1] ?? 0),
+            z !== undefined ? z : (currentXyz[2] ?? 0)
+          ]
+          constraint = FixedPointConstraint.create(
+            `Fixed ${point.getName()}`,
+            point,
+            targetXyz,
+            {}
+          )
+        }
+        break
+      }
+
+      case 'points_colinear': {
+        const points = constraintParameters.points as WorldPoint[]
+        if (points && points.length >= 3) {
+          constraint = CollinearPointsConstraint.create(
+            `Collinear ${points.map(p => p.getName()).join('-')}`,
+            points,
+            {}
+          )
+        }
+        break
+      }
+
+      case 'points_coplanar':
+      case 'plane': {
+        const points = constraintParameters.points as WorldPoint[] | undefined
+        const cornerA = constraintParameters.cornerA as WorldPoint | undefined
+        const cornerB = constraintParameters.cornerB as WorldPoint | undefined
+        const cornerC = constraintParameters.cornerC as WorldPoint | undefined
+        const cornerD = constraintParameters.cornerD as WorldPoint | undefined
+
+        let coplanarPoints: WorldPoint[] | undefined
+        if (points && points.length >= 4) {
+          coplanarPoints = points
+        } else if (cornerA && cornerB && cornerC && cornerD) {
+          coplanarPoints = [cornerA, cornerB, cornerC, cornerD]
+        }
+
+        if (coplanarPoints) {
+          constraint = CoplanarPointsConstraint.create(
+            `Coplanar ${coplanarPoints.map(p => p.getName()).join('-')}`,
+            coplanarPoints,
+            {}
+          )
+        }
+        break
+      }
+
+      default:
+        console.warn(`Unsupported constraint type: ${activeConstraintType}`)
+        return
     }
 
-    // Type assertion: this plain object is passed to handlers that may convert it
-    onAddConstraint(constraintData as unknown as Constraint)
+    if (constraint) {
+      onAddConstraint(constraint)
+    }
 
     // Clear constraint creation state
     setActiveConstraintType(null)

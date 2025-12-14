@@ -4,86 +4,38 @@
 .workspace-switcher {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: var(--surface-variant);
-  border-radius: 8px;
-  border: 1px solid var(--outline-variant);
+  gap: 4px;
 }
 
 .workspace-btn {
-  padding: 8px 16px;
-  border: 1px solid var(--outline);
-  border-radius: 6px;
-  background: var(--surface);
-  color: var(--on-surface);
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  font-size: 14px;
+  transition: all 0.15s ease;
+  font-size: 13px;
   font-weight: 500;
-  position: relative;
-  overflow: hidden;
-}
-
-.workspace-btn::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.6s ease;
 }
 
 .workspace-btn:hover {
-  background: var(--surface-variant);
-  border-color: var(--outline-variant);
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.workspace-btn:hover::before {
-  left: 100%;
+  background: var(--bg-panel);
+  color: var(--text-primary);
 }
 
 .workspace-btn.active {
-  background: var(--primary);
-  color: var(--on-primary);
-  border-color: var(--primary);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-  transform: scale(1.05);
-}
-
-.workspace-btn.switching {
-  animation: workspaceSwitch 0.6s ease-out;
-}
-
-@keyframes workspaceSwitch {
-  0% {
-    transform: scale(1) rotateY(0deg);
-  }
-  50% {
-    transform: scale(1.1) rotateY(90deg);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-  }
-  100% {
-    transform: scale(1.05) rotateY(0deg);
-  }
+  background: var(--accent-blue);
+  color: #fff;
+  border-color: var(--accent-blue);
 }
 
 .workspace-indicator {
-  display: flex;
-  flex-direction: column;
-  font-size: 12px;
-  color: var(--on-surface-variant);
-  margin-left: 16px;
+  display: none;
 }
 
 .shortcut-hint {
-  font-size: 10px;
-  opacity: 0.7;
-  margin-top: 2px;
+  display: none;
 }
 
 /* World View */
@@ -179,39 +131,7 @@
   flex: 1;
 }
 
-/* Entity visual styles using CSS custom properties */
-:root {
-  /* Entity colors */
-  --color-satisfied: #4CAF50;
-  --color-warning: #FF9800;
-  --color-violated: #F44336;
-  --color-world-geometry: #2196F3;
-  --color-image-guides: #FF5722;
-  --color-construction: #9E9E9E;
-  --color-selection: #FFC107;
-
-  /* Theme colors - dark theme default */
-  --background: #121212;
-  --surface: #1E1E1E;
-  --surface-variant: #2D2D2D;
-  --on-surface: #E1E1E1;
-  --on-surface-variant: #C1C1C1;
-  --outline: #404040;
-  --outline-variant: #303030;
-  --primary: #2196F3;
-  --on-primary: #FFFFFF;
-}
-
-/* Light theme override */
-.theme-light {
-  --background: #FAFAFA;
-  --surface: #FFFFFF;
-  --surface-variant: #F5F5F5;
-  --on-surface: #1C1C1C;
-  --on-surface-variant: #424242;
-  --outline: #E0E0E0;
-  --outline-variant: #C8C8C8;
-}
+/* Entity visual styles - variables now defined in pictorigo.css */
 
 /* Constraint glyphs */
 .constraint-glyph {
@@ -313,16 +233,10 @@
   .workspace-switcher {
     flex-direction: column;
     gap: 4px;
-    padding: 8px;
   }
 
   .workspace-btn {
     width: 100%;
-    text-align: center;
-  }
-
-  .workspace-indicator {
-    margin-left: 0;
     text-align: center;
   }
 

@@ -13,10 +13,10 @@
 import { Value, V, nonlinearLeastSquares } from 'scalar-autograd';
 import type { ValueMap, IOptimizableCamera } from './IOptimizable';
 import type { WorldPoint } from '../entities/world-point/WorldPoint';
-import type { Line } from '../entities/line/Line';
+import { Line } from '../entities/line/Line';
 import type { Viewpoint } from '../entities/viewpoint/Viewpoint';
 import type { ImagePoint } from '../entities/imagePoint/ImagePoint';
-import type { Constraint } from '../entities/constraints/base-constraint';
+import { Constraint } from '../entities/constraints/base-constraint';
 import type { VanishingLine, VanishingLineAxis } from '../entities/vanishing-line';
 import { computeVanishingPoint } from './vanishing-points';
 
@@ -74,7 +74,7 @@ export interface SolverOptions {
    * If true (or function returns true), camera intrinsics are optimized.
    * If false, intrinsics stay fixed.
    */
-  optimizeCameraIntrinsics?: boolean | ((camera: Viewpoint) => boolean);
+  optimizeCameraIntrinsics?: boolean | ((camera: IOptimizableCamera) => boolean);
   /**
    * If > 0, adds soft regularization to prevent unconstrained points from diverging.
    * The weight is multiplied by distance from initial position.
@@ -88,13 +88,13 @@ export class ConstraintSystem {
   private maxIterations: number;
   private damping: number;
   private verbose: boolean;
-  private optimizeCameraIntrinsics: boolean | ((camera: Viewpoint) => boolean);
+  private optimizeCameraIntrinsics: boolean | ((camera: IOptimizableCamera) => boolean);
   private regularizationWeight: number;
 
   // Entities in the system
   private points: Set<WorldPoint> = new Set();
   private lines: Set<Line> = new Set();
-  private cameras: Set<Viewpoint> = new Set();
+  private cameras: Set<IOptimizableCamera> = new Set();
   private imagePoints: Set<ImagePoint> = new Set();
   private constraints: Set<Constraint> = new Set();
 
@@ -129,7 +129,7 @@ export class ConstraintSystem {
    * Add a viewpoint (camera) to the constraint system.
    * Viewpoints add their pose (and optionally intrinsics) as optimizable parameters.
    */
-  addCamera(viewpoint: Viewpoint): void {
+  addCamera(viewpoint: IOptimizableCamera): void {
     this.cameras.add(viewpoint);
   }
 
@@ -194,9 +194,8 @@ export class ConstraintSystem {
           typeof this.optimizeCameraIntrinsics === 'function'
             ? this.optimizeCameraIntrinsics(camera)
             : this.optimizeCameraIntrinsics;
-        const optimizableCamera = camera as unknown as IOptimizableCamera;
-        const cameraVariables = optimizableCamera.addToValueMap(valueMap, {
-          optimizePose: !optimizableCamera.isPoseLocked,
+        const cameraVariables = camera.addToValueMap(valueMap, {
+          optimizePose: !camera.isPoseLocked,
           optimizeIntrinsics,
           optimizeDistortion: false,
         });
@@ -233,16 +232,14 @@ export class ConstraintSystem {
       // CAMERA INTRINSIC CONSTRAINTS (quaternion normalization)
       for (const camera of this.cameras) {
         if ('computeResiduals' in camera && typeof camera.computeResiduals === 'function') {
-          const optimizableCamera = camera as unknown as IOptimizableCamera;
-          const cameraResiduals = optimizableCamera.computeResiduals(valueMap);
+          const cameraResiduals = camera.computeResiduals(valueMap);
           residuals.push(...cameraResiduals);
         }
 
         // VANISHING POINT CONSTRAINTS - use angular error (not pixel error)
         // This avoids huge residuals from distant vanishing points
-        const optimizableCamera = camera as unknown as IOptimizableCamera;
         const cameraValues = valueMap.cameras.get(camera);
-        if (cameraValues && optimizableCamera.vanishingLines && optimizableCamera.vanishingLines.size > 0) {
+        if (cameraValues && camera.vanishingLines && camera.vanishingLines.size > 0) {
           const axisDirs: Record<VanishingLineAxis, [number, number, number]> = {
             x: [1, 0, 0],
             y: [0, 1, 0],
@@ -250,7 +247,7 @@ export class ConstraintSystem {
           };
 
           (['x', 'y', 'z'] as VanishingLineAxis[]).forEach(axis => {
-            const linesForAxis = Array.from(optimizableCamera.vanishingLines as Set<VanishingLine>).filter(
+            const linesForAxis = Array.from(camera.vanishingLines as Set<VanishingLine>).filter(
               (l: VanishingLine) => l.axis === axis
             );
             if (linesForAxis.length < 2) return;
@@ -371,8 +368,7 @@ export class ConstraintSystem {
 
       for (const camera of this.cameras) {
         if ('computeResiduals' in camera && typeof camera.computeResiduals === 'function') {
-          const optimizableCamera = camera as unknown as IOptimizableCamera;
-          const cameraResiduals = optimizableCamera.computeResiduals(valueMap);
+          const cameraResiduals = camera.computeResiduals(valueMap);
           allResiduals.push(...cameraResiduals);
         }
       }
@@ -440,8 +436,7 @@ export class ConstraintSystem {
       // Update cameras with solved values
       for (const camera of this.cameras) {
         if ('applyOptimizationResultFromValueMap' in camera && typeof camera.applyOptimizationResultFromValueMap === 'function') {
-          const optimizableCamera = camera as unknown as IOptimizableCamera;
-          optimizableCamera.applyOptimizationResultFromValueMap(valueMap);
+          camera.applyOptimizationResultFromValueMap(valueMap);
         }
       }
 
@@ -453,7 +448,7 @@ export class ConstraintSystem {
       // Evaluate and store residuals for lines (intrinsic constraints)
       for (const line of this.lines) {
         if ('evaluateAndStoreResiduals' in line && typeof line.evaluateAndStoreResiduals === 'function') {
-          (line as any).evaluateAndStoreResiduals(valueMap);
+          line.evaluateAndStoreResiduals(valueMap);
         }
       }
 
@@ -509,15 +504,14 @@ export class ConstraintSystem {
       const residuals = line.computeResiduals(valueMap);
       pushCounts.set(line, {
         count: residuals.length,
-        name: (line as any).name || 'Line'
+        name: line.name || 'Line'
       });
     }
 
     // Count pushed residuals for cameras
     for (const camera of this.cameras) {
       if ('computeResiduals' in camera && typeof camera.computeResiduals === 'function') {
-        const optimizableCamera = camera as unknown as IOptimizableCamera;
-        const residuals = optimizableCamera.computeResiduals(valueMap);
+        const residuals = camera.computeResiduals(valueMap);
         pushCounts.set(camera, {
           count: residuals.length,
           name: camera.name || 'Camera'
@@ -547,7 +541,8 @@ export class ConstraintSystem {
     let hasViolations = false;
     for (const [entity, info] of pushCounts) {
       if ('lastResiduals' in entity) {
-        const actualCount = (entity as any).lastResiduals?.length ?? 0;
+        const lastResiduals = (entity as Line | Constraint).lastResiduals;
+        const actualCount = lastResiduals?.length ?? 0;
         if (actualCount !== info.count) {
           if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
             console.error(

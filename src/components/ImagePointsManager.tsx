@@ -16,7 +16,7 @@ export interface ImagePointReference {
 interface ImagePointsManagerProps {
   isOpen: boolean
   onClose: () => void
-  worldPoints: Map<string, WorldPoint>
+  worldPoints: Set<WorldPoint>
   images: Map<string, Viewpoint>
   selectedImagePoints?: ImagePointReference[]
   onEditImagePoint?: (ref: ImagePointReference) => void

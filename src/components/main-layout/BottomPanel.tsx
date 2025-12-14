@@ -41,7 +41,7 @@ interface BottomPanelProps {
   onDeletePlane: (plane: any) => void
   onTogglePlaneVisibility: (plane: any) => void
   onSelectPlane: (plane: any) => void
-  worldPointsMap: Map<string, WorldPoint>
+  worldPointsMap: Set<WorldPoint>
   viewpointsMap: Map<string, Viewpoint>
   onEditImagePoint: (ref: ImagePointReference) => void
   onDeleteImagePoint: (ref: ImagePointReference) => void

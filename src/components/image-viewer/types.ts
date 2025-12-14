@@ -38,7 +38,7 @@ import { ToolContext } from '../../types/tool-context'
 
 export interface ImageViewerPropsBase {
   image: Viewpoint
-  worldPoints: Map<string, WorldPoint>
+  worldPoints: Set<WorldPoint>
   lineEntities?: Map<string, Line>
   selectedPoints: WorldPoint[]
   selectedLines?: Line[]
@@ -58,7 +58,7 @@ export interface ImageViewerPropsBase {
 
 export interface ImageViewerRenderState {
   viewpoint: Viewpoint
-  worldPoints: Map<string, WorldPoint>
+  worldPoints: Set<WorldPoint>
   lines: Map<string, Line>
   scale: number
   offset: CanvasOffset

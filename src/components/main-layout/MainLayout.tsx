@@ -237,12 +237,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
   }, [project, removeDuplicateImagePoints])
 
   const currentImage = currentViewpoint
-  const worldPointsMap = new Map<string, WorldPoint>()
-  if (project?.worldPoints) {
-    for (const wp of project.worldPoints) {
-      worldPointsMap.set(getEntityKey(wp), wp)
-    }
-  }
+  const worldPointsMap = project?.worldPoints || new Set<WorldPoint>()
 
   const linesMap = new Map<string, LineEntity>()
   if (project?.lines) {

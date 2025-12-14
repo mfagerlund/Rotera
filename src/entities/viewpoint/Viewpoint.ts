@@ -506,12 +506,12 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IOptimizabl
             k1, k2, k3, p1, p2
         }
 
-        valueMap.cameras.set(this as any, cameraValues)
+        valueMap.cameras.set(this, cameraValues)
         return variables
     }
 
     computeResiduals(valueMap: ValueMap): Value[] {
-        const cameraValues = valueMap.cameras.get(this as any)
+        const cameraValues = valueMap.cameras.get(this)
         if (!cameraValues) return []
 
         const residuals: Value[] = [quaternionNormalizationResidual(cameraValues.rotation)]
@@ -538,7 +538,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IOptimizabl
     }
 
     applyOptimizationResultFromValueMap(valueMap: ValueMap): void {
-        const cameraValues = valueMap.cameras.get(this as any)
+        const cameraValues = valueMap.cameras.get(this)
         if (!cameraValues) return
 
         this.position = [cameraValues.position.x.data, cameraValues.position.y.data, cameraValues.position.z.data]

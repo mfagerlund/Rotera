@@ -68,7 +68,7 @@ export const useOptimization = () => {
       lines.forEach((l) => system.addLine(l));
       viewpoints.forEach((v) => {
         system.addCamera(v);
-        v.imagePoints.forEach((ip) => system.addImagePoint(ip as any));
+        v.imagePoints.forEach((ip) => system.addImagePoint(ip));
       });
       constraints.forEach((c) => system.addConstraint(c));
 
@@ -80,9 +80,11 @@ export const useOptimization = () => {
 
       points.forEach((p) => p.addToValueMap(valueMap));
       viewpoints.forEach((v) => {
-        if ('addToValueMap' in v && typeof v.addToValueMap === 'function') {
-          (v as any).addToValueMap(valueMap);
-        }
+        v.addToValueMap(valueMap, {
+          optimizePose: !v.isPoseLocked,
+          optimizeIntrinsics: false,
+          optimizeDistortion: false,
+        });
       });
 
       // Compute residuals for each constraint

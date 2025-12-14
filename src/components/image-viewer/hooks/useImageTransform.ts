@@ -15,7 +15,7 @@ export interface UseImageTransformParams {
   setImageLoaded: (loaded: boolean) => void
   image: Viewpoint
   selectedPoints: WorldPoint[]
-  worldPoints: Map<string, WorldPoint>
+  worldPoints: Set<WorldPoint>
   onScaleChange?: (scale: number) => void
 }
 

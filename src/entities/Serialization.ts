@@ -67,9 +67,9 @@ export class Serialization {
     )
 
     const viewpointsArray = (dto.viewpoints || []).map(vpDto => Viewpoint.deserialize(vpDto, context))
-    const viewpoints: Set<Viewpoint> = new (Set as any)(viewpointsArray);
+    const viewpoints = new Set(viewpointsArray)
 
-    (dto.vanishingLines || []).forEach((vlDto: VanishingLineDto) => {
+    ;(dto.vanishingLines || []).forEach((vlDto: VanishingLineDto) => {
       VanishingLine.deserialize(vlDto, context)
     })
 

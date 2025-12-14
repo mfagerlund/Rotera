@@ -1,37 +1,20 @@
 // Parallel lines constraint
 
-import type { EntityValidationResult } from '../../validation/validator'
-import type { ValueMap } from '../../optimization/IOptimizable'
-import type { Value } from 'scalar-autograd'
 import * as vec3 from '../../utils/vec3'
 import type { Line } from '../line'
-import {
-  Constraint,
-  type ConstraintRepository,
-  type ConstraintEvaluation
-} from './base-constraint'
+import type { ConstraintEvaluation } from './base-constraint'
 import type { SerializationContext } from '../serialization/SerializationContext'
 import type { ParallelLinesConstraintDto } from './ConstraintDto'
+import { LineRelationshipConstraint } from './line-relationship-constraint'
 
-export class ParallelLinesConstraint extends Constraint {
-  readonly lineA: Line
-  readonly lineB: Line
-  tolerance: number
-
+export class ParallelLinesConstraint extends LineRelationshipConstraint {
   private constructor(
     name: string,
     lineA: Line,
     lineB: Line,
     tolerance: number
   ) {
-    super(name)
-    this.lineA = lineA
-    this.lineB = lineB
-    this.tolerance = tolerance
-
-    // Register with lines
-    lineA.addReferencingConstraint(this)
-    lineB.addReferencingConstraint(this)
+    super(name, lineA, lineB, tolerance)
   }
 
   static create(
@@ -68,65 +51,16 @@ export class ParallelLinesConstraint extends Constraint {
     return { value: 90, satisfied: false }
   }
 
-  validateConstraintSpecific(): EntityValidationResult {
-    return {
-      isValid: true,
-      errors: [],
-      warnings: [],
-      summary: 'Parallel lines constraint validation passed'
-    }
-  }
-
-  /**
-   * Compute residuals for parallel lines constraint.
-   * Not yet implemented - requires line support in valueMap.
-   * Lines are not currently tracked in optimization system.
-   */
-  computeResiduals(valueMap: ValueMap): Value[] {
-    console.warn(`Parallel lines constraint ${this.getName()}: not yet implemented - requires line support in valueMap`)
-    return []
-  }
-
   serialize(context: SerializationContext): ParallelLinesConstraintDto {
-    const id = context.getEntityId(this) || context.registerEntity(this)
-
-    const line1Id = context.getEntityId(this.lineA)
-    const line2Id = context.getEntityId(this.lineB)
-
-    if (!line1Id || !line2Id) {
-      throw new Error(
-        `ParallelLinesConstraint "${this.name}": Cannot serialize - lines must be serialized first`
-      )
-    }
-
-    return {
-      id,
-      type: 'parallel_lines',
-      name: this.name,
-      line1Id,
-      line2Id,
-      tolerance: this.tolerance
-    }
+    return this.serializeBase(context) as ParallelLinesConstraintDto
   }
 
   static deserialize(dto: ParallelLinesConstraintDto, context: SerializationContext): ParallelLinesConstraint {
-    const line1 = context.getEntity<Line>(dto.line1Id)
-    const line2 = context.getEntity<Line>(dto.line2Id)
-
-    if (!line1 || !line2) {
-      throw new Error(
-        `ParallelLinesConstraint "${dto.name}": Cannot deserialize - lines not found in context`
-      )
-    }
-
-    const constraint = ParallelLinesConstraint.create(
-      dto.name,
-      line1,
-      line2,
-      { tolerance: dto.tolerance }
+    return LineRelationshipConstraint.deserializeBase(
+      dto,
+      context,
+      'ParallelLinesConstraint',
+      (name, line1, line2, tolerance) => new ParallelLinesConstraint(name, line1, line2, tolerance)
     )
-
-    context.registerEntity(constraint, dto.id)
-    return constraint
   }
 }

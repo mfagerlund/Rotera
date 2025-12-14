@@ -28,7 +28,7 @@ import { setDraggingWorldPoint, clearDraggingWorldPoint } from '../utils/dragCon
 import { getConstraintDisplayName } from '../utils/constraintDisplay'
 
 interface WorldPointPanelProps {
-  worldPoints: Map<string, WorldPoint>
+  worldPoints: Set<WorldPoint>
   viewpoints: Map<string, Viewpoint>
   constraints: Constraint[]
   selectedWorldPoints: WorldPoint[]

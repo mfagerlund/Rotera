@@ -4,7 +4,7 @@ import { Line, LineDirection } from '../entities/line'
 import { Viewpoint } from '../entities/viewpoint'
 import { ImagePoint } from '../entities/imagePoint'
 import { Constraint } from '../entities/constraints'
-import type { OptimizationExportDto } from '../types/optimization-export'
+import type { ProjectDto } from '../entities/project/ProjectDto'
 import { DistanceConstraint } from '../entities/constraints/distance-constraint'
 import { AngleConstraint } from '../entities/constraints/angle-constraint'
 import { CoplanarPointsConstraint } from '../entities/constraints/coplanar-points-constraint'
@@ -73,7 +73,7 @@ export interface DomainOperations {
 
   // Project
   clearProject: () => void
-  exportOptimizationDto: () => any | null  // Returns ProjectDto (full serialization)
+  exportOptimizationDto: () => ProjectDto | null  // Returns ProjectDto (full serialization)
   removeDuplicateImagePoints: () => number  // Returns number of duplicates removed
 }
 
@@ -339,13 +339,13 @@ export function useDomainOperations(
     project.clear()
   }
 
-  const exportOptimizationDto = (): OptimizationExportDto | null => {
+  const exportOptimizationDto = (): ProjectDto | null => {
     if (!project) return null
 
     // Use the full project serialization (ProjectDto format)
     // The caller (MainToolbar) will filter out image blobs if needed
     const json = Serialization.serialize(project)
-    return JSON.parse(json) as any as OptimizationExportDto
+    return JSON.parse(json) as ProjectDto
   }
 
   const removeDuplicateImagePoints = (): number => {

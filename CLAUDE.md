@@ -1,4 +1,4 @@
-<!-- TODO: Consider renaming project to "grammagon" (gramma=drawing + gon=angle) -->
+<!-- Rename to "Gramzo" - for sale on BrandBucket - see scratch/naming-research.md -->
 
 - Dev server: `npm run dev` (runs on http://localhost:5173)
 - Before we're done with a task, run `bash check.sh`

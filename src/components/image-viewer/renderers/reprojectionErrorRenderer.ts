@@ -1,4 +1,5 @@
 import { RenderParams } from './types'
+import { imagePointToCanvas, imageToCanvas } from './renderUtils'
 
 export function renderReprojectionErrors(params: RenderParams): void {
   const {
@@ -19,10 +20,13 @@ export function renderReprojectionErrors(params: RenderParams): void {
       return
     }
 
-    const actualX = imagePoint.u * scale + offset.x
-    const actualY = imagePoint.v * scale + offset.y
-    const reprojectedX = imagePoint.reprojectedU * scale + offset.x
-    const reprojectedY = imagePoint.reprojectedV * scale + offset.y
+    const { x: actualX, y: actualY } = imagePointToCanvas(imagePoint, scale, offset)
+    const { x: reprojectedX, y: reprojectedY } = imageToCanvas(
+      imagePoint.reprojectedU,
+      imagePoint.reprojectedV,
+      scale,
+      offset
+    )
 
     ctx.strokeStyle = 'rgba(255, 0, 255, 0.7)'
     ctx.lineWidth = 2

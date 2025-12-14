@@ -299,8 +299,7 @@ export const ProjectDB = {
       }
     }
 
-    const projectWithId = project as any
-    projectWithId._dbId = id
+    project._dbId = id
 
     return project
   },
@@ -309,7 +308,7 @@ export const ProjectDB = {
     const db = await openDatabase()
     console.log('[ProjectDB.saveProject] Saving project:', project.name, 'to folder:', folderId)
 
-    const existingId = (project as any)._dbId as string | undefined
+    const existingId = project._dbId
     console.log('[ProjectDB.saveProject] Existing _dbId:', existingId)
     const id = existingId || generateId()
     console.log('[ProjectDB.saveProject] Using id:', id)
@@ -456,8 +455,7 @@ export const ProjectDB = {
       }
     })
 
-    const projectWithDbId = project as any
-    projectWithDbId._dbId = id
+    project._dbId = id
     console.log('[ProjectDB.saveProject] Save complete, assigned _dbId:', id)
 
     return id

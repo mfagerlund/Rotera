@@ -204,7 +204,7 @@ export const LinesManager: React.FC<LinesManagerProps> = observer(({
             showHeader={false}
             showActionButtons={false}
             editMode={true}
-            existingLine={editingLine as any}
+            existingLine={editingLine}
             onUpdateLine={handleUpdateLine}
             onDeleteLine={onDeleteLine}
           />
