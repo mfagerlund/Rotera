@@ -87,14 +87,25 @@ const ImageWorkspace: React.FC<ImageWorkspaceProps> = ({
       <div className="workspace-image-view">
         <div className="no-image-state">
           <div className="empty-state-content">
+            <svg className="empty-state-illustration" width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="20" y="30" width="80" height="60" rx="4" stroke="currentColor" strokeWidth="2" opacity="0.6"/>
+              <circle cx="40" cy="50" r="8" stroke="currentColor" strokeWidth="2" opacity="0.4"/>
+              <path d="M30 70 L50 55 L70 65 L90 50" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.4"/>
+              <rect x="35" y="15" width="50" height="40" rx="3" stroke="currentColor" strokeWidth="2" opacity="0.8"/>
+              <circle cx="50" cy="30" r="6" stroke="currentColor" strokeWidth="2" opacity="0.5"/>
+              <path d="M40 45 L55 35 L70 42" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.5"/>
+            </svg>
             <h3>No Image Selected</h3>
             <p>Add images using the sidebar to get started</p>
             <button
-              className="btn-primary"
+              className="btn-primary btn-pulse"
               onClick={onRequestAddImage}
             >
               Add First Image
             </button>
+            <div className="empty-state-tip">
+              Tip: You can also drag & drop images directly
+            </div>
           </div>
         </div>
       </div>

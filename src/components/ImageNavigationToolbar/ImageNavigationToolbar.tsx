@@ -214,7 +214,11 @@ export const ImageNavigationToolbar = observer(forwardRef<ImageNavigationToolbar
             ))
           ) : (
             <div className="empty-images-state">
-              <div className="empty-icon">□</div>
+              <svg className="empty-icon-svg" width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="8" y="12" width="32" height="24" rx="2" stroke="currentColor" strokeWidth="2" opacity="0.6"/>
+                <circle cx="16" cy="20" r="3" stroke="currentColor" strokeWidth="1.5" opacity="0.5"/>
+                <path d="M10 30 L18 24 L26 28 L38 20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.5"/>
+              </svg>
               <div className="empty-text">No images yet</div>
               <div className="empty-hint">Click <FontAwesomeIcon icon={faPlus} /> to add images</div>
             </div>
