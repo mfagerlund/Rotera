@@ -3,6 +3,8 @@
 
 import React, { useEffect, useState, useRef } from 'react'
 import { observer } from 'mobx-react-lite'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faXmark } from '@fortawesome/free-solid-svg-icons'
 import { LineDirection } from '../../entities/line'
 import { WorldPoint } from '../../entities/world-point'
 import { useLoopTrace } from '../../hooks/useLoopTrace'
@@ -213,7 +215,7 @@ export const LoopTraceTool: React.FC<LoopTraceToolProps> = observer(({
       {showHeader && (
         <div className="tool-header">
           <h4>Loop Trace</h4>
-          <button className="btn-cancel" onClick={onCancel}>✕</button>
+          <button className="btn-cancel" onClick={onCancel}><FontAwesomeIcon icon={faXmark} /></button>
         </div>
       )}
 

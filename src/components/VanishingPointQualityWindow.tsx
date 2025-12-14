@@ -1,5 +1,7 @@
 import React from 'react'
 import { observer } from 'mobx-react-lite'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCheck } from '@fortawesome/free-solid-svg-icons'
 import { Viewpoint } from '../entities/viewpoint'
 import FloatingWindow from './FloatingWindow'
 import { computeVanishingPoint, validateLineQuality, validateAxisLineDistribution, LineQualityIssue } from '../optimization/vanishing-points'
@@ -127,7 +129,7 @@ export const VanishingPointQualityWindow: React.FC<VanishingPointQualityWindowPr
               <span style={{ flex: 1, color: '#ccc' }}>
                 {q.lines === 0 && <span style={{ color: '#888' }}>No lines</span>}
                 {q.lines === 1 && <span style={{ color: '#888' }}>1 line (need 2+)</span>}
-                {q.lines === 2 && <span style={{ color: '#4CAF50', fontWeight: 'bold' }}>2 lines ✓</span>}
+                {q.lines === 2 && <span style={{ color: '#4CAF50', fontWeight: 'bold' }}>2 lines <FontAwesomeIcon icon={faCheck} /></span>}
                 {q.lines >= 3 && q.angle !== undefined && (
                   <span style={{ color: qualityColor, fontWeight: 'bold' }}>
                     {q.lines} lines - {q.angle.toFixed(2)}°

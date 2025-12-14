@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCheck, faXmark } from '@fortawesome/free-solid-svg-icons'
 import '../styles/confirm-dialog.css'
 
 interface ConfirmDialogProps {
@@ -124,10 +126,10 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         {showMessage && <div className="confirm-message">{message}</div>}
         <div className="confirm-buttons">
           <button className="btn-cancel" onClick={handleCancel} title={cancelLabel}>
-            <span className="btn-icon">✕</span>
+            <span className="btn-icon"><FontAwesomeIcon icon={faXmark} /></span>
           </button>
           <button className={`btn-confirm ${variant}`} onClick={handleConfirm} title={confirmLabel}>
-            <span className="btn-icon">✓</span>
+            <span className="btn-icon"><FontAwesomeIcon icon={faCheck} /></span>
           </button>
         </div>
       </div>

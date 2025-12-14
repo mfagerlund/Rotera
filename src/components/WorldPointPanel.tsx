@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowsLeftRight, faBullseye, faCamera, faDraftingCompass, faGear, faLocationDot, faPencil, faRocket, faTrash, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
+import { faArrowsLeftRight, faBullseye, faCamera, faDraftingCompass, faGear, faLocationDot, faPencil, faRocket, faTrash, faTriangleExclamation, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { faCircle } from '@fortawesome/free-regular-svg-icons'
 // Entity imports
 import type { WorldPoint } from '../entities/world-point'
@@ -328,7 +328,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = observer(({
             className="btn-cancel-placement"
             title="Press Escape to cancel"
           >
-            ✕
+            <FontAwesomeIcon icon={faXmark} />
           </button>
         </div>
       )}

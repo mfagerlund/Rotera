@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useEffect } from 'react'
 import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faCamera, faCheck, faCircleXmark } from '@fortawesome/free-solid-svg-icons'
+import { faCamera, faCheck, faCircleXmark, faCube, faColumns, faRotate, faSpinner, faCircleDot, faGripLines, faGripLinesVertical } from '@fortawesome/free-solid-svg-icons'
 import { faCircle } from '@fortawesome/free-regular-svg-icons'
 import type { Viewpoint } from '../entities/viewpoint'
 
@@ -82,7 +82,7 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = observer(({
     {
       id: 'world' as const,
       name: 'World View',
-      icon: '🌐',
+      icon: <FontAwesomeIcon icon={faCube} />,
       description: 'View 3D geometry and constraints',
       hasContent: worldHasContent,
       shortcut: '2'
@@ -90,7 +90,7 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = observer(({
     {
       id: 'split' as const,
       name: 'Split View',
-      icon: '⚌',
+      icon: <FontAwesomeIcon icon={faColumns} />,
       description: 'Side-by-side image and world views',
       hasContent: imageHasContent && worldHasContent,
       shortcut: '3'
@@ -139,7 +139,7 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = observer(({
               <span className="workspace-indicator empty"><FontAwesomeIcon icon={faCircle} /></span>
             )}
             {config.hasContent && currentWorkspace === config.id && (
-              <span className="workspace-indicator active">●</span>
+              <span className="workspace-indicator active"><FontAwesomeIcon icon={faCircleDot} /></span>
             )}
           </button>
         ))}
@@ -159,7 +159,7 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = observer(({
           }}
           title="Cycle through workspaces (Tab)"
         >
-          ⟲
+          <FontAwesomeIcon icon={faRotate} />
         </button>
       </div>
     </div>
@@ -192,8 +192,8 @@ export const WorkspaceStatus: React.FC<WorkspaceStatusProps> = observer(({
         <span className="status-label">Workspace:</span>
         <span className="status-value workspace-name">
           {workspace === 'image' ? <><FontAwesomeIcon icon={faCamera} /> Image View</> :
-           workspace === 'world' ? '🌐 World View' :
-           '⚌ Split View'}
+           workspace === 'world' ? <><FontAwesomeIcon icon={faCube} /> World View</> :
+           <><FontAwesomeIcon icon={faColumns} /> Split View</>}
         </span>
       </div>
 
@@ -219,7 +219,7 @@ export const WorkspaceStatus: React.FC<WorkspaceStatusProps> = observer(({
           <span className="status-indicator optimization">
             {worldInfo.optimizationStatus === 'converged' ? <FontAwesomeIcon icon={faCheck} /> :
              worldInfo.optimizationStatus === 'failed' ? <FontAwesomeIcon icon={faCircleXmark} /> :
-             worldInfo.optimizationStatus === 'running' ? '⟳' : <FontAwesomeIcon icon={faCircle} />}
+             worldInfo.optimizationStatus === 'running' ? <FontAwesomeIcon icon={faSpinner} spin /> : <FontAwesomeIcon icon={faCircle} />}
           </span>
         </div>
       )}
@@ -421,7 +421,7 @@ export const SplitViewContainer: React.FC<SplitViewContainerProps> = observer(({
         onMouseDown={handleMouseDown}
       >
         <div className="split-handle">
-          {splitDirection === 'horizontal' ? '⋮' : '⋯'}
+          <FontAwesomeIcon icon={splitDirection === 'horizontal' ? faGripLinesVertical : faGripLines} />
         </div>
       </div>
 

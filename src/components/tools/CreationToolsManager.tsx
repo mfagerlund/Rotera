@@ -3,7 +3,8 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faLocationDot, faRuler, faSquare, faPaintBrush, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons'
+import { faLocationDot, faRuler, faSquare, faPaintBrush, faChevronLeft, faChevronRight, faLink, faDraftingCompass, faXmark } from '@fortawesome/free-solid-svg-icons'
+import { faCircle as faCircleRegular } from '@fortawesome/free-regular-svg-icons'
 import LineCreationTool from './LineCreationTool'
 import LoopTraceTool from './LoopTraceTool'
 import OrientationPaintTool from './OrientationPaintTool'
@@ -286,7 +287,7 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = observe
           onClick={() => handleToolActivation('circle')}
           title="Create circle (center + radius or 3 points) (C)"
         >
-          <span className="tool-icon">⭕</span>
+          <span className="tool-icon"><FontAwesomeIcon icon={faCircleRegular} /></span>
           {!isCollapsed && <span className="tool-label">Circle</span>}
           {!isCollapsed && <span className="tool-shortcut">C</span>}
         </button>
@@ -296,7 +297,7 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = observe
           onClick={() => handleToolActivation('loop')}
           title="Loop trace - String together points and create lines (O)"
         >
-          <span className="tool-icon">🔗</span>
+          <span className="tool-icon"><FontAwesomeIcon icon={faLink} /></span>
           {!isCollapsed && <span className="tool-label">Loop</span>}
           {!isCollapsed && <span className="tool-shortcut">O</span>}
         </button>
@@ -306,7 +307,7 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = observe
           onClick={() => handleToolActivation('vanishing')}
           title="Draw vanishing lines for camera initialization (V)"
         >
-          <span className="tool-icon">📐</span>
+          <span className="tool-icon"><FontAwesomeIcon icon={faDraftingCompass} /></span>
           {!isCollapsed && <span className="tool-label">Vanishing</span>}
           {!isCollapsed && <span className="tool-shortcut">V</span>}
         </button>
@@ -337,7 +338,7 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = observe
             <div className="point-creation-tool">
               <div className="tool-header">
                 <h4>Create Point</h4>
-                <button className="btn-cancel" onClick={handleToolCancel}>✕</button>
+                <button className="btn-cancel" onClick={handleToolCancel}><FontAwesomeIcon icon={faXmark} /></button>
               </div>
               <div className="tool-message">
                 Click on an image to place a point
@@ -363,7 +364,7 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = observe
             <div className="circle-creation-tool">
               <div className="tool-header">
                 <h4>Create Circle</h4>
-                <button className="btn-cancel" onClick={handleToolCancel}>✕</button>
+                <button className="btn-cancel" onClick={handleToolCancel}><FontAwesomeIcon icon={faXmark} /></button>
               </div>
               <div className="tool-message">
                 Circle creation tool - Coming soon
@@ -375,7 +376,7 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = observe
             <div className="vanishing-line-tool">
               <div className="tool-header">
                 <h4>Vanishing Lines</h4>
-                <button className="btn-cancel" onClick={handleToolCancel}>✕</button>
+                <button className="btn-cancel" onClick={handleToolCancel}><FontAwesomeIcon icon={faXmark} /></button>
               </div>
               <div className="tool-message">
                 Click two points to draw a vanishing line

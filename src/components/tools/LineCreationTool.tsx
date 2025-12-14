@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowRight, faBullseye, faMagnifyingGlass, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
+import { faArrowRight, faBullseye, faMagnifyingGlass, faTriangleExclamation, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { useConfirm } from '../ConfirmDialog'
 import { WorldPoint } from '../../entities/world-point'
 import { Line } from '../../entities/line'
@@ -331,7 +331,7 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = observer(({
             onClick={onCancel}
             title={editMode ? "Cancel edit (Esc)" : "Cancel line creation (Esc)"}
           >
-            ✕
+            <FontAwesomeIcon icon={faXmark} />
           </button>
         </div>
       )}
@@ -413,7 +413,7 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = observer(({
                   style={{padding: '2px 4px', fontSize: '10px'}}
                   title="Clear point 1"
                 >
-                  ✕
+                  <FontAwesomeIcon icon={faXmark} />
                 </button>
               )}
             </div>
@@ -444,7 +444,7 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = observer(({
                   style={{padding: '2px 4px', fontSize: '10px'}}
                   title="Clear point 2"
                 >
-                  ✕
+                  <FontAwesomeIcon icon={faXmark} />
                 </button>
               )}
             </div>
@@ -526,7 +526,7 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = observer(({
                   style={{padding: '2px 4px', fontSize: '10px'}}
                   title="Clear length constraint"
                 >
-                  ✕
+                  <FontAwesomeIcon icon={faXmark} />
                 </button>
               )}
             </div>

@@ -2,6 +2,8 @@
 
 import React, { useEffect } from 'react'
 import { observer } from 'mobx-react-lite'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faXmark } from '@fortawesome/free-solid-svg-icons'
 import { Line } from '../entities/line/Line'
 import { WorldPoint } from '../entities/world-point'
 import { getConstraintDisplayName } from '../utils/constraintDisplay'
@@ -60,7 +62,7 @@ export const ConstraintPropertyPanel: React.FC<ConstraintPropertyPanelProps> = o
           onClick={onCancel}
           title="Cancel constraint creation"
         >
-          ✕
+          <FontAwesomeIcon icon={faXmark} />
         </button>
       </div>
 
