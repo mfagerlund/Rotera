@@ -1404,10 +1404,10 @@ export function initializeCameraWithVanishingPoints(
   const vpArray = Object.values(vps).filter(vp => vp !== undefined) as VanishingPoint[]
 
   // Log observed VPs from vanishing lines
-  log('[VP Init] Observed vanishing points from lines:')
-  if (vps.x) log(`  X axis: (${vps.x.u.toFixed(2)}, ${vps.x.v.toFixed(2)})`)
-  if (vps.y) log(`  Y axis: (${vps.y.u.toFixed(2)}, ${vps.y.v.toFixed(2)})`)
-  if (vps.z) log(`  Z axis: (${vps.z.u.toFixed(2)}, ${vps.z.v.toFixed(2)})`)
+  log('[VP Init] Vanishing points:')
+  if (vps.x) log(`  X: (${vps.x.u.toFixed(3)}, ${vps.x.v.toFixed(3)})`)
+  if (vps.y) log(`  Y: (${vps.y.u.toFixed(3)}, ${vps.y.v.toFixed(3)})`)
+  if (vps.z) log(`  Z: (${vps.z.u.toFixed(3)}, ${vps.z.v.toFixed(3)})`)
 
   if (vpArray.length < 2) {
     log('[initializeCameraWithVanishingPoints] Not enough vanishing points')

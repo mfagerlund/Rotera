@@ -24,8 +24,8 @@ export interface DragState {
   setLastMousePos: (pos: CanvasPoint) => void
   lastPanTime: number
   setLastPanTime: (time: number) => void
-  isShiftKeyPressed: boolean
-  setIsShiftKeyPressed: (pressed: boolean) => void
+  isCtrlKeyPressed: boolean
+  setIsCtrlKeyPressed: (pressed: boolean) => void
 }
 
 export interface PointDragState {
@@ -89,7 +89,7 @@ export function useImageViewerState(): UseImageViewerStateReturn {
   const [isDragging, setIsDragging] = useState(false)
   const [lastMousePos, setLastMousePos] = useState<CanvasPoint>({ x: 0, y: 0 })
   const [lastPanTime, setLastPanTime] = useState(0)
-  const [isShiftKeyPressed, setIsShiftKeyPressed] = useState(false)
+  const [isCtrlKeyPressed, setIsCtrlKeyPressed] = useState(false)
 
   const [isDraggingPoint, setIsDraggingPoint] = useState(false)
   const [draggedPoint, setDraggedPoint] = useState<WorldPoint | null>(null)
@@ -136,8 +136,8 @@ export function useImageViewerState(): UseImageViewerStateReturn {
       setLastMousePos,
       lastPanTime,
       setLastPanTime,
-      isShiftKeyPressed,
-      setIsShiftKeyPressed
+      isCtrlKeyPressed,
+      setIsCtrlKeyPressed
     },
     pointDragState: {
       isDraggingPoint,

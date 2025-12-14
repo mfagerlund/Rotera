@@ -132,7 +132,125 @@ function inferFromLine(line: Line): { pointsUpdated: number; conflicts: Inferenc
       break
   }
 
+  // NEW: Infer coordinate along the line direction using targetLength
+  // This enables single-point scale establishment: if one endpoint is fully known
+  // and the line has a targetLength, we can infer the unknown endpoint's position
+  // along the line direction.
+  if (line.targetLength !== undefined && line.targetLength > 0) {
+    const axisIndex = getAxisIndex(direction)
+    if (axisIndex !== null) {
+      // Try to infer pointB from pointA
+      const resultB = inferAlongLineDirection(pointA, pointB, axisIndex, line.targetLength, `${direction}-line ${line.name} targetLength`)
+      pointsUpdated += resultB.pointsUpdated
+      conflicts.push(...resultB.conflicts)
+
+      // Try to infer pointA from pointB
+      const resultA = inferAlongLineDirection(pointB, pointA, axisIndex, line.targetLength, `${direction}-line ${line.name} targetLength`)
+      pointsUpdated += resultA.pointsUpdated
+      conflicts.push(...resultA.conflicts)
+    }
+  }
+
   return { pointsUpdated, conflicts }
+}
+
+/**
+ * Get the axis index for a single-axis direction (x=0, y=1, z=2), or null for plane/free directions
+ */
+function getAxisIndex(direction: string | undefined): number | null {
+  switch (direction) {
+    case 'x': return 0
+    case 'y': return 1
+    case 'z': return 2
+    default: return null
+  }
+}
+
+/**
+ * Infer the coordinate along the line direction using targetLength.
+ *
+ * This is a VERY conservative inference that only applies when:
+ * - Source point is FULLY LOCKED (not just inferred) - this establishes the coordinate system
+ * - Target point has the 2 perpendicular coords known, but NOT the direction coord
+ * - The source point is at the origin (0,0,0) - this ensures we're inferring scale from origin
+ * - The target point is visible in exactly 1 camera - this is a proxy for "single camera setup"
+ *
+ * The restriction to single-camera scenarios prevents incorrect inferences in multi-camera
+ * setups where Essential Matrix handles scale differently.
+ *
+ * Sign: We pick positive direction by default. The optimizer will correct if needed.
+ */
+function inferAlongLineDirection(
+  source: WorldPoint,
+  target: WorldPoint,
+  axisIndex: number,
+  targetLength: number,
+  constraintName: string
+): { pointsUpdated: number; conflicts: InferenceConflict[] } {
+  const conflicts: InferenceConflict[] = []
+
+  // Target must not have the direction axis locked or already inferred
+  if (target.lockedXyz[axisIndex] !== null || target.inferredXyz[axisIndex] !== null) {
+    return { pointsUpdated: 0, conflicts }
+  }
+
+  // CONSERVATIVE: Source must be FULLY LOCKED (not just inferred)
+  // This ensures we're only inferring from a definitive coordinate system anchor
+  if (!source.isFullyLocked()) {
+    return { pointsUpdated: 0, conflicts }
+  }
+
+  // CONSERVATIVE: Source must be at origin
+  // This restricts inference to scale establishment from a known origin point
+  const sourceXyz = source.lockedXyz
+  if (sourceXyz[0] !== 0 || sourceXyz[1] !== 0 || sourceXyz[2] !== 0) {
+    return { pointsUpdated: 0, conflicts }
+  }
+
+  // CONSERVATIVE: BOTH source and target must be visible in exactly 1 camera
+  // AND it must be the SAME camera (single-camera project)
+  // Multi-camera setups use Essential Matrix which handles scale differently
+  if (source.imagePoints.size !== 1 || target.imagePoints.size !== 1) {
+    return { pointsUpdated: 0, conflicts }
+  }
+
+  // Check both points are visible in the SAME camera
+  const sourceImagePoint = Array.from(source.imagePoints)[0]
+  const targetImagePoint = Array.from(target.imagePoints)[0]
+  if (sourceImagePoint.viewpoint !== targetImagePoint.viewpoint) {
+    return { pointsUpdated: 0, conflicts }
+  }
+
+  // CONSERVATIVE: Check if this is truly a single-camera project
+  // by verifying the viewpoint has no other cameras visible
+  // (i.e., the viewpoint's imagePoints all belong to points with size 1)
+  const theViewpoint = sourceImagePoint.viewpoint
+  const allPointsInViewpoint = Array.from(theViewpoint.imagePoints).map(ip => ip.worldPoint)
+  const isMultiCameraProject = allPointsInViewpoint.some(wp => wp.imagePoints.size > 1)
+  if (isMultiCameraProject) {
+    return { pointsUpdated: 0, conflicts }
+  }
+
+  // Source must have the direction axis known (always true for fully locked)
+  const sourceAxisValue = sourceXyz[axisIndex]!
+
+  // Target must have the perpendicular axes known (from the regular inference pass)
+  // For axis-aligned lines, the perpendicular coords should already be inferred
+  const otherAxes = [0, 1, 2].filter(i => i !== axisIndex)
+  for (const otherAxis of otherAxes) {
+    const targetOtherValue = target.lockedXyz[otherAxis] ?? target.inferredXyz[otherAxis]
+    if (targetOtherValue === null) {
+      // Perpendicular axis not yet known, can't infer
+      return { pointsUpdated: 0, conflicts }
+    }
+  }
+
+  // All conditions met: infer the coordinate along the direction
+  // Pick positive direction by default; optimizer will correct via image evidence
+  const inferredValue = sourceAxisValue + targetLength
+
+  target.inferredXyz[axisIndex] = inferredValue
+  return { pointsUpdated: 1, conflicts }
 }
 
 function inferAxisFromOther(

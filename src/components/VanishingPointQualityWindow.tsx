@@ -1,10 +1,10 @@
 import React from 'react'
 import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faCheck } from '@fortawesome/free-solid-svg-icons'
+import { faCheck, faExclamationTriangle } from '@fortawesome/free-solid-svg-icons'
 import { Viewpoint } from '../entities/viewpoint'
 import FloatingWindow from './FloatingWindow'
-import { computeVanishingPoint, validateLineQuality, validateAxisLineDistribution, LineQualityIssue } from '../optimization/vanishing-points'
+import { computeVanishingPoint, validateLineQuality, validateAxisLineDistribution, LineQualityIssue, collectDirectionConstrainedLines, VPLineData } from '../optimization/vanishing-points'
 import { VanishingLine, VanishingLineAxis } from '../entities/vanishing-line'
 
 interface VanishingPointQualityWindowProps {
@@ -20,18 +20,33 @@ export const VanishingPointQualityWindow: React.FC<VanishingPointQualityWindowPr
 }) => {
   if (!currentViewpoint) return null
 
-  const linesByAxis: Record<string, Array<VanishingLine>> = { x: [], y: [], z: [] }
+  // Collect explicit VanishingLines
+  const explicitLinesByAxis: Record<string, Array<VanishingLine>> = { x: [], y: [], z: [] }
   currentViewpoint.vanishingLines.forEach(vl => {
-    linesByAxis[vl.axis].push(vl)
+    explicitLinesByAxis[vl.axis].push(vl)
   })
 
-  const vpQuality: Record<string, { lines: number; angle?: number; color: string }> = {
-    x: { lines: linesByAxis.x.length, color: '#ff0000' },
-    y: { lines: linesByAxis.y.length, color: '#00ff00' },
-    z: { lines: linesByAxis.z.length, color: '#0000ff' }
+  // Collect virtual vanishing lines from direction-constrained Lines (x, y, z directions)
+  const virtualLines = collectDirectionConstrainedLines(currentViewpoint)
+  const virtualLinesByAxis: Record<string, Array<VPLineData>> = { x: [], y: [], z: [] }
+  virtualLines.forEach(vl => {
+    virtualLinesByAxis[vl.axis].push(vl)
+  })
+
+  // Combined count for each axis (explicit + virtual)
+  const allLinesByAxis: Record<string, Array<VPLineData>> = {
+    x: [...explicitLinesByAxis.x, ...virtualLinesByAxis.x],
+    y: [...explicitLinesByAxis.y, ...virtualLinesByAxis.y],
+    z: [...explicitLinesByAxis.z, ...virtualLinesByAxis.z]
   }
 
-  Object.entries(linesByAxis).forEach(([axis, lines]) => {
+  const vpQuality: Record<string, { lines: number; angle?: number; color: string }> = {
+    x: { lines: allLinesByAxis.x.length, color: '#ff0000' },
+    y: { lines: allLinesByAxis.y.length, color: '#00ff00' },
+    z: { lines: allLinesByAxis.z.length, color: '#0000ff' }
+  }
+
+  Object.entries(allLinesByAxis).forEach(([axis, lines]) => {
     if (lines.length >= 3) {
       const vp = computeVanishingPoint(lines)
       if (vp) {
@@ -64,17 +79,21 @@ export const VanishingPointQualityWindow: React.FC<VanishingPointQualityWindowPr
 
   const allIssues: Array<{ axis: VanishingLineAxis; issues: LineQualityIssue[] }> = []
 
-  Object.entries(linesByAxis).forEach(([axis, lines]) => {
+  // Validate explicit VanishingLines, but pass ALL lines (explicit + virtual) for the count
+  // This ensures parallel line warnings are suppressed when 3+ total lines exist for the axis
+  Object.entries(explicitLinesByAxis).forEach(([axis, explicitLines]) => {
     const axisTyped = axis as VanishingLineAxis
+    const allLinesForAxis = allLinesByAxis[axis]
 
-    lines.forEach(line => {
-      const issues = validateLineQuality(line, lines)
+    explicitLines.forEach(line => {
+      const issues = validateLineQuality(line, allLinesForAxis)
       if (issues.length > 0) {
         allIssues.push({ axis: axisTyped, issues })
       }
     })
 
-    const distributionIssues = validateAxisLineDistribution(lines)
+    // Distribution issues should consider all lines for the axis
+    const distributionIssues = validateAxisLineDistribution(allLinesForAxis)
     if (distributionIssues.length > 0) {
       allIssues.push({ axis: axisTyped, issues: distributionIssues })
     }
@@ -92,7 +111,6 @@ export const VanishingPointQualityWindow: React.FC<VanishingPointQualityWindowPr
       <div style={{ padding: '10px' }}>
         {(['x', 'y', 'z'] as const).map(axis => {
           const q = vpQuality[axis]
-          const qualityColor = q.angle === undefined ? '#999' : q.angle < 1 ? '#00ff00' : q.angle < 5 ? '#ffff00' : '#ff0000'
 
           const axisIcon = axis === 'x' ? (
             <svg width="32" height="24" viewBox="0 0 32 24">
@@ -129,23 +147,23 @@ export const VanishingPointQualityWindow: React.FC<VanishingPointQualityWindowPr
               <span style={{ flex: 1, color: '#ccc' }}>
                 {q.lines === 0 && <span style={{ color: '#888' }}>No lines</span>}
                 {q.lines === 1 && <span style={{ color: '#888' }}>1 line (need 2+)</span>}
-                {q.lines === 2 && <span style={{ color: '#4CAF50', fontWeight: 'bold' }}>2 lines <FontAwesomeIcon icon={faCheck} /></span>}
+                {q.lines === 2 && <span style={{ color: '#ccc' }}>2 lines <FontAwesomeIcon icon={faCheck} style={{ color: '#4CAF50' }} /></span>}
                 {q.lines >= 3 && q.angle !== undefined && (
-                  <span style={{ color: qualityColor, fontWeight: 'bold' }}>
-                    {q.lines} lines - {q.angle.toFixed(2)}°
+                  <span style={{ color: '#ccc' }}>
+                    {q.lines} lines - {q.angle.toFixed(2)}°{' '}
+                    {q.angle < 1 ? (
+                      <><FontAwesomeIcon icon={faCheck} style={{ color: '#4CAF50' }} /> excellent</>
+                    ) : q.angle < 5 ? (
+                      <><FontAwesomeIcon icon={faCheck} style={{ color: '#4CAF50' }} /> good</>
+                    ) : (
+                      <><FontAwesomeIcon icon={faExclamationTriangle} style={{ color: '#FFC107' }} /> poor accuracy</>
+                    )}
                   </span>
                 )}
               </span>
             </div>
           )
         })}
-        <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #555', fontSize: '11px', color: '#888' }}>
-          <div style={{ marginBottom: '4px' }}>Quality thresholds:</div>
-          <div style={{ color: '#00ff00' }}>• Green: &lt; 1° (excellent)</div>
-          <div style={{ color: '#ffff00' }}>• Yellow: 1-5° (good)</div>
-          <div style={{ color: '#ff0000' }}>• Red: ≥ 5° (poor)</div>
-        </div>
-
         {allIssues.length > 0 && (
           <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #555' }}>
             <div style={{ fontSize: '12px', color: '#ccc', marginBottom: '8px', fontWeight: 'bold' }}>

@@ -113,8 +113,8 @@ export const WorldView = observer(React.forwardRef<WorldViewRef, WorldViewProps>
       return
     }
 
-    // Start view manipulation (middle mouse button or shift+left = pan, left = rotate)
-    const isPan = event.button === 1 || event.shiftKey
+    // Start view manipulation (middle mouse button or ctrl+left = pan, left = rotate)
+    const isPan = event.button === 1 || event.ctrlKey
     startDrag(x, y, isPan ? 'pan' : 'rotate')
   }
 
@@ -369,7 +369,7 @@ export const WorldView = observer(React.forwardRef<WorldViewRef, WorldViewProps>
           View rot.x: {(viewMatrix.rotation.x * 180 / Math.PI).toFixed(1)}° • rot.y: {(viewMatrix.rotation.y * 180 / Math.PI).toFixed(1)}° • rot.z: {(viewMatrix.rotation.z * 180 / Math.PI).toFixed(1)}° • Zoom: {viewMatrix.scale.toFixed(0)}
         </div>
         <div className="controls-hint">
-          Drag: Rotate • Middle/Shift+Drag: Pan • Scroll: Zoom • Click camera: Focus
+          Drag: Rotate • Middle/Ctrl+Drag: Pan • Scroll: Zoom • Click camera: Focus
         </div>
       </div>
     </div>

@@ -278,7 +278,7 @@ export const ImageViewer = observer(forwardRef<ImageViewerRef, ImageViewerProps>
         hoveredPoint={pointDragState.hoveredPoint}
         hoveredLine={!!pointDragState.hoveredLine}
         placementModeActive={placementModeActive}
-        isShiftKeyPressed={dragState.isShiftKeyPressed}
+        isCtrlKeyPressed={dragState.isCtrlKeyPressed}
         isDragOverTarget={pointDragState.isDragOverTarget}
         setIsDragOverTarget={pointDragState.setIsDragOverTarget}
         setIsDragDropActive={precisionDragState.setIsDragDropActive}
@@ -306,7 +306,7 @@ export const ImageViewer = observer(forwardRef<ImageViewerRef, ImageViewerProps>
           )}
         </div>
         <div className="controls-hint">
-          Click: Select/Create • Drag point: Move • Shift+Drag: Pan • Scroll: Zoom • 0: Fit
+          Click: Select/Create • Drag point: Move • Ctrl+Drag: Pan • Scroll: Zoom • 0: Fit
         </div>
       </div>
 

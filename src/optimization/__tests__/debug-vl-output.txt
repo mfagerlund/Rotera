@@ -9,8 +9,8 @@ Viewpoints: 2
 === RESULT ===
 Converged: true
 Iterations: 20
-Residual: 1.3044547552164287
-Median reproj: 0.3632117787145103
+Residual: 1.3044547552166093
+Median reproj: 0.36321177871465316
 Cameras initialized: C3, C1
 Cameras excluded: none
 
@@ -19,10 +19,10 @@ Cameras excluded: none
 [initializeCameraWithVanishingPoints] Starting vanishing point initialization...
 [validateVanishingPoints] Added 7 virtual VP lines from direction-constrained Lines
 [VP] WARNING: VP very far from origin (u=552, v=-117925)
-[VP Init] Observed vanishing points from lines:
-  X axis: (-4301.35, 428.55)
-  Y axis: (552.37, -117924.63)
-  Z axis: (1350.16, 427.70)
+[VP Init] Vanishing points:
+  X: (-4301.349, 428.552)
+  Y: (552.367, -117924.631)
+  Z: (1350.160, 427.696)
 [initializeCameraWithVanishingPoints] Using existing principal point: (551.5, 397.0)
 [initializeCameraWithVanishingPoints] Using existing focal length: 2014.0
 [VP Debug] X VP at (-4301, 429) -> direction LEFT/DOWN in camera [-0.924, -0.006, 0.383]
@@ -51,7 +51,7 @@ Cameras excluded: none
 [Scale] Applied scale=1.000 from 1 point pairs
 [Prelim] 1 init camera(s), 1 need late PnP
 [VP] WARNING: VP very far from origin (u=569, v=-118618)
-[Prelim] Single-cam solve: conv=true, iter=8, res=1.103
+[Prelim] Single-cam solve: conv=true, iter=13, res=1.103
   Centroid of 6 constrained points: [-3.333, -5.000, -3.333]
   Sample constrained points (first 5):
     [0.000, 0.000, 0.000]

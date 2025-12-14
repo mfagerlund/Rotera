@@ -649,4 +649,87 @@ describe('Solving Scenarios - Phase 4: Single Camera with Inferred Coordinates',
       expect(result.medianReprojectionError).toBeLessThan(1.0);
     });
   });
+
+  describe('Scenario 13: Single Fixed Point with Line Length Constraint', () => {
+    /**
+     * This test validates solving when:
+     * - Only ONE world point is fully locked (O at origin)
+     * - Another point (Y) is on an axis-aligned line with targetLength
+     * - The targetLength should provide enough information to establish scale
+     *
+     * Current behavior: FAILS because scale requires 2 fully constrained points
+     * Expected behavior: Should infer Y's missing coordinate from targetLength
+     */
+    it('should solve when scale is provided via line targetLength', () => {
+      const project = loadFixture('only-one-fixed-point.json');
+
+      // Verify fixture structure
+      expect(project.worldPoints.size).toBe(4);
+      expect(project.viewpoints.size).toBe(1);
+      expect(project.imagePoints.size).toBe(4);
+      expect(project.lines.size).toBe(3);
+
+      const worldPointsArray = Array.from(project.worldPoints);
+      const camera = Array.from(project.viewpoints)[0] as Viewpoint;
+
+      // O is fully locked at origin
+      const wpO = worldPointsArray.find(p => p.name === 'O')!;
+      expect(wpO.lockedXyz).toEqual([0, 0, 0]);
+      expect(wpO.isFullyConstrained()).toBe(true);
+
+      // Y has inferred x=0, z=0 but y is unknown
+      const wpY = worldPointsArray.find(p => p.name === 'Y')!;
+      expect(wpY.lockedXyz).toEqual([null, null, null]);
+      expect(wpY.inferredXyz[0]).toBe(0);  // x inferred
+      expect(wpY.inferredXyz[1]).toBe(null);  // y NOT inferred
+      expect(wpY.inferredXyz[2]).toBe(0);  // z inferred
+
+      // Line from O to Y has direction='y' and targetLength=10
+      const linesArray = Array.from(project.lines);
+      const lineOY = linesArray.find(l =>
+        (l.pointA.name === 'O' && l.pointB.name === 'Y') ||
+        (l.pointA.name === 'Y' && l.pointB.name === 'O')
+      )!;
+      expect(lineOY.direction).toBe('y');
+      expect(lineOY.targetLength).toBe(10);
+
+      // Verify camera has vanishing lines
+      expect(camera.getVanishingLineCount()).toBe(6);
+
+      // Print current state
+      console.log('\n=== ONLY ONE FIXED POINT TEST ===');
+      console.log('World points:');
+      for (const wp of worldPointsArray) {
+        console.log(`  ${wp.name}: locked=[${wp.lockedXyz}], inferred=[${wp.inferredXyz}], fullyConstrained=${wp.isFullyConstrained()}`);
+      }
+
+      const result = optimizeProject(project, {
+        autoInitializeCameras: true,
+        autoInitializeWorldPoints: true,
+        detectOutliers: true,
+        maxIterations: 100,
+        tolerance: 1e-6,
+        verbose: true
+      });
+
+      console.log('\n=== RESULT ===');
+      console.log(`Converged: ${result.converged}`);
+      console.log(`Error: ${result.error}`);
+      console.log(`Median reproj error: ${result.medianReprojectionError}`);
+      console.log(`Cameras initialized: ${result.camerasInitialized}`);
+
+      // After fix: should converge with good accuracy
+      expect(result.error).toBeNull();
+      expect(result.converged).toBe(true);
+      expect(result.medianReprojectionError).toBeLessThan(1.0);
+
+      // Y should end up at [0, ±10, 0] after solving
+      if (wpY.optimizedXyz) {
+        console.log(`Y optimized: [${wpY.optimizedXyz}]`);
+        expect(wpY.optimizedXyz[0]).toBeCloseTo(0, 1);
+        expect(Math.abs(wpY.optimizedXyz[1])).toBeCloseTo(10, 1);
+        expect(wpY.optimizedXyz[2]).toBeCloseTo(0, 1);
+      }
+    });
+  });
 });

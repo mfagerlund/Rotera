@@ -73,6 +73,26 @@ export function renderLoupe(params: LoupeRenderParams): void {
   const topLeftX = centerX - radius
   const topLeftY = centerY - radius
 
+  // Draw indicator circle on main image showing what area the loupe covers
+  const indicatorCenterX = imageU * scale + offsetX
+  const indicatorCenterY = imageV * scale + offsetY
+  const indicatorRadius = (sourceSize / 2) * scale
+
+  ctx.save()
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)'
+  ctx.lineWidth = 2
+  ctx.setLineDash([4, 4])
+  ctx.beginPath()
+  ctx.arc(indicatorCenterX, indicatorCenterY, indicatorRadius, 0, Math.PI * 2)
+  ctx.stroke()
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)'
+  ctx.lineWidth = 1
+  ctx.beginPath()
+  ctx.arc(indicatorCenterX, indicatorCenterY, indicatorRadius, 0, Math.PI * 2)
+  ctx.stroke()
+  ctx.setLineDash([])
+  ctx.restore()
+
   ctx.save()
 
   ctx.fillStyle = 'rgba(0, 0, 0, 0.45)'

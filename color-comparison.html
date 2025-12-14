@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dark Theme Color Comparison</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #000;
+      padding: 20px;
+    }
+    h1 { color: #fff; text-align: center; margin-bottom: 30px; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .theme { border-radius: 8px; overflow: hidden; }
+    .theme-name { padding: 12px; text-align: center; font-weight: 600; font-size: 14px; }
+    .panel { padding: 16px; }
+    .toolbar { display: flex; gap: 8px; padding: 12px; align-items: center; }
+    .btn { padding: 8px 16px; border-radius: 4px; border: none; font-size: 13px; cursor: pointer; }
+    .sidebar { padding: 12px; }
+    .sidebar-item { padding: 8px 12px; border-radius: 4px; margin-bottom: 4px; font-size: 13px; }
+    .content { padding: 16px; min-height: 120px; }
+    .card { padding: 12px; border-radius: 4px; margin-bottom: 8px; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Pick a Dark Theme</h1>
+  <div class="grid">
+
+    <!-- GitHub Dark -->
+    <div class="theme">
+      <div class="theme-name" style="background: #21262d; color: #e6edf3;">GitHub Dark (Current)</div>
+      <div class="toolbar" style="background: #161b22; border-bottom: 1px solid #30363d;">
+        <div class="btn" style="background: #21262d; color: #e6edf3; border: 1px solid #30363d;">File</div>
+        <div class="btn" style="background: #238636; color: #fff;">Optimize</div>
+      </div>
+      <div style="display: flex;">
+        <div class="sidebar" style="background: #0d1117; width: 140px; border-right: 1px solid #30363d;">
+          <div class="sidebar-item" style="background: #21262d; color: #e6edf3;">World Points</div>
+          <div class="sidebar-item" style="color: #8b949e;">Lines</div>
+          <div class="sidebar-item" style="color: #8b949e;">Constraints</div>
+        </div>
+        <div class="content" style="background: #0d1117; flex: 1;">
+          <div class="card" style="background: #161b22; color: #e6edf3; border: 1px solid #30363d;">Point A: (0, 0, 0)</div>
+          <div class="card" style="background: #161b22; color: #8b949e; border: 1px solid #30363d;">Point B: (1, 2, 3)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VS Code Neutral -->
+    <div class="theme">
+      <div class="theme-name" style="background: #2d2d2d; color: #cccccc;">VS Code Neutral</div>
+      <div class="toolbar" style="background: #252526; border-bottom: 1px solid #3c3c3c;">
+        <div class="btn" style="background: #2d2d2d; color: #cccccc; border: 1px solid #3c3c3c;">File</div>
+        <div class="btn" style="background: #5cb85c; color: #fff;">Optimize</div>
+      </div>
+      <div style="display: flex;">
+        <div class="sidebar" style="background: #1e1e1e; width: 140px; border-right: 1px solid #3c3c3c;">
+          <div class="sidebar-item" style="background: #2d2d2d; color: #cccccc;">World Points</div>
+          <div class="sidebar-item" style="color: #969696;">Lines</div>
+          <div class="sidebar-item" style="color: #969696;">Constraints</div>
+        </div>
+        <div class="content" style="background: #1e1e1e; flex: 1;">
+          <div class="card" style="background: #252526; color: #cccccc; border: 1px solid #3c3c3c;">Point A: (0, 0, 0)</div>
+          <div class="card" style="background: #252526; color: #969696; border: 1px solid #3c3c3c;">Point B: (1, 2, 3)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tokyo Night -->
+    <div class="theme">
+      <div class="theme-name" style="background: #24283b; color: #c0caf5;">Tokyo Night</div>
+      <div class="toolbar" style="background: #1a1b26; border-bottom: 1px solid #414868;">
+        <div class="btn" style="background: #24283b; color: #c0caf5; border: 1px solid #414868;">File</div>
+        <div class="btn" style="background: #9ece6a; color: #1a1b26;">Optimize</div>
+      </div>
+      <div style="display: flex;">
+        <div class="sidebar" style="background: #16161e; width: 140px; border-right: 1px solid #414868;">
+          <div class="sidebar-item" style="background: #24283b; color: #c0caf5;">World Points</div>
+          <div class="sidebar-item" style="color: #565f89;">Lines</div>
+          <div class="sidebar-item" style="color: #565f89;">Constraints</div>
+        </div>
+        <div class="content" style="background: #16161e; flex: 1;">
+          <div class="card" style="background: #1a1b26; color: #c0caf5; border: 1px solid #414868;">Point A: (0, 0, 0)</div>
+          <div class="card" style="background: #1a1b26; color: #565f89; border: 1px solid #414868;">Point B: (1, 2, 3)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Catppuccin Mocha -->
+    <div class="theme">
+      <div class="theme-name" style="background: #313244; color: #cdd6f4;">Catppuccin Mocha</div>
+      <div class="toolbar" style="background: #1e1e2e; border-bottom: 1px solid #45475a;">
+        <div class="btn" style="background: #313244; color: #cdd6f4; border: 1px solid #45475a;">File</div>
+        <div class="btn" style="background: #a6e3a1; color: #1e1e2e;">Optimize</div>
+      </div>
+      <div style="display: flex;">
+        <div class="sidebar" style="background: #181825; width: 140px; border-right: 1px solid #45475a;">
+          <div class="sidebar-item" style="background: #313244; color: #cdd6f4;">World Points</div>
+          <div class="sidebar-item" style="color: #6c7086;">Lines</div>
+          <div class="sidebar-item" style="color: #6c7086;">Constraints</div>
+        </div>
+        <div class="content" style="background: #181825; flex: 1;">
+          <div class="card" style="background: #1e1e2e; color: #cdd6f4; border: 1px solid #45475a;">Point A: (0, 0, 0)</div>
+          <div class="card" style="background: #1e1e2e; color: #6c7086; border: 1px solid #45475a;">Point B: (1, 2, 3)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- One Dark -->
+    <div class="theme">
+      <div class="theme-name" style="background: #3e4451; color: #abb2bf;">One Dark</div>
+      <div class="toolbar" style="background: #282c34; border-bottom: 1px solid #4b5263;">
+        <div class="btn" style="background: #3e4451; color: #abb2bf; border: 1px solid #4b5263;">File</div>
+        <div class="btn" style="background: #98c379; color: #282c34;">Optimize</div>
+      </div>
+      <div style="display: flex;">
+        <div class="sidebar" style="background: #21252b; width: 140px; border-right: 1px solid #4b5263;">
+          <div class="sidebar-item" style="background: #3e4451; color: #abb2bf;">World Points</div>
+          <div class="sidebar-item" style="color: #5c6370;">Lines</div>
+          <div class="sidebar-item" style="color: #5c6370;">Constraints</div>
+        </div>
+        <div class="content" style="background: #21252b; flex: 1;">
+          <div class="card" style="background: #282c34; color: #abb2bf; border: 1px solid #4b5263;">Point A: (0, 0, 0)</div>
+          <div class="card" style="background: #282c34; color: #5c6370; border: 1px solid #4b5263;">Point B: (1, 2, 3)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dracula -->
+    <div class="theme">
+      <div class="theme-name" style="background: #44475a; color: #f8f8f2;">Dracula</div>
+      <div class="toolbar" style="background: #282a36; border-bottom: 1px solid #6272a4;">
+        <div class="btn" style="background: #44475a; color: #f8f8f2; border: 1px solid #6272a4;">File</div>
+        <div class="btn" style="background: #50fa7b; color: #282a36;">Optimize</div>
+      </div>
+      <div style="display: flex;">
+        <div class="sidebar" style="background: #21222c; width: 140px; border-right: 1px solid #6272a4;">
+          <div class="sidebar-item" style="background: #44475a; color: #f8f8f2;">World Points</div>
+          <div class="sidebar-item" style="color: #6272a4;">Lines</div>
+          <div class="sidebar-item" style="color: #6272a4;">Constraints</div>
+        </div>
+        <div class="content" style="background: #21222c; flex: 1;">
+          <div class="card" style="background: #282a36; color: #f8f8f2; border: 1px solid #6272a4;">Point A: (0, 0, 0)</div>
+          <div class="card" style="background: #282a36; color: #6272a4; border: 1px solid #6272a4;">Point B: (1, 2, 3)</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>
