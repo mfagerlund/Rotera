@@ -11,10 +11,10 @@ import { renderLines } from './renderers/lineRenderer'
 import { renderAxes } from './renderers/axesRenderer'
 import { renderCameras } from './renderers/cameraRenderer'
 import { findPointAt, findLineAt, findCameraAt } from './utils'
-// Display handedness is LEFT-handed due to Y-flip in screen projection
-// (screenY = cy - scaledY, which flips the Y axis for screen coordinates)
-// This is a fixed property of the projection, not view-dependent.
-const DISPLAY_HANDEDNESS: 'L' | 'R' = 'L'
+// Display handedness: RIGHT-handed (X right, Y up, Z toward viewer)
+// The orthographic projection negates Z to achieve this.
+// 
+const DISPLAY_HANDEDNESS: 'L' | 'R' = 'R'
 
 
 export const WorldView = observer(React.forwardRef<WorldViewRef, WorldViewProps>(({
