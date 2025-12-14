@@ -91,7 +91,8 @@ export function useImageViewerEvents({
     const x = event.clientX - rect.left
     const y = event.clientY - rect.top
 
-    if (event.button === 1 || (event.button === 0 && event.altKey)) {
+    // Pan: middle mouse button OR shift+left click (consistent with WorldView)
+    if (event.button === 1 || (event.button === 0 && event.shiftKey)) {
       dragState.setIsDragging(true)
       dragState.setLastMousePos({ x, y })
       dragState.setLastPanTime(Date.now())
@@ -603,15 +604,15 @@ export function useImageViewerEvents({
       }
     }
 
-    const handleAltKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Alt') {
-        dragState.setIsAltKeyPressed(true)
+    const handleShiftKeyDownForPan = (event: KeyboardEvent) => {
+      if (event.key === 'Shift') {
+        dragState.setIsShiftKeyPressed(true)
       }
     }
 
-    const handleAltKeyUp = (event: KeyboardEvent) => {
-      if (event.key === 'Alt') {
-        dragState.setIsAltKeyPressed(false)
+    const handleShiftKeyUpForPan = (event: KeyboardEvent) => {
+      if (event.key === 'Shift') {
+        dragState.setIsShiftKeyPressed(false)
       }
     }
 
@@ -639,15 +640,15 @@ export function useImageViewerEvents({
     }
 
     window.addEventListener('keydown', handleKeyDown)
-    window.addEventListener('keydown', handleAltKeyDown)
-    window.addEventListener('keyup', handleAltKeyUp)
+    window.addEventListener('keydown', handleShiftKeyDownForPan)
+    window.addEventListener('keyup', handleShiftKeyUpForPan)
     window.addEventListener('keydown', handleShiftKeyDown)
     window.addEventListener('keyup', handleShiftKeyUp)
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
-      window.removeEventListener('keydown', handleAltKeyDown)
-      window.removeEventListener('keyup', handleAltKeyUp)
+      window.removeEventListener('keydown', handleShiftKeyDownForPan)
+      window.removeEventListener('keyup', handleShiftKeyUpForPan)
       window.removeEventListener('keydown', handleShiftKeyDown)
       window.removeEventListener('keyup', handleShiftKeyUp)
     }

@@ -38,6 +38,62 @@
   display: none;
 }
 
+/* Tool Options Strip - shows in header when tools with options are active */
+.tool-options-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.tool-options-strip .tool-label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.tool-options-strip .axis-buttons,
+.tool-options-strip .direction-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.tool-options-strip .axis-btn,
+.tool-options-strip .direction-btn {
+  padding: 4px 10px;
+  border: 1px solid;
+  border-radius: 3px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.tool-options-strip .axis-btn:hover,
+.tool-options-strip .direction-btn:hover {
+  opacity: 0.8;
+}
+
+.tool-options-strip .direction-btn {
+  border-color: var(--border);
+  color: var(--text-secondary);
+}
+
+.tool-options-strip .direction-btn.active {
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
+  color: #fff;
+}
+
+.tool-options-strip .tool-hint {
+  color: var(--text-muted);
+  font-size: 11px;
+  margin-left: auto;
+}
+
 /* World View */
 .world-view {
   display: flex;

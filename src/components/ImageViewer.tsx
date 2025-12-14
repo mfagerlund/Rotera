@@ -278,7 +278,7 @@ export const ImageViewer = observer(forwardRef<ImageViewerRef, ImageViewerProps>
         hoveredPoint={pointDragState.hoveredPoint}
         hoveredLine={!!pointDragState.hoveredLine}
         placementModeActive={placementModeActive}
-        isAltKeyPressed={dragState.isAltKeyPressed}
+        isShiftKeyPressed={dragState.isShiftKeyPressed}
         isDragOverTarget={pointDragState.isDragOverTarget}
         setIsDragOverTarget={pointDragState.setIsDragOverTarget}
         setIsDragDropActive={precisionDragState.setIsDragDropActive}
@@ -296,6 +296,19 @@ export const ImageViewer = observer(forwardRef<ImageViewerRef, ImageViewerProps>
         onPlaceWorldPoint={onPlaceWorldPoint}
         events={events}
       />
+
+      {/* Info footer - similar to WorldView */}
+      <div className="image-viewer-info">
+        <div className="view-state">
+          Zoom: {(imageViewerState.scale * 100).toFixed(0)}%
+          {imageViewerState.currentMousePos && transform.canvasToImageCoords(imageViewerState.currentMousePos.x, imageViewerState.currentMousePos.y) && (
+            <> • Pos: ({transform.canvasToImageCoords(imageViewerState.currentMousePos.x, imageViewerState.currentMousePos.y)!.u.toFixed(0)}, {transform.canvasToImageCoords(imageViewerState.currentMousePos.x, imageViewerState.currentMousePos.y)!.v.toFixed(0)})</>
+          )}
+        </div>
+        <div className="controls-hint">
+          Click: Select/Create • Drag point: Move • Shift+Drag: Pan • Scroll: Zoom • 0: Fit
+        </div>
+      </div>
 
       {!imageViewerState.imageLoaded && (
         <div className="image-loading">

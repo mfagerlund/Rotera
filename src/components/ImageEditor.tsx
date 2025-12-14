@@ -7,6 +7,8 @@ import type { Viewpoint } from '../entities/viewpoint'
 import { useConfirm } from './ConfirmDialog'
 import { V, Vec3, Vec4 } from 'scalar-autograd'
 import { projectWorldPointToPixelQuaternion } from '../optimization/camera-projection'
+import { computeVanishingPoint, collectDirectionConstrainedLines, VPLineData } from '../optimization/vanishing-points'
+import { VanishingLineAxis } from '../entities/vanishing-line'
 
 interface ImageEditorProps {
   isOpen: boolean
@@ -98,6 +100,40 @@ export const ImageEditor: React.FC<ImageEditorProps> = observer(({
   }
   const solveLoss = computeSolveLoss()
 
+  // Compute vanishing points for display
+  const computeVanishingPoints = () => {
+    const allLinesByAxis: Record<VanishingLineAxis, VPLineData[]> = { x: [], y: [], z: [] }
+
+    // Collect explicit vanishing lines
+    Array.from(viewpoint.vanishingLines).forEach(vl => {
+      allLinesByAxis[vl.axis].push(vl)
+    })
+
+    // Collect virtual lines from direction-constrained world lines
+    const virtualLines = collectDirectionConstrainedLines(viewpoint)
+    virtualLines.forEach(vl => {
+      allLinesByAxis[vl.axis].push(vl)
+    })
+
+    const vps: Record<VanishingLineAxis, { u: number; v: number } | null> = { x: null, y: null, z: null }
+    const axes: VanishingLineAxis[] = ['x', 'y', 'z']
+
+    axes.forEach(axis => {
+      const lines = allLinesByAxis[axis]
+      if (lines.length >= 2) {
+        const vp = computeVanishingPoint(lines)
+        if (vp) {
+          vps[axis] = vp
+        }
+      }
+    })
+
+    return vps
+  }
+
+  const vanishingPoints = computeVanishingPoints()
+  const hasVanishingPoints = vanishingPoints.x || vanishingPoints.y || vanishingPoints.z
+
   // Reset form when viewpoint changes
   useEffect(() => {
     setEditedName(viewpoint.getName())
@@ -157,11 +193,9 @@ export const ImageEditor: React.FC<ImageEditorProps> = observer(({
       >
         <div className="image-edit-content">
 
-          {/* Basic Properties */}
-          <div className="edit-section">
-            <h4>Basic Properties</h4>
-
-            <div className="form-row">
+          {/* Name and Preview */}
+          <div className="edit-section" style={{ paddingBottom: '8px' }}>
+            <div className="form-row" style={{ marginBottom: '8px' }}>
               <label>Name</label>
               <input
                 type="text"
@@ -171,14 +205,9 @@ export const ImageEditor: React.FC<ImageEditorProps> = observer(({
                 placeholder="Viewpoint name"
               />
             </div>
-          </div>
-
-          {/* Image Preview */}
-          <div className="edit-section">
-            <h4>Preview</h4>
             <div className="image-preview" style={{
               width: '100%',
-              maxHeight: '200px',
+              maxHeight: '100px',
               overflow: 'hidden',
               display: 'flex',
               justifyContent: 'center',
@@ -191,85 +220,53 @@ export const ImageEditor: React.FC<ImageEditorProps> = observer(({
                 alt={viewpoint.getName()}
                 style={{
                   maxWidth: '100%',
-                  maxHeight: '200px',
+                  maxHeight: '100px',
                   objectFit: 'contain'
                 }}
               />
             </div>
-          </div>
-
-          {/* Image Information */}
-          <div className="edit-section">
-            <h4>Information</h4>
-
-            <div className="status-grid">
-              <div className="status-item">
-                <label>Dimensions</label>
-                <span>{imageWidth} × {imageHeight} px</span>
-              </div>
-
-              <div className="status-item">
-                <label>Viewpoint Name</label>
-                <span title={viewpoint.getName()}>{viewpoint.getName()}</span>
-              </div>
-
-              <div className="status-item">
-                <label>Solve Loss</label>
-                <span>
-                  {solveLoss.rms !== null
-                    ? `${solveLoss.rms.toFixed(2)} px`
-                    : 'N/A'}
-                  {solveLoss.count > 0 ? ` (${solveLoss.count} pts)` : ''}
-                </span>
-              </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '11px', color: '#666' }}>
+              <span>{imageWidth} × {imageHeight} px</span>
+              <span>
+                RMS: {solveLoss.rms !== null ? `${solveLoss.rms.toFixed(2)} px` : 'N/A'}
+                {solveLoss.count > 0 ? ` (${solveLoss.count} pts)` : ''}
+              </span>
             </div>
           </div>
 
-          {/* Camera Pose */}
-          <div className="edit-section">
-            <h4>Camera Pose</h4>
-
-            <div className="status-grid">
-              <div className="status-item">
-                <label>Position</label>
-                <span style={{ fontFamily: 'monospace', fontSize: '11px' }}>
-                  X: {viewpoint.position[0].toFixed(3)}, Y: {viewpoint.position[1].toFixed(3)}, Z: {viewpoint.position[2].toFixed(3)}
+          {/* Camera */}
+          <div className="edit-section" style={{ paddingBottom: '8px' }}>
+            <h4 style={{ marginBottom: '6px' }}>Camera</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px', fontSize: '11px' }}>
+              <div>
+                <span style={{ color: '#888' }}>Position: </span>
+                <span style={{ fontFamily: 'monospace' }}>
+                  ({viewpoint.position[0].toFixed(2)}, {viewpoint.position[1].toFixed(2)}, {viewpoint.position[2].toFixed(2)})
                 </span>
               </div>
-
-              <div className="status-item">
-                <label>Orientation</label>
-                <span style={{ fontFamily: 'monospace', fontSize: '11px' }}>
+              <div>
+                <span style={{ color: '#888' }}>Focal: </span>
+                <span style={{ fontFamily: 'monospace' }}>{viewpoint.focalLength.toFixed(1)} px</span>
+              </div>
+              <div>
+                <span style={{ color: '#888' }}>Rotation: </span>
+                <span style={{ fontFamily: 'monospace' }}>
                   {(() => {
                     const [roll, pitch, yaw] = viewpoint.getRotationEuler()
                     const toDeg = (rad: number) => (rad * 180 / Math.PI).toFixed(1)
-                    return `Roll: ${toDeg(roll)}°, Pitch: ${toDeg(pitch)}°, Yaw: ${toDeg(yaw)}°`
+                    return `(${toDeg(roll)}°, ${toDeg(pitch)}°, ${toDeg(yaw)}°)`
                   })()}
                 </span>
               </div>
-            </div>
-          </div>
-
-          {/* Camera Intrinsics */}
-          <div className="edit-section">
-            <h4>Camera Intrinsics</h4>
-
-            <div className="status-grid">
-              <div className="status-item">
-                <label>Focal Length</label>
-                <span>{viewpoint.focalLength.toFixed(1)} px</span>
-              </div>
-
-              <div className="status-item">
-                <label>Principal Point</label>
-                <span style={{ fontFamily: 'monospace', fontSize: '11px' }}>
+              <div>
+                <span style={{ color: '#888' }}>PP: </span>
+                <span style={{ fontFamily: 'monospace' }}>
                   ({viewpoint.principalPointX.toFixed(1)}, {viewpoint.principalPointY.toFixed(1)})
                 </span>
               </div>
             </div>
-
-            <div className="form-row" style={{ marginTop: '8px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+            <div style={{ marginTop: '6px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '11px' }}>
                 <input
                   type="checkbox"
                   checked={viewpoint.isPossiblyCropped}
@@ -277,16 +274,48 @@ export const ImageEditor: React.FC<ImageEditorProps> = observer(({
                     viewpoint.isPossiblyCropped = e.target.checked
                     setHasChanges(true)
                   }}
+                  style={{ width: '14px', height: '14px' }}
                 />
                 <span>Image may be cropped</span>
+                <span style={{ color: '#888', marginLeft: '8px' }}>
+                  ({viewpoint.isPossiblyCropped ? 'PP optimizable' : 'PP fixed'})
+                </span>
               </label>
-              <span style={{ fontSize: '11px', color: '#888', marginLeft: '24px' }}>
-                {viewpoint.isPossiblyCropped
-                  ? 'Principal point can be optimized'
-                  : 'Principal point locked to image center'}
-              </span>
             </div>
           </div>
+
+          {/* Vanishing Points */}
+          {hasVanishingPoints && (
+            <div className="edit-section" style={{ paddingBottom: '8px' }}>
+              <h4 style={{ marginBottom: '6px' }}>Vanishing Points</h4>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', fontSize: '11px' }}>
+                {vanishingPoints.x && (
+                  <span>
+                    <span style={{ color: '#ff4444', fontWeight: 'bold' }}>X</span>
+                    <span style={{ fontFamily: 'monospace', marginLeft: '4px' }}>
+                      ({vanishingPoints.x.u.toFixed(1)}, {vanishingPoints.x.v.toFixed(1)})
+                    </span>
+                  </span>
+                )}
+                {vanishingPoints.y && (
+                  <span>
+                    <span style={{ color: '#44ff44', fontWeight: 'bold' }}>Y</span>
+                    <span style={{ fontFamily: 'monospace', marginLeft: '4px' }}>
+                      ({vanishingPoints.y.u.toFixed(1)}, {vanishingPoints.y.v.toFixed(1)})
+                    </span>
+                  </span>
+                )}
+                {vanishingPoints.z && (
+                  <span>
+                    <span style={{ color: '#4444ff', fontWeight: 'bold' }}>Z</span>
+                    <span style={{ fontFamily: 'monospace', marginLeft: '4px' }}>
+                      ({vanishingPoints.z.u.toFixed(1)}, {vanishingPoints.z.v.toFixed(1)})
+                    </span>
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </FloatingWindow>
     </>

@@ -20,7 +20,7 @@ interface ImageCanvasProps {
   hoveredPoint: WorldPoint | null
   hoveredLine: boolean
   placementModeActive: boolean
-  isAltKeyPressed: boolean
+  isShiftKeyPressed: boolean
   isDragOverTarget: boolean
   setIsDragOverTarget: (isOver: boolean) => void
   setIsDragDropActive: (isActive: boolean) => void
@@ -49,7 +49,7 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
   hoveredPoint,
   hoveredLine,
   placementModeActive,
-  isAltKeyPressed,
+  isShiftKeyPressed,
   isDragOverTarget,
   setIsDragOverTarget,
   setIsDragDropActive,
@@ -76,7 +76,7 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
     if (hoveredPoint && onMovePoint) return 'grab'
     if (hoveredPoint || hoveredLine) return 'pointer'
     if (placementModeActive) return 'copy'
-    if (isAltKeyPressed) return 'grab'
+    if (isShiftKeyPressed) return 'grab'
     return 'crosshair'
   }
 

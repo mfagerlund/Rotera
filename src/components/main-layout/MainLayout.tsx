@@ -9,7 +9,7 @@ import { useMainLayoutHandlers } from '../../hooks/useMainLayoutHandlers'
 import { useMainLayoutKeyboard } from '../../hooks/useMainLayoutKeyboard'
 import { useLayoutState } from './hooks/useLayoutState'
 import { ConstructionPreview } from '../image-viewer/types'
-import { Line as LineEntity } from '../../entities/line'
+import { Line as LineEntity, LineDirection } from '../../entities/line'
 import { WorldPoint } from '../../entities/world-point'
 import { VanishingLine } from '../../entities/vanishing-line'
 import { Plane } from '../../entities/plane'
@@ -24,6 +24,7 @@ import type { ImageViewerRef } from '../ImageViewer'
 import type { WorldViewRef } from '../WorldView'
 import { WorkspaceManager, WorkspaceStatus } from '../WorkspaceManager'
 import { MainToolbar } from './MainToolbar'
+import { ToolOptionsStrip } from './ToolOptionsStrip'
 import ImageWorkspace from './ImageWorkspace'
 import WorldWorkspace from './WorldWorkspace'
 import SplitWorkspace from './SplitWorkspace'
@@ -202,6 +203,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
 
   const [constructionPreview, setConstructionPreview] = useState<ConstructionPreview | null>(null)
   const [currentVanishingLineAxis, setCurrentVanishingLineAxis] = useState<'x' | 'y' | 'z'>('x')
+  const [orientationPaintDirection, setOrientationPaintDirection] = useState<LineDirection>('free')
   const [mousePosition, setMousePosition] = useState<{ u: number; v: number } | null>(null)
 
   const handleVisibilityChange = useCallback((key: keyof VisibilitySettings, value: boolean) => {
@@ -624,6 +626,14 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
               isDirty={isDirty}
             />
 
+            <ToolOptionsStrip
+              activeTool={activeTool}
+              currentVanishingLineAxis={currentVanishingLineAxis}
+              onVanishingLineAxisChange={setCurrentVanishingLineAxis}
+              selectedDirection={orientationPaintDirection}
+              onDirectionChange={setOrientationPaintDirection}
+            />
+
             <div className="content-area">
               <LeftPanel
                 ref={leftPanelRef}
@@ -731,6 +741,8 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
                 onClearEditingCoplanarConstraint={() => setEditingCoplanarConstraint(null)}
                 currentVanishingLineAxis={currentVanishingLineAxis}
                 onVanishingLineAxisChange={setCurrentVanishingLineAxis}
+                orientationPaintDirection={orientationPaintDirection}
+                onOrientationPaintDirectionChange={setOrientationPaintDirection}
                 activeConstraintType={activeConstraintType}
                 selectedPoints={selectedPointEntities}
                 selectedLines={selectedLineEntities}

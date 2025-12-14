@@ -1,6 +1,6 @@
 import { RenderParams, AXIS_COLORS } from './types'
-import { computeVanishingPoint, validateLineQuality } from '../../../optimization/vanishing-points'
-import { VanishingLine } from '../../../entities/vanishing-line'
+import { computeVanishingPoint, validateLineQuality, collectDirectionConstrainedLines, VPLineData } from '../../../optimization/vanishing-points'
+import { VanishingLine, VanishingLineAxis } from '../../../entities/vanishing-line'
 
 export function renderVanishingLines(params: RenderParams): void {
   const {
@@ -17,14 +17,29 @@ export function renderVanishingLines(params: RenderParams): void {
 
   if (!visibility.vanishingLines && !visibility.vanishingPoints) return
 
-  const linesByAxis: Record<string, Array<VanishingLine>> = {
+  // Collect explicit vanishing lines
+  const explicitLinesByAxis: Record<VanishingLineAxis, Array<VanishingLine>> = {
     x: [],
     y: [],
     z: []
   }
 
   Array.from(viewpoint.vanishingLines).forEach(vanishingLine => {
-    linesByAxis[vanishingLine.axis].push(vanishingLine)
+    explicitLinesByAxis[vanishingLine.axis].push(vanishingLine)
+  })
+
+  // Collect direction-constrained world lines as virtual VP lines
+  const virtualLines = collectDirectionConstrainedLines(viewpoint)
+
+  // Combined lines for VP computation and validation (includes virtual lines from x/y/z-constrained world lines)
+  const allLinesByAxis: Record<VanishingLineAxis, Array<VPLineData>> = {
+    x: [...explicitLinesByAxis.x],
+    y: [...explicitLinesByAxis.y],
+    z: [...explicitLinesByAxis.z]
+  }
+
+  virtualLines.forEach(vl => {
+    allLinesByAxis[vl.axis].push(vl)
   })
 
   if (visibility.vanishingLines) {
@@ -41,10 +56,13 @@ export function renderVanishingLines(params: RenderParams): void {
       const lineWidth = isSelected ? 4 : 3
       const endpointRadius = isSelected ? 6 : 4
 
-      ctx.setLineDash([])
+      // Dash-dot pattern to distinguish VLs from regular lines
+      const dashDotPattern = [10, 5, 2, 5]
+      ctx.setLineDash(dashDotPattern)
 
-      // Draw selection highlight (glow effect) behind the line
+      // Draw selection highlight (glow effect) behind the line - solid for visibility
       if (isSelected) {
+        ctx.setLineDash([])  // Solid glow
         ctx.strokeStyle = '#FFFFFF'
         ctx.lineWidth = lineWidth + 4
         ctx.beginPath()
@@ -60,7 +78,8 @@ export function renderVanishingLines(params: RenderParams): void {
         ctx.stroke()
       }
 
-      // Draw the main line in axis color
+      // Draw the main line in axis color with dash-dot pattern
+      ctx.setLineDash(dashDotPattern)
       ctx.strokeStyle = axisColor
       ctx.lineWidth = lineWidth
 
@@ -68,6 +87,7 @@ export function renderVanishingLines(params: RenderParams): void {
       ctx.moveTo(x1, y1)
       ctx.lineTo(x2, y2)
       ctx.stroke()
+      ctx.setLineDash([])  // Reset for endpoints and quality icons
 
       // Draw endpoints with selection ring
       if (isSelected) {
@@ -88,7 +108,7 @@ export function renderVanishingLines(params: RenderParams): void {
       ctx.arc(x2, y2, endpointRadius, 0, 2 * Math.PI)
       ctx.fill()
 
-      const qualityIssues = validateLineQuality(vanishingLine, linesByAxis[vanishingLine.axis])
+      const qualityIssues = validateLineQuality(vanishingLine, allLinesByAxis[vanishingLine.axis])
       if (qualityIssues.length > 0) {
         const midX = (x1 + x2) / 2
         const midY = (y1 + y2) / 2
@@ -134,8 +154,8 @@ export function renderVanishingLines(params: RenderParams): void {
 
   const vanishingPointAccuracy: Record<string, number> = {}
 
-  Object.keys(linesByAxis).forEach(axis => {
-    const lines = linesByAxis[axis]
+  Object.keys(allLinesByAxis).forEach(axis => {
+    const lines = allLinesByAxis[axis as VanishingLineAxis]
     if (lines.length < 2) return
 
     const vp = computeVanishingPoint(lines)
@@ -244,13 +264,15 @@ export function renderVanishingLines(params: RenderParams): void {
     }
   })
 
-  if (vanishingPoints.x && vanishingPoints.y) {
+  // Horizon line: X-Z is the ground plane horizon (Y-up coordinate system)
+  // Prioritize X-Z over other combinations
+  if (vanishingPoints.x && vanishingPoints.z) {
     const vp1_x = vanishingPoints.x.u * scale + offset.x
     const vp1_y = vanishingPoints.x.v * scale + offset.y
-    const vp2_x = vanishingPoints.y.u * scale + offset.x
-    const vp2_y = vanishingPoints.y.v * scale + offset.y
+    const vp2_x = vanishingPoints.z.u * scale + offset.x
+    const vp2_y = vanishingPoints.z.v * scale + offset.y
 
-    ctx.strokeStyle = 'rgba(255, 255, 0, 0.5)'
+    ctx.strokeStyle = 'rgba(255, 255, 0, 0.5)'  // Yellow for true horizon (XZ plane)
     ctx.lineWidth = 2
     ctx.setLineDash([10, 5])
 
@@ -259,13 +281,13 @@ export function renderVanishingLines(params: RenderParams): void {
     ctx.lineTo(vp2_x, vp2_y)
     ctx.stroke()
     ctx.setLineDash([])
-  } else if (vanishingPoints.x && vanishingPoints.z) {
+  } else if (vanishingPoints.x && vanishingPoints.y) {
     const vp1_x = vanishingPoints.x.u * scale + offset.x
     const vp1_y = vanishingPoints.x.v * scale + offset.y
-    const vp2_x = vanishingPoints.z.u * scale + offset.x
-    const vp2_y = vanishingPoints.z.v * scale + offset.y
+    const vp2_x = vanishingPoints.y.u * scale + offset.x
+    const vp2_y = vanishingPoints.y.v * scale + offset.y
 
-    ctx.strokeStyle = 'rgba(255, 0, 255, 0.5)'
+    ctx.strokeStyle = 'rgba(255, 0, 255, 0.5)'  // Magenta for XY plane
     ctx.lineWidth = 2
     ctx.setLineDash([10, 5])
 
@@ -280,7 +302,7 @@ export function renderVanishingLines(params: RenderParams): void {
     const vp2_x = vanishingPoints.z.u * scale + offset.x
     const vp2_y = vanishingPoints.z.v * scale + offset.y
 
-    ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)'
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)'  // Cyan for YZ plane
     ctx.lineWidth = 2
     ctx.setLineDash([10, 5])
 
@@ -326,16 +348,16 @@ export function renderVanishingLines(params: RenderParams): void {
     const canvasHeight = canvasEl.height
 
     if (visibility.perspectiveGrid) {
-      const linesX = linesByAxis['x']
-      const linesY = linesByAxis['y']
-      const linesZ = linesByAxis['z']
+      const linesX = allLinesByAxis['x']
+      const linesY = allLinesByAxis['y']
+      const linesZ = allLinesByAxis['z']
       const vpX = vanishingPoints['x']
       const vpY = vanishingPoints['y']
       const vpZ = vanishingPoints['z']
 
       const drawPerspectiveGrid = (
-        linesA: Array<VanishingLine>,
-        linesB: Array<VanishingLine>,
+        linesA: Array<VPLineData>,
+        linesB: Array<VPLineData>,
         vpA: { u: number; v: number },
         vpB: { u: number; v: number },
         nx = 10,
@@ -346,7 +368,7 @@ export function renderVanishingLines(params: RenderParams): void {
         const vpA_pix = { x: vpA.u * scale + offset.x, y: vpA.v * scale + offset.y }
         const vpB_pix = { x: vpB.u * scale + offset.x, y: vpB.v * scale + offset.y }
 
-        const getAngleRange = (vp: { x: number; y: number }, lines: Array<VanishingLine>) => {
+        const getAngleRange = (vp: { x: number; y: number }, lines: Array<VPLineData>) => {
           const angles = lines.map(L => {
             const mid_u = (L.p1.u + L.p2.u) / 2
             const mid_v = (L.p1.v + L.p2.v) / 2

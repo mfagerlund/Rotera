@@ -108,10 +108,18 @@ function findImagePointInViewpoint(
 }
 
 /**
+ * Generic line type for VP calculations - just needs p1 and p2 coordinates.
+ */
+export interface VPLineData {
+  p1: { u: number; v: number }
+  p2: { u: number; v: number }
+}
+
+/**
  * Collects direction-constrained Lines visible in a viewpoint as virtual vanishing lines.
  * A Line is "visible" if both endpoints have ImagePoints in the viewpoint.
  */
-function collectDirectionConstrainedLines(
+export function collectDirectionConstrainedLines(
   viewpoint: Viewpoint
 ): { axis: VanishingLineAxis; p1: { u: number; v: number }; p2: { u: number; v: number } }[] {
   const virtualLines: { axis: VanishingLineAxis; p1: { u: number; v: number }; p2: { u: number; v: number } }[] = []
@@ -1279,15 +1287,15 @@ function solveLinearSystem3x3(A: number[][], b: number[]): number[] | null {
   return x
 }
 
-export function computeLineLength(line: VanishingLine): number {
+export function computeLineLength(line: VPLineData): number {
   const dx = line.p2.u - line.p1.u
   const dy = line.p2.v - line.p1.v
   return Math.sqrt(dx * dx + dy * dy)
 }
 
 export function computeAngleBetweenLines(
-  line1: VanishingLine,
-  line2: VanishingLine
+  line1: VPLineData,
+  line2: VPLineData
 ): number {
   const dx1 = line1.p2.u - line1.p1.u
   const dy1 = line1.p2.v - line1.p1.v
@@ -1310,8 +1318,8 @@ export function computeAngleBetweenLines(
 }
 
 export function validateLineQuality(
-  line: VanishingLine,
-  allLinesForAxis: VanishingLine[]
+  line: VPLineData,
+  allLinesForAxis: VPLineData[]
 ): LineQualityIssue[] {
   const issues: LineQualityIssue[] = []
 
@@ -1348,7 +1356,7 @@ export function validateLineQuality(
 }
 
 export function validateAxisLineDistribution(
-  lines: VanishingLine[]
+  lines: VPLineData[]
 ): LineQualityIssue[] {
   const issues: LineQualityIssue[] = []
 

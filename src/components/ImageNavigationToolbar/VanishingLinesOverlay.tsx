@@ -47,6 +47,7 @@ export const VanishingLinesOverlay: React.FC<VanishingLinesOverlayProps> = obser
             stroke={vl.getColor()}
             strokeWidth={1}
             strokeOpacity={0.8}
+            strokeDasharray="4,2,1,2"
           />
         )
       })}

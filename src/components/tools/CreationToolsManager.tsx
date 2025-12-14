@@ -37,6 +37,8 @@ interface CreationToolsManagerProps {
   onToolChange: (tool: ToolType) => void
   currentVanishingLineAxis?: 'x' | 'y' | 'z'
   onVanishingLineAxisChange?: (axis: 'x' | 'y' | 'z') => void
+  orientationPaintDirection?: LineDirection
+  onOrientationPaintDirectionChange?: (direction: LineDirection) => void
   allWorldPoints: WorldPoint[]
   existingLines: Map<string, Line>
   onCreatePoint: (imageId: string, u: number, v: number) => void
@@ -66,6 +68,8 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = observe
   onToolChange,
   currentVanishingLineAxis = 'x',
   onVanishingLineAxisChange,
+  orientationPaintDirection = 'free',
+  onOrientationPaintDirectionChange,
   allWorldPoints,
   existingLines,
   onCreatePoint,
@@ -469,6 +473,8 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = observe
                   onUpdateLine(line, { direction })
                 }
               }}
+              selectedDirection={orientationPaintDirection}
+              onDirectionChange={onOrientationPaintDirectionChange || (() => {})}
             />
           )}
         </div>

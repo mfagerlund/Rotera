@@ -1,7 +1,7 @@
 import React from 'react'
 import { observer } from 'mobx-react-lite'
 import { WorldPoint } from '../../entities/world-point'
-import { Line as LineEntity } from '../../entities/line'
+import { Line as LineEntity, LineDirection } from '../../entities/line'
 import { Viewpoint } from '../../entities/viewpoint'
 import type { ISelectable } from '../../types/selectable'
 import { ConstructionPreview } from '../image-viewer/types'
@@ -35,6 +35,8 @@ interface RightPanelProps {
   onClearEditingCoplanarConstraint: () => void
   currentVanishingLineAxis: 'x' | 'y' | 'z'
   onVanishingLineAxisChange: (axis: 'x' | 'y' | 'z') => void
+  orientationPaintDirection: LineDirection
+  onOrientationPaintDirectionChange: (direction: LineDirection) => void
   activeConstraintType: string | null
   selectedPoints: WorldPoint[]
   selectedLines: LineEntity[]
@@ -70,6 +72,8 @@ export const RightPanel: React.FC<RightPanelProps> = observer(({
   onClearEditingCoplanarConstraint,
   currentVanishingLineAxis,
   onVanishingLineAxisChange,
+  orientationPaintDirection,
+  onOrientationPaintDirectionChange,
   activeConstraintType,
   selectedPoints,
   selectedLines,
@@ -106,6 +110,8 @@ export const RightPanel: React.FC<RightPanelProps> = observer(({
         onClearEditingCoplanarConstraint={onClearEditingCoplanarConstraint}
         currentVanishingLineAxis={currentVanishingLineAxis}
         onVanishingLineAxisChange={onVanishingLineAxisChange}
+        orientationPaintDirection={orientationPaintDirection}
+        onOrientationPaintDirectionChange={onOrientationPaintDirectionChange}
       />
 
       <ConstraintPropertyPanel
