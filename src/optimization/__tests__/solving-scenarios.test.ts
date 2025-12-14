@@ -732,4 +732,125 @@ describe('Solving Scenarios - Phase 4: Single Camera with Inferred Coordinates',
       }
     });
   });
+
+  describe('Axis Sign Correction', () => {
+    it('should correct X axis sign when locked X is positive but solved is negative', () => {
+      // Create a scenario where X axis might be flipped
+      const project = loadFixture('coordinate-sign-good.json');
+
+      // Find a point with positive X locked coordinate and verify it's correct after solve
+      const worldPointsArray = Array.from(project.worldPoints) as WorldPoint[];
+      const pointWithPositiveX = worldPointsArray.find(wp => {
+        const locked = wp.lockedXyz;
+        return locked && locked[0] !== null && locked[0] > 0;
+      });
+
+      const result = optimizeProject(project, {
+        autoInitializeCameras: true,
+        autoInitializeWorldPoints: true,
+        forceRightHanded: true,
+        maxIterations: 100,
+        tolerance: 1e-6,
+      });
+
+      expect(result.converged).toBe(true);
+
+      // If there's a point with positive locked X, its solved X should also be positive
+      if (pointWithPositiveX && pointWithPositiveX.optimizedXyz) {
+        const lockedX = pointWithPositiveX.lockedXyz![0]!;
+        const solvedX = pointWithPositiveX.optimizedXyz[0];
+        console.log(`Point ${pointWithPositiveX.name}: locked X=${lockedX}, solved X=${solvedX}`);
+        expect(Math.sign(solvedX)).toBe(Math.sign(lockedX));
+      }
+    });
+
+    it('should correct Y axis sign when locked Y is positive but solved is negative', () => {
+      const project = loadFixture('coordinate-sign-good.json');
+
+      const worldPointsArray = Array.from(project.worldPoints) as WorldPoint[];
+      const pointWithPositiveY = worldPointsArray.find(wp => {
+        const locked = wp.lockedXyz;
+        return locked && locked[1] !== null && locked[1] > 0;
+      });
+
+      const result = optimizeProject(project, {
+        autoInitializeCameras: true,
+        autoInitializeWorldPoints: true,
+        forceRightHanded: true,
+        maxIterations: 100,
+        tolerance: 1e-6,
+      });
+
+      expect(result.converged).toBe(true);
+
+      if (pointWithPositiveY && pointWithPositiveY.optimizedXyz) {
+        const lockedY = pointWithPositiveY.lockedXyz![1]!;
+        const solvedY = pointWithPositiveY.optimizedXyz[1];
+        console.log(`Point ${pointWithPositiveY.name}: locked Y=${lockedY}, solved Y=${solvedY}`);
+        expect(Math.sign(solvedY)).toBe(Math.sign(lockedY));
+      }
+    });
+
+    it('should correct Z axis sign when locked Z is positive but solved is negative', () => {
+      const project = loadFixture('coordinate-sign-good.json');
+
+      const worldPointsArray = Array.from(project.worldPoints) as WorldPoint[];
+      const pointWithPositiveZ = worldPointsArray.find(wp => {
+        const locked = wp.lockedXyz;
+        return locked && locked[2] !== null && locked[2] > 0;
+      });
+
+      const result = optimizeProject(project, {
+        autoInitializeCameras: true,
+        autoInitializeWorldPoints: true,
+        forceRightHanded: true,
+        maxIterations: 100,
+        tolerance: 1e-6,
+      });
+
+      expect(result.converged).toBe(true);
+
+      if (pointWithPositiveZ && pointWithPositiveZ.optimizedXyz) {
+        const lockedZ = pointWithPositiveZ.lockedXyz![2]!;
+        const solvedZ = pointWithPositiveZ.optimizedXyz[2];
+        console.log(`Point ${pointWithPositiveZ.name}: locked Z=${lockedZ}, solved Z=${solvedZ}`);
+        expect(Math.sign(solvedZ)).toBe(Math.sign(lockedZ));
+      }
+    });
+
+    it('should ensure all locked axis signs match after solving', () => {
+      // Test that forceRightHanded corrects any axis sign mismatches
+      const project = loadFixture('coordinate-sign-posZ.json');
+
+      const worldPointsArray = Array.from(project.worldPoints) as WorldPoint[];
+
+      const result = optimizeProject(project, {
+        autoInitializeCameras: true,
+        autoInitializeWorldPoints: true,
+        forceRightHanded: true,
+        maxIterations: 100,
+        tolerance: 1e-6,
+      });
+
+      expect(result.converged).toBe(true);
+
+      // After solving with forceRightHanded, ALL locked coordinates should have matching signs
+      for (const wp of worldPointsArray) {
+        const locked = wp.lockedXyz;
+        const solved = wp.optimizedXyz;
+        if (!locked || !solved) continue;
+
+        // Only check non-zero locked values
+        if (locked[0] !== null && locked[0] !== 0 && solved[0] !== null) {
+          expect(Math.sign(solved[0])).toBe(Math.sign(locked[0]));
+        }
+        if (locked[1] !== null && locked[1] !== 0 && solved[1] !== null) {
+          expect(Math.sign(solved[1])).toBe(Math.sign(locked[1]));
+        }
+        if (locked[2] !== null && locked[2] !== 0 && solved[2] !== null) {
+          expect(Math.sign(solved[2])).toBe(Math.sign(locked[2]));
+        }
+      }
+    });
+  });
 });

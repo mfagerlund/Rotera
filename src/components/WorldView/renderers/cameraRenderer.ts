@@ -125,7 +125,11 @@ export function renderCameras(
     // Stored quaternions rotate world → camera, but to place the frustum in world space
     // we need the inverse (camera → world) rotation.
     const rot = viewpoint.rotation
-    const rotInverse: [number, number, number, number] = [rot[0], -rot[1], -rot[2], -rot[3]]
+    let rotInverse: [number, number, number, number] = [rot[0], -rot[1], -rot[2], -rot[3]]
+
+    // When isZReflected=true, "in front of camera" is negative Z in camera space.
+    // Place the frustum plane at negative Z so it's visible.
+    const zPlane = viewpoint.isZReflected ? -frustumDepth : frustumDepth
 
     // Build image plane corners in camera space using intrinsics.
     const fx = viewpoint.focalLength
@@ -133,8 +137,6 @@ export function renderCameras(
     const cx = viewpoint.principalPointX
     const cy = viewpoint.principalPointY
 
-    // Place the image plane at Z = frustumDepth in camera space for visibility
-    const zPlane = frustumDepth
     const pixelCorners: [number, number][] = [
       [0, 0], // top-left pixel
       [viewpoint.imageWidth, 0], // top-right

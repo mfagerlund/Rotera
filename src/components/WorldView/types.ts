@@ -39,6 +39,11 @@ export interface ViewMatrix {
   principalPoint?: [number, number]
   aspectRatio?: number
   skew?: number
+  /**
+   * When true, the camera has been Z-reflected with Rz_180 rotation.
+   * After this transformation, cam' = -cam, so points in front have camZ < 0.
+   */
+  isZReflected?: boolean
 }
 
 export interface DragState {

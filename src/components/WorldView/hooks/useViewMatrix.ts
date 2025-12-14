@@ -114,7 +114,8 @@ export function useViewMatrix() {
         focalLength: target.focalLength,
         principalPoint: target.principalPoint,
         aspectRatio: target.aspectRatio,
-        skew: target.skew
+        skew: target.skew,
+        isZReflected: target.isZReflected
       })
 
       if (t < 1) {
@@ -284,6 +285,7 @@ export function useViewMatrix() {
     console.log('Quaternion:', viewpoint.rotation)
     console.log('Focal length:', viewpoint.focalLength, '-> scaled:', focalLength)
     console.log('Image:', imageWidth, 'x', imageHeight, '-> Canvas:', canvasWidth, 'x', canvasHeight)
+    console.log('isZReflected:', viewpoint.isZReflected)
     console.log('=== END DEBUG ===')
 
     // Pass camera parameters directly - projection will use quaternion
@@ -296,7 +298,8 @@ export function useViewMatrix() {
       focalLength,
       principalPoint,
       aspectRatio: viewpoint.aspectRatio,
-      skew: viewpoint.skewCoefficient
+      skew: viewpoint.skewCoefficient,
+      isZReflected: viewpoint.isZReflected
     })
   }, [animateTo])
 

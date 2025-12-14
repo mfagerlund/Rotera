@@ -36,7 +36,8 @@ export function useProjection(canvasRef: React.RefObject<HTMLCanvasElement>, vie
       focalLength,
       principalPoint,
       aspectRatio,
-      skew
+      skew,
+      isZReflected
     } = viewMatrix
 
     // If we have camera quaternion, use proper pinhole camera projection
@@ -50,8 +51,9 @@ export function useProjection(canvasRef: React.RefObject<HTMLCanvasElement>, vie
       const [camX, camY, camZ] = rotateByQuaternion([px, py, pz], cameraQuaternion)
 
       // Step 3: Perspective projection (pinhole camera model)
-      // Only project points in front of camera (Z > 0)
-      if (camZ > 0.01) {
+      // After Z-reflection + Rz_180, cam' = -cam, so points in front have camZ < 0
+      const isInFront = isZReflected ? (camZ < -0.01) : (camZ > 0.01)
+      if (isInFront) {
         // Principal point + translation for pan support
         const cx = (principalPoint?.[0] ?? canvas.width / 2) + translation.x
         const cy = (principalPoint?.[1] ?? canvas.height / 2) + translation.y
