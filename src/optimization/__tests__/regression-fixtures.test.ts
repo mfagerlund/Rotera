@@ -34,11 +34,13 @@ function loadFixture(filename: string) {
 function runRegressionTest(fixture: RegressionFixture) {
   const project = loadFixture(fixture.filename);
 
+  // Use fewer iterations for regression tests - we just need error below threshold,
+  // not full convergence. This dramatically speeds up the test suite.
   const result = optimizeProject(project, {
     autoInitializeCameras: true,
     autoInitializeWorldPoints: true,
     detectOutliers: true,
-    maxIterations: 400,
+    maxIterations: 100, // Reduced from 400 - regression tests don't need full convergence
     tolerance: 1e-6,
     verbose: false,
   });
