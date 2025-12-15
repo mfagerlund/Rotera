@@ -761,7 +761,32 @@ export function computeRotationsFromVPs(
   let d_y_alt: number[] | null = null  // Alternate Y direction (flipped)
   let derivedYAxis = false  // True when Y is computed from cross product (not from VP)
 
-  if (directions.x && directions.z && !directions.y) {
+  if (directions.x && directions.y && directions.z) {
+    // All 3 VPs observed - use them directly, but ensure right-handed
+    d_x = directions.x
+    d_y = directions.y
+    d_z = directions.z
+    d_y_alt = [-d_y[0], -d_y[1], -d_y[2]]
+
+    log(`[VP Debug] All 3 VPs observed. Initial directions:`)
+    log(`[VP Debug]   d_x = [${d_x.map(v => v.toFixed(4)).join(', ')}]`)
+    log(`[VP Debug]   d_y = [${d_y.map(v => v.toFixed(4)).join(', ')}]`)
+    log(`[VP Debug]   d_z = [${d_z.map(v => v.toFixed(4)).join(', ')}]`)
+
+    // Check if observed directions form right or left-handed system
+    const crossXY = cross(d_x, d_y)
+    const crossXY_norm = normalize(crossXY)
+    const dot = crossXY_norm[0] * d_z[0] + crossXY_norm[1] * d_z[1] + crossXY_norm[2] * d_z[2]
+    log(`[VP Debug] X × Y = [${crossXY_norm.map(v => v.toFixed(4)).join(', ')}]`)
+    log(`[VP Debug] (X × Y) · Z = ${dot.toFixed(4)} (${dot > 0 ? 'RIGHT-HANDED' : 'LEFT-HANDED'})`)
+
+    // CRITICAL: If left-handed, flip Z to make the base right-handed
+    // This ensures all 4 even-flip sign combinations are also right-handed
+    if (dot < 0) {
+      log(`[VP Debug] Flipping d_z to make base rotation RIGHT-HANDED`)
+      d_z = [-d_z[0], -d_z[1], -d_z[2]]
+    }
+  } else if (directions.x && directions.z && !directions.y) {
     d_x = directions.x
     d_z = directions.z
     d_y = cross(d_z, d_x)  // Y = Z × X (right-hand rule)
@@ -1573,9 +1598,89 @@ export function initializeCameraWithVanishingPoints(
       totalReprojError += err
     }
 
+    // =========================================================================
+    // RIGHT-HANDED COORDINATE PREFERENCE
+    // =========================================================================
+    // For right-handed coordinates, we need X×Y to point in +Z direction.
+    // When X is at +X and Y is at +Y, this requires Z to be at +Z.
+    //
+    // Check which sign of axis-constrained coordinates produces better reprojection.
+    let optimalXIsPositive = true  // default to positive if no X constraint
+    let optimalZIsPositive = true  // default to positive if no Z constraint
+
+    for (const wp of Array.from(worldPoints)) {
+      const locked = wp.lockedXyz
+      if (!locked) continue
+
+      // Check for Z-axis constraint: [0, 0, null]
+      if (locked[0] === 0 && locked[1] === 0 && locked[2] === null) {
+        const imagePoints = viewpoint.getImagePointsForWorldPoint(wp)
+        if (imagePoints.length === 0) continue
+
+        const observed = { u: imagePoints[0].u, v: imagePoints[0].v }
+
+        const testZ = (zVal: number) => {
+          const worldPos: [number, number, number] = [0, 0, zVal]
+          const rel = [worldPos[0] - position[0], worldPos[1] - position[1], worldPos[2] - position[2]]
+          const cam = [
+            rotationMatrix[0][0] * rel[0] + rotationMatrix[0][1] * rel[1] + rotationMatrix[0][2] * rel[2],
+            rotationMatrix[1][0] * rel[0] + rotationMatrix[1][1] * rel[1] + rotationMatrix[1][2] * rel[2],
+            rotationMatrix[2][0] * rel[0] + rotationMatrix[2][1] * rel[1] + rotationMatrix[2][2] * rel[2]
+          ]
+          if (cam[2] <= 0) return Infinity
+          const projU = principalPoint.u + focalLength * (cam[0] / cam[2])
+          const projV = principalPoint.v - focalLength * (cam[1] / cam[2])
+          return Math.sqrt((projU - observed.u) ** 2 + (projV - observed.v) ** 2)
+        }
+
+        const errPlus = testZ(10)
+        const errMinus = testZ(-10)
+        optimalZIsPositive = errPlus < errMinus
+
+        log(`[VP RH] Z-axis point ${wp.name}: z=+10 err=${errPlus.toFixed(1)}px, z=-10 err=${errMinus.toFixed(1)}px -> ${optimalZIsPositive ? 'POSITIVE Z' : 'NEGATIVE Z'}`)
+      }
+
+      // Check for X-axis constraint: [null, 0, 0]
+      if (locked[0] === null && locked[1] === 0 && locked[2] === 0) {
+        const imagePoints = viewpoint.getImagePointsForWorldPoint(wp)
+        if (imagePoints.length === 0) continue
+
+        const observed = { u: imagePoints[0].u, v: imagePoints[0].v }
+
+        const testX = (xVal: number) => {
+          const worldPos: [number, number, number] = [xVal, 0, 0]
+          const rel = [worldPos[0] - position[0], worldPos[1] - position[1], worldPos[2] - position[2]]
+          const cam = [
+            rotationMatrix[0][0] * rel[0] + rotationMatrix[0][1] * rel[1] + rotationMatrix[0][2] * rel[2],
+            rotationMatrix[1][0] * rel[0] + rotationMatrix[1][1] * rel[1] + rotationMatrix[1][2] * rel[2],
+            rotationMatrix[2][0] * rel[0] + rotationMatrix[2][1] * rel[1] + rotationMatrix[2][2] * rel[2]
+          ]
+          if (cam[2] <= 0) return Infinity
+          const projU = principalPoint.u + focalLength * (cam[0] / cam[2])
+          const projV = principalPoint.v - focalLength * (cam[1] / cam[2])
+          return Math.sqrt((projU - observed.u) ** 2 + (projV - observed.v) ** 2)
+        }
+
+        const errPlus = testX(10)
+        const errMinus = testX(-10)
+        optimalXIsPositive = errPlus < errMinus
+
+        log(`[VP RH] X-axis point ${wp.name}: x=+10 err=${errPlus.toFixed(1)}px, x=-10 err=${errMinus.toFixed(1)}px -> ${optimalXIsPositive ? 'POSITIVE X' : 'NEGATIVE X'}`)
+      }
+    }
+
+    // For right-handed: X×Y should point in same direction as Z
+    // If X and Z have same sign (both + or both -), then with Y at +Y, it's right-handed
+    // If X and Z have opposite signs, it's left-handed
+    const wouldBeRightHanded = (optimalXIsPositive === optimalZIsPositive)
+    const rightHandedBonus = wouldBeRightHanded ? 300000 : 0
+
+    log(`[VP RH] optimalX=${optimalXIsPositive ? '+' : '-'}, optimalZ=${optimalZIsPositive ? '+' : '-'} -> ${wouldBeRightHanded ? 'RIGHT-HANDED (+bonus)' : 'LEFT-HANDED (no bonus)'}`)
+
     // Score: points in front is primary (required), reprojection error is secondary (lower is better)
     // Use negative reproj error so higher score = better
-    const score = pointsInFront * 1000000 - totalReprojError
+    // Add right-handed bonus to prefer rotations with positive axis coordinates
+    const score = pointsInFront * 1000000 + rightHandedBonus - totalReprojError
     const avgError = totalReprojError / effectivePointsData.length
     if (VP_SIGN_DEBUG) {
       log(
@@ -1594,6 +1699,7 @@ export function initializeCameraWithVanishingPoints(
       bestPosition = position
       bestPointsInFront = pointsInFront
       bestReprojError = totalReprojError / effectivePointsData.length
+      log(`[VP Sign Debug] NEW BEST: [${baseLabel} ${flipX},${flipY},${flipZ}] score=${score.toFixed(1)}, avgError=${avgError.toFixed(1)}px`)
     }
   }
   } // end of baseRotations loop

@@ -39,6 +39,7 @@ describe('Y Convention Invariance', () => {
       detectOutliers: false,
       maxIterations: 100,
       tolerance: 1e-6,
+      forceRightHanded: false, // Preserve original sign convention for this test
     });
 
     console.log('\n=== -Y UP CONVENTION ===');
@@ -87,6 +88,7 @@ describe('Y Convention Invariance', () => {
       detectOutliers: false,
       maxIterations: 100,
       tolerance: 1e-6,
+      forceRightHanded: false, // Preserve original sign convention for this test
     });
 
     console.log('\n=== +Y UP CONVENTION ===');
@@ -112,6 +114,7 @@ describe('Y Convention Invariance', () => {
       autoInitializeCameras: true,
       autoInitializeWorldPoints: true,
       detectOutliers: false,
+      forceRightHanded: false, // Preserve original sign convention
     });
 
     // Run +Y convention (flip both Y and Z to maintain right-handedness)
@@ -133,6 +136,7 @@ describe('Y Convention Invariance', () => {
       autoInitializeCameras: true,
       autoInitializeWorldPoints: true,
       detectOutliers: false,
+      forceRightHanded: false, // Preserve original sign convention
     });
 
     console.log('\n=== COMPARISON ===');
