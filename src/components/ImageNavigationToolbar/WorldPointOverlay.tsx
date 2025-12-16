@@ -15,6 +15,7 @@ interface WorldPointOverlayProps {
   hoveredWorldPoint: WorldPoint | null
   onWorldPointHover?: (worldPoint: WorldPoint | null) => void
   onWorldPointClick?: (worldPoint: WorldPoint, ctrlKey: boolean, shiftKey: boolean) => void
+  onWorldPointRightClick?: (worldPoint: WorldPoint) => void
 }
 
 export const WorldPointOverlay: React.FC<WorldPointOverlayProps> = observer(({
@@ -24,7 +25,8 @@ export const WorldPointOverlay: React.FC<WorldPointOverlayProps> = observer(({
   selectedWorldPoints,
   hoveredWorldPoint,
   onWorldPointHover,
-  onWorldPointClick
+  onWorldPointClick,
+  onWorldPointRightClick
 }) => {
   return (
     <div className="wp-locations-overlay">
@@ -74,6 +76,13 @@ export const WorldPointOverlay: React.FC<WorldPointOverlayProps> = observer(({
             onClick={(e) => {
               e.stopPropagation()
               onWorldPointClick?.(wp, e.ctrlKey, e.shiftKey)
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              // Select the point and open the edit dialog
+              onWorldPointClick?.(wp, e.ctrlKey, e.shiftKey)
+              onWorldPointRightClick?.(wp)
             }}
           />
         )

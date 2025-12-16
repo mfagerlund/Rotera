@@ -186,6 +186,17 @@ export function getConstraintGlyph(constraintType: string): string {
   }
 }
 
+// Axis colors for X, Y, Z - pure RGB for maximum clarity
+export const AXIS_COLORS: Record<'x' | 'y' | 'z', string> = {
+  x: '#ff0000',
+  y: '#00ff00',
+  z: '#0000ff'
+} as const
+
+export function getAxisColor(axis: 'x' | 'y' | 'z'): string {
+  return AXIS_COLORS[axis]
+}
+
 // Animation easing functions
 export const EASING = {
   easeOut: 'cubic-bezier(0.0, 0.0, 0.2, 1)',
@@ -200,6 +211,7 @@ export default {
   THEME_COLORS,
   FEEDBACK_LEVELS,
   ENTITY_STYLES,
+  AXIS_COLORS,
   EASING,
   getConstraintStatusColor,
   getEntityColorForStatus,
@@ -207,5 +219,6 @@ export default {
   getConstructionColor,
   getImageGuideColor,
   getWorldGeometryColor,
-  getConstraintGlyph
+  getConstraintGlyph,
+  getAxisColor
 }

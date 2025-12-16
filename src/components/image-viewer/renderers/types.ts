@@ -4,6 +4,9 @@ import { Line } from '../../../entities/line'
 import { VanishingLine } from '../../../entities/vanishing-line'
 import { Viewpoint } from '../../../entities/viewpoint'
 import { CanvasToImage, ImageToCanvas, ConstructionPreview } from '../types'
+import { AXIS_COLORS } from '../../../constants/visualLanguage'
+
+export { AXIS_COLORS }
 
 export interface RenderParams {
   ctx: CanvasRenderingContext2D
@@ -53,8 +56,3 @@ export interface RenderParams {
   imageRef: RefObject<HTMLImageElement>
 }
 
-export const AXIS_COLORS: Record<'x' | 'y' | 'z', string> = {
-  x: '#F44336',
-  y: '#4CAF50',
-  z: '#2196F3'
-}

@@ -29,6 +29,7 @@ interface LeftPanelProps {
   onImageReorder: (newOrder: string[]) => void
   onWorldPointHover: (worldPoint: WorldPoint | null) => void
   onWorldPointClick: (worldPoint: WorldPoint, ctrlKey: boolean, shiftKey: boolean) => void
+  onWorldPointRightClick: (worldPoint: WorldPoint) => void
   onCopyPointsToCurrentImage: (sourceViewpoint: Viewpoint) => void
   onViewFromCamera: (viewpoint: Viewpoint) => void
   onShowInImageView: (viewpoint: Viewpoint) => void
@@ -55,6 +56,7 @@ export const LeftPanel = observer(forwardRef<LeftPanelRef, LeftPanelProps>(({
   onImageReorder,
   onWorldPointHover,
   onWorldPointClick,
+  onWorldPointRightClick,
   onCopyPointsToCurrentImage,
   onViewFromCamera,
   onShowInImageView
@@ -86,6 +88,7 @@ export const LeftPanel = observer(forwardRef<LeftPanelRef, LeftPanelProps>(({
         onImageReorder={onImageReorder}
         onWorldPointHover={onWorldPointHover}
         onWorldPointClick={onWorldPointClick}
+        onWorldPointRightClick={onWorldPointRightClick}
         onCopyPointsToCurrentImage={onCopyPointsToCurrentImage}
         onViewFromCamera={onViewFromCamera}
         onShowInImageView={onShowInImageView}

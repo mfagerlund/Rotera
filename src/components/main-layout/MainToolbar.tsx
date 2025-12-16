@@ -218,17 +218,29 @@ export const MainToolbar: React.FC<MainToolbarProps> = observer(({
               </button>
             </form>
           ) : (
-            <button
-              className="project-name-display"
-              onClick={() => {
-                setEditedName(project.name)
-                setIsEditingName(true)
-              }}
-              title="Click to rename project"
-            >
-              {project.name}{isDirty && <span className="dirty-indicator">*</span>}
-              <FontAwesomeIcon icon={faPencil} className="edit-icon" />
-            </button>
+            <>
+              <button
+                className="project-name-display"
+                onClick={() => {
+                  setEditedName(project.name)
+                  setIsEditingName(true)
+                }}
+                title="Click to rename project"
+              >
+                {project.name}
+                <FontAwesomeIcon icon={faPencil} className="edit-icon" />
+              </button>
+              {onSaveProject && (
+                <button
+                  className={`btn-save-inline ${isDirty ? 'btn-save-inline--dirty' : ''}`}
+                  onClick={handleSave}
+                  disabled={isSaving || !isDirty}
+                  title={isDirty ? 'Save project (Ctrl+S)' : 'No unsaved changes'}
+                >
+                  <FontAwesomeIcon icon={faFloppyDisk} />
+                </button>
+              )}
+            </>
           )}
         </div>
       )}

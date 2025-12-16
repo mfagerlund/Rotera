@@ -36,6 +36,7 @@ export const ImageNavigationItem: React.FC<ImageNavigationItemProps> = observer(
   onDrop,
   onWorldPointHover,
   onWorldPointClick,
+  onWorldPointRightClick,
   onCopyPointsToCurrentImage,
   onViewFromCamera,
   onShowInImageView,
@@ -231,6 +232,7 @@ export const ImageNavigationItem: React.FC<ImageNavigationItemProps> = observer(
           hoveredWorldPoint={hoveredWorldPoint}
           onWorldPointHover={onWorldPointHover}
           onWorldPointClick={onWorldPointClick}
+          onWorldPointRightClick={onWorldPointRightClick}
         />
       </div>
     </div>

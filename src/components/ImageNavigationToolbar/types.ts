@@ -26,6 +26,7 @@ export interface ImageNavigationToolbarProps {
   onImageReorder: (newOrder: string[]) => void
   onWorldPointHover?: (worldPoint: WorldPoint | null) => void
   onWorldPointClick?: (worldPoint: WorldPoint, ctrlKey: boolean, shiftKey: boolean) => void
+  onWorldPointRightClick?: (worldPoint: WorldPoint) => void
   onCopyPointsToCurrentImage?: (sourceViewpoint: Viewpoint) => void
   onViewFromCamera?: (viewpoint: Viewpoint) => void
   onShowInImageView?: (viewpoint: Viewpoint) => void
@@ -55,6 +56,7 @@ export interface ImageNavigationItemProps {
   onDrop: () => void
   onWorldPointHover?: (worldPoint: WorldPoint | null) => void
   onWorldPointClick?: (worldPoint: WorldPoint, ctrlKey: boolean, shiftKey: boolean) => void
+  onWorldPointRightClick?: (worldPoint: WorldPoint) => void
   onCopyPointsToCurrentImage?: (sourceViewpoint: Viewpoint) => void
   onViewFromCamera?: (viewpoint: Viewpoint) => void
   onShowInImageView?: (viewpoint: Viewpoint) => void

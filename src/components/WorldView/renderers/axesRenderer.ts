@@ -1,6 +1,7 @@
 // Coordinate axes rendering
 
 import type { ProjectedPoint } from '../types'
+import { AXIS_COLORS } from '../../../constants/visualLanguage'
 
 export function renderAxes(
   ctx: CanvasRenderingContext2D,
@@ -13,9 +14,9 @@ export function renderAxes(
   const axisLength = 2 // meters
 
   const axes = [
-    { end: [axisLength, 0, 0] as [number, number, number], color: '#F44336', label: 'X' },
-    { end: [0, axisLength, 0] as [number, number, number], color: '#4CAF50', label: 'Y' },
-    { end: [0, 0, axisLength] as [number, number, number], color: '#2196F3', label: 'Z' }
+    { end: [axisLength, 0, 0] as [number, number, number], color: AXIS_COLORS.x, label: 'X' },
+    { end: [0, axisLength, 0] as [number, number, number], color: AXIS_COLORS.y, label: 'Y' },
+    { end: [0, 0, axisLength] as [number, number, number], color: AXIS_COLORS.z, label: 'Z' }
   ]
 
   const originProj = project3DTo2D(origin)

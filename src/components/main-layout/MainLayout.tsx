@@ -104,6 +104,11 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
     return () => clearInterval(interval)
   }, [])
 
+  // Track dirty state before optimization to restore it after
+  // (optimization changes computed values, not real user data)
+  const dirtyStateBeforeOptimizeRef = useRef(false)
+  const isOptimizingRef = useRef(false)
+
   // Task 6: Mark dirty on changes using MobX reaction
   useEffect(() => {
     if (!project) return
@@ -111,17 +116,18 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
     const dispose = reaction(
       () => Serialization.serialize(project),
       () => {
-        markDirty()
+        // Don't mark dirty during optimization - optimization changes computed values,
+        // not user data, so we preserve the pre-optimization dirty state
+        if (!isOptimizingRef.current) {
+          markDirty()
+          setIsDirtyState(true)
+        }
       },
       { fireImmediately: false }
     )
 
     return () => dispose()
   }, [project])
-
-  // Track dirty state before optimization to restore it after
-  // (optimization changes computed values, not real user data)
-  const dirtyStateBeforeOptimizeRef = useRef(false)
 
   const handleSaveProject = useCallback(async () => {
     if (!project) return
@@ -205,6 +211,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
   // Wrap triggerOptimization to capture dirty state before optimization starts
   const handleTriggerOptimization = useCallback(() => {
     dirtyStateBeforeOptimizeRef.current = getIsDirty()
+    isOptimizingRef.current = true
     triggerOptimization()
   }, [triggerOptimization])
 
@@ -637,8 +644,6 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
               activeTool={activeTool}
               currentVanishingLineAxis={currentVanishingLineAxis}
               onVanishingLineAxisChange={setCurrentVanishingLineAxis}
-              selectedDirection={orientationPaintDirection}
-              onDirectionChange={setOrientationPaintDirection}
             />
 
             <div className="content-area">
@@ -676,6 +681,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
                 onImageReorder={handleImageReorder}
                 onWorldPointHover={setHoveredWorldPoint}
                 onWorldPointClick={handleEnhancedPointClick}
+                onWorldPointRightClick={openWorldPointEdit}
                 onViewFromCamera={(viewpoint) => {
                   workspaceActions.setWorkspace('world')
                   setTimeout(() => worldViewRef.current?.lookFromCamera(viewpoint), 100)
@@ -921,6 +927,8 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
         hoveredCoplanarConstraint={hoveredCoplanarConstraint}
         project={project}
         onOptimizationComplete={(success, message) => {
+          // Optimization is done - stop suppressing dirty changes
+          isOptimizingRef.current = false
           // Restore the dirty state from before optimization
           // (optimization only changes computed values, not user data)
           if (dirtyStateBeforeOptimizeRef.current) {

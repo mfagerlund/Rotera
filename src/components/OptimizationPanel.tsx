@@ -134,7 +134,8 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
   const { cancel: cancelOptimization } = clientSolver
 
   // Get optimization stats from actual entities
-  const stats = React.useMemo(() => {
+  // Note: No useMemo - let MobX observer track observable access for reactivity
+  const stats = (() => {
     const pointArray = Array.from(project.worldPoints.values())
     const lineArray = Array.from(project.lines.values())
     const viewpointArray = Array.from(project.viewpoints.values())
@@ -251,7 +252,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
       canInitialize,
       initializationError
     }
-  }, [project])
+  })()
 
   const canOptimize = useCallback(() => {
     if (isOptimizing) return false

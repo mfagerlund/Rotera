@@ -5,6 +5,7 @@ import type { ISerializable } from '../serialization/ISerializable';
 import type { SerializationContext } from '../serialization/SerializationContext';
 import type { VanishingLineDto } from './VanishingLineDto';
 import type { ISelectable, SelectableType } from '../../types/selectable';
+import { AXIS_COLORS } from '../../constants/visualLanguage';
 
 export type VanishingLineAxis = 'x' | 'y' | 'z';
 
@@ -63,14 +64,7 @@ export class VanishingLine implements ISerializable<VanishingLineDto>, ISelectab
   }
 
   getColor(): string {
-    switch (this.axis) {
-      case 'x':
-        return '#ff0000';
-      case 'y':
-        return '#00ff00';
-      case 'z':
-        return '#0000ff';
-    }
+    return AXIS_COLORS[this.axis];
   }
 
   getAxisName(): string {

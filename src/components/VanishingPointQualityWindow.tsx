@@ -6,6 +6,7 @@ import { Viewpoint } from '../entities/viewpoint'
 import FloatingWindow from './FloatingWindow'
 import { computeVanishingPoint, validateLineQuality, validateAxisLineDistribution, LineQualityIssue, collectDirectionConstrainedLines, VPLineData } from '../optimization/vanishing-points'
 import { VanishingLine, VanishingLineAxis } from '../entities/vanishing-line'
+import { AXIS_COLORS } from '../constants/visualLanguage'
 
 interface VanishingPointQualityWindowProps {
   isOpen: boolean
@@ -41,9 +42,9 @@ export const VanishingPointQualityWindow: React.FC<VanishingPointQualityWindowPr
   }
 
   const vpQuality: Record<string, { lines: number; angle?: number; color: string }> = {
-    x: { lines: allLinesByAxis.x.length, color: '#ff0000' },
-    y: { lines: allLinesByAxis.y.length, color: '#00ff00' },
-    z: { lines: allLinesByAxis.z.length, color: '#0000ff' }
+    x: { lines: allLinesByAxis.x.length, color: AXIS_COLORS.x },
+    y: { lines: allLinesByAxis.y.length, color: AXIS_COLORS.y },
+    z: { lines: allLinesByAxis.z.length, color: AXIS_COLORS.z }
   }
 
   Object.entries(allLinesByAxis).forEach(([axis, lines]) => {
@@ -114,21 +115,21 @@ export const VanishingPointQualityWindow: React.FC<VanishingPointQualityWindowPr
 
           const axisIcon = axis === 'x' ? (
             <svg width="32" height="24" viewBox="0 0 32 24">
-              <line x1="10" y1="11" x2="32" y2="4" stroke="#ff0000" strokeWidth="2" />
-              <line x1="10" y1="13" x2="32" y2="20" stroke="#ff0000" strokeWidth="2" />
-              <circle cx="6" cy="12" r="3" fill="#ff0000" />
+              <line x1="10" y1="11" x2="32" y2="4" stroke={AXIS_COLORS.x} strokeWidth="2" />
+              <line x1="10" y1="13" x2="32" y2="20" stroke={AXIS_COLORS.x} strokeWidth="2" />
+              <circle cx="6" cy="12" r="3" fill={AXIS_COLORS.x} />
             </svg>
           ) : axis === 'y' ? (
             <svg width="24" height="32" viewBox="0 0 24 32">
-              <line x1="11" y1="10" x2="4" y2="32" stroke="#00ff00" strokeWidth="2" />
-              <line x1="13" y1="10" x2="20" y2="32" stroke="#00ff00" strokeWidth="2" />
-              <circle cx="12" cy="6" r="3" fill="#00ff00" />
+              <line x1="11" y1="10" x2="4" y2="32" stroke={AXIS_COLORS.y} strokeWidth="2" />
+              <line x1="13" y1="10" x2="20" y2="32" stroke={AXIS_COLORS.y} strokeWidth="2" />
+              <circle cx="12" cy="6" r="3" fill={AXIS_COLORS.y} />
             </svg>
           ) : (
             <svg width="32" height="24" viewBox="0 0 32 24">
-              <line x1="0" y1="4" x2="22" y2="11" stroke="#0000ff" strokeWidth="2" />
-              <line x1="0" y1="20" x2="22" y2="13" stroke="#0000ff" strokeWidth="2" />
-              <circle cx="26" cy="12" r="3" fill="#0000ff" />
+              <line x1="0" y1="4" x2="22" y2="11" stroke={AXIS_COLORS.z} strokeWidth="2" />
+              <line x1="0" y1="20" x2="22" y2="13" stroke={AXIS_COLORS.z} strokeWidth="2" />
+              <circle cx="26" cy="12" r="3" fill={AXIS_COLORS.z} />
             </svg>
           )
 
@@ -170,7 +171,7 @@ export const VanishingPointQualityWindow: React.FC<VanishingPointQualityWindowPr
               Quality Warnings
             </div>
             {allIssues.map((item, idx) => {
-              const axisColors = { x: '#ff0000', y: '#00ff00', z: '#0000ff' }
+              const axisColors = AXIS_COLORS
               return item.issues.map((issue, issueIdx) => (
                 <div
                   key={`${idx}-${issueIdx}`}

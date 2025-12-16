@@ -32,6 +32,7 @@ export const ImageNavigationToolbar = observer(forwardRef<ImageNavigationToolbar
   onImageReorder,
   onWorldPointHover,
   onWorldPointClick,
+  onWorldPointRightClick,
   onCopyPointsToCurrentImage,
   onViewFromCamera,
   onShowInImageView
@@ -206,6 +207,7 @@ export const ImageNavigationToolbar = observer(forwardRef<ImageNavigationToolbar
                 onDrop={() => handleDrop(image)}
                 onWorldPointHover={onWorldPointHover}
                 onWorldPointClick={onWorldPointClick}
+                onWorldPointRightClick={onWorldPointRightClick}
                 onCopyPointsToCurrentImage={onCopyPointsToCurrentImage}
                 onViewFromCamera={onViewFromCamera}
                 onShowInImageView={onShowInImageView}

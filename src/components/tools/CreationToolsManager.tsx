@@ -473,19 +473,6 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = observe
             </div>
           )}
 
-          {activeTool === 'orientationPaint' && (
-            <OrientationPaintTool
-              isActive={activeTool === 'orientationPaint'}
-              onCancel={handleToolCancel}
-              onPaintLine={(line, direction) => {
-                if (onUpdateLine) {
-                  onUpdateLine(line, { direction })
-                }
-              }}
-              selectedDirection={orientationPaintDirection}
-              onDirectionChange={onOrientationPaintDirectionChange || (() => {})}
-            />
-          )}
         </div>
       )}
 
@@ -640,6 +627,27 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = observe
           isActive={activeTool === 'plane'}
           editMode={!!editingCoplanarConstraint}
           existingConstraint={editingCoplanarConstraint || undefined}
+        />
+      </FloatingWindow>
+
+      {/* Floating Orientation Paint Tool */}
+      <FloatingWindow
+        title="Paint Orientation"
+        isOpen={activeTool === 'orientationPaint'}
+        onClose={handleToolCancel}
+        storageKey="orientation-paint-tool"
+        showOkCancel={false}
+      >
+        <OrientationPaintTool
+          isActive={activeTool === 'orientationPaint'}
+          onCancel={handleToolCancel}
+          onPaintLine={(line, direction) => {
+            if (onUpdateLine) {
+              onUpdateLine(line, { direction })
+            }
+          }}
+          selectedDirection={orientationPaintDirection}
+          onDirectionChange={onOrientationPaintDirectionChange || (() => {})}
         />
       </FloatingWindow>
 

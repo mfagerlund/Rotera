@@ -51,6 +51,12 @@ export const WorldPointsManager: React.FC<WorldPointsManagerProps> = observer(({
     return xyz.map(v => v !== null ? v.toFixed(2) : '?').join(', ')
   }
 
+  const formatOptimizedCoords = (worldPoint: WorldPoint): string => {
+    const xyz = worldPoint.optimizedXyz
+    if (!xyz) return '-'
+    return xyz.map(v => v.toFixed(2)).join(', ')
+  }
+
   const formatResidual = (worldPoint: WorldPoint): string => {
     const info = worldPoint.getOptimizationInfo()
     if (info.residuals.length === 0) return '-'
@@ -78,7 +84,7 @@ export const WorldPointsManager: React.FC<WorldPointsManagerProps> = observer(({
         title={`World Points (${worldPointsList.length})`}
         isOpen={isOpen}
         onClose={onClose}
-        width={480}
+        width={580}
         maxHeight={400}
         storageKey="world-points-popup"
         showOkCancel={false}
@@ -94,6 +100,7 @@ export const WorldPointsManager: React.FC<WorldPointsManagerProps> = observer(({
                   <th>Name</th>
                   <th>Images</th>
                   <th>Coords</th>
+                  <th>Optimized</th>
                   <th>Residual</th>
                   <th></th>
                 </tr>
@@ -106,6 +113,12 @@ export const WorldPointsManager: React.FC<WorldPointsManagerProps> = observer(({
                     onClick={(e) => {
                       e.stopPropagation()
                       onSelectWorldPoint?.(worldPoint)
+                    }}
+                    onContextMenu={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      onSelectWorldPoint?.(worldPoint)
+                      onEditWorldPoint?.(worldPoint)
                     }}
                   >
                     <td>
@@ -120,6 +133,7 @@ export const WorldPointsManager: React.FC<WorldPointsManagerProps> = observer(({
                       {getImagePointCount(worldPoint)}
                     </td>
                     <td className="length-cell">{formatCoords(worldPoint)}</td>
+                    <td className="length-cell">{formatOptimizedCoords(worldPoint)}</td>
                     <td className="residual-cell">{formatResidual(worldPoint)}</td>
                     <td className="actions-cell">
                       {onEditWorldPoint && (
