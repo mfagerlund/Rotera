@@ -130,10 +130,9 @@ describe('Solving Scenarios - Phase 2: Two Camera Systems', () => {
       expect(project.viewpoints.size).toBe(2);
       expect(project.imagePoints.size).toBe(16);
 
-      const worldPointsArray = Array.from(project.worldPoints);
-      for (const wp of worldPointsArray) {
-        expect(wp.lockedXyz).toEqual([null, null, null]);
-      }
+      // Lock first point as origin to anchor the scene (required since validation change)
+      const worldPointsArray = Array.from(project.worldPoints) as WorldPoint[];
+      worldPointsArray[0].lockedXyz = [0, 0, 0];
 
       // Mark cameras as possibly cropped to allow PP optimization
       // This is needed for Essential Matrix to converge well without locked points

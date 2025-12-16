@@ -89,8 +89,6 @@ export function triangulateRayRay(
   // Maximum reasonable depth is 100x baseline (arbitrary but prevents infinity)
   const maxReasonableDepth = Math.max(baselineLength * 100, fallbackDepth * 10);
 
-  // Debug: Log all triangulations to see what's happening
-  log(`[Tri] baseline=${baselineLength.toFixed(2)}, maxDepth=${maxReasonableDepth.toFixed(0)}`)
 
   if (Math.abs(denom) < 1e-10) {
     // Rays are nearly parallel - use fallback

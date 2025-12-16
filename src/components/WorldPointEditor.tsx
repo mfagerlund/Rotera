@@ -227,8 +227,8 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
 
             <div className="form-row">
               <label>Locked</label>
-              <div style={{ display: 'flex', gap: '4px', flex: 1, maxWidth: '300px', alignItems: 'flex-end' }}>
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, position: 'relative' }}>
+              <div style={{ display: 'flex', gap: '8px', flex: 1, alignItems: 'flex-end', minWidth: 0 }}>
+                <div style={{ flex: '1 1 0', minWidth: '50px', display: 'flex', flexDirection: 'column', position: 'relative' }}>
                   <span style={{ fontSize: '11px', color: '#999', marginBottom: '2px' }}>X</span>
                   <input
                     type="number"
@@ -237,7 +237,7 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
                     placeholder="free"
                     step="0.001"
                     className="form-input no-spinners"
-                    style={{ fontSize: '12px', padding: '4px', width: '100%', height: '26px' }}
+                    style={{ fontSize: '12px', padding: '4px', width: '100%', height: '26px', boxSizing: 'border-box' }}
                   />
                   {lockedX && (
                     <button
@@ -248,7 +248,7 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
                     >×</button>
                   )}
                 </div>
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, position: 'relative' }}>
+                <div style={{ flex: '1 1 0', minWidth: '50px', display: 'flex', flexDirection: 'column', position: 'relative' }}>
                   <span style={{ fontSize: '11px', color: '#999', marginBottom: '2px' }}>Y</span>
                   <input
                     type="number"
@@ -257,7 +257,7 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
                     placeholder="free"
                     step="0.001"
                     className="form-input no-spinners"
-                    style={{ fontSize: '12px', padding: '4px', width: '100%', height: '26px' }}
+                    style={{ fontSize: '12px', padding: '4px', width: '100%', height: '26px', boxSizing: 'border-box' }}
                   />
                   {lockedY && (
                     <button
@@ -268,7 +268,7 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
                     >×</button>
                   )}
                 </div>
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, position: 'relative' }}>
+                <div style={{ flex: '1 1 0', minWidth: '50px', display: 'flex', flexDirection: 'column', position: 'relative' }}>
                   <span style={{ fontSize: '11px', color: '#999', marginBottom: '2px' }}>Z</span>
                   <input
                     type="number"
@@ -277,7 +277,7 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
                     placeholder="free"
                     step="0.001"
                     className="form-input no-spinners"
-                    style={{ fontSize: '12px', padding: '4px', width: '100%', height: '26px' }}
+                    style={{ fontSize: '12px', padding: '4px', width: '100%', height: '26px', boxSizing: 'border-box' }}
                   />
                   {lockedZ && (
                     <button
@@ -307,6 +307,7 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
                     cursor: 'pointer',
                     height: '26px',
                     minWidth: '26px',
+                    flexShrink: 0,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center'

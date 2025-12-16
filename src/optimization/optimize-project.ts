@@ -569,6 +569,16 @@ export function optimizeProject(
           throw new Error(`Need 2+ cameras for Essential Matrix, have ${uninitializedCameras.length}. Lock 3+ WPs for PnP.`);
         }
 
+        // VALIDATION: Essential Matrix requires at least one locked point to anchor the scene.
+        // Without a locked point, the scene has no fixed position/scale reference, and axis
+        // constraints alone only provide orientation - the result is arbitrary garbage.
+        if (lockedPoints.length < 1) {
+          throw new Error(
+            'Cannot optimize: at least one point must be locked to anchor the scene. ' +
+            'Lock a point with known coordinates (e.g., origin at [0,0,0]).'
+          );
+        }
+
         const vp1 = uninitializedCameras[0] as Viewpoint;
         const vp2 = uninitializedCameras[1] as Viewpoint;
 
@@ -634,7 +644,7 @@ export function optimizeProject(
     });
 
     if (axisConstrainedLines.length > 0) {
-      alignSceneToLineDirections(viewpointArray, pointArray, lineArray);
+      alignSceneToLineDirections(viewpointArray, pointArray, lineArray, usedEssentialMatrix);
 
       // Apply scale from line target lengths
       const linesWithTargetLength = axisConstrainedLines.filter(l => l.targetLength !== undefined);
@@ -1263,6 +1273,11 @@ export function optimizeProject(
       }
     }
   }
+
+  // Log final summary with quality assessment
+  const quality = result.residual < 1 ? 'Excellent' : result.residual < 5 ? 'Good' : 'Poor';
+  const qualityStars = result.residual < 1 ? '***' : result.residual < 5 ? '**' : '*';
+  log(`[Summary] ${qualityStars} ${quality} | error=${result.residual.toFixed(3)} | median=${medianReprojectionError?.toFixed(2) ?? '?'}px | iter=${result.iterations} | conv=${result.converged}`);
 
   return {
     ...result,

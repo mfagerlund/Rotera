@@ -251,9 +251,6 @@ function step3_triangulateFromImages(
         const result = triangulateRayRay(ip1, ip2, vp1, vp2, fallbackDepth)
         if (result) {
           point.optimizedXyz = result.worldPoint
-          // Debug: Check for degenerate triangulations
-          const dist = Math.sqrt(result.worldPoint[0]**2 + result.worldPoint[1]**2 + result.worldPoint[2]**2)
-          log(`[Step3] ${point.name}: dist=${dist.toFixed(1)}, pos=[${result.worldPoint.map(v => v.toFixed(1)).join(', ')}]`)
           initialized.add(point)
           triangulatedCount++
           triangulated = true
@@ -264,6 +261,17 @@ function step3_triangulateFromImages(
     if (!triangulated) {
       failedCount++
     }
+  }
+
+  // Always log a compact summary of triangulated points
+  if (triangulatedCount > 0) {
+    const triPoints = points
+      .filter(p => initialized.has(p) && p.optimizedXyz)
+      .map(p => {
+        const pos = p.optimizedXyz!
+        return `${p.name}:[${pos.map(v => v.toFixed(1)).join(',')}]`
+      })
+    log(`[Tri] ${triangulatedCount} pts: ${triPoints.join(' ')}`)
   }
 
   if (verbose) {

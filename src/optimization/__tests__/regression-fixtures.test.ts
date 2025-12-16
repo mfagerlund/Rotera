@@ -111,3 +111,16 @@ describe('Regression Fixtures - Multi-Camera VL', () => {
     runRegressionTest(fixture);
   });
 });
+
+describe('Regression Fixtures - Essential Matrix', () => {
+  const essentialMatrixFixtures: RegressionFixture[] = [
+    // Two-axis case: Y-axis line (length 10) and X-axis line from origin
+    // Known issue: Essential Matrix has Y sign ambiguity. -Y works (<1 error), +Y fails (~91 error)
+    // TODO: Need to pick correct Y sign during initialization
+    { filename: 'two-axis-y-sign-ambiguity.json', maxTotalError: 2 },
+  ];
+
+  it.each(essentialMatrixFixtures)('$filename should have total error < $maxTotalError', (fixture) => {
+    runRegressionTest(fixture);
+  });
+});
