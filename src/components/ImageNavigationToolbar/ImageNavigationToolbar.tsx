@@ -153,10 +153,10 @@ export const ImageNavigationToolbar = observer(forwardRef<ImageNavigationToolbar
       )}
       <div className="image-toolbar">
         <div className="image-toolbar-header">
-          <h3>Images</h3>
+          <h3>Viewpoints</h3>
           <button
             className="btn-add-image"
-            title="Add Images"
+            title="Add Viewpoints"
             onClick={handleAddImage}
           >
             +

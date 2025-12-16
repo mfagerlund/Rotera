@@ -228,7 +228,7 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
             <div className="form-row">
               <label>Locked</label>
               <div style={{ display: 'flex', gap: '4px', flex: 1, maxWidth: '300px', alignItems: 'flex-end' }}>
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, position: 'relative' }}>
                   <span style={{ fontSize: '11px', color: '#999', marginBottom: '2px' }}>X</span>
                   <input
                     type="number"
@@ -236,11 +236,19 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
                     onChange={(e) => { setLockedX(e.target.value); handleChange(); }}
                     placeholder="free"
                     step="0.001"
-                    className="form-input"
-                    style={{ fontSize: '12px', padding: '4px', width: '100%' }}
+                    className="form-input no-spinners"
+                    style={{ fontSize: '12px', padding: '4px', width: '100%', height: '26px' }}
                   />
+                  {lockedX && (
+                    <button
+                      type="button"
+                      onClick={() => { setLockedX(''); handleChange(); }}
+                      title="Clear X"
+                      className="coord-clear-btn"
+                    >×</button>
+                  )}
                 </div>
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, position: 'relative' }}>
                   <span style={{ fontSize: '11px', color: '#999', marginBottom: '2px' }}>Y</span>
                   <input
                     type="number"
@@ -248,11 +256,19 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
                     onChange={(e) => { setLockedY(e.target.value); handleChange(); }}
                     placeholder="free"
                     step="0.001"
-                    className="form-input"
-                    style={{ fontSize: '12px', padding: '4px', width: '100%' }}
+                    className="form-input no-spinners"
+                    style={{ fontSize: '12px', padding: '4px', width: '100%', height: '26px' }}
                   />
+                  {lockedY && (
+                    <button
+                      type="button"
+                      onClick={() => { setLockedY(''); handleChange(); }}
+                      title="Clear Y"
+                      className="coord-clear-btn"
+                    >×</button>
+                  )}
                 </div>
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, position: 'relative' }}>
                   <span style={{ fontSize: '11px', color: '#999', marginBottom: '2px' }}>Z</span>
                   <input
                     type="number"
@@ -260,9 +276,17 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
                     onChange={(e) => { setLockedZ(e.target.value); handleChange(); }}
                     placeholder="free"
                     step="0.001"
-                    className="form-input"
-                    style={{ fontSize: '12px', padding: '4px', width: '100%' }}
+                    className="form-input no-spinners"
+                    style={{ fontSize: '12px', padding: '4px', width: '100%', height: '26px' }}
                   />
+                  {lockedZ && (
+                    <button
+                      type="button"
+                      onClick={() => { setLockedZ(''); handleChange(); }}
+                      title="Clear Z"
+                      className="coord-clear-btn"
+                    >×</button>
+                  )}
                 </div>
                 <button
                   type="button"

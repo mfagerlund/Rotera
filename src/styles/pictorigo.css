@@ -6073,3 +6073,39 @@ body {
   color: var(--text-primary);
   letter-spacing: -0.5px;
 }
+
+/* ===========================================
+   COORDINATE INPUT CLEAR BUTTONS
+   =========================================== */
+
+/* Clear button for coordinate inputs in WorldPointEditor */
+.coord-clear-btn {
+  position: absolute;
+  right: -2px;
+  bottom: 3px;
+  background: rgba(0, 0, 0, 0.6);
+  border: none;
+  color: #999;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: 3px;
+  transition: all 0.15s ease;
+}
+
+.coord-clear-btn:hover {
+  background: rgba(255, 100, 100, 0.8);
+  color: #fff;
+}
+
+/* Hide number input spinners */
+.no-spinners::-webkit-outer-spin-button,
+.no-spinners::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.no-spinners[type=number] {
+  -moz-appearance: textfield;
+}

@@ -38,7 +38,7 @@ import { ProjectDB } from '../../services/project-db'
 import { getIsDirty, markClean, markDirty } from '../../store/project-store'
 import { reaction } from 'mobx'
 import { Serialization } from '../../entities/Serialization'
-import { useAutoSave } from '../../hooks/useAutoSave'
+// Auto-save removed - user wants explicit saves only
 
 import '../../styles/enhanced-workspace.css'
 import '../../styles/tools.css'
@@ -119,8 +119,9 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
     return () => dispose()
   }, [project])
 
-  // Task 4: Auto-save
-  useAutoSave(project)
+  // Track dirty state before optimization to restore it after
+  // (optimization changes computed values, not real user data)
+  const dirtyStateBeforeOptimizeRef = useRef(false)
 
   const handleSaveProject = useCallback(async () => {
     if (!project) return
@@ -200,6 +201,12 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
     projectImageSortOrder: Array.isArray(project?.imageSortOrder) ? project.imageSortOrder : undefined,
     onOpenWorldPointEdit: handleOpenWorldPointEdit
   })
+
+  // Wrap triggerOptimization to capture dirty state before optimization starts
+  const handleTriggerOptimization = useCallback(() => {
+    dirtyStateBeforeOptimizeRef.current = getIsDirty()
+    triggerOptimization()
+  }, [triggerOptimization])
 
   const [constructionPreview, setConstructionPreview] = useState<ConstructionPreview | null>(null)
   const [currentVanishingLineAxis, setCurrentVanishingLineAxis] = useState<'x' | 'y' | 'z'>('x')
@@ -622,7 +629,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
               onReturnToBrowser={onReturnToBrowser}
               onSaveProject={handleSaveProject}
               onSaveAsProject={handleSaveAsProject}
-              onOpenOptimization={triggerOptimization}
+              onOpenOptimization={handleTriggerOptimization}
               isDirty={isDirty}
             />
 
@@ -914,7 +921,14 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
         hoveredCoplanarConstraint={hoveredCoplanarConstraint}
         project={project}
         onOptimizationComplete={(success, message) => {
-          saveProject()
+          // Restore the dirty state from before optimization
+          // (optimization only changes computed values, not user data)
+          if (dirtyStateBeforeOptimizeRef.current) {
+            markDirty()
+          } else {
+            markClean()
+          }
+          setIsDirtyState(dirtyStateBeforeOptimizeRef.current)
           if (success && worldViewRef.current) {
             worldViewRef.current.zoomFit()
           }
