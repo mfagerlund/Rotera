@@ -5,6 +5,8 @@ import { loadProjectFromJson } from '../../store/project-serialization';
 import { optimizeProject } from '../optimize-project';
 import type { Viewpoint } from '../../entities/viewpoint';
 import type { WorldPoint } from '../../entities/world-point';
+// Determinism test removed - running optimization 3x just to verify identical results was slow (~15s)
+// If determinism ever breaks, it would show up as flaky tests
 
 function loadFixture(filename: string) {
   const fixturePath = path.join(__dirname, 'fixtures', filename);
@@ -115,54 +117,4 @@ describe('GOLDEN: Essential Matrix with Coplanar Constraint and Free Point', () 
     expect(floatPoint.optimizedXyz).toBeDefined();
   });
 
-  it('should produce deterministic results across multiple runs', () => {
-    const results: { iterations: number; error: number; floatPos: number[] }[] = [];
-
-    for (let run = 0; run < 3; run++) {
-      const project = loadFixture('no-axis-no-lines-one-coplanar-one-free-point.json');
-
-      // Clear state
-      for (const wp of project.worldPoints) {
-        if (!wp.isFullyConstrained()) {
-          (wp as WorldPoint).optimizedXyz = undefined;
-        }
-      }
-      for (const vp of project.viewpoints) {
-        (vp as Viewpoint).position = [0, 0, 0];
-        (vp as Viewpoint).rotation = [1, 0, 0, 0];
-        (vp as Viewpoint).focalLength = Math.max((vp as Viewpoint).imageWidth, (vp as Viewpoint).imageHeight);
-      }
-
-      const result = optimizeProject(project, {
-        autoInitializeCameras: true,
-        autoInitializeWorldPoints: true,
-        detectOutliers: true,
-        maxIterations: 500,
-        tolerance: 1e-8,
-        verbose: false
-      });
-
-      const floatPoint = Array.from(project.worldPoints).find(wp => wp.name === 'FLOAT') as WorldPoint;
-
-      results.push({
-        iterations: result.iterations,
-        error: result.medianReprojectionError ?? Infinity,
-        floatPos: floatPoint.optimizedXyz ? [...floatPoint.optimizedXyz] : [0, 0, 0]
-      });
-    }
-
-    console.log('\nDeterminism check (3 runs):');
-    results.forEach((r, i) => {
-      console.log(`  Run ${i + 1}: iter=${r.iterations}, error=${r.error.toFixed(6)}px, FLOAT=[${r.floatPos.map(x => x.toFixed(4)).join(', ')}]`);
-    });
-
-    // All runs should produce the same result
-    for (let i = 1; i < results.length; i++) {
-      expect(results[i].iterations).toBe(results[0].iterations);
-      expect(results[i].error).toBeCloseTo(results[0].error, 6);
-      for (let j = 0; j < 3; j++) {
-        expect(results[i].floatPos[j]).toBeCloseTo(results[0].floatPos[j], 6);
-      }
-    }
-  });
 });

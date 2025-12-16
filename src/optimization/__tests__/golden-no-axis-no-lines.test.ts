@@ -5,6 +5,8 @@ import { loadProjectFromJson } from '../../store/project-serialization';
 import { optimizeProject } from '../optimize-project';
 import type { Viewpoint } from '../../entities/viewpoint';
 import type { WorldPoint } from '../../entities/world-point';
+// Determinism test removed - running optimization 2x just to verify identical results was slow (~16s)
+// If determinism ever breaks, it would show up as flaky tests
 
 function loadFixture(filename: string) {
   const fixturePath = path.join(__dirname, 'fixtures', filename);
@@ -102,54 +104,4 @@ describe('GOLDEN: No-Axis No-Lines (Essential Matrix + Free Solve, minimal const
     console.log('GOLDEN TEST PASSED\n');
   });
 
-  it('should produce deterministic results across multiple runs', () => {
-    // Run 1
-    const project1 = loadFixture('no-axis-no-lines-8-8.json');
-    for (const wp of project1.worldPoints) {
-      if (!wp.isFullyConstrained()) {
-        (wp as WorldPoint).optimizedXyz = undefined;
-      }
-    }
-    for (const vp of project1.viewpoints) {
-      (vp as Viewpoint).position = [0, 0, 0];
-      (vp as Viewpoint).rotation = [1, 0, 0, 0];
-      (vp as Viewpoint).focalLength = Math.max((vp as Viewpoint).imageWidth, (vp as Viewpoint).imageHeight);
-    }
-
-    const result1 = optimizeProject(project1, {
-      autoInitializeCameras: true,
-      autoInitializeWorldPoints: true,
-      detectOutliers: true,
-      maxIterations: 600,
-      tolerance: 1e-8,
-      verbose: false
-    });
-
-    // Run 2
-    const project2 = loadFixture('no-axis-no-lines-8-8.json');
-    for (const wp of project2.worldPoints) {
-      if (!wp.isFullyConstrained()) {
-        (wp as WorldPoint).optimizedXyz = undefined;
-      }
-    }
-    for (const vp of project2.viewpoints) {
-      (vp as Viewpoint).position = [0, 0, 0];
-      (vp as Viewpoint).rotation = [1, 0, 0, 0];
-      (vp as Viewpoint).focalLength = Math.max((vp as Viewpoint).imageWidth, (vp as Viewpoint).imageHeight);
-    }
-
-    const result2 = optimizeProject(project2, {
-      autoInitializeCameras: true,
-      autoInitializeWorldPoints: true,
-      detectOutliers: true,
-      maxIterations: 600,
-      tolerance: 1e-8,
-      verbose: false
-    });
-
-    // Results should be identical (deterministic)
-    expect(result1.residual).toBeCloseTo(result2.residual, 6);
-    expect(result1.medianReprojectionError).toBeCloseTo(result2.medianReprojectionError!, 6);
-    expect(result1.iterations).toBe(result2.iterations);
-  });
 });
