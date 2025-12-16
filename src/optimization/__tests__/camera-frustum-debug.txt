@@ -1,0 +1,68 @@
+Fixture not found, skipping
+
+=== Synthetic Camera Test ===
+Test 1: isZReflected=false (original)
+  Camera position: [0,0,0]
+  Camera rotation: [1,0,0,0]
+  isZReflected: false
+  top-left:
+    Pixel: (0, 0)
+    World corner: (-0.800, 0.600, 1.000)
+    Camera-relative: (-0.800, 0.600, 1.000)
+    After rotation: (-0.800, 0.600, 1.000)
+    isInFront check: camZ=1.000, isZReflected=false, result=true
+    Projected: (0.0, 0.0) - PASS
+  top-right:
+    Pixel: (800, 0)
+    World corner: (0.800, 0.600, 1.000)
+    Camera-relative: (0.800, 0.600, 1.000)
+    After rotation: (0.800, 0.600, 1.000)
+    isInFront check: camZ=1.000, isZReflected=false, result=true
+    Projected: (800.0, 0.0) - PASS
+  bottom-right:
+    Pixel: (800, 600)
+    World corner: (0.800, -0.600, 1.000)
+    Camera-relative: (0.800, -0.600, 1.000)
+    After rotation: (0.800, -0.600, 1.000)
+    isInFront check: camZ=1.000, isZReflected=false, result=true
+    Projected: (800.0, 600.0) - PASS
+  bottom-left:
+    Pixel: (0, 600)
+    World corner: (-0.800, -0.600, 1.000)
+    Camera-relative: (-0.800, -0.600, 1.000)
+    After rotation: (-0.800, -0.600, 1.000)
+    isInFront check: camZ=1.000, isZReflected=false, result=true
+    Projected: (0.0, 600.0) - PASS
+
+Test 2: isZReflected=true (after transform)
+  Camera position: [0,0,0]
+  Camera rotation: [0,0,0,1]
+  isZReflected: true
+  top-left:
+    Pixel: (0, 0)
+    World corner: (-0.800, 0.600, -1.000)
+    Camera-relative: (-0.800, 0.600, -1.000)
+    After rotation: (0.800, -0.600, -1.000)
+    isInFront check: camZ=-1.000, isZReflected=true, result=true
+    Projected: (0.0, 0.0) - PASS
+  top-right:
+    Pixel: (800, 0)
+    World corner: (0.800, 0.600, -1.000)
+    Camera-relative: (0.800, 0.600, -1.000)
+    After rotation: (-0.800, -0.600, -1.000)
+    isInFront check: camZ=-1.000, isZReflected=true, result=true
+    Projected: (800.0, 0.0) - PASS
+  bottom-right:
+    Pixel: (800, 600)
+    World corner: (0.800, -0.600, -1.000)
+    Camera-relative: (0.800, -0.600, -1.000)
+    After rotation: (-0.800, 0.600, -1.000)
+    isInFront check: camZ=-1.000, isZReflected=true, result=true
+    Projected: (800.0, 600.0) - PASS
+  bottom-left:
+    Pixel: (0, 600)
+    World corner: (-0.800, -0.600, -1.000)
+    Camera-relative: (-0.800, -0.600, -1.000)
+    After rotation: (0.800, 0.600, -1.000)
+    isInFront check: camZ=-1.000, isZReflected=true, result=true
+    Projected: (0.0, 600.0) - PASS

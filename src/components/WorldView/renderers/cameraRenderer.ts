@@ -232,5 +232,31 @@ export function renderCameras(
       ctx.textAlign = 'center'
       ctx.fillText(viewpoint.name, apexProj.x, apexProj.y - 10)
     }
+
+    // Draw small XYZ axes indicator at camera position
+    const axisLength = frustumDepth * 0.15 // Small relative to frustum
+    const axes = [
+      { dir: [1, 0, 0] as [number, number, number], color: '#F44336', label: 'X' },
+      { dir: [0, 1, 0] as [number, number, number], color: '#4CAF50', label: 'Y' },
+      { dir: [0, 0, 1] as [number, number, number], color: '#2196F3', label: 'Z' }
+    ]
+
+    axes.forEach(axis => {
+      const scaledDir: [number, number, number] = [
+        axis.dir[0] * axisLength,
+        axis.dir[1] * axisLength,
+        axis.dir[2] * axisLength
+      ]
+      const rotatedDir = rotatePoint(scaledDir, rotInverse)
+      const endWorld = addVec3(pos, rotatedDir)
+      const endProj = project3DTo2D(endWorld)
+
+      ctx.beginPath()
+      ctx.moveTo(apexProj.x, apexProj.y)
+      ctx.lineTo(endProj.x, endProj.y)
+      ctx.strokeStyle = axis.color
+      ctx.lineWidth = 2
+      ctx.stroke()
+    })
   })
 }

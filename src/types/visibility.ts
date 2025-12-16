@@ -30,7 +30,7 @@ export const DEFAULT_VISIBILITY: VisibilitySettings = {
   vanishingPoints: true,
   perspectiveGrid: false,
   reprojectionErrors: false,
-  cameraVanishingGeometry: false
+  cameraVanishingGeometry: true
 }
 
 export const DEFAULT_LOCKING: LockSettings = {

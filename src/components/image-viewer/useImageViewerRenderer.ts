@@ -10,6 +10,7 @@ import { renderWorldPoints } from './renderers/worldPointsRenderer'
 import { renderLines } from './renderers/imagePointsRenderer'
 import { renderVanishingLines } from './renderers/vanishingGeometryRenderer'
 import { renderCameraVanishingGeometry } from './renderers/cameraGeometryRenderer'
+import { renderWorldAxes } from './renderers/worldAxesRenderer'
 import { renderConstructionPreview } from './renderers/constructionPreviewRenderer'
 import { renderReprojectionErrors } from './renderers/reprojectionErrorRenderer'
 import { renderSelectionOverlay } from './renderers/selectionOverlayRenderer'
@@ -136,6 +137,7 @@ export const useImageViewerRenderer = ({
       renderLines(params)
       renderVanishingLines(params)
       renderCameraVanishingGeometry(params)
+      renderWorldAxes(params)
       renderWorldPoints(params)
       renderReprojectionErrors(params)
       renderConstructionPreview(params)

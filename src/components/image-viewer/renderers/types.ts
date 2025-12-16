@@ -54,7 +54,7 @@ export interface RenderParams {
 }
 
 export const AXIS_COLORS: Record<'x' | 'y' | 'z', string> = {
-  x: '#ff0000',
-  y: '#00ff00',
-  z: '#0000ff'
+  x: '#F44336',
+  y: '#4CAF50',
+  z: '#2196F3'
 }

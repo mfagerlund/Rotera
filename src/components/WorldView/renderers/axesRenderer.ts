@@ -27,7 +27,7 @@ export function renderAxes(
     ctx.moveTo(originProj.x, originProj.y)
     ctx.lineTo(endProj.x, endProj.y)
     ctx.strokeStyle = axis.color
-    ctx.lineWidth = 2
+    ctx.lineWidth = 3
     ctx.stroke()
 
     // Axis label
