@@ -346,7 +346,8 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = observer(({
               value={lineName}
               onChange={(e) => setLineName(e.target.value)}
               placeholder="Enter line name"
-              style={{flex: 1, fontSize: '12px', padding: '2px'}}
+              className="form-input"
+              style={{flex: 1, fontSize: '12px', height: '24px'}}
               maxLength={20}
             />
           </div>
@@ -356,7 +357,8 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = observer(({
             <select
               value={lineColor}
               onChange={(e) => setLineColor(e.target.value)}
-              style={{flex: 1, fontSize: '12px', padding: '2px'}}
+              className="form-input"
+              style={{flex: 1, fontSize: '12px', height: '24px'}}
             >
               {PRESET_COLORS.map(color => (
                 <option
@@ -398,7 +400,8 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = observer(({
                   setPointSlot1(index >= 0 ? allWorldPoints[index] : null)
                 }}
                 onFocus={handleSlot1Focus}
-                style={{flex: 1, fontSize: '12px', padding: '2px'}}
+                className="form-input"
+                style={{flex: 1, fontSize: '12px', height: '24px'}}
               >
                 <option value={-1}>Select point...</option>
                 {allWorldPoints.map((point, index) => (
@@ -410,7 +413,7 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = observer(({
               {pointSlot1 && (
                 <button
                   onClick={clearSlot1}
-                  style={{padding: '2px 4px', fontSize: '10px'}}
+                  className="field-clear-btn"
                   title="Clear point 1"
                 >
                   <FontAwesomeIcon icon={faXmark} />
@@ -429,7 +432,8 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = observer(({
                   setPointSlot2(index >= 0 ? allWorldPoints[index] : null)
                 }}
                 onFocus={handleSlot2Focus}
-                style={{flex: 1, fontSize: '12px', padding: '2px'}}
+                className="form-input"
+                style={{flex: 1, fontSize: '12px', height: '24px'}}
               >
                 <option value={-1}>Select point...</option>
                 {allWorldPoints.map((point, index) => (
@@ -441,7 +445,7 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = observer(({
               {pointSlot2 && (
                 <button
                   onClick={clearSlot2}
-                  style={{padding: '2px 4px', fontSize: '10px'}}
+                  className="field-clear-btn"
                   title="Clear point 2"
                 >
                   <FontAwesomeIcon icon={faXmark} />
@@ -517,13 +521,14 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = observer(({
                 step="0.1"
                 min="0.001"
                 placeholder="Optional"
-                style={{width: '80px', fontSize: '12px', padding: '2px'}}
+                className="form-input"
+                style={{width: '80px', fontSize: '12px', height: '24px'}}
               />
               <span style={{fontSize: '12px'}}>m</span>
               {lengthValue && (
                 <button
                   onClick={() => setLengthValue('')}
-                  style={{padding: '2px 4px', fontSize: '10px'}}
+                  className="field-clear-btn"
                   title="Clear length constraint"
                 >
                   <FontAwesomeIcon icon={faXmark} />

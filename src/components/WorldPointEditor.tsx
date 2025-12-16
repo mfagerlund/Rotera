@@ -143,8 +143,6 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
         <div className="image-edit-content">
           {/* Basic Properties */}
           <div className="edit-section">
-            <h4>Basic Properties</h4>
-
             <div className="form-row">
               <label>Name</label>
               <input

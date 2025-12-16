@@ -9,8 +9,8 @@ Viewpoints: 2
 === RESULT ===
 Converged: true
 Iterations: 20
-Residual: 1.3044547552166152
-Median reproj: 0.3632117787148183
+Residual: 1.3044547552164998
+Median reproj: 0.3632117787147357
 Cameras initialized: C3, C1
 Cameras excluded: none
 
@@ -85,7 +85,7 @@ Cameras excluded: none
 [Scale] Applied scale=1.000 from 1 point pairs
 [Prelim] 1 init camera(s), 1 need late PnP
 [VP] WARNING: VP very far from origin (u=569, v=-118618)
-[Prelim] Single-cam solve: conv=true, iter=14, res=1.103
+[Prelim] Single-cam solve: conv=true, iter=8, res=1.103
   Centroid of 6 constrained points: [-3.333, -5.000, -3.333]
   Sample constrained points (first 5):
     [0.000, 0.000, 0.000]

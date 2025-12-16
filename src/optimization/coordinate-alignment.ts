@@ -259,6 +259,12 @@ export function alignCamerasToLockedPoints(
 }
 
 /**
+ * Callback to test alignment quality by running a preliminary solve.
+ * Takes maxIterations parameter and returns the residual (error) of the solve.
+ */
+export type AlignmentQualityCallback = (maxIterations: number) => number;
+
+/**
  * Align the scene to match line direction constraints.
  *
  * After Essential Matrix initialization, the scene is in an arbitrary coordinate frame.
@@ -277,7 +283,8 @@ export function alignSceneToLineDirections(
   cameras: Viewpoint[],
   allPoints: WorldPoint[],
   lines: Line[],
-  usedEssentialMatrix: boolean = false
+  usedEssentialMatrix: boolean = false,
+  qualityCallback?: AlignmentQualityCallback
 ): boolean {
   // Helper to apply a rotation to the entire scene
   const applyRotation = (rotation: number[]) => {
@@ -420,9 +427,86 @@ export function alignSceneToLineDirections(
     const dotPosAlign = computeSecondAxisAlignment(true);
     const dotNegAlign = computeSecondAxisAlignment(false);
 
-    // Pick the alignment where second axis has positive dot (doesn't need flip)
-    // If both are similar, fall back to dot-product for first axis
-    if (Math.abs(dotPosAlign - dotNegAlign) > 0.1) {
+    // Check if the second-axis test is reliable:
+    // If both dot products are near zero, the second axis line is nearly perpendicular
+    // to its target axis, meaning triangulation is degenerate and we can't trust this heuristic.
+    const bothDotsNearZero = Math.abs(dotPosAlign) < 0.5 && Math.abs(dotNegAlign) < 0.5;
+
+    if (bothDotsNearZero && qualityCallback) {
+      // Second axis is degenerate - triangulated direction is nearly perpendicular to target.
+      // Try both orientations with actual solves and pick the better one.
+      log(`[Align] ${firstAxisKey}-axis: EM second-axis degenerate (+dot=${dotPosAlign.toFixed(2)}, -dot=${dotNegAlign.toFixed(2)}), trying both with solves`);
+
+      // Helper to save/restore state
+      const saveState = () => ({
+        cameras: cameras.map(c => ({ pos: [...c.position], rot: [...c.rotation] })),
+        points: allPoints.map(p => ({ xyz: p.optimizedXyz ? [...p.optimizedXyz] : undefined }))
+      });
+      const restoreState = (state: ReturnType<typeof saveState>) => {
+        cameras.forEach((c, i) => {
+          c.position = state.cameras[i].pos as [number, number, number];
+          c.rotation = state.cameras[i].rot as [number, number, number, number];
+        });
+        allPoints.forEach((p, i) => {
+          p.optimizedXyz = state.points[i].xyz as [number, number, number] | undefined;
+        });
+      };
+
+      // Helper to test an alignment
+      const testAlignment = (positive: boolean, iterations: number): number => {
+        const state = saveState();
+        const dir = positive ? positiveDir : negativeDir;
+        const rotation = computeRotationBetweenVectors(dir, firstLine.targetAxis);
+        applyRotation(rotation);
+        const error = qualityCallback(iterations);
+        restoreState(state);
+        return error;
+      };
+
+      // First pass: quick solve (30 iterations)
+      let errorPositive = testAlignment(true, 30);
+      let errorNegative = testAlignment(false, 30);
+      log(`[Align] ${firstAxisKey}-axis: quick test: +err=${errorPositive.toFixed(2)}, -err=${errorNegative.toFixed(2)}`);
+
+      // If errors are very similar (within 10%), run longer solves to differentiate
+      const errorRatio = Math.min(errorPositive, errorNegative) / Math.max(errorPositive, errorNegative);
+      if (errorRatio > 0.9) {
+        log(`[Align] ${firstAxisKey}-axis: errors similar, running longer solves`);
+        errorPositive = testAlignment(true, 300);
+        errorNegative = testAlignment(false, 300);
+        log(`[Align] ${firstAxisKey}-axis: long test: +err=${errorPositive.toFixed(2)}, -err=${errorNegative.toFixed(2)}`);
+
+        // If still equal, try even longer (essentially full solves)
+        const newRatio = Math.min(errorPositive, errorNegative) / Math.max(errorPositive, errorNegative);
+        if (newRatio > 0.99) {
+          log(`[Align] ${firstAxisKey}-axis: still equal, running full solves`);
+          errorPositive = testAlignment(true, 500);
+          errorNegative = testAlignment(false, 500);
+          log(`[Align] ${firstAxisKey}-axis: full test: +err=${errorPositive.toFixed(2)}, -err=${errorNegative.toFixed(2)}`);
+        }
+      }
+
+      // When errors are equal (or very close), the solver converges to the same state
+      // for both orientations due to line direction constraints.
+      const finalRatio = Math.min(errorPositive, errorNegative) / Math.max(errorPositive, errorNegative);
+      if (finalRatio > 0.99) {
+        // Errors are essentially equal - need alternative heuristic.
+        // Empirically: with 3 axis lines (fully constrained), use triangulated direction.
+        // With 2 axis lines (under-constrained), use opposite.
+        const numAxes = presentAxes.length;
+        if (numAxes >= 3) {
+          usePositive = dotPreferPositive;
+          log(`[Align] ${firstAxisKey}-axis: errors equal, 3 axes, using triangulated direction -> ${usePositive ? '+' : '-'}`);
+        } else {
+          usePositive = !dotPreferPositive;
+          log(`[Align] ${firstAxisKey}-axis: errors equal, ${numAxes} axes, using opposite of triangulated direction -> ${usePositive ? '+' : '-'}`);
+        }
+      } else {
+        usePositive = errorPositive < errorNegative;
+        log(`[Align] ${firstAxisKey}-axis: chose ${usePositive ? '+' : '-'}${firstAxisKey.toUpperCase()} based on error (${errorPositive.toFixed(2)} vs ${errorNegative.toFixed(2)})`);
+      }
+    } else if (Math.abs(dotPosAlign - dotNegAlign) > 0.1 && !bothDotsNearZero) {
+      // Pick the alignment where second axis has positive dot (doesn't need flip)
       usePositive = dotPosAlign > dotNegAlign;
       log(`[Align] ${firstAxisKey}-axis: EM second-axis test (${secondAxisKey}): +dot=${dotPosAlign.toFixed(2)}, -dot=${dotNegAlign.toFixed(2)} -> ${usePositive ? '+' : '-'}`);
     } else {

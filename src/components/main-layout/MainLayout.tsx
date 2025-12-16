@@ -926,6 +926,11 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
         selectedCoplanarConstraints={selectedCoplanarConstraints}
         hoveredCoplanarConstraint={hoveredCoplanarConstraint}
         project={project}
+        onOptimizationStart={() => {
+          // Capture dirty state before optimization makes changes
+          dirtyStateBeforeOptimizeRef.current = getIsDirty()
+          isOptimizingRef.current = true
+        }}
         onOptimizationComplete={(success, message) => {
           // Optimization is done - stop suppressing dirty changes
           isOptimizingRef.current = false

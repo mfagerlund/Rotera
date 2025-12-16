@@ -62,6 +62,7 @@ interface BottomPanelProps {
   selectedCoplanarConstraints?: CoplanarPointsConstraint[]
   hoveredCoplanarConstraint?: CoplanarPointsConstraint | null
   project: Project | null
+  onOptimizationStart?: () => void
   onOptimizationComplete: (success: boolean, message: string) => void
   onSelectWorldPoint?: (worldPoint: WorldPoint) => void
   onHoverWorldPoint?: (worldPoint: WorldPoint | null) => void
@@ -120,6 +121,7 @@ export const BottomPanel: React.FC<BottomPanelProps> = observer(({
   selectedCoplanarConstraints = [],
   hoveredCoplanarConstraint,
   project,
+  onOptimizationStart,
   onOptimizationComplete,
   onSelectWorldPoint,
   onHoverWorldPoint,
@@ -220,6 +222,7 @@ export const BottomPanel: React.FC<BottomPanelProps> = observer(({
           isOpen={entityPopups.showOptimizationPanel}
           onClose={() => onClosePopup('showOptimizationPanel')}
           project={project}
+          onOptimizationStart={onOptimizationStart}
           onOptimizationComplete={onOptimizationComplete}
           onSelectWorldPoint={onSelectWorldPoint}
           onSelectLine={onSelectLine}

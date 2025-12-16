@@ -10,7 +10,7 @@ import { initializeCamerasWithEssentialMatrix } from './essential-matrix';
 import { initializeWorldPoints as unifiedInitialize } from './unified-initialization';
 import { initializeSingleCameraPoints } from './single-camera-initialization';
 import { initializeCameraWithVanishingPoints } from './vanishing-points';
-import { alignSceneToLineDirections, alignSceneToLockedPoints } from './coordinate-alignment';
+import { alignSceneToLineDirections, alignSceneToLockedPoints, AlignmentQualityCallback } from './coordinate-alignment';
 import type { IOptimizableCamera } from './IOptimizable';
 import { log, clearOptimizationLogs, optimizationLogs } from './optimization-logger';
 
@@ -644,7 +644,90 @@ export function optimizeProject(
     });
 
     if (axisConstrainedLines.length > 0) {
-      alignSceneToLineDirections(viewpointArray, pointArray, lineArray, usedEssentialMatrix);
+      // Create quality callback for degenerate Essential Matrix cases.
+      // This runs a preliminary solve and returns the residual.
+      const qualityCallback: AlignmentQualityCallback | undefined = usedEssentialMatrix
+        ? (maxIterations: number) => {
+            // Apply scale and translation before testing
+            const linesWithTargetLength = axisConstrainedLines.filter(l => l.targetLength !== undefined);
+            if (linesWithTargetLength.length > 0) {
+              let sumScale = 0;
+              let count = 0;
+              for (const line of linesWithTargetLength) {
+                const posA = line.pointA.optimizedXyz;
+                const posB = line.pointB.optimizedXyz;
+                if (posA && posB && line.targetLength) {
+                  const currentLength = Math.sqrt(
+                    (posB[0] - posA[0]) ** 2 + (posB[1] - posA[1]) ** 2 + (posB[2] - posA[2]) ** 2
+                  );
+                  if (currentLength > 0.01) {
+                    sumScale += line.targetLength / currentLength;
+                    count++;
+                  }
+                }
+              }
+              if (count > 0) {
+                const scale = sumScale / count;
+                for (const wp of pointArray) {
+                  if (wp.optimizedXyz) {
+                    wp.optimizedXyz = [wp.optimizedXyz[0] * scale, wp.optimizedXyz[1] * scale, wp.optimizedXyz[2] * scale];
+                  }
+                }
+                for (const vp of viewpointArray) {
+                  vp.position = [vp.position[0] * scale, vp.position[1] * scale, vp.position[2] * scale];
+                }
+              }
+            }
+
+            // Translate to anchor point
+            const anchorPoint = lockedPointsForCheck.find(wp => wp.optimizedXyz !== undefined);
+            if (anchorPoint && anchorPoint.optimizedXyz) {
+              const target = anchorPoint.getEffectiveXyz();
+              const current = anchorPoint.optimizedXyz;
+              const translation = [
+                target[0]! - current[0],
+                target[1]! - current[1],
+                target[2]! - current[2],
+              ];
+              for (const wp of pointArray) {
+                if (wp.optimizedXyz) {
+                  wp.optimizedXyz = [
+                    wp.optimizedXyz[0] + translation[0],
+                    wp.optimizedXyz[1] + translation[1],
+                    wp.optimizedXyz[2] + translation[2],
+                  ];
+                }
+              }
+              for (const vp of viewpointArray) {
+                vp.position = [
+                  vp.position[0] + translation[0],
+                  vp.position[1] + translation[1],
+                  vp.position[2] + translation[2],
+                ];
+              }
+            }
+
+            // Run a solve to test alignment quality
+            const testSystem = new ConstraintSystem({
+              maxIterations,
+              tolerance: 1e-4,
+              verbose: false,
+            });
+            pointArray.forEach(p => testSystem.addPoint(p));
+            lineArray.forEach(l => testSystem.addLine(l));
+            viewpointArray.forEach(v => testSystem.addCamera(v));
+            for (const ip of project.imagePoints) {
+              testSystem.addImagePoint(ip as ImagePoint);
+            }
+            for (const c of constraintArray) {
+              testSystem.addConstraint(c);
+            }
+            const testResult = testSystem.solve();
+            return testResult.residual ?? Infinity;
+          }
+        : undefined;
+
+      alignSceneToLineDirections(viewpointArray, pointArray, lineArray, usedEssentialMatrix, qualityCallback);
 
       // Apply scale from line target lengths
       const linesWithTargetLength = axisConstrainedLines.filter(l => l.targetLength !== undefined);

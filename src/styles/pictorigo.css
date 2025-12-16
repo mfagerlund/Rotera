@@ -1659,7 +1659,7 @@ body {
   border-radius: var(--border-radius);
   overflow: visible;
   border: 2px solid transparent;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background: var(--bg-secondary);
   margin-top: 8px;
   padding-left: 0;
@@ -1672,23 +1672,16 @@ body {
 .image-nav-item:hover {
   border-color: rgba(6, 150, 215, 0.5);
   box-shadow: 0 2px 12px rgba(6, 150, 215, 0.15);
-  transform: translateY(-1px);
 }
 
 .image-nav-item.active {
   border-color: var(--accent-blue);
-  box-shadow:
-    0 4px 16px rgba(6, 150, 215, 0.4),
-    0 0 0 1px rgba(6, 150, 215, 0.2);
-  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(6, 150, 215, 0.4);
   background: linear-gradient(135deg, var(--bg-secondary) 0%, rgba(6, 150, 215, 0.05) 100%);
 }
 
 .image-nav-item.active:hover {
-  box-shadow:
-    0 6px 20px rgba(6, 150, 215, 0.5),
-    0 0 0 1px rgba(6, 150, 215, 0.3);
-  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(6, 150, 215, 0.5);
 }
 
 .image-nav-item.constraint-mode {
@@ -1697,10 +1690,7 @@ body {
 
 .image-nav-item.constraint-mode.active {
   border-color: var(--accent-blue);
-  box-shadow:
-    0 4px 16px rgba(6, 150, 215, 0.4),
-    0 0 0 1px rgba(6, 150, 215, 0.2);
-  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(6, 150, 215, 0.4);
 }
 
 /* Top bar with name and controls */
@@ -6122,6 +6112,27 @@ body {
 .coord-clear-btn:hover {
   background: rgba(255, 100, 100, 0.8);
   color: #fff;
+}
+
+/* Field clear button for inline use in forms */
+.field-clear-btn {
+  background: var(--surface-3, #3a3a3a);
+  border: 1px solid var(--border, #555);
+  color: var(--text-secondary, #999);
+  cursor: pointer;
+  font-size: 10px;
+  padding: 4px 6px;
+  border-radius: 3px;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.field-clear-btn:hover {
+  background: rgba(255, 100, 100, 0.3);
+  border-color: rgba(255, 100, 100, 0.5);
+  color: #f66;
 }
 
 /* Hide number input spinners */

@@ -118,6 +118,10 @@ describe('Regression Fixtures - Essential Matrix', () => {
     // Known issue: Essential Matrix has Y sign ambiguity. -Y works (<1 error), +Y fails (~91 error)
     // TODO: Need to pick correct Y sign during initialization
     { filename: 'two-axis-y-sign-ambiguity.json', maxTotalError: 2 },
+    // Three-axis case with 8 points - minimal configuration
+    { filename: 'minimal-8-point-3-axis.json', maxTotalError: 2 },
+    // Another 8-point case - tests degenerate disambiguation
+    { filename: 'minimal-8-point-v2.json', maxTotalError: 2 },
   ];
 
   it.each(essentialMatrixFixtures)('$filename should have total error < $maxTotalError', (fixture) => {

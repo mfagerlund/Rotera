@@ -39,6 +39,8 @@ interface OptimizationPanelProps {
   autoStart?: boolean
   /** Counter that triggers optimization when incremented (used by toolbar button) */
   optimizeTrigger?: number
+  /** Called when optimization starts (before any changes) */
+  onOptimizationStart?: () => void
 }
 
 function computeCameraReprojectionError(vp: Viewpoint): number {
@@ -117,7 +119,8 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
   hoveredWorldPoint,
   hoveredCoplanarConstraint,
   autoStart = false,
-  optimizeTrigger
+  optimizeTrigger,
+  onOptimizationStart
 }) => {
   const [isOptimizing, setIsOptimizing] = useState(false)
   const [settings, setSettings] = useState(defaultOptimizationSettings)
@@ -269,6 +272,9 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
   const handleOptimize = useCallback(async () => {
     if (!canOptimize()) return
 
+    // Notify parent before any changes (so it can capture dirty state)
+    onOptimizationStart?.()
+
     setIsOptimizing(true)
     setResults(null)
     setPnpResults([])
@@ -331,7 +337,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
       setIsOptimizing(false)
       setStatusMessage(null)
     }
-  }, [canOptimize, project, settings, clientSolver, onOptimizationComplete])
+  }, [canOptimize, project, settings, clientSolver, onOptimizationComplete, onOptimizationStart])
 
   const handleStop = useCallback(() => {
     cancelOptimization()
@@ -496,7 +502,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
       title="Bundle Adjustment Optimization"
       isOpen={isOpen}
       onClose={onClose}
-      width={500}
+      width={530}
       maxHeight={600}
       storageKey="optimization-panel"
       showOkCancel={false}
@@ -810,6 +816,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
                   <thead>
                     <tr>
                       <th>Name</th>
+                      <th>Coords</th>
                       <th>Position</th>
                       <th>RMS</th>
                     </tr>
@@ -834,7 +841,8 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
                             }}
                           >
                             <td>{point.getName()}</td>
-                            <td>[{info.optimizedXyz?.map(v => formatNumber(v)).join(', ')}]</td>
+                            <td>[{point.getEffectiveXyz().map(v => v !== null ? v.toFixed(2) : '-').join(', ')}]</td>
+                            <td>[{info.optimizedXyz?.map(v => v.toFixed(2)).join(', ')}]</td>
                             <td>{formatNumber(info.rmsResidual)}</td>
                           </tr>
                         )
