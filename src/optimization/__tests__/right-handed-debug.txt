@@ -62,11 +62,11 @@ Z: [0,0,null]
 === OPTIMIZATION RESULT ===
 Converged: true
 Iterations: 5
-Median error: 2.458514167898589e-7 px
+Median error: 2.45494049076523e-7 px
 Error: null
 
 === AFTER OPTIMIZATION ===
 O: [0,0,0]
-X: [10.006665554465716,0,0]
+X: [10.00666555008554,0,0]
 Y: [0,10,0]
-Z: [0,0,9.928599024178785]
+Z: [0,0,9.928599024975298]

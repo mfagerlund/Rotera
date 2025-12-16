@@ -265,6 +265,15 @@ export function alignCamerasToLockedPoints(
 export type AlignmentQualityCallback = (maxIterations: number) => number;
 
 /**
+ * Result of alignment that indicates whether the orientation is ambiguous.
+ */
+export interface AlignmentResult {
+  success: boolean;
+  /** If true, the alignment couldn't determine the correct orientation and both should be tried */
+  ambiguous: boolean;
+}
+
+/**
  * Align the scene to match line direction constraints.
  *
  * After Essential Matrix initialization, the scene is in an arbitrary coordinate frame.
@@ -278,14 +287,19 @@ export type AlignmentQualityCallback = (maxIterations: number) => number;
  *
  * The sign ambiguity (e.g., +Y vs -Y) is resolved by trying both and picking
  * the one with lower reprojection error.
+ *
+ * @param forceFirstAxisSign - If provided, forces the first axis alignment to use
+ *   this sign ('positive' or 'negative') instead of auto-detecting. Used for retry
+ *   when the initial alignment was ambiguous.
  */
 export function alignSceneToLineDirections(
   cameras: Viewpoint[],
   allPoints: WorldPoint[],
   lines: Line[],
   usedEssentialMatrix: boolean = false,
-  qualityCallback?: AlignmentQualityCallback
-): boolean {
+  qualityCallback?: AlignmentQualityCallback,
+  forceFirstAxisSign?: 'positive' | 'negative'
+): AlignmentResult {
   // Helper to apply a rotation to the entire scene
   const applyRotation = (rotation: number[]) => {
     for (const cam of cameras) {
@@ -350,8 +364,11 @@ export function alignSceneToLineDirections(
   }
 
   if (axisLinesByDirection.size === 0) {
-    return false;
+    return { success: false, ambiguous: false };
   }
+
+  // Track if we couldn't determine the correct orientation
+  let isAmbiguous = false;
 
   // Get unique axes in the order they first appear in lines (preserves iteration order
   // for backwards compatibility - old tests depend on this order)
@@ -369,7 +386,7 @@ export function alignSceneToLineDirections(
   const firstDirection = computeLineDirection(firstLine.line);
 
   if (!firstDirection) {
-    return false;
+    return { success: false, ambiguous: false };
   }
 
   // Define positive and negative directions for alignment options
@@ -384,7 +401,11 @@ export function alignSceneToLineDirections(
   // For Essential Matrix cases, try both signs and pick based on locked point alignment
   let usePositive: boolean = dotPreferPositive;
 
-  if (usedEssentialMatrix && presentAxes.length >= 2) {
+  // If forced sign is specified, skip all auto-detection and use the forced value
+  if (forceFirstAxisSign) {
+    usePositive = forceFirstAxisSign === 'positive';
+    log(`[Align] ${firstAxisKey}-axis: FORCED to ${forceFirstAxisSign}`);
+  } else if (usedEssentialMatrix && presentAxes.length >= 2) {
     // For Essential Matrix with 2+ axis constraints, use the second axis to disambiguate the first.
     // After aligning the first axis, the second axis line should point in a consistent direction.
     // Try both signs and pick the one that gives better second-axis alignment.
@@ -490,17 +511,12 @@ export function alignSceneToLineDirections(
       // for both orientations due to line direction constraints.
       const finalRatio = Math.min(errorPositive, errorNegative) / Math.max(errorPositive, errorNegative);
       if (finalRatio > 0.99) {
-        // Errors are essentially equal - need alternative heuristic.
-        // Empirically: with 3 axis lines (fully constrained), use triangulated direction.
-        // With 2 axis lines (under-constrained), use opposite.
-        const numAxes = presentAxes.length;
-        if (numAxes >= 3) {
-          usePositive = dotPreferPositive;
-          log(`[Align] ${firstAxisKey}-axis: errors equal, 3 axes, using triangulated direction -> ${usePositive ? '+' : '-'}`);
-        } else {
-          usePositive = !dotPreferPositive;
-          log(`[Align] ${firstAxisKey}-axis: errors equal, ${numAxes} axes, using opposite of triangulated direction -> ${usePositive ? '+' : '-'}`);
-        }
+        // Errors are essentially equal - we can't determine the correct orientation.
+        // Mark as ambiguous so the caller can try both full optimizations.
+        isAmbiguous = true;
+        // For now, just pick positive (will be overridden by caller if needed)
+        usePositive = dotPreferPositive;
+        log(`[Align] ${firstAxisKey}-axis: errors equal, AMBIGUOUS - caller should try both`);
       } else {
         usePositive = errorPositive < errorNegative;
         log(`[Align] ${firstAxisKey}-axis: chose ${usePositive ? '+' : '-'}${firstAxisKey.toUpperCase()} based on error (${errorPositive.toFixed(2)} vs ${errorNegative.toFixed(2)})`);
@@ -625,7 +641,7 @@ export function alignSceneToLineDirections(
     }
   }
 
-  return true;
+  return { success: true, ambiguous: isAmbiguous };
 }
 
 /**

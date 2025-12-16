@@ -56,34 +56,20 @@ export const OrientationPaintTool: React.FC<OrientationPaintToolProps> = observe
   ]
 
   return (
-    <div className="orientation-paint-tool">
-      <div className="tool-header">
-        <h4>Paint Orientation</h4>
-        <button className="btn-cancel" onClick={onCancel}>X</button>
+    <div className="orientation-paint-tool" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+      <div className="orientation-buttons compact" style={{ margin: 0 }}>
+        {directionOptions.map(option => (
+          <button
+            key={option.value}
+            className={`orientation-btn ${selectedDirection === option.value ? 'active' : ''}`}
+            onClick={() => onDirectionChange(option.value)}
+            title={option.tooltip}
+          >
+            {option.label}
+          </button>
+        ))}
       </div>
-      <div className="tool-message">
-        Click lines to apply the selected orientation
-      </div>
-      <div style={{ margin: '10px 0' }}>
-        <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '12px' }}>Direction:</label>
-        <div className="orientation-buttons compact">
-          {directionOptions.map(option => (
-            <button
-              key={option.value}
-              className={`orientation-btn ${selectedDirection === option.value ? 'active' : ''}`}
-              onClick={() => onDirectionChange(option.value)}
-              title={option.tooltip}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="tool-help">
-        <div className="help-text">
-          Press Esc to cancel
-        </div>
-      </div>
+      <button className="btn-cancel" onClick={onCancel} title="Cancel (Esc)">X</button>
     </div>
   )
 })

@@ -122,6 +122,8 @@ describe('Regression Fixtures - Essential Matrix', () => {
     { filename: 'minimal-8-point-3-axis.json', maxTotalError: 2 },
     // Another 8-point case - tests degenerate disambiguation
     { filename: 'minimal-8-point-v2.json', maxTotalError: 2 },
+    // 15-point 3-axis case - tests that axis count heuristic alone isn't enough
+    { filename: 'minimal-15-point-3-axis.json', maxTotalError: 2 },
   ];
 
   it.each(essentialMatrixFixtures)('$filename should have total error < $maxTotalError', (fixture) => {

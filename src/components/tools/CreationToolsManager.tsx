@@ -637,6 +637,8 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = observe
         onClose={handleToolCancel}
         storageKey="orientation-paint-tool"
         showOkCancel={false}
+        minWidth={100}
+        minHeight={40}
       >
         <OrientationPaintTool
           isActive={activeTool === 'orientationPaint'}
