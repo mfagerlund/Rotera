@@ -15,8 +15,12 @@ import {
   faCircle,
   faArrowRight,
   faCopy,
-  faFileExport
+  faFileExport,
+  faBolt,
+  faStar,
+  faStarHalfAlt
 } from '@fortawesome/free-solid-svg-icons'
+import { faStar as faStarOutline } from '@fortawesome/free-regular-svg-icons'
 import { ProjectDB, ProjectSummary, Folder } from '../services/project-db'
 import { Project } from '../entities/project'
 import { useConfirm } from './ConfirmDialog'
@@ -24,6 +28,15 @@ import { SessionStore } from '../services/session-store'
 import { Serialization } from '../entities/Serialization'
 import { AppBranding } from './AppBranding'
 import JSZip from 'jszip'
+import { optimizeProject, OptimizeProjectResult } from '../optimization/optimize-project'
+
+interface BatchOptimizationResult {
+  projectId: string
+  error: number | null
+  converged: boolean
+  solveTimeMs: number
+  errorMessage?: string
+}
 
 interface ProjectBrowserProps {
   onOpenProject: (project: Project) => void
@@ -54,6 +67,9 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
   const [showExportModal, setShowExportModal] = useState(false)
   const [exportExcludeImages, setExportExcludeImages] = useState(true)
   const [isExporting, setIsExporting] = useState(false)
+  const [batchResults, setBatchResults] = useState<Map<string, BatchOptimizationResult>>(new Map())
+  const [isBatchOptimizing, setIsBatchOptimizing] = useState(false)
+  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 })
 
   const setCurrentFolderId = useCallback((folderId: string | null) => {
     setCurrentFolderIdState(folderId)
@@ -257,6 +273,59 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
     }
   }
 
+  const handleBatchOptimize = async () => {
+    if (projects.length === 0) return
+
+    setIsBatchOptimizing(true)
+    setBatchProgress({ current: 0, total: projects.length })
+    const newResults = new Map<string, BatchOptimizationResult>()
+
+    for (let i = 0; i < projects.length; i++) {
+      const summary = projects[i]
+      setBatchProgress({ current: i + 1, total: projects.length })
+
+      try {
+        const project = await ProjectDB.loadProject(summary.id)
+        const startTime = performance.now()
+
+        // Run optimization
+        const result = optimizeProject(project, {
+          tolerance: 1e-6,
+          maxIterations: 500,
+          damping: 0.1,
+          autoInitializeCameras: true,
+          autoInitializeWorldPoints: true,
+        })
+
+        const solveTimeMs = performance.now() - startTime
+
+        newResults.set(summary.id, {
+          projectId: summary.id,
+          error: result.residual,
+          converged: result.converged,
+          solveTimeMs,
+          errorMessage: result.error ?? undefined,
+        })
+      } catch (error) {
+        newResults.set(summary.id, {
+          projectId: summary.id,
+          error: null,
+          converged: false,
+          solveTimeMs: 0,
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        })
+      }
+
+      // Update results incrementally
+      setBatchResults(new Map(newResults))
+
+      // Yield to event loop between projects
+      await new Promise(resolve => setTimeout(resolve, 0))
+    }
+
+    setIsBatchOptimizing(false)
+  }
+
   const handleDragStart = (e: React.DragEvent, project: ProjectSummary) => {
     setDraggedProject(project)
     e.dataTransfer.effectAllowed = 'move'
@@ -343,6 +412,18 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
             title="Export all projects in this folder"
           >
             <FontAwesomeIcon icon={faFileExport} /> Export Folder
+          </button>
+          <button
+            className="project-browser__btn project-browser__btn--optimize"
+            onClick={handleBatchOptimize}
+            disabled={projects.length === 0 || isBatchOptimizing}
+            title="Run optimization on all projects in this folder"
+          >
+            {isBatchOptimizing ? (
+              <><FontAwesomeIcon icon={faSpinner} spin /> Optimizing {batchProgress.current}/{batchProgress.total}...</>
+            ) : (
+              <><FontAwesomeIcon icon={faBolt} /> Optimize All</>
+            )}
           </button>
         </div>
       </div>
@@ -514,6 +595,36 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
                     <span className="project-browser__item-date">
                       {formatDate(project.updatedAt)}
                     </span>
+                    {batchResults.has(project.id) && (() => {
+                      const result = batchResults.get(project.id)!
+                      const getQualityInfo = () => {
+                        if (result.error === null || result.errorMessage) {
+                          return { icon: faStarOutline, color: '#e74c3c', label: 'Failed' }
+                        }
+                        if (result.error < 1) {
+                          return { icon: faStar, color: '#2ecc71', label: 'Excellent' }
+                        }
+                        if (result.error < 5) {
+                          return { icon: faStarHalfAlt, color: '#f1c40f', label: 'Good' }
+                        }
+                        return { icon: faStarOutline, color: '#e74c3c', label: 'Poor' }
+                      }
+                      const quality = getQualityInfo()
+                      return (
+                        <span
+                          className="project-browser__item-optimization"
+                          title={result.errorMessage || `Error: ${result.error?.toFixed(3)}, Time: ${result.solveTimeMs.toFixed(0)}ms${result.converged ? '' : ' (not converged)'}`}
+                        >
+                          <FontAwesomeIcon icon={quality.icon} style={{ color: quality.color }} />
+                          {result.error !== null ? (
+                            <span style={{ color: quality.color }}>{result.error.toFixed(2)}</span>
+                          ) : (
+                            <span style={{ color: quality.color }}>Error</span>
+                          )}
+                          <span className="project-browser__item-time">{result.solveTimeMs.toFixed(0)}ms</span>
+                        </span>
+                      )
+                    })()}
                   </>
                 )}
                 <div className="project-browser__item-actions">

@@ -405,6 +405,7 @@ export interface OptimizeProjectResult extends SolverResult {
   camerasExcluded?: string[];
   outliers?: OutlierInfo[];
   medianReprojectionError?: number;
+  solveTimeMs?: number;
 }
 
 export function optimizeProject(
@@ -438,6 +439,8 @@ export function optimizeProject(
   // Clear logs and reset all cached state before solving
   clearOptimizationLogs();
   resetOptimizationState(project);
+
+  const startTime = performance.now();
 
   log(`[Optimize] WP:${project.worldPoints.size} L:${project.lines.size} VP:${project.viewpoints.size} IP:${project.imagePoints.size} C:${project.constraints.size}`);
 
@@ -1624,9 +1627,10 @@ export function optimizeProject(
   }
 
   // Log final summary with quality assessment
+  const solveTimeMs = performance.now() - startTime;
   const quality = result.residual < 1 ? 'Excellent' : result.residual < 5 ? 'Good' : 'Poor';
   const qualityStars = result.residual < 1 ? '***' : result.residual < 5 ? '**' : '*';
-  log(`[Summary] ${qualityStars} ${quality} | error=${result.residual.toFixed(3)} | median=${medianReprojectionError?.toFixed(2) ?? '?'}px | iter=${result.iterations} | conv=${result.converged}`);
+  log(`[Summary] ${qualityStars} ${quality} | error=${result.residual.toFixed(3)} | median=${medianReprojectionError?.toFixed(2) ?? '?'}px | iter=${result.iterations} | conv=${result.converged} | ${solveTimeMs.toFixed(0)}ms`);
 
   return {
     ...result,
@@ -1634,5 +1638,6 @@ export function optimizeProject(
     camerasExcluded: excludedCameraNames.length > 0 ? excludedCameraNames : undefined,
     outliers,
     medianReprojectionError,
+    solveTimeMs,
   };
 }

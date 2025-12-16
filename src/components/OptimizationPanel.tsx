@@ -509,29 +509,16 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
       headerButtons={headerButtons}
     >
     <div className="optimization-panel">
-      <div className="optimization-stats">
-        <div className="stat-item">
-          <span className="stat-label">Points:</span>
-          <span className="stat-value">{stats.pointCount} ({stats.unlockedPointCount} unlocked)</span>
-        </div>
-        {stats.viewpointCount > 0 && (
-          <div className="stat-item">
-            <span className="stat-label">Viewpoints:</span>
-            <span className="stat-value">{stats.viewpointCount}</span>
-          </div>
-        )}
-        <div className="stat-item">
-          <span className="stat-label">Constraints:</span>
-          <span className="stat-value">
-            {stats.constraintDOF}
-            {stats.lineConstraintCount > 0 && ` (${stats.lineConstraintCount} from lines)`}
-            {stats.projectionConstraintCount > 0 && ` (${stats.projectionConstraintCount} observations)`}
-          </span>
-        </div>
-        <div className="stat-item">
-          <span className="stat-label">Degrees of Freedom:</span>
-          <span className="stat-value">{stats.netDOF} (vars: {stats.totalDOF}, constraints: {stats.constraintDOF})</span>
-        </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+        <span>Pts:{stats.pointCount} ({stats.unlockedPointCount} unlocked)</span>
+        {stats.viewpointCount > 0 && <><span style={{ margin: '0 4px', opacity: 0.5 }}>|</span><span>VPs:{stats.viewpointCount}</span></>}
+        <span style={{ margin: '0 4px', opacity: 0.5 }}>|</span>
+        <span>
+          Constraints:{stats.constraintDOF}
+          {stats.lineConstraintCount > 0 && ` (${stats.lineConstraintCount} lines)`}
+        </span>
+        <span style={{ margin: '0 4px', opacity: 0.5 }}>|</span>
+        <span>DOF:{stats.netDOF}</span>
       </div>
 
       {/* Progress Status Display */}
@@ -721,19 +708,12 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
               </div>
             );
           })()}
-          <div className="results-details">
-            <div className="result-item">
-              <span>Total Error:</span>
-              <span>{formatNumber(results.totalError)}</span>
-            </div>
-            <div className="result-item">
-              <span>Point Accuracy:</span>
-              <span>{formatNumber(results.pointAccuracy)}</span>
-            </div>
-            <div className="result-item">
-              <span>Iterations:</span>
-              <span>{results.iterations}</span>
-            </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>
+            <span>Error:{formatNumber(results.totalError)}</span>
+            <span style={{ margin: '0 4px', opacity: 0.5 }}>|</span>
+            <span>Accuracy:{formatNumber(results.pointAccuracy)}</span>
+            <span style={{ margin: '0 4px', opacity: 0.5 }}>|</span>
+            <span>Iterations:{results.iterations}</span>
           </div>
 
           {/* Outlier Detection */}
@@ -807,8 +787,6 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
           {/* Entity-level optimization information - show even if not converged */}
           {(results.converged || results.medianReprojectionError !== undefined) && (
             <div className="entity-optimization-info">
-              <h4>Entity Optimization Results</h4>
-
               {/* World Points */}
               <div className="entity-section">
                 <h5>World Points ({Array.from(project.worldPoints.values()).length})</h5>

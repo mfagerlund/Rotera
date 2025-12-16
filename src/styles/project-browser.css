@@ -416,3 +416,39 @@
   outline: none;
   border-color: var(--accent-blue);
 }
+
+/* Batch optimization button */
+.project-browser__btn--optimize {
+  background: linear-gradient(135deg, #f0c040 0%, #e6a800 100%);
+  border-color: #e6a800;
+  color: #1a1a1a;
+}
+
+.project-browser__btn--optimize:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ffd34d 0%, #f0c040 100%);
+  border-color: #f0c040;
+}
+
+.project-browser__btn--optimize:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Optimization result display in project item */
+.project-browser__item-optimization {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding: 4px 8px;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+  margin-left: auto;
+  margin-right: 8px;
+}
+
+.project-browser__item-time {
+  color: var(--text-muted);
+  font-size: 11px;
+  margin-left: 4px;
+}
