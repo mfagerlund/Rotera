@@ -79,7 +79,7 @@ describe('GOLDEN: No-Axis Lines (Essential Matrix + Free Solve)', () => {
       autoInitializeCameras: true,
       autoInitializeWorldPoints: true,
       detectOutliers: true,
-      maxIterations: 400,
+      maxIterations: 100,
       tolerance: 1e-8,
       verbose: false
     });
@@ -147,7 +147,7 @@ describe('GOLDEN: No-Axis Lines (Essential Matrix + Free Solve)', () => {
       autoInitializeCameras: true,
       autoInitializeWorldPoints: true,
       detectOutliers: true,
-      maxIterations: 400,
+      maxIterations: 100,
       tolerance: 1e-8,
       verbose: false
     });
@@ -169,7 +169,7 @@ describe('GOLDEN: No-Axis Lines (Essential Matrix + Free Solve)', () => {
       autoInitializeCameras: true,
       autoInitializeWorldPoints: true,
       detectOutliers: true,
-      maxIterations: 400,
+      maxIterations: 100,
       tolerance: 1e-8,
       verbose: false
     });

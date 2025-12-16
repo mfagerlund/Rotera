@@ -9,8 +9,8 @@ Viewpoints: 2
 === RESULT ===
 Converged: true
 Iterations: 20
-Residual: 1.304454755216512
-Median reproj: 0.363211778714623
+Residual: 1.3044547552164787
+Median reproj: 0.3632117787146832
 Cameras initialized: C3, C1
 Cameras excluded: none
 
