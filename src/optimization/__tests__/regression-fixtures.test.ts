@@ -112,6 +112,21 @@ describe('Regression Fixtures - Multi-Camera VL', () => {
   });
 });
 
+describe('Regression Fixtures - Poor Solves (Investigation Needed)', () => {
+  // These fixtures have poor results that we want to track and potentially improve
+  const poorSolveFixtures: RegressionFixture[] = [
+    // Non-orthogonal VPs (X·Z=0.404), left-handed result, median=6.42px
+    // Issues: VP Y very far from origin, VP directions not orthogonal
+    // Hand-drawn 2-point perspective - VPs are not perfectly orthogonal (~24° error)
+    // This is expected for hand-drawn art - the solver does its best
+    { filename: 'Three Boxes.json', maxTotalError: 17 },
+  ];
+
+  it.each(poorSolveFixtures)('$filename should have total error < $maxTotalError', (fixture) => {
+    runRegressionTest(fixture);
+  });
+});
+
 describe('Regression Fixtures - Essential Matrix', () => {
   const essentialMatrixFixtures: RegressionFixture[] = [
     // Two-axis case: Y-axis line (length 10) and X-axis line from origin
