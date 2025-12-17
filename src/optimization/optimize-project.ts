@@ -18,7 +18,7 @@ import { log, clearOptimizationLogs, optimizationLogs } from './optimization-log
 export { log, clearOptimizationLogs, optimizationLogs } from './optimization-logger';
 
 // Version for tracking code updates
-const OPTIMIZER_VERSION = '2.1.1-vpem-hybrid';
+const OPTIMIZER_VERSION = '2.4.0-single-vp-init';
 
 // WeakMaps for temporary storage during optimization (avoid polluting entity objects)
 const viewpointInitialVps = new WeakMap<Viewpoint, Record<string, { u: number; v: number }>>();
@@ -548,15 +548,20 @@ export function optimizeProject(
         );
       }
 
-      // Use standalone function that counts direction-constrained Lines as virtual VLs
-      const canAnyUninitCameraUseVP = uninitializedCameras.some(vp =>
-        canInitializeWithVanishingPoints(vp as Viewpoint, worldPointSet, { allowSinglePoint: uninitializedCameras.length === 1 })
+      // Check VP capability with both strict (2+ points) and relaxed (1 point) modes
+      const canAnyUninitCameraUseVPStrict = uninitializedCameras.some(vp =>
+        canInitializeWithVanishingPoints(vp as Viewpoint, worldPointSet, { allowSinglePoint: false })
       );
+      const canAnyUninitCameraUseVPRelaxed = uninitializedCameras.some(vp =>
+        canInitializeWithVanishingPoints(vp as Viewpoint, worldPointSet, { allowSinglePoint: true })
+      );
+      // Use strict mode for decision-making, but note if relaxed mode is available
+      const canAnyUninitCameraUseVP = canAnyUninitCameraUseVPStrict || (uninitializedCameras.length === 1 && canAnyUninitCameraUseVPRelaxed);
 
       // Debug logging for initialization path
       // lockedPts = fully constrained (locked OR inferred), trulyLocked = only user-locked points
       const trulyLockedCount = worldPointArray.filter(wp => wp.isFullyLocked()).length;
-      log(`[Init Debug] uninitCameras=${uninitializedCameras.length}, lockedPts=${lockedPoints.length} (trulyLocked=${trulyLockedCount}), canVP=${canAnyUninitCameraUseVP}`);
+      log(`[Init Debug] uninitCameras=${uninitializedCameras.length}, lockedPts=${lockedPoints.length} (trulyLocked=${trulyLockedCount}), canVP=${canAnyUninitCameraUseVP} (relaxed=${canAnyUninitCameraUseVPRelaxed})`);
 
       if (lockedPoints.length >= 2 || canAnyUninitCameraUseVP || (uninitializedCameras.length === 1 && lockedPoints.length >= 1)) {
         const canAnyCameraUsePnP = uninitializedCameras.some(vp => {
@@ -581,6 +586,12 @@ export function optimizeProject(
           }
         }
 
+        // CRITICAL: When multiple cameras can VP init but have < 3 locked points each,
+        // only VP init ONE camera. Independent VP init for each camera gives inconsistent
+        // world frames since VP determines rotation but not a consistent position.
+        // After one camera is VP-initialized, triangulate points, then PnP for the rest.
+        let vpInitializedOneCamera = false;
+
         for (const vp of uninitializedCameras) {
           const vpConcrete = vp as Viewpoint;
 
@@ -591,6 +602,15 @@ export function optimizeProject(
           // If camera has actual VLs, VP init should be used - it handles handedness correctly.
           const hasActualVanishingLines = vpConcrete.getVanishingLineCount() > 0;
           const skipVPForLatePnP = uninitializedCameras.length === 1 && lockedPoints.length < 3 && !hasActualVanishingLines;
+
+          // When multiple cameras exist and we've already VP-initialized one with < 3 locked points,
+          // skip VP init for remaining cameras - they'll use late PnP after triangulation
+          const skipVPForMultiCam = vpInitializedOneCamera && lockedPoints.length < 3;
+          if (skipVPForMultiCam) {
+            log(`[Init Path] ${vpConcrete.name}: skipping VP (already VP-inited one camera with < 3 locked points)`);
+            continue;
+          }
+
           log(`[Init Path] skipVPForLatePnP=${skipVPForLatePnP} (uninit=${uninitializedCameras.length}, locked=${lockedPoints.length}, hasVL=${hasActualVanishingLines})`);
 
           // Use standalone function that counts direction-constrained Lines as virtual VLs
@@ -600,6 +620,7 @@ export function optimizeProject(
               log(`[Init] ${vpConcrete.name} via VP, f=${vpConcrete.focalLength.toFixed(0)}`);
               camerasInitialized.push(vpConcrete.name);
               camerasInitializedViaVP.add(vpConcrete);
+              vpInitializedOneCamera = true;
               continue;
             }
           }
@@ -622,6 +643,56 @@ export function optimizeProject(
               vpConcrete.rotation = [1, 0, 0, 0];
             } else {
               throw new Error(`PnP failed for ${vpConcrete.name} with ${vpLockedPoints.length} locked points`);
+            }
+          }
+        }
+      }
+
+      if (camerasInitialized.length === 0) {
+        // STEPPED INITIALIZATION: Try VP init with single point for multi-camera scenes
+        // If a camera has good VLs and sees a locked point, initialize it first,
+        // then use the resulting points to help initialize other cameras
+        if (uninitializedCameras.length >= 2 && canAnyUninitCameraUseVPRelaxed && lockedPoints.length >= 1) {
+          log(`[Init Stepped] Trying VP init with single locked point before Essential Matrix...`);
+
+          // Set up locked points first
+          for (const wp of lockedPoints) {
+            const effective = wp.getEffectiveXyz();
+            wp.optimizedXyz = [effective[0]!, effective[1]!, effective[2]!];
+          }
+
+          // Find and initialize the camera that can use VP with single point
+          for (const vp of uninitializedCameras) {
+            const vpConcrete = vp as Viewpoint;
+            if (canInitializeWithVanishingPoints(vpConcrete, worldPointSet, { allowSinglePoint: true })) {
+              const success = initializeCameraWithVanishingPoints(vpConcrete, worldPointSet, { allowSinglePoint: true });
+              if (success) {
+                log(`[Init Stepped] ${vpConcrete.name} via VP (single point), f=${vpConcrete.focalLength.toFixed(0)}`);
+                camerasInitialized.push(vpConcrete.name);
+                camerasInitializedViaVP.add(vpConcrete);
+
+                // After VP init, try to initialize remaining cameras using PnP with constrained points
+                // The inference system should have propagated coordinates to points on axis lines
+                const remainingCameras = uninitializedCameras.filter(c => c !== vpConcrete);
+                for (const remainingVp of remainingCameras) {
+                  const remVpConcrete = remainingVp as Viewpoint;
+                  const remConstrainedPoints = Array.from(remVpConcrete.imagePoints).filter(ip =>
+                    (ip.worldPoint as WorldPoint).isFullyConstrained()
+                  );
+                  if (remConstrainedPoints.length >= 3) {
+                    const pnpResult = initializeCameraWithPnP(remVpConcrete, worldPointSet);
+                    if (pnpResult.success && pnpResult.reliable) {
+                      log(`[Init Stepped] ${remVpConcrete.name} via PnP (after VP), pos=[${remVpConcrete.position.map(x => x.toFixed(1)).join(',')}]`);
+                      camerasInitialized.push(remVpConcrete.name);
+                    } else if (pnpResult.success) {
+                      log(`[Init Stepped] ${remVpConcrete.name} PnP unreliable after VP: ${pnpResult.reason}`);
+                    }
+                  } else {
+                    log(`[Init Stepped] ${remVpConcrete.name} needs ${remConstrainedPoints.length}/3 constrained points for PnP`);
+                  }
+                }
+                break; // Done with stepped initialization
+              }
             }
           }
         }
