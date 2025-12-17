@@ -516,6 +516,32 @@ export function optimizeProject(
       const lockedPoints = worldPointArray.filter(wp => wp.isFullyConstrained());
       const worldPointSet = new Set<WorldPoint>(worldPointArray);
 
+      // TIER 1 VALIDATION: Must have at least one fully locked point to anchor the scene
+      // This is the most fundamental requirement - without it, nothing else can work.
+      // Locked points provide the coordinate system origin and scale reference.
+      if (lockedPoints.length === 0) {
+        throw new Error(
+          'No fully locked world points found. At least one point must have all three ' +
+          'coordinates (X, Y, Z) locked to anchor the scene. Lock a point at the origin [0,0,0] ' +
+          'or another known position.'
+        );
+      }
+
+      // TIER 2 VALIDATION: Must have scale constraint
+      // Scale can come from: (a) two fully locked points, OR (b) a line with targetLength
+      const hasLengthConstrainedLine = Array.from(project.lines).some(
+        line => line.targetLength !== undefined && line.targetLength > 0
+      );
+      const hasScaleConstraint = lockedPoints.length >= 2 || hasLengthConstrainedLine;
+
+      if (!hasScaleConstraint) {
+        throw new Error(
+          'No scale constraint found. The scene needs a known distance to establish scale. Provide either:\n' +
+          '  - Two fully locked world points (the distance between them defines scale), OR\n' +
+          '  - A line with a defined length (targetLength)'
+        );
+      }
+
       // Use standalone function that counts direction-constrained Lines as virtual VLs
       const canAnyUninitCameraUseVP = uninitializedCameras.some(vp =>
         canInitializeWithVanishingPoints(vp as Viewpoint, worldPointSet, { allowSinglePoint: uninitializedCameras.length === 1 })
@@ -603,8 +629,12 @@ export function optimizeProject(
         log(`[Init Debug] No cameras initialized. uninitCameras=${uninitializedCameras.length}, canUseLatePnP=${singleCameraWithConstrainedPoints}`);
 
         if (uninitializedCameras.length < 2 && !singleCameraWithConstrainedPoints) {
-          log(`[Init Debug] FAILING: Need 2+ cameras for Essential Matrix`);
-          throw new Error(`Need 2+ cameras for Essential Matrix, have ${uninitializedCameras.length}. Lock 3+ WPs for PnP.`);
+          log(`[Init Debug] FAILING: Single camera needs constrained points visible`);
+          throw new Error(
+            'Single camera optimization requires the locked point(s) to be visible in the image. ' +
+            'Either: (1) add image points for your locked world points, or (2) add a second camera ' +
+            'with 7+ shared points for Essential Matrix initialization.'
+          );
         }
 
         // Single camera will use late PnP - skip Essential Matrix
@@ -612,16 +642,7 @@ export function optimizeProject(
           log(`[Init Debug] Single camera will use late PnP with constrained points`);
           // Skip Essential Matrix - camera will be initialized via late PnP
         } else {
-          // VALIDATION: Essential Matrix requires at least one locked point to anchor the scene.
-          // Without a locked point, the scene has no fixed position/scale reference, and axis
-          // constraints alone only provide orientation - the result is arbitrary garbage.
-          if (lockedPoints.length < 1) {
-            throw new Error(
-              'Cannot optimize: at least one point must be locked to anchor the scene. ' +
-              'Lock a point with known coordinates (e.g., origin at [0,0,0]).'
-            );
-          }
-
+          // Essential Matrix path requires 2+ cameras (already validated above)
           const vp1 = uninitializedCameras[0] as Viewpoint;
           const vp2 = uninitializedCameras[1] as Viewpoint;
 

@@ -18,22 +18,20 @@ describe('GOLDEN: No-Axis No-Lines (Essential Matrix + Free Solve, minimal const
   /**
    * This test validates Essential Matrix initialization with MINIMAL constraints:
    * - 8 world points, 2 cameras (8+8 = 16 image points)
-   * - 1 locked point (O at origin)
+   * - 2 locked points (O at origin, WP1 at [1,1,1]) - provides scale
    * - NO lines at all (no length constraints, no axis constraints)
    * - NO coplanar constraints
    *
-   * This is the hardest case: the scene has no scale reference and arbitrary orientation.
    * The optimizer must:
    * 1. Use Essential Matrix to get relative pose (up to scale)
-   * 2. Triangulate all points in arbitrary coordinate frame
-   * 3. Apply similarity transform to align the single locked point to origin
-   * 4. The scale remains arbitrary (determined by Essential Matrix baseline = ~10 units)
+   * 2. Triangulate all points
+   * 3. Apply similarity transform to align locked points
    *
    * Expected performance:
    * - Median reprojection error < 0.2 px (achieves ~0.07 px)
-   * - Locked point at origin
+   * - Locked points maintained
    */
-  it('should solve 8+8 two-camera scene with only 1 locked point (no lines, no constraints)', () => {
+  it('should solve 8+8 two-camera scene with 2 locked points (no lines, no constraints)', () => {
     console.log('\n=== GOLDEN: NO-AXIS NO-LINES ===\n');
 
     const project = loadFixture('no-axis-no-lines-8-8.json');
@@ -64,10 +62,10 @@ describe('GOLDEN: No-Axis No-Lines (Essential Matrix + Free Solve, minimal const
     console.log(`  Locked points: ${lockedPoints.length}`);
     console.log();
 
-    // This test specifically validates the minimal case
+    // This test validates the minimal case with scale constraint (2 locked points)
     expect(lines.length).toBe(0);
     expect(constraints.length).toBe(0);
-    expect(lockedPoints.length).toBe(1);
+    expect(lockedPoints.length).toBe(2);
 
     // Run optimization
     const result = optimizeProject(project, {

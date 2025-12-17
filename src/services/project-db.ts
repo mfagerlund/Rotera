@@ -54,6 +54,96 @@ function generateId(): string {
   return crypto.randomUUID()
 }
 
+// Helper function to get all items from a store
+function getAllFromStore<T>(db: IDBDatabase, storeName: string): Promise<T[]> {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readonly')
+    const store = tx.objectStore(storeName)
+    const request = store.getAll()
+
+    request.onerror = () => reject(request.error)
+    request.onsuccess = () => resolve(request.result as T[])
+  })
+}
+
+// Helper function to convert StoredProject to ProjectSummary
+function toProjectSummary(p: StoredProject): ProjectSummary {
+  return {
+    id: p.id,
+    name: p.name,
+    folderId: p.folderId,
+    createdAt: new Date(p.createdAt),
+    updatedAt: new Date(p.updatedAt),
+    thumbnailUrl: p.thumbnailUrl,
+    viewpointCount: p.viewpointCount,
+    worldPointCount: p.worldPointCount
+  }
+}
+
+// Helper function to create a transaction with PROJECTS_STORE and IMAGES_STORE
+function createProjectAndImagesTransaction(
+  db: IDBDatabase,
+  mode: IDBTransactionMode
+): Promise<{ tx: IDBTransaction; projectStore: IDBObjectStore; imageStore: IDBObjectStore }> {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction([PROJECTS_STORE, IMAGES_STORE], mode)
+    const projectStore = tx.objectStore(PROJECTS_STORE)
+    const imageStore = tx.objectStore(IMAGES_STORE)
+
+    tx.onerror = () => reject(tx.error)
+
+    resolve({ tx, projectStore, imageStore })
+  })
+}
+
+// Helper function to get and update a project in a transaction
+async function getAndUpdateProject(
+  db: IDBDatabase,
+  id: string,
+  updateFn: (project: StoredProject) => void
+): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(PROJECTS_STORE, 'readwrite')
+    const store = tx.objectStore(PROJECTS_STORE)
+
+    const getRequest = store.get(id)
+    getRequest.onsuccess = () => {
+      const project = getRequest.result as StoredProject
+      if (project) {
+        updateFn(project)
+        store.put(project)
+      }
+    }
+
+    tx.onerror = () => reject(tx.error)
+    tx.oncomplete = () => resolve()
+  })
+}
+
+// Helper function to get and update a folder in a transaction
+async function getAndUpdateFolder(
+  db: IDBDatabase,
+  id: string,
+  updateFn: (folder: Folder) => void
+): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(FOLDERS_STORE, 'readwrite')
+    const store = tx.objectStore(FOLDERS_STORE)
+
+    const getRequest = store.get(id)
+    getRequest.onsuccess = () => {
+      const folder = getRequest.result as Folder
+      if (folder) {
+        updateFn(folder)
+        store.put(folder)
+      }
+    }
+
+    tx.onerror = () => reject(tx.error)
+    tx.oncomplete = () => resolve()
+  })
+}
+
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION)
@@ -210,53 +300,17 @@ export const ProjectDB = {
   async listProjects(folderId: string | null = null): Promise<ProjectSummary[]> {
     const db = await openDatabase()
     console.log('[ProjectDB.listProjects] Listing projects in folder:', folderId)
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(PROJECTS_STORE, 'readonly')
-      const store = tx.objectStore(PROJECTS_STORE)
-      const request = store.getAll()
-
-      request.onerror = () => reject(request.error)
-      request.onsuccess = () => {
-        const allProjects = request.result as StoredProject[]
-        console.log('[ProjectDB.listProjects] All projects in DB:', allProjects.length)
-        const filtered = allProjects.filter(p => p.folderId === folderId)
-        console.log('[ProjectDB.listProjects] Filtered for folderId', folderId, ':', filtered.length)
-        resolve(filtered.map(p => ({
-          id: p.id,
-          name: p.name,
-          folderId: p.folderId,
-          createdAt: new Date(p.createdAt),
-          updatedAt: new Date(p.updatedAt),
-          thumbnailUrl: p.thumbnailUrl,
-          viewpointCount: p.viewpointCount,
-          worldPointCount: p.worldPointCount
-        })))
-      }
-    })
+    const allProjects = await getAllFromStore<StoredProject>(db, PROJECTS_STORE)
+    console.log('[ProjectDB.listProjects] All projects in DB:', allProjects.length)
+    const filtered = allProjects.filter(p => p.folderId === folderId)
+    console.log('[ProjectDB.listProjects] Filtered for folderId', folderId, ':', filtered.length)
+    return filtered.map(toProjectSummary)
   },
 
   async listAllProjects(): Promise<ProjectSummary[]> {
     const db = await openDatabase()
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(PROJECTS_STORE, 'readonly')
-      const store = tx.objectStore(PROJECTS_STORE)
-      const request = store.getAll()
-
-      request.onerror = () => reject(request.error)
-      request.onsuccess = () => {
-        const projects = request.result as StoredProject[]
-        resolve(projects.map(p => ({
-          id: p.id,
-          name: p.name,
-          folderId: p.folderId,
-          createdAt: new Date(p.createdAt),
-          updatedAt: new Date(p.updatedAt),
-          thumbnailUrl: p.thumbnailUrl,
-          viewpointCount: p.viewpointCount,
-          worldPointCount: p.worldPointCount
-        })))
-      }
-    })
+    const projects = await getAllFromStore<StoredProject>(db, PROJECTS_STORE)
+    return projects.map(toProjectSummary)
   },
 
   async loadProject(id: string): Promise<Project> {
@@ -424,16 +478,12 @@ export const ProjectDB = {
       worldPointCount: project.worldPoints.size
     }
 
-    await new Promise<void>((resolve, reject) => {
-      const tx = db.transaction([PROJECTS_STORE, IMAGES_STORE], 'readwrite')
+    const { tx, projectStore, imageStore } = await createProjectAndImagesTransaction(db, 'readwrite')
 
-      tx.onerror = () => reject(tx.error)
+    await new Promise<void>((resolve, reject) => {
       tx.oncomplete = () => resolve()
 
-      const projectStore = tx.objectStore(PROJECTS_STORE)
       projectStore.put(storedProject)
-
-      const imageStore = tx.objectStore(IMAGES_STORE)
 
       const deleteRequest = imageStore.index('projectId').getAllKeys(id)
       deleteRequest.onsuccess = () => {
@@ -486,17 +536,13 @@ export const ProjectDB = {
 
   async deleteProject(id: string): Promise<void> {
     const db = await openDatabase()
+    const { tx, projectStore, imageStore } = await createProjectAndImagesTransaction(db, 'readwrite')
 
     await new Promise<void>((resolve, reject) => {
-      const tx = db.transaction([PROJECTS_STORE, IMAGES_STORE], 'readwrite')
-
-      tx.onerror = () => reject(tx.error)
       tx.oncomplete = () => resolve()
 
-      const projectStore = tx.objectStore(PROJECTS_STORE)
       projectStore.delete(id)
 
-      const imageStore = tx.objectStore(IMAGES_STORE)
       const index = imageStore.index('projectId')
       const request = index.getAllKeys(id)
       request.onsuccess = () => {
@@ -509,48 +555,20 @@ export const ProjectDB = {
 
   async moveProject(id: string, folderId: string | null): Promise<void> {
     const db = await openDatabase()
-
-    await new Promise<void>((resolve, reject) => {
-      const tx = db.transaction(PROJECTS_STORE, 'readwrite')
-      const store = tx.objectStore(PROJECTS_STORE)
-
-      const getRequest = store.get(id)
-      getRequest.onsuccess = () => {
-        const project = getRequest.result as StoredProject
-        if (project) {
-          project.folderId = folderId
-          store.put(project)
-        }
-      }
-
-      tx.onerror = () => reject(tx.error)
-      tx.oncomplete = () => resolve()
+    await getAndUpdateProject(db, id, (project) => {
+      project.folderId = folderId
     })
   },
 
   async renameProject(id: string, name: string): Promise<void> {
     const db = await openDatabase()
-
-    await new Promise<void>((resolve, reject) => {
-      const tx = db.transaction(PROJECTS_STORE, 'readwrite')
-      const store = tx.objectStore(PROJECTS_STORE)
-
-      const getRequest = store.get(id)
-      getRequest.onsuccess = () => {
-        const storedProject = getRequest.result as StoredProject
-        if (storedProject) {
-          // Also update the name in the serialized project data to keep them in sync
-          const projectData = Serialization.deserialize(storedProject.data)
-          projectData.name = name
-          storedProject.data = Serialization.serialize(projectData)
-          storedProject.name = name
-          storedProject.updatedAt = new Date()
-          store.put(storedProject)
-        }
-      }
-
-      tx.onerror = () => reject(tx.error)
-      tx.oncomplete = () => resolve()
+    await getAndUpdateProject(db, id, (storedProject) => {
+      // Also update the name in the serialized project data to keep them in sync
+      const projectData = Serialization.deserialize(storedProject.data)
+      projectData.name = name
+      storedProject.data = Serialization.serialize(projectData)
+      storedProject.name = name
+      storedProject.updatedAt = new Date()
     })
   },
 
@@ -560,14 +578,10 @@ export const ProjectDB = {
     const now = new Date()
     console.log('[ProjectDB.copyProject] Copying project:', id, 'as:', newName)
 
+    const { tx, projectStore, imageStore } = await createProjectAndImagesTransaction(db, 'readwrite')
+
     await new Promise<void>((resolve, reject) => {
-      const tx = db.transaction([PROJECTS_STORE, IMAGES_STORE], 'readwrite')
-
-      tx.onerror = () => reject(tx.error)
       tx.oncomplete = () => resolve()
-
-      const projectStore = tx.objectStore(PROJECTS_STORE)
-      const imageStore = tx.objectStore(IMAGES_STORE)
 
       const getRequest = projectStore.get(id)
       getRequest.onsuccess = () => {
@@ -643,62 +657,29 @@ export const ProjectDB = {
   async listFolders(parentId: string | null = null): Promise<Folder[]> {
     const db = await openDatabase()
     console.log('[ProjectDB.listFolders] Listing folders in parent:', parentId)
-
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(FOLDERS_STORE, 'readonly')
-      const store = tx.objectStore(FOLDERS_STORE)
-      const request = store.getAll()
-
-      request.onerror = () => reject(request.error)
-      request.onsuccess = () => {
-        const allFolders = request.result as Folder[]
-        console.log('[ProjectDB.listFolders] All folders in DB:', allFolders.length)
-        const filtered = allFolders.filter(f => f.parentId === parentId)
-        console.log('[ProjectDB.listFolders] Filtered for parentId', parentId, ':', filtered.length)
-        resolve(filtered.map((f: Folder) => ({
-          ...f,
-          createdAt: new Date(f.createdAt)
-        })))
-      }
-    })
+    const allFolders = await getAllFromStore<Folder>(db, FOLDERS_STORE)
+    console.log('[ProjectDB.listFolders] All folders in DB:', allFolders.length)
+    const filtered = allFolders.filter(f => f.parentId === parentId)
+    console.log('[ProjectDB.listFolders] Filtered for parentId', parentId, ':', filtered.length)
+    return filtered.map((f: Folder) => ({
+      ...f,
+      createdAt: new Date(f.createdAt)
+    }))
   },
 
   async listAllFolders(): Promise<Folder[]> {
     const db = await openDatabase()
-
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(FOLDERS_STORE, 'readonly')
-      const store = tx.objectStore(FOLDERS_STORE)
-      const request = store.getAll()
-
-      request.onerror = () => reject(request.error)
-      request.onsuccess = () => {
-        resolve(request.result.map((f: Folder) => ({
-          ...f,
-          createdAt: new Date(f.createdAt)
-        })))
-      }
-    })
+    const folders = await getAllFromStore<Folder>(db, FOLDERS_STORE)
+    return folders.map((f: Folder) => ({
+      ...f,
+      createdAt: new Date(f.createdAt)
+    }))
   },
 
   async renameFolder(id: string, name: string): Promise<void> {
     const db = await openDatabase()
-
-    await new Promise<void>((resolve, reject) => {
-      const tx = db.transaction(FOLDERS_STORE, 'readwrite')
-      const store = tx.objectStore(FOLDERS_STORE)
-
-      const getRequest = store.get(id)
-      getRequest.onsuccess = () => {
-        const folder = getRequest.result as Folder
-        if (folder) {
-          folder.name = name
-          store.put(folder)
-        }
-      }
-
-      tx.onerror = () => reject(tx.error)
-      tx.oncomplete = () => resolve()
+    await getAndUpdateFolder(db, id, (folder) => {
+      folder.name = name
     })
   },
 

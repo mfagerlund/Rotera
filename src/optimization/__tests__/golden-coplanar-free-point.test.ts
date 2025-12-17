@@ -70,7 +70,7 @@ describe('GOLDEN: Essential Matrix with Coplanar Constraint and Free Point', () 
     expect(project.imagePoints.size).toBe(17);
     expect(lines.length).toBe(0);
     expect(constraints.length).toBe(1);
-    expect(lockedPoints.length).toBe(1);
+    expect(lockedPoints.length).toBe(2);
     expect(floatPoint).toBeDefined();
     expect(floatPoint.imagePoints.size).toBe(1); // Only visible in one image
 

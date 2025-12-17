@@ -528,7 +528,10 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
       onEmptySpaceClick={handleEmptySpaceClick}
       onRequestAddImage={handleRequestAddImage}
       onMousePositionChange={handleMousePositionChange}
-      onEscapePressed={() => setActiveTool('select')}
+      onEscapePressed={() => {
+        setActiveTool('select')
+        setConstructionPreview(null)
+      }}
     />
   ), [
     activeConstraintType,

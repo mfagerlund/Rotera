@@ -316,7 +316,7 @@ describe('7-Point Essential Matrix Algorithm', () => {
         maxIterations: 10,
         verbose: false
       });
-    }).toThrow(/at least one point must be locked/);
+    }).toThrow(/No fully locked world points found/);
 
     console.log('Optimization correctly blocked due to insufficient correspondences');
     console.log('\n=== Test Passed ===\n');

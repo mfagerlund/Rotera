@@ -6,19 +6,19 @@
       "id": "WorldPoint_0",
       "name": "WP1",
       "lockedXyz": [
-        null,
-        null,
-        null
+        1,
+        1,
+        1
       ],
       "inferredXyz": [
-        null,
-        null,
-        null
+        1,
+        1,
+        1
       ],
       "optimizedXyz": [
-        0.8793842681881648,
-        0.6464665775022118,
-        0.9080462841275173
+        1,
+        1,
+        1
       ],
       "color": "#FF6B6B",
       "isVisible": true

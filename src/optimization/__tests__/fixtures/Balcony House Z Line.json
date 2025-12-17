@@ -266,7 +266,8 @@
       "lineStyle": "solid",
       "thickness": 1,
       "direction": "z",
-      "tolerance": 0.001
+      "tolerance": 0.001,
+      "targetLength": 1
     }
   ],
   "imagePoints": [

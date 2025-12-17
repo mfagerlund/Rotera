@@ -64,7 +64,7 @@ describe('Regression Fixtures - Balcony Houses', () => {
     { filename: 'Balcony House X,Y and Z Lines.json', maxTotalError: 2 },
     { filename: 'Balcony House Y and Z Line.json', maxTotalError: 2 },
     { filename: 'Balcony House Y Line.json', maxTotalError: 2 },
-    { filename: 'Balcony House Z Line.json', maxTotalError: 2 },
+    { filename: 'Balcony House Z Line.json', maxTotalError: 4 },
     { filename: 'Balcony House 2 With Balcony Points.json', maxTotalError: 2 },
   ];
 

@@ -22,6 +22,16 @@ const PRESET_COLORS = [
   { value: '#95a5a6', name: 'Light Gray' }
 ]
 
+const DIRECTION_OPTIONS = [
+  { value: 'free' as LineDirection, label: 'Free', tooltip: 'No constraint' },
+  { value: 'x' as LineDirection, label: 'X', tooltip: 'Parallel to X axis' },
+  { value: 'y' as LineDirection, label: 'Y', tooltip: 'Parallel to Y axis (vertical)' },
+  { value: 'z' as LineDirection, label: 'Z', tooltip: 'Parallel to Z axis' },
+  { value: 'xy' as LineDirection, label: 'XY', tooltip: 'In XY plane' },
+  { value: 'xz' as LineDirection, label: 'XZ', tooltip: 'In XZ plane (horizontal)' },
+  { value: 'yz' as LineDirection, label: 'YZ', tooltip: 'In YZ plane' }
+]
+
 // RENAME_TO: LineEditor (handles both creation and editing)
 interface LineCreationToolProps {
   selectedPoints: WorldPoint[]
@@ -55,6 +65,99 @@ interface LineConstraints {
   targetLength?: number
   tolerance?: number
 }
+
+// Helper component for point slot selection
+interface PointSlotSelectorProps {
+  label: string
+  selectedPoint: WorldPoint | null
+  allPoints: WorldPoint[]
+  disabledPoint?: WorldPoint | null
+  onPointChange: (point: WorldPoint | null) => void
+  onFocus: () => void
+  onClear: () => void
+}
+
+const PointSlotSelector: React.FC<PointSlotSelectorProps> = ({
+  label,
+  selectedPoint,
+  allPoints,
+  disabledPoint,
+  onPointChange,
+  onFocus,
+  onClear
+}) => (
+  <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+    <label style={{minWidth: '50px', fontSize: '12px'}}>{label}</label>
+    <div style={{display: 'flex', alignItems: 'center', gap: '4px', flex: 1}}>
+      <select
+        value={selectedPoint ? allPoints.indexOf(selectedPoint) : -1}
+        onChange={(e) => {
+          const index = parseInt(e.target.value)
+          onPointChange(index >= 0 ? allPoints[index] : null)
+        }}
+        onFocus={onFocus}
+        className="form-input"
+        style={{flex: 1, fontSize: '12px', height: '24px'}}
+      >
+        <option value={-1}>Select point...</option>
+        {allPoints.map((point, index) => (
+          <option key={getEntityKey(point)} value={index} disabled={point === disabledPoint}>
+            {point.getName()}
+          </option>
+        ))}
+      </select>
+      {selectedPoint && (
+        <button
+          onClick={onClear}
+          className="field-clear-btn"
+          title={`Clear ${label.toLowerCase()}`}
+        >
+          <FontAwesomeIcon icon={faXmark} />
+        </button>
+      )}
+    </div>
+  </div>
+)
+
+// Helper component for direction button
+interface DirectionButtonProps {
+  option: { value: LineDirection; label: string; tooltip: string }
+  isActive: boolean
+  onClick: () => void
+}
+
+const DirectionButton: React.FC<DirectionButtonProps> = ({ option, isActive, onClick }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    title={option.tooltip}
+    style={{
+      flex: '1 1 auto',
+      minWidth: '40px',
+      padding: '4px 6px',
+      fontSize: '11px',
+      border: `1px solid ${isActive ? 'var(--accent, #0696d7)' : 'var(--border, #555)'}`,
+      background: isActive ? 'var(--accent, #0696d7)' : 'var(--bg-input, #2a2a2a)',
+      color: isActive ? '#fff' : 'var(--text, #fff)',
+      borderRadius: '3px',
+      cursor: 'pointer',
+      fontWeight: isActive ? '600' : '400',
+      transition: 'all 0.15s ease'
+    }}
+    onMouseEnter={(e) => {
+      if (!isActive) {
+        e.currentTarget.style.borderColor = 'var(--accent, #0696d7)'
+      }
+    }}
+    onMouseLeave={(e) => {
+      if (!isActive) {
+        e.currentTarget.style.borderColor = 'var(--border, #555)'
+      }
+    }}
+  >
+    {option.label}
+  </button>
+)
 
 // RENAME_TO: LineEditor
 export const LineCreationTool: React.FC<LineCreationToolProps> = observer(({
@@ -390,69 +493,24 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = observer(({
 
         {/* Point Selection */}
         <div style={{display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '8px'}}>
-          <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-            <label style={{minWidth: '50px', fontSize: '12px'}}>Point 1</label>
-            <div style={{display: 'flex', alignItems: 'center', gap: '4px', flex: 1}}>
-              <select
-                value={pointSlot1 ? allWorldPoints.indexOf(pointSlot1) : -1}
-                onChange={(e) => {
-                  const index = parseInt(e.target.value)
-                  setPointSlot1(index >= 0 ? allWorldPoints[index] : null)
-                }}
-                onFocus={handleSlot1Focus}
-                className="form-input"
-                style={{flex: 1, fontSize: '12px', height: '24px'}}
-              >
-                <option value={-1}>Select point...</option>
-                {allWorldPoints.map((point, index) => (
-                  <option key={getEntityKey(point)} value={index}>
-                    {point.getName()}
-                  </option>
-                ))}
-              </select>
-              {pointSlot1 && (
-                <button
-                  onClick={clearSlot1}
-                  className="field-clear-btn"
-                  title="Clear point 1"
-                >
-                  <FontAwesomeIcon icon={faXmark} />
-                </button>
-              )}
-            </div>
-          </div>
+          <PointSlotSelector
+            label="Point 1"
+            selectedPoint={pointSlot1}
+            allPoints={allWorldPoints}
+            onPointChange={setPointSlot1}
+            onFocus={handleSlot1Focus}
+            onClear={clearSlot1}
+          />
 
-          <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-            <label style={{minWidth: '50px', fontSize: '12px'}}>Point 2</label>
-            <div style={{display: 'flex', alignItems: 'center', gap: '4px', flex: 1}}>
-              <select
-                value={pointSlot2 ? allWorldPoints.indexOf(pointSlot2) : -1}
-                onChange={(e) => {
-                  const index = parseInt(e.target.value)
-                  setPointSlot2(index >= 0 ? allWorldPoints[index] : null)
-                }}
-                onFocus={handleSlot2Focus}
-                className="form-input"
-                style={{flex: 1, fontSize: '12px', height: '24px'}}
-              >
-                <option value={-1}>Select point...</option>
-                {allWorldPoints.map((point, index) => (
-                  <option key={getEntityKey(point)} value={index} disabled={point === pointSlot1}>
-                    {point.getName()}
-                  </option>
-                ))}
-              </select>
-              {pointSlot2 && (
-                <button
-                  onClick={clearSlot2}
-                  className="field-clear-btn"
-                  title="Clear point 2"
-                >
-                  <FontAwesomeIcon icon={faXmark} />
-                </button>
-              )}
-            </div>
-          </div>
+          <PointSlotSelector
+            label="Point 2"
+            selectedPoint={pointSlot2}
+            allPoints={allWorldPoints}
+            disabledPoint={pointSlot1}
+            onPointChange={setPointSlot2}
+            onFocus={handleSlot2Focus}
+            onClear={clearSlot2}
+          />
         </div>
 
 
@@ -463,51 +521,14 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = observer(({
           <div style={{marginBottom: '8px'}}>
             <label style={{fontSize: '12px', fontWeight: '500', display: 'block', marginBottom: '4px'}}>Direction</label>
             <div style={{display: 'flex', gap: '4px', flexWrap: 'wrap'}}>
-              {[
-                { value: 'free', label: 'Free', tooltip: 'No constraint' },
-                { value: 'x', label: 'X', tooltip: 'Parallel to X axis' },
-                { value: 'y', label: 'Y', tooltip: 'Parallel to Y axis (vertical)' },
-                { value: 'z', label: 'Z', tooltip: 'Parallel to Z axis' },
-                { value: 'xy', label: 'XY', tooltip: 'In XY plane' },
-                { value: 'xz', label: 'XZ', tooltip: 'In XZ plane (horizontal)' },
-                { value: 'yz', label: 'YZ', tooltip: 'In YZ plane' }
-              ].map(option => {
-                const isActive = direction === option.value
-
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setDirection(option.value as LineDirection)}
-                    title={option.tooltip}
-                    style={{
-                      flex: '1 1 auto',
-                      minWidth: '40px',
-                      padding: '4px 6px',
-                      fontSize: '11px',
-                      border: `1px solid ${isActive ? 'var(--accent, #0696d7)' : 'var(--border, #555)'}`,
-                      background: isActive ? 'var(--accent, #0696d7)' : 'var(--bg-input, #2a2a2a)',
-                      color: isActive ? '#fff' : 'var(--text, #fff)',
-                      borderRadius: '3px',
-                      cursor: 'pointer',
-                      fontWeight: isActive ? '600' : '400',
-                      transition: 'all 0.15s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isActive) {
-                        e.currentTarget.style.borderColor = 'var(--accent, #0696d7)'
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isActive) {
-                        e.currentTarget.style.borderColor = 'var(--border, #555)'
-                      }
-                    }}
-                  >
-                    {option.label}
-                  </button>
-                )
-              })}
+              {DIRECTION_OPTIONS.map(option => (
+                <DirectionButton
+                  key={option.value}
+                  option={option}
+                  isActive={direction === option.value}
+                  onClick={() => setDirection(option.value)}
+                />
+              ))}
             </div>
           </div>
 

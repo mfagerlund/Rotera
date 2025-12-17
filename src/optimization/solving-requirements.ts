@@ -158,10 +158,15 @@ export function validateSolvingRequirements(project: Project): SolvingRequiremen
   }
 
   if (!bestPair.hasScaleConstraint) {
-    warnings.push('No scale constraint found. Provide either:');
-    warnings.push('  - Two fully locked world points shared between viewpoints, OR');
-    warnings.push('  - A line with targetLength connecting two shared world points');
-    warnings.push('Without scale constraint, the reconstruction scale will be arbitrary.');
+    errors.push('No scale constraint found. Provide either:');
+    errors.push('  - Two fully locked world points, OR');
+    errors.push('  - A line with a defined length (targetLength)');
+    return {
+      isValid: false,
+      errors,
+      warnings,
+      bestPair
+    };
   }
 
   return {

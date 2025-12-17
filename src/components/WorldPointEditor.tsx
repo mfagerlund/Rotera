@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { observer } from 'mobx-react-lite'
 import { WorldPoint } from '../entities/world-point'
 import { Viewpoint } from '../entities/viewpoint'
@@ -8,6 +8,82 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCircleDot, faTrash } from '@fortawesome/free-solid-svg-icons'
 
 type ProjectImage = Viewpoint
+
+interface CoordinateInputProps {
+  label: string
+  value: string
+  onChange: (value: string) => void
+}
+
+const CoordinateInput: React.FC<CoordinateInputProps> = ({ label, value, onChange }) => (
+  <div style={{ flex: '1 1 0', minWidth: '50px', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+    <span style={{ fontSize: '11px', color: '#999', marginBottom: '2px' }}>{label}</span>
+    <input
+      type="number"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder="free"
+      step="0.001"
+      className="form-input no-spinners"
+      style={{ fontSize: '12px', padding: '4px', width: '100%', height: '26px', boxSizing: 'border-box' }}
+    />
+    {value && (
+      <button
+        type="button"
+        onClick={() => onChange('')}
+        title={`Clear ${label}`}
+        className="coord-clear-btn"
+      >×</button>
+    )}
+  </div>
+)
+
+interface TableCellProps {
+  children?: React.ReactNode
+  align?: 'left' | 'right' | 'center'
+  isHeader?: boolean
+  fontFamily?: string
+  color?: string
+  width?: string
+}
+
+const TableCell: React.FC<TableCellProps> = ({
+  children,
+  align = 'left',
+  isHeader = false,
+  fontFamily,
+  color,
+  width
+}) => {
+  const Tag = isHeader ? 'th' : 'td'
+  return (
+    <Tag style={{
+      padding: isHeader ? '6px 8px' : '4px 8px',
+      textAlign: align,
+      fontWeight: isHeader ? '600' : undefined,
+      fontFamily,
+      color,
+      width
+    }}>
+      {children}
+    </Tag>
+  )
+}
+
+interface ReprojectionCellProps {
+  value?: number
+  hasReprojection: boolean
+}
+
+const ReprojectionCell: React.FC<ReprojectionCellProps> = ({ value, hasReprojection }) => (
+  <TableCell
+    align="right"
+    fontFamily="monospace"
+    color={hasReprojection ? '#9c9' : '#666'}
+  >
+    {hasReprojection && value !== undefined ? value.toFixed(1) : '-'}
+  </TableCell>
+)
 
 interface WorldPointEditorProps {
   isOpen: boolean
@@ -44,8 +120,8 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
     worldPoint.lockedXyz[2] !== null ? worldPoint.lockedXyz[2].toString() : ''
   )
 
-  // Reset form when worldPoint changes
-  useEffect(() => {
+  // Helper to reset form to worldPoint values
+  const resetForm = useCallback(() => {
     setEditedName(worldPoint.name)
     setEditedColor(worldPoint.color)
     setLockedX(worldPoint.lockedXyz[0] !== null ? worldPoint.lockedXyz[0].toString() : '')
@@ -53,6 +129,11 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
     setLockedZ(worldPoint.lockedXyz[2] !== null ? worldPoint.lockedXyz[2].toString() : '')
     setHasChanges(false)
   }, [worldPoint])
+
+  // Reset form when worldPoint changes
+  useEffect(() => {
+    resetForm()
+  }, [resetForm])
 
   const handleChange = () => {
     setHasChanges(true)
@@ -78,13 +159,7 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
   const handleCancel = async () => {
     if (hasChanges) {
       if (await confirm('You have unsaved changes. Are you sure you want to cancel?')) {
-        // Reset to original values
-        setEditedName(worldPoint.name)
-        setEditedColor(worldPoint.color)
-        setLockedX(worldPoint.lockedXyz[0] !== null ? worldPoint.lockedXyz[0].toString() : '')
-        setLockedY(worldPoint.lockedXyz[1] !== null ? worldPoint.lockedXyz[1].toString() : '')
-        setLockedZ(worldPoint.lockedXyz[2] !== null ? worldPoint.lockedXyz[2].toString() : '')
-        setHasChanges(false)
+        resetForm()
         onClose()
       }
     } else {
@@ -226,66 +301,21 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
             <div className="form-row">
               <label>Locked</label>
               <div style={{ display: 'flex', gap: '8px', flex: 1, alignItems: 'flex-end', minWidth: 0 }}>
-                <div style={{ flex: '1 1 0', minWidth: '50px', display: 'flex', flexDirection: 'column', position: 'relative' }}>
-                  <span style={{ fontSize: '11px', color: '#999', marginBottom: '2px' }}>X</span>
-                  <input
-                    type="number"
-                    value={lockedX}
-                    onChange={(e) => { setLockedX(e.target.value); handleChange(); }}
-                    placeholder="free"
-                    step="0.001"
-                    className="form-input no-spinners"
-                    style={{ fontSize: '12px', padding: '4px', width: '100%', height: '26px', boxSizing: 'border-box' }}
-                  />
-                  {lockedX && (
-                    <button
-                      type="button"
-                      onClick={() => { setLockedX(''); handleChange(); }}
-                      title="Clear X"
-                      className="coord-clear-btn"
-                    >×</button>
-                  )}
-                </div>
-                <div style={{ flex: '1 1 0', minWidth: '50px', display: 'flex', flexDirection: 'column', position: 'relative' }}>
-                  <span style={{ fontSize: '11px', color: '#999', marginBottom: '2px' }}>Y</span>
-                  <input
-                    type="number"
-                    value={lockedY}
-                    onChange={(e) => { setLockedY(e.target.value); handleChange(); }}
-                    placeholder="free"
-                    step="0.001"
-                    className="form-input no-spinners"
-                    style={{ fontSize: '12px', padding: '4px', width: '100%', height: '26px', boxSizing: 'border-box' }}
-                  />
-                  {lockedY && (
-                    <button
-                      type="button"
-                      onClick={() => { setLockedY(''); handleChange(); }}
-                      title="Clear Y"
-                      className="coord-clear-btn"
-                    >×</button>
-                  )}
-                </div>
-                <div style={{ flex: '1 1 0', minWidth: '50px', display: 'flex', flexDirection: 'column', position: 'relative' }}>
-                  <span style={{ fontSize: '11px', color: '#999', marginBottom: '2px' }}>Z</span>
-                  <input
-                    type="number"
-                    value={lockedZ}
-                    onChange={(e) => { setLockedZ(e.target.value); handleChange(); }}
-                    placeholder="free"
-                    step="0.001"
-                    className="form-input no-spinners"
-                    style={{ fontSize: '12px', padding: '4px', width: '100%', height: '26px', boxSizing: 'border-box' }}
-                  />
-                  {lockedZ && (
-                    <button
-                      type="button"
-                      onClick={() => { setLockedZ(''); handleChange(); }}
-                      title="Clear Z"
-                      className="coord-clear-btn"
-                    >×</button>
-                  )}
-                </div>
+                <CoordinateInput
+                  label="X"
+                  value={lockedX}
+                  onChange={(value) => { setLockedX(value); handleChange(); }}
+                />
+                <CoordinateInput
+                  label="Y"
+                  value={lockedY}
+                  onChange={(value) => { setLockedY(value); handleChange(); }}
+                />
+                <CoordinateInput
+                  label="Z"
+                  value={lockedZ}
+                  onChange={(value) => { setLockedZ(value); handleChange(); }}
+                />
                 <button
                   type="button"
                   onClick={() => {
@@ -392,13 +422,13 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
                     borderBottom: '1px solid var(--border)'
                   }}>
                     <tr>
-                      <th style={{ padding: '6px 8px', textAlign: 'left', fontWeight: '600' }}>Image</th>
-                      <th style={{ padding: '6px 8px', textAlign: 'right', fontWeight: '600' }}>U</th>
-                      <th style={{ padding: '6px 8px', textAlign: 'right', fontWeight: '600' }}>V</th>
-                      <th style={{ padding: '6px 8px', textAlign: 'right', fontWeight: '600' }}>Repr. U</th>
-                      <th style={{ padding: '6px 8px', textAlign: 'right', fontWeight: '600' }}>Repr. V</th>
-                      <th style={{ padding: '6px 8px', textAlign: 'right', fontWeight: '600' }}>Error</th>
-                      <th style={{ padding: '6px 8px', textAlign: 'center', fontWeight: '600', width: '40px' }}></th>
+                      <TableCell isHeader align="left">Image</TableCell>
+                      <TableCell isHeader align="right">U</TableCell>
+                      <TableCell isHeader align="right">V</TableCell>
+                      <TableCell isHeader align="right">Repr. U</TableCell>
+                      <TableCell isHeader align="right">Repr. V</TableCell>
+                      <TableCell isHeader align="right">Error</TableCell>
+                      <TableCell isHeader align="center" width="40px"></TableCell>
                     </tr>
                   </thead>
                   <tbody>
@@ -416,40 +446,25 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
                             borderBottom: idx < imagePointsList.length - 1 ? '1px solid #333' : 'none'
                           }}
                         >
-                          <td style={{ padding: '4px 8px', color: '#ccc' }}>{viewpoint.name}</td>
-                          <td style={{ padding: '4px 8px', textAlign: 'right', fontFamily: 'monospace' }}>
+                          <TableCell color="#ccc">{viewpoint.name}</TableCell>
+                          <TableCell align="right" fontFamily="monospace">
                             {ip.u.toFixed(1)}
-                          </td>
-                          <td style={{ padding: '4px 8px', textAlign: 'right', fontFamily: 'monospace' }}>
+                          </TableCell>
+                          <TableCell align="right" fontFamily="monospace">
                             {ip.v.toFixed(1)}
-                          </td>
-                          <td style={{
-                            padding: '4px 8px',
-                            textAlign: 'right',
-                            fontFamily: 'monospace',
-                            color: hasReprojection ? '#9c9' : '#666'
-                          }}>
-                            {hasReprojection ? ip.reprojectedU!.toFixed(1) : '-'}
-                          </td>
-                          <td style={{
-                            padding: '4px 8px',
-                            textAlign: 'right',
-                            fontFamily: 'monospace',
-                            color: hasReprojection ? '#9c9' : '#666'
-                          }}>
-                            {hasReprojection ? ip.reprojectedV!.toFixed(1) : '-'}
-                          </td>
-                          <td style={{
-                            padding: '4px 8px',
-                            textAlign: 'right',
-                            fontFamily: 'monospace',
-                            color: hasReprojection
+                          </TableCell>
+                          <ReprojectionCell value={ip.reprojectedU} hasReprojection={hasReprojection} />
+                          <ReprojectionCell value={ip.reprojectedV} hasReprojection={hasReprojection} />
+                          <TableCell
+                            align="right"
+                            fontFamily="monospace"
+                            color={hasReprojection
                               ? (totalError > 10 ? '#f66' : totalError > 5 ? '#fa3' : '#9c9')
-                              : '#666'
-                          }}>
+                              : '#666'}
+                          >
                             {hasReprojection ? totalError.toFixed(1) : '-'}
-                          </td>
-                          <td style={{ padding: '4px 8px', textAlign: 'center' }}>
+                          </TableCell>
+                          <TableCell align="center">
                             <button
                               onClick={() => handleDeleteImagePoint(ip)}
                               style={{
@@ -466,7 +481,7 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
                             >
                               <FontAwesomeIcon icon={faTrash} />
                             </button>
-                          </td>
+                          </TableCell>
                         </tr>
                       )
                     })}

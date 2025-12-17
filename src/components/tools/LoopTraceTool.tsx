@@ -170,6 +170,16 @@ export const LoopTraceTool: React.FC<LoopTraceToolProps> = observer(({
           onClearSelection()
         }
         onCancel()
+      } else if (event.key === 'Escape') {
+        event.preventDefault()
+        // Clear preview and selection on escape
+        if (onConstructionPreviewChange) {
+          onConstructionPreviewChange(null)
+        }
+        if (onClearSelection) {
+          onClearSelection()
+        }
+        onCancel()
       }
     }
 
@@ -177,7 +187,7 @@ export const LoopTraceTool: React.FC<LoopTraceToolProps> = observer(({
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [isActive, complete])
+  }, [isActive, complete, onConstructionPreviewChange, onClearSelection, onCancel])
 
   const handleOrientationChange = (newOrientation: LineDirection) => {
     setOrientation(newOrientation)
