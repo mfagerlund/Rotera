@@ -43,6 +43,30 @@ interface ProjectBrowserProps {
   onCreateProject: () => void
 }
 
+interface InlineRenameInputProps {
+  value: string
+  onChange: (value: string) => void
+  onConfirm: () => void
+  onCancel: () => void
+}
+
+const InlineRenameInput: React.FC<InlineRenameInputProps> = ({ value, onChange, onConfirm, onCancel }) => {
+  return (
+    <input
+      type="text"
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      onKeyDown={e => {
+        if (e.key === 'Enter') onConfirm()
+        if (e.key === 'Escape') onCancel()
+      }}
+      onBlur={onConfirm}
+      autoFocus
+      onClick={e => e.stopPropagation()}
+    />
+  )
+}
+
 export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
   onOpenProject,
   onCreateProject
@@ -509,17 +533,11 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
                   className="project-browser__item-icon project-browser__item-icon--folder"
                 />
                 {editingItem?.type === 'folder' && editingItem.id === folder.id ? (
-                  <input
-                    type="text"
+                  <InlineRenameInput
                     value={editingItem.name}
-                    onChange={e => setEditingItem({ ...editingItem, name: e.target.value })}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') handleRenameItem()
-                      if (e.key === 'Escape') setEditingItem(null)
-                    }}
-                    onBlur={handleRenameItem}
-                    autoFocus
-                    onClick={e => e.stopPropagation()}
+                    onChange={name => setEditingItem({ ...editingItem, name })}
+                    onConfirm={handleRenameItem}
+                    onCancel={() => setEditingItem(null)}
                   />
                 ) : (
                   <span className="project-browser__item-name">{folder.name}</span>
@@ -573,17 +591,11 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
                   />
                 )}
                 {editingItem?.type === 'project' && editingItem.id === project.id ? (
-                  <input
-                    type="text"
+                  <InlineRenameInput
                     value={editingItem.name}
-                    onChange={e => setEditingItem({ ...editingItem, name: e.target.value })}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') handleRenameItem()
-                      if (e.key === 'Escape') setEditingItem(null)
-                    }}
-                    onBlur={handleRenameItem}
-                    autoFocus
-                    onClick={e => e.stopPropagation()}
+                    onChange={name => setEditingItem({ ...editingItem, name })}
+                    onConfirm={handleRenameItem}
+                    onCancel={() => setEditingItem(null)}
                   />
                 ) : (
                   <>

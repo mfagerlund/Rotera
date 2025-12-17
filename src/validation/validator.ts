@@ -125,11 +125,8 @@ export class ValidationEngine {
     }
   }
 
-  private static checkCircularDependencies(context: ValidationContext, errors: EntityValidationError[]): void {
-    const visited = new Set<EntityId>()
-    const stack = new Set<EntityId>()
-
-    const allIds = [
+  private static getAllEntityIds(context: ValidationContext): EntityId[] {
+    return [
       ...context.getAllPointIds(),
       ...context.getAllLineIds(),
       ...context.getAllPlaneIds(),
@@ -137,6 +134,12 @@ export class ValidationEngine {
       ...context.getAllImageIds(),
       ...context.getAllConstraintIds()
     ]
+  }
+
+  private static checkCircularDependencies(context: ValidationContext, errors: EntityValidationError[]): void {
+    const visited = new Set<EntityId>()
+    const stack = new Set<EntityId>()
+    const allIds = this.getAllEntityIds(context)
 
     for (const id of allIds) {
       if (!visited.has(id)) {
@@ -174,14 +177,7 @@ export class ValidationEngine {
 
   private static checkDanglingReferences(context: ValidationContext, errors: EntityValidationError[]): void {
     // Check that all referenced entities exist
-    const allIds = [
-      ...context.getAllPointIds(),
-      ...context.getAllLineIds(),
-      ...context.getAllPlaneIds(),
-      ...context.getAllCameraIds(),
-      ...context.getAllImageIds(),
-      ...context.getAllConstraintIds()
-    ]
+    const allIds = this.getAllEntityIds(context)
 
     for (const id of allIds) {
       const dependencies = context.getDependencies(id)
@@ -342,13 +338,16 @@ export class ValidationHelpers {
 
 // Serialization validation
 export class SerializationValidator {
-  static validateBeforeSave(context: ValidationContext, entities: IValidatable[]): void {
-    const result = ValidationEngine.validateProject(entities, context)
-
+  private static throwValidationErrors(result: EntityValidationResult, operation: string): void {
     if (!result.isValid) {
       const errorMessages = result.errors.map(e => `[${e.code}] ${e.message}`).join('\n')
-      throw new Error(`Cannot save project with validation errors:\n${errorMessages}`)
+      throw new Error(`Cannot ${operation} project with validation errors:\n${errorMessages}`)
     }
+  }
+
+  static validateBeforeSave(context: ValidationContext, entities: IValidatable[]): void {
+    const result = ValidationEngine.validateProject(entities, context)
+    this.throwValidationErrors(result, 'save')
 
     if (result.warnings.length > 0) {
       console.warn('Project saved with warnings:', result.warnings)
@@ -357,10 +356,6 @@ export class SerializationValidator {
 
   static validateAfterLoad(context: ValidationContext, entities: IValidatable[]): void {
     const result = ValidationEngine.validateProject(entities, context)
-
-    if (!result.isValid) {
-      const errorMessages = result.errors.map(e => `[${e.code}] ${e.message}`).join('\n')
-      throw new Error(`Cannot load project with validation errors:\n${errorMessages}`)
-    }
+    this.throwValidationErrors(result, 'load')
   }
 }

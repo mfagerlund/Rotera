@@ -1,6 +1,7 @@
 // Tests for optimization service
 import { OptimizationService } from '../optimization'
 import { mockProject, mockOptimizationResults, waitFor } from '../../tests/testUtils'
+import { Project } from '../../entities/project'
 
 describe('🧪 OptimizationService', () => {
   let service: OptimizationService
@@ -120,10 +121,8 @@ describe('🧪 OptimizationService', () => {
     })
 
     it('handles project with no constraints', async () => {
-      const projectWithoutConstraints = {
-        ...mockProject,
-        constraints: []
-      }
+      const projectWithoutConstraints = Project.create('Test Project')
+      // No constraints added, so constraints Set is empty
 
       const result = await service.optimizeConstraints(projectWithoutConstraints)
 

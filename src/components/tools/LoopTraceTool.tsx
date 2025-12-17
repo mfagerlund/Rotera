@@ -5,8 +5,9 @@ import React, { useEffect, useState, useRef } from 'react'
 import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faXmark } from '@fortawesome/free-solid-svg-icons'
-import { LineDirection } from '../../entities/line'
+import { LineDirection, Line } from '../../entities/line'
 import { WorldPoint } from '../../entities/world-point'
+import { Constraint } from '../../entities/constraints/base-constraint'
 import { useLoopTrace } from '../../hooks/useLoopTrace'
 
 interface LineConstraints {
@@ -25,9 +26,9 @@ import { ConstructionPreview } from '../image-viewer/types'
 interface LoopTraceToolProps {
   selectedPoints: WorldPoint[]
   allWorldPoints: WorldPoint[]
-  existingLines: Map<string, any>
+  existingLines: Map<string, Line>
   onCreateLine: (pointA: WorldPoint, pointB: WorldPoint, constraints?: LineConstraints) => void
-  onCreateConstraint?: (constraint: any) => void
+  onCreateConstraint?: (constraint: Constraint) => void
   onCancel: () => void
   onConstructionPreviewChange?: (preview: ConstructionPreview | null) => void
   onClearSelection?: () => void
@@ -53,7 +54,7 @@ export const LoopTraceTool: React.FC<LoopTraceToolProps> = observer(({
   const [coplanarEnabled, setCoplanarEnabled] = useState(true)
   const [namePrefix, setNamePrefix] = useState('')
   const [closedLoop, setClosedLoop] = useState(false)
-  const prevSegmentsRef = useRef<any[]>([])
+  const prevSegmentsRef = useRef<Array<{ pointA: WorldPoint; pointB: WorldPoint; status: 'new' | 'exists' | 'building'; existingLineName?: string }>>([])
   const prevSelectedPointsCountRef = useRef(0)
   const prevIsActiveRef = useRef(isActive)
 

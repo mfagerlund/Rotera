@@ -150,30 +150,12 @@ export function applyDistortion(
  * Applies perspective projection, distortion, and camera intrinsics.
  *
  * @param cameraPoint - Point in camera coordinates (Vec3)
- * @param focalLength - Focal length (pixels)
- * @param aspectRatio - Aspect ratio (fy/fx)
- * @param principalPointX - Principal point x coordinate (pixels)
- * @param principalPointY - Principal point y coordinate (pixels)
- * @param skew - Skew coefficient
- * @param k1 - First radial distortion coefficient
- * @param k2 - Second radial distortion coefficient
- * @param k3 - Third radial distortion coefficient
- * @param p1 - First tangential distortion coefficient
- * @param p2 - Second tangential distortion coefficient
+ * @param params - Camera intrinsic and distortion parameters
  * @returns Pixel coordinates [u, v] or null if point is behind camera
  */
 export function cameraToPixelCoordinates(
   cameraPoint: Vec3,
-  focalLength: Value,
-  aspectRatio: Value,
-  principalPointX: Value,
-  principalPointY: Value,
-  skew: Value,
-  k1: Value,
-  k2: Value,
-  k3: Value,
-  p1: Value,
-  p2: Value
+  params: CameraParameters
 ): [Value, Value] | null {
   // Check if point is behind camera (z <= 0)
   const zThreshold = V.C(0.1);
@@ -192,20 +174,20 @@ export function cameraToPixelCoordinates(
   const [x_distorted, y_distorted] = applyDistortion(
     x_normalized,
     y_normalized,
-    k1,
-    k2,
-    k3,
-    p1,
-    p2
+    params.k1,
+    params.k2,
+    params.k3,
+    params.p1,
+    params.p2
   );
 
   // Apply intrinsics
   // K = [[fx, s, cx], [0, fy, cy], [0, 0, 1]]
-  const fx = focalLength;
-  const fy = V.mul(focalLength, aspectRatio);
+  const fx = params.focalLength;
+  const fy = V.mul(params.focalLength, params.aspectRatio);
 
-  const u = V.add(V.add(V.mul(fx, x_distorted), V.mul(skew, y_distorted)), principalPointX);
-  const v = V.add(principalPointY, V.neg(V.mul(fy, y_distorted)));
+  const u = V.add(V.add(V.mul(fx, x_distorted), V.mul(params.skew, y_distorted)), params.principalPointX);
+  const v = V.add(params.principalPointY, V.neg(V.mul(fy, y_distorted)));
 
   return [u, v];
 }
@@ -267,9 +249,8 @@ export function projectWorldPointToPixelQuaternion(
   // Transform to camera coordinates using quaternion
   const cameraPoint = worldToCameraCoordinatesQuaternion(worldPoint, cameraPosition, cameraRotation);
 
-  // Project to pixel coordinates
-  return cameraToPixelCoordinates(
-    cameraPoint,
+  // Project to pixel coordinates using parameter object
+  return cameraToPixelCoordinates(cameraPoint, {
     focalLength,
     aspectRatio,
     principalPointX,
@@ -279,8 +260,8 @@ export function projectWorldPointToPixelQuaternion(
     k2,
     k3,
     p1,
-    p2
-  );
+    p2,
+  });
 }
 
 /**
@@ -319,9 +300,8 @@ export function projectWorldPointToPixel(
   // Transform to camera coordinates
   const cameraPoint = worldToCameraCoordinates(worldPoint, cameraPosition, cameraRotation);
 
-  // Project to pixel coordinates
-  return cameraToPixelCoordinates(
-    cameraPoint,
+  // Project to pixel coordinates using parameter object
+  return cameraToPixelCoordinates(cameraPoint, {
     focalLength,
     aspectRatio,
     principalPointX,
@@ -331,6 +311,6 @@ export function projectWorldPointToPixel(
     k2,
     k3,
     p1,
-    p2
-  );
+    p2,
+  });
 }

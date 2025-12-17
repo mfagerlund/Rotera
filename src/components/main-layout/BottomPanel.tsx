@@ -1,10 +1,12 @@
 import React from 'react'
 import { observer } from 'mobx-react-lite'
 import { WorldPoint } from '../../entities/world-point'
-import { Line as LineEntity } from '../../entities/line'
+import { Line as LineEntity, LineDirection } from '../../entities/line'
 import { Viewpoint } from '../../entities/viewpoint'
 import { Project } from '../../entities/project'
 import { CoplanarPointsConstraint } from '../../entities/constraints/coplanar-points-constraint'
+import { Constraint } from '../../entities/constraints'
+import { Plane } from '../../entities/plane'
 import WorldPointsManager from '../WorldPointsManager'
 import LinesManager from '../LinesManager'
 import PlanesManager from '../PlanesManager'
@@ -14,6 +16,16 @@ import CoplanarConstraintsManager from '../CoplanarConstraintsManager'
 import WorldPointEditor from '../WorldPointEditor'
 import { VanishingPointQualityWindow } from '../VanishingPointQualityWindow'
 import OptimizationPanel from '../OptimizationPanel'
+
+// Line creation options
+interface LineConstraints {
+  name?: string
+  color?: string
+  isConstruction?: boolean
+  direction?: LineDirection
+  targetLength?: number
+  tolerance?: number
+}
 
 interface BottomPanelProps {
   entityPopups: {
@@ -36,24 +48,24 @@ interface BottomPanelProps {
   onUpdateLine: (updatedLine: LineEntity) => void
   onToggleLineVisibility: (line: LineEntity) => void
   onSelectLine: (line: LineEntity) => void
-  onCreateLine: (pointA: WorldPoint, pointB: WorldPoint, lineConstraints?: any) => void
-  selectedPlanes: any[]
-  onEditPlane: (plane: any) => void
-  onDeletePlane: (plane: any) => void
-  onTogglePlaneVisibility: (plane: any) => void
-  onSelectPlane: (plane: any) => void
+  onCreateLine: (pointA: WorldPoint, pointB: WorldPoint, lineConstraints?: LineConstraints) => void
+  selectedPlanes: Plane[]
+  onEditPlane: (plane: Plane) => void
+  onDeletePlane: (plane: Plane) => void
+  onTogglePlaneVisibility: (plane: Plane) => void
+  onSelectPlane: (plane: Plane) => void
   worldPointsMap: Set<WorldPoint>
   viewpointsMap: Map<string, Viewpoint>
   onEditImagePoint: (ref: ImagePointReference) => void
   onDeleteImagePoint: (ref: ImagePointReference) => void
   onDeleteAllImagePoints?: () => void
   onSelectImagePoint: (ref: ImagePointReference) => void
-  constraints: any[]
+  constraints: Constraint[]
   allLines: LineEntity[]
-  onEditConstraint: (constraint: any) => void
-  onDeleteConstraint: (constraint: any) => void
+  onEditConstraint: (constraint: Constraint) => void
+  onDeleteConstraint: (constraint: Constraint) => void
   onDeleteAllConstraints?: () => void
-  onSelectConstraint: (constraint: any) => void
+  onSelectConstraint: (constraint: Constraint) => void
   onEditCoplanarConstraint?: (constraint: CoplanarPointsConstraint) => void
   onDeleteCoplanarConstraint?: (constraint: CoplanarPointsConstraint) => void
   onDeleteAllCoplanarConstraints?: () => void

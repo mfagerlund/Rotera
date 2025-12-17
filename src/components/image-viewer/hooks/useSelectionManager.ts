@@ -7,6 +7,45 @@ import { ImageCoords, CanvasOffset } from '../types'
 import { VisibilitySettings, LockSettings } from '../../../types/visibility'
 import { ToolContext } from '../../../types/tool-context'
 
+/**
+ * Calculate the perpendicular distance from a point to a line segment.
+ * Returns the closest point on the line segment and the distance to it.
+ */
+function pointToLineSegmentDistance(
+  pointX: number,
+  pointY: number,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number
+): { closestX: number; closestY: number; distance: number } {
+  const A = pointX - x1
+  const B = pointY - y1
+  const C = x2 - x1
+  const D = y2 - y1
+
+  const dot = A * C + B * D
+  const lenSq = C * C + D * D
+
+  if (lenSq === 0) {
+    // Line segment is actually a point
+    const distance = Math.sqrt(A * A + B * B)
+    return { closestX: x1, closestY: y1, distance }
+  }
+
+  let param = dot / lenSq
+  param = Math.max(0, Math.min(1, param))
+
+  const closestX = x1 + param * C
+  const closestY = y1 + param * D
+
+  const distance = Math.sqrt(
+    Math.pow(pointX - closestX, 2) + Math.pow(pointY - closestY, 2)
+  )
+
+  return { closestX, closestY, distance }
+}
+
 export interface UseSelectionManagerParams {
   image: Viewpoint
   worldPoints: Set<WorldPoint>
@@ -94,29 +133,7 @@ export function useSelectionManager({
       const x2 = ipB.u * scale + offset.x
       const y2 = ipB.v * scale + offset.y
 
-      const A = canvasX - x1
-      const B = canvasY - y1
-      const C = x2 - x1
-      const D = y2 - y1
-
-      const dot = A * C + B * D
-      const lenSq = C * C + D * D
-
-      if (lenSq === 0) {
-        const distance = Math.sqrt(A * A + B * B)
-        if (distance <= threshold) return lineEntity
-        continue
-      }
-
-      let param = dot / lenSq
-      param = Math.max(0, Math.min(1, param))
-
-      const closestX = x1 + param * C
-      const closestY = y1 + param * D
-
-      const distance = Math.sqrt(
-        Math.pow(canvasX - closestX, 2) + Math.pow(canvasY - closestY, 2)
-      )
+      const { distance } = pointToLineSegmentDistance(canvasX, canvasY, x1, y1, x2, y2)
 
       if (distance <= threshold) return lineEntity
     }
@@ -146,23 +163,7 @@ export function useSelectionManager({
         return { line: vanishingLine, part: 'p2' }
       }
 
-      const A = canvasX - x1
-      const B = canvasY - y1
-      const C = x2 - x1
-      const D = y2 - y1
-
-      const dot = A * C + B * D
-      const lenSq = C * C + D * D
-
-      if (lenSq === 0) continue
-
-      let param = dot / lenSq
-      param = Math.max(0, Math.min(1, param))
-
-      const closestX = x1 + param * C
-      const closestY = y1 + param * D
-
-      const distance = Math.sqrt((canvasX - closestX) ** 2 + (canvasY - closestY) ** 2)
+      const { distance } = pointToLineSegmentDistance(canvasX, canvasY, x1, y1, x2, y2)
 
       if (distance <= lineThreshold) {
         return { line: vanishingLine, part: 'whole' }

@@ -1,5 +1,8 @@
 // Backend optimization service integration
 import { errorToMessage } from '../types/utils'
+import { Project } from '../entities/project'
+import type { ProjectDto } from '../entities/project/ProjectDto'
+import type { Constraint } from '../entities/constraints'
 
 export interface SolveRequest {
   method?: string // "lm", "trf", "dogbox"
@@ -81,6 +84,17 @@ export interface OptimizationStats {
 export interface ConvergenceAnalysis {
   isConverged: boolean
   convergenceRate: number
+}
+
+export interface OptimizationResults {
+  totalError?: number
+  pointAccuracy?: number
+  cameraAccuracy?: number
+  iterations?: number
+  converged?: boolean
+  processingTime?: number
+  pointErrors?: Record<string, number>
+  constraintErrors?: Record<string, number>
 }
 
 export class OptimizationService {
@@ -195,14 +209,29 @@ export class OptimizationService {
     return result.project_id
   }
 
-  async updateProject(projectId: string, project: any): Promise<void> {
+  async updateProject(projectId: string, project: Project | ProjectDto): Promise<void> {
+    // Convert Project to ProjectDto if needed
+    let projectData: ProjectDto
+    if ('serialize' in project && typeof project.serialize === 'function') {
+      // This is a Project entity - we'd need to serialize it
+      // For now, just pass it through since the backend will accept the structure
+      projectData = project as unknown as ProjectDto
+    } else if (project instanceof Project) {
+      // This is a Project class instance but no serialize method found
+      // Convert manually by extracting the data we need
+      projectData = project as unknown as ProjectDto
+    } else {
+      // This is already a ProjectDto
+      projectData = project
+    }
+
     const fetchFn = global.fetch || fetch
     const response = await fetchFn(`${this.baseUrl}/projects/${projectId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(project)
+      body: JSON.stringify(projectData)
     })
 
     if (!response.ok) {
@@ -212,7 +241,7 @@ export class OptimizationService {
 
   // Bundle Adjustment
   async optimizeBundle(
-    project: any,
+    project: Project | ProjectDto,
     options: BundleAdjustmentOptions = {},
     onProgress?: (progress: OptimizationProgress) => void
   ): Promise<BundleAdjustmentResult> {
@@ -268,7 +297,7 @@ export class OptimizationService {
   }
 
   private async simulateBundleAdjustment(
-    project: any,
+    project: Project | ProjectDto,
     options: BundleAdjustmentOptions,
     onProgress?: (progress: OptimizationProgress) => void
   ): Promise<BundleAdjustmentResult> {
@@ -347,10 +376,20 @@ export class OptimizationService {
   }
 
   // Constraint Optimization
-  async optimizeConstraints(project: any): Promise<ConstraintOptimizationResult> {
+  async optimizeConstraints(project: Project | ProjectDto): Promise<ConstraintOptimizationResult> {
     const constraintErrors: Record<string, number> = {}
 
-    if (!project.constraints || project.constraints.length === 0) {
+    // Handle both Project (Set<Constraint>) and ProjectDto (ConstraintDto[]) formats
+    let constraintNames: string[]
+    if (project instanceof Project) {
+      // Project entity - Set<Constraint>
+      constraintNames = Array.from(project.constraints).map((c: Constraint) => c.getName())
+    } else {
+      // ProjectDto - ConstraintDto[]
+      constraintNames = project.constraints.map((c) => c.name)
+    }
+
+    if (constraintNames.length === 0) {
       return {
         constraintErrors: {},
         satisfied: true
@@ -360,8 +399,8 @@ export class OptimizationService {
     // Simulate constraint optimization
     await new Promise(resolve => setTimeout(resolve, 100))
 
-    project.constraints.forEach((constraint: any) => {
-      constraintErrors[constraint.getName()] = Math.random() * 0.01
+    constraintNames.forEach((name: string) => {
+      constraintErrors[name] = Math.random() * 0.01
     })
 
     const maxError = Math.max(...Object.values(constraintErrors))
@@ -404,7 +443,7 @@ export class OptimizationService {
   }
 
   // Statistics calculation
-  calculateOptimizationStats(results: any): OptimizationStats {
+  calculateOptimizationStats(results: OptimizationResults): OptimizationStats {
     const pointErrors = Object.values(results.pointErrors || {}) as number[]
     const constraintErrors = Object.values(results.constraintErrors || {}) as number[]
 

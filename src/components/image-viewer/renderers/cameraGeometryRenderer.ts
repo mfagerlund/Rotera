@@ -1,33 +1,29 @@
 import { RenderParams, AXIS_COLORS } from './types'
 
-export function renderCameraVanishingGeometry(params: RenderParams): void {
-  const {
-    ctx,
-    canvasEl,
-    viewpoint,
-    scale,
-    offset,
-    visibility
-  } = params
+type RotationMatrix = readonly [
+  readonly [number, number, number],
+  readonly [number, number, number],
+  readonly [number, number, number]
+]
 
-  if (!visibility.cameraVanishingGeometry) return
-  if (!canvasEl) return
-
-  const [qw, qx, qy, qz] = viewpoint.rotation
-
-  const rotationMatrix = [
+function quaternionToRotationMatrix(rotation: readonly [number, number, number, number]): RotationMatrix {
+  const [qw, qx, qy, qz] = rotation
+  return [
     [1 - 2 * (qy * qy + qz * qz), 2 * (qx * qy - qz * qw), 2 * (qx * qz + qy * qw)],
     [2 * (qx * qy + qz * qw), 1 - 2 * (qx * qx + qz * qz), 2 * (qy * qz - qx * qw)],
     [2 * (qx * qz - qy * qw), 2 * (qy * qz + qx * qw), 1 - 2 * (qx * qx + qy * qy)]
   ] as const
+}
 
-  const fx = viewpoint.focalLength
-  const fy = viewpoint.focalLength * viewpoint.aspectRatio
-  const cx = viewpoint.principalPointX
-  const cy = viewpoint.principalPointY
-  const skew = viewpoint.skewCoefficient ?? 0
-
-  const projectDirection = (dir: [number, number, number]) => {
+function createProjectionFunction(
+  rotationMatrix: RotationMatrix,
+  fx: number,
+  fy: number,
+  cx: number,
+  cy: number,
+  skew: number
+) {
+  return (dir: [number, number, number]) => {
     const camX = rotationMatrix[0][0] * dir[0] + rotationMatrix[0][1] * dir[1] + rotationMatrix[0][2] * dir[2]
     const camY = rotationMatrix[1][0] * dir[0] + rotationMatrix[1][1] * dir[1] + rotationMatrix[1][2] * dir[2]
     const camZ = rotationMatrix[2][0] * dir[0] + rotationMatrix[2][1] * dir[1] + rotationMatrix[2][2] * dir[2]
@@ -48,6 +44,30 @@ export function renderCameraVanishingGeometry(params: RenderParams): void {
 
     return { u, v }
   }
+}
+
+export function renderCameraVanishingGeometry(params: RenderParams): void {
+  const {
+    ctx,
+    canvasEl,
+    viewpoint,
+    scale,
+    offset,
+    visibility
+  } = params
+
+  if (!visibility.cameraVanishingGeometry) return
+  if (!canvasEl) return
+
+  const rotationMatrix = quaternionToRotationMatrix(viewpoint.rotation)
+
+  const fx = viewpoint.focalLength
+  const fy = viewpoint.focalLength * viewpoint.aspectRatio
+  const cx = viewpoint.principalPointX
+  const cy = viewpoint.principalPointY
+  const skew = viewpoint.skewCoefficient ?? 0
+
+  const projectDirection = createProjectionFunction(rotationMatrix, fx, fy, cx, cy, skew)
 
   const directions: Record<'x' | 'y' | 'z', [number, number, number]> = {
     x: [1, 0, 0],
@@ -85,6 +105,32 @@ export function renderCameraVanishingGeometry(params: RenderParams): void {
     ctx.textBaseline = 'top'
     ctx.fillStyle = onCanvas ? 'rgba(0, 0, 0, 0.65)' : 'rgba(0, 100, 0, 0.65)'
     ctx.fillText(label, x, y + 6)
+  }
+
+  const drawArrowhead = (
+    ctx: CanvasRenderingContext2D,
+    endX: number,
+    endY: number,
+    angle: number,
+    headLen: number,
+    headAngle: number,
+    strokeStyle: string,
+    lineWidth: number
+  ) => {
+    ctx.strokeStyle = strokeStyle
+    ctx.lineWidth = lineWidth
+    ctx.beginPath()
+    ctx.moveTo(endX, endY)
+    ctx.lineTo(
+      endX - headLen * Math.cos(angle - headAngle),
+      endY - headLen * Math.sin(angle - headAngle)
+    )
+    ctx.moveTo(endX, endY)
+    ctx.lineTo(
+      endX - headLen * Math.cos(angle + headAngle),
+      endY - headLen * Math.sin(angle + headAngle)
+    )
+    ctx.stroke()
   }
 
   const drawDirectionArrow = (vpX: number, vpY: number, color: string, axisLabel: string) => {
@@ -134,36 +180,10 @@ export function renderCameraVanishingGeometry(params: RenderParams): void {
     const angle = Math.atan2(ny, nx)
 
     // White outline for arrowhead
-    ctx.strokeStyle = 'white'
-    ctx.lineWidth = 6
-    ctx.beginPath()
-    ctx.moveTo(endX, endY)
-    ctx.lineTo(
-      endX - headLen * Math.cos(angle - headAngle),
-      endY - headLen * Math.sin(angle - headAngle)
-    )
-    ctx.moveTo(endX, endY)
-    ctx.lineTo(
-      endX - headLen * Math.cos(angle + headAngle),
-      endY - headLen * Math.sin(angle + headAngle)
-    )
-    ctx.stroke()
+    drawArrowhead(ctx, endX, endY, angle, headLen, headAngle, 'white', 6)
 
     // Colored arrowhead
-    ctx.strokeStyle = color
-    ctx.lineWidth = 4
-    ctx.beginPath()
-    ctx.moveTo(endX, endY)
-    ctx.lineTo(
-      endX - headLen * Math.cos(angle - headAngle),
-      endY - headLen * Math.sin(angle - headAngle)
-    )
-    ctx.moveTo(endX, endY)
-    ctx.lineTo(
-      endX - headLen * Math.cos(angle + headAngle),
-      endY - headLen * Math.sin(angle + headAngle)
-    )
-    ctx.stroke()
+    drawArrowhead(ctx, endX, endY, angle, headLen, headAngle, color, 4)
 
     // Draw label with background
     const labelX = endX + nx * 20

@@ -562,42 +562,32 @@ export function useImageViewerEvents({
     return () => window.removeEventListener('keydown', handleEscape)
   }, [dragState, pointDragState, precisionDragState, imageViewerState, vanishingLineDragState, onMovePoint, onEscapePressed])
 
+  const zoomAtCenter = useCallback((scaleFactor: number, minScale: number, maxScale: number) => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const centerX = canvas.width / 2
+    const centerY = canvas.height / 2
+    const newScale = Math.max(minScale, Math.min(maxScale, imageViewerState.scale * scaleFactor))
+
+    const scaleRatio = newScale / imageViewerState.scale
+    imageViewerState.setOffset(prev => ({
+      x: centerX - (centerX - prev.x) * scaleRatio,
+      y: centerY - (centerY - prev.y) * scaleRatio
+    }))
+    imageViewerState.setScale(newScale)
+  }, [canvasRef, imageViewerState])
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.target !== document.body) return
 
       if (event.key === '=' || event.key === '+') {
         event.preventDefault()
-        const canvas = canvasRef.current
-        if (canvas) {
-          const centerX = canvas.width / 2
-          const centerY = canvas.height / 2
-          const scaleFactor = 1.2
-          const newScale = Math.min(5, imageViewerState.scale * scaleFactor)
-
-          const scaleRatio = newScale / imageViewerState.scale
-          imageViewerState.setOffset(prev => ({
-            x: centerX - (centerX - prev.x) * scaleRatio,
-            y: centerY - (centerY - prev.y) * scaleRatio
-          }))
-          imageViewerState.setScale(newScale)
-        }
+        zoomAtCenter(1.2, 0.1, 5)
       } else if (event.key === '-' || event.key === '_') {
         event.preventDefault()
-        const canvas = canvasRef.current
-        if (canvas) {
-          const centerX = canvas.width / 2
-          const centerY = canvas.height / 2
-          const scaleFactor = 0.8
-          const newScale = Math.max(0.1, imageViewerState.scale * scaleFactor)
-
-          const scaleRatio = newScale / imageViewerState.scale
-          imageViewerState.setOffset(prev => ({
-            x: centerX - (centerX - prev.x) * scaleRatio,
-            y: centerY - (centerY - prev.y) * scaleRatio
-          }))
-          imageViewerState.setScale(newScale)
-        }
+        zoomAtCenter(0.8, 0.1, 5)
       } else if (event.key === '0') {
         event.preventDefault()
         transform.fitImageToCanvas()
@@ -652,7 +642,7 @@ export function useImageViewerEvents({
       window.removeEventListener('keydown', handleShiftKeyDown)
       window.removeEventListener('keyup', handleShiftKeyUp)
     }
-  }, [canvasRef, imageViewerState, dragState, precisionDragState, transform, precisionMode, isPlacementInteractionActive])
+  }, [canvasRef, imageViewerState, dragState, precisionDragState, transform, precisionMode, isPlacementInteractionActive, zoomAtCenter])
 
   return {
     handleMouseDown,

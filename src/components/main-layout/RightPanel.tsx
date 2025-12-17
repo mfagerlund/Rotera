@@ -9,6 +9,48 @@ import { ActiveTool } from '../../hooks/useMainLayoutState'
 import CreationToolsManager from '../tools/CreationToolsManager'
 import ConstraintPropertyPanel from '../ConstraintPropertyPanel'
 import { CoplanarPointsConstraint } from '../../entities/constraints/coplanar-points-constraint'
+import { Constraint } from '../../entities/constraints'
+
+// Line creation options
+interface LineConstraints {
+  name?: string
+  color?: string
+  isConstruction?: boolean
+  direction?: LineDirection
+  targetLength?: number
+  tolerance?: number
+}
+
+// Plane creation options
+interface PlaneDefinition {
+  name: string
+  points: WorldPoint[]
+}
+
+// Circle creation options
+type CircleDefinition =
+  | { center: WorldPoint; radius: number }
+  | { pointA: WorldPoint; pointB: WorldPoint; pointC: WorldPoint }
+
+// Line update parameters
+interface LineUpdateParams {
+  name?: string
+  color?: string
+}
+
+// Constraint parameter value types
+type ConstraintParameterValue =
+  | WorldPoint
+  | LineEntity
+  | WorldPoint[]
+  | LineEntity[]
+  | number
+  | string
+  | boolean
+  | null
+  | undefined
+
+type ConstraintParameters = Record<string, ConstraintParameterValue>
 
 interface RightPanelProps {
   selectedEntities: ISelectable[]
@@ -17,18 +59,18 @@ interface RightPanelProps {
   allWorldPoints: WorldPoint[]
   existingLines: Map<string, LineEntity>
   onCreatePoint: (imageId: string, u: number, v: number) => void
-  onCreateLine: (pointA: WorldPoint, pointB: WorldPoint, lineConstraints?: any) => void
-  onCreateConstraint: (constraint: any) => void
-  onCreatePlane: (definition: any) => void
-  onCreateCircle: (definition: any) => void
+  onCreateLine: (pointA: WorldPoint, pointB: WorldPoint, lineConstraints?: LineConstraints) => void
+  onCreateConstraint: (constraint: Constraint) => void
+  onCreatePlane: (definition: PlaneDefinition) => void
+  onCreateCircle: (definition: CircleDefinition) => void
   onConstructionPreviewChange: (preview: ConstructionPreview | null) => void
   onClearSelection: () => void
   currentViewpoint?: Viewpoint
   editingLine: LineEntity | null
-  onUpdateLine: (lineEntity: LineEntity, updatedLine: any) => void
+  onUpdateLine: (lineEntity: LineEntity, updatedLine: LineUpdateParams) => void
   onDeleteLine: (line: LineEntity) => void
   onClearEditingLine: () => void
-  projectConstraints: any[]
+  projectConstraints: Constraint[]
   editingCoplanarConstraint: CoplanarPointsConstraint | null
   onUpdateCoplanarConstraint: (constraint: CoplanarPointsConstraint, updates: { name: string; points: WorldPoint[] }) => void
   onDeleteCoplanarConstraint: (constraint: CoplanarPointsConstraint) => void
@@ -40,9 +82,9 @@ interface RightPanelProps {
   activeConstraintType: string | null
   selectedPoints: WorldPoint[]
   selectedLines: LineEntity[]
-  constraintParameters: any
+  constraintParameters: ConstraintParameters
   isConstraintComplete: boolean
-  onParameterChange: (key: string, value: any) => void
+  onParameterChange: (key: string, value: ConstraintParameterValue) => void
   onApplyConstraint: () => void
   onCancelConstraintCreation: () => void
 }

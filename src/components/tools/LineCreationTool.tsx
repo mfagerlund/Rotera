@@ -50,8 +50,8 @@ interface LineCreationToolProps {
   showActionButtons?: boolean
   editMode?: boolean
   existingLine?: Line
-  existingConstraints?: any[]
-  onUpdateLine?: (lineEntity: Line, updatedLine: any) => void
+  existingConstraints?: unknown[]
+  onUpdateLine?: (lineEntity: Line, updatedLine: Partial<LineConstraints & { name: string; color: string; isConstruction: boolean }>) => void
   onDeleteLine?: (line: Line) => void
 }
 

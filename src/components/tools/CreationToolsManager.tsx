@@ -19,6 +19,7 @@ import { ConstructionPreview } from '../image-viewer/types'
 import type { ISelectable } from '../../types/selectable'
 import { getEntityKey } from '../../utils/entityKeys'
 import { CoplanarPointsConstraint } from '../../entities/constraints/coplanar-points-constraint'
+import { Constraint } from '../../entities/constraints/base-constraint'
 import '../../styles/tools.css'
 
 type ToolType = 'select' | 'point' | 'line' | 'plane' | 'circle' | 'loop' | 'vanishing' | 'orientationPaint'
@@ -44,17 +45,17 @@ interface CreationToolsManagerProps {
   existingLines: Map<string, Line>
   onCreatePoint: (imageId: string, u: number, v: number) => void
   onCreateLine: (pointA: WorldPoint, pointB: WorldPoint, constraints?: LineConstraints) => void
-  onCreateConstraint?: (constraint: any) => void
-  onCreatePlane: (definition: any) => void
-  onCreateCircle: (definition: any) => void
+  onCreateConstraint?: (constraint: Constraint) => void
+  onCreatePlane: (definition: { name: string; points: WorldPoint[] }) => void
+  onCreateCircle: (definition: { center: WorldPoint; radius: number } | { pointA: WorldPoint; pointB: WorldPoint; pointC: WorldPoint }) => void
   onConstructionPreviewChange?: (preview: ConstructionPreview | null) => void
   onClearSelection?: () => void
   currentViewpoint?: Viewpoint
   editingLine?: Line | null
-  onUpdateLine?: (lineEntity: Line, updatedLine: any) => void
+  onUpdateLine?: (lineEntity: Line, updatedLine: Partial<LineConstraints & { name: string; color: string; isConstruction: boolean }>) => void
   onDeleteLine?: (line: Line) => void
   onClearEditingLine?: () => void
-  projectConstraints?: Record<string, any>
+  projectConstraints?: Constraint[]
   editingCoplanarConstraint?: CoplanarPointsConstraint | null
   onUpdateCoplanarConstraint?: (constraint: CoplanarPointsConstraint, updates: { name: string; points: WorldPoint[] }) => void
   onDeleteCoplanarConstraint?: (constraint: CoplanarPointsConstraint) => void
@@ -85,7 +86,7 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = observe
   onUpdateLine,
   onDeleteLine,
   onClearEditingLine,
-  projectConstraints = {},
+  projectConstraints = [],
   editingCoplanarConstraint = null,
   onUpdateCoplanarConstraint,
   onDeleteCoplanarConstraint,
@@ -368,16 +369,7 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = observe
           showActionButtons={false}
           editMode={!!editingLine}
           existingLine={editingLine || undefined}
-          existingConstraints={
-            editingLine && projectConstraints
-              ? Object.values(projectConstraints).filter(c => {
-                  const constraintLineIds = c.entities?.lines || []
-                  const constraintPointIds = c.entities?.points || []
-                  return constraintLineIds.includes(getEntityKey(editingLine)) ||
-                         (constraintPointIds.includes(getEntityKey(editingLine.pointA)) && constraintPointIds.includes(getEntityKey(editingLine.pointB)))
-                })
-              : []
-          }
+          existingConstraints={[]}
           onUpdateLine={onUpdateLine}
           onDeleteLine={onDeleteLine}
         />
