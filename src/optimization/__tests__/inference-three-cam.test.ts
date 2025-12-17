@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { loadProjectFromJson } from '../../store/project-serialization';
-import { optimizeProject, optimizationLogs } from '../optimize-project';
+import { optimizeProject } from '../optimize-project';
 
 describe('Inference Three Camera', () => {
   it('should solve three cameras using stepped VP + PnP initialization', () => {
@@ -20,21 +20,8 @@ describe('Inference Three Camera', () => {
       verbose: false
     });
 
-    // Log initialization path
-    const initLogs = optimizationLogs.filter(l => l.includes('[Init'));
-
-    // Write debug info to file for inspection
-    const debugInfo = [
-      'Init logs:',
-      ...initLogs,
-      '',
-      `Converged: ${result.converged}`,
-      `Median error: ${result.medianReprojectionError?.toFixed(2)} px`
-    ].join('\n');
-    fs.writeFileSync(path.join(__dirname, 'three-cam-debug.txt'), debugInfo);
-
-    // Should converge with good accuracy - NOT 48px!
+    // Should converge with good accuracy
     expect(result.medianReprojectionError).toBeDefined();
-    expect(result.medianReprojectionError!).toBeLessThan(3.0); // Strict threshold - must actually work
+    expect(result.medianReprojectionError!).toBeLessThan(3.0);
   });
 });

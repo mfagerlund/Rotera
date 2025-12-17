@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from '@jest/globals'
 import * as fs from 'fs'
 import * as path from 'path'
 import { loadProjectFromJson } from '../../store/project-serialization'
-import { optimizeProject, clearOptimizationLogs, optimizationLogs } from '../optimize-project'
+import { optimizeProject, clearOptimizationLogs } from '../optimize-project'
 
 function loadFixture(filename: string) {
   const fixturePath = path.join(__dirname, 'fixtures', filename)
@@ -26,13 +26,6 @@ describe('Balcony House optimization', () => {
       maxIterations: 400,
       verbose: false,
     })
-
-    // Write debug info
-    const initLogs = optimizationLogs.filter(l => l.includes('[Init') || l.includes('[Optimize]'));
-    fs.writeFileSync(
-      path.join(__dirname, 'balcony-house-debug.txt'),
-      initLogs.join('\n')
-    );
 
     console.log('Result:', {
       converged: result.converged,
@@ -62,7 +55,6 @@ describe('Balcony House optimization', () => {
       maxIterations: 400,
       verbose: false,
     })
-    const initLogs1 = optimizationLogs.filter(l => l.includes('[Init'));
 
     // Run 2
     clearOptimizationLogs();
@@ -72,23 +64,6 @@ describe('Balcony House optimization', () => {
       maxIterations: 400,
       verbose: false,
     })
-    const initLogs2 = optimizationLogs.filter(l => l.includes('[Init'));
-
-    // Write debug info
-    fs.writeFileSync(
-      path.join(__dirname, 'determinism-debug.txt'),
-      [
-        'RUN 1:',
-        `  residual: ${result1.residual}`,
-        `  median: ${result1.medianReprojectionError}`,
-        ...initLogs1.map(l => '  ' + l),
-        '',
-        'RUN 2:',
-        `  residual: ${result2.residual}`,
-        `  median: ${result2.medianReprojectionError}`,
-        ...initLogs2.map(l => '  ' + l),
-      ].join('\n')
-    );
 
     // Results should be identical
     expect(result1.residual).toBeCloseTo(result2.residual, 6)
