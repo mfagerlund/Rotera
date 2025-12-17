@@ -18,7 +18,7 @@ Result: converged=true, iter=18, median=0.07px
 [Stage2] Single-cam init: 1 ok, 0 failed
 [Solve] conv=true, iter=18, median=0.07px | 1:f=1601 2:f=1431
 [Handedness] Cannot determine handedness (no axis points found)
-[Summary] *** Excellent | error=0.526 | median=0.07px | iter=18 | conv=true | 2453ms
+[Summary] *** Excellent | error=0.526 | median=0.07px | iter=18 | conv=true | 1633ms
 
 Camera positions:
   1: pos=[-49.92, 63.95, -33.44] f=1601
@@ -59,7 +59,7 @@ Optimization logs:
 [Stage1] Multi-cam only: WP:8 L:1 IP:16 -> conv=true, iter=297, res=73.290
 [Solve] conv=true, iter=65, median=6.62px | 1:f=1474 2:f=1472
 [Handedness] Cannot determine handedness (no axis points found)
-[Summary] * Poor | error=43.366 | median=6.62px | iter=65 | conv=true | 7298ms
+[Summary] * Poor | error=43.366 | median=6.62px | iter=65 | conv=true | 2391ms
 
 World point positions after optimization:
   WP1: opt=[-20.71, 35.27, -11.07] locked=[null,null,null] inferred=[null,null,null]

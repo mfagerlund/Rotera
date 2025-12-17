@@ -38,3 +38,7 @@ scratch/
 # Build outputs
 build_output.txt
 *.tmp.md
+
+# Test debug output files
+src/optimization/__tests__/*-debug*.txt
+src/optimization/__tests__/*-output*.txt
