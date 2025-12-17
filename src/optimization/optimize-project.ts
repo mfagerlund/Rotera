@@ -9,13 +9,16 @@ import { Line } from '../entities/line';
 import { initializeCamerasWithEssentialMatrix } from './essential-matrix';
 import { initializeWorldPoints as unifiedInitialize } from './unified-initialization';
 import { initializeSingleCameraPoints } from './single-camera-initialization';
-import { initializeCameraWithVanishingPoints, canInitializeWithVanishingPoints } from './vanishing-points';
+import { initializeCameraWithVanishingPoints, canInitializeWithVanishingPoints, validateVanishingPoints, computeRotationsFromVPs, estimateFocalLength } from './vanishing-points';
 import { alignSceneToLineDirections, alignSceneToLockedPoints, AlignmentQualityCallback, AlignmentResult } from './coordinate-alignment';
 import type { IOptimizableCamera } from './IOptimizable';
 import { log, clearOptimizationLogs, optimizationLogs } from './optimization-logger';
 
 // Re-export for backwards compatibility
 export { log, clearOptimizationLogs, optimizationLogs } from './optimization-logger';
+
+// Version for tracking code updates
+const OPTIMIZER_VERSION = '2.1.1-vpem-hybrid';
 
 // WeakMaps for temporary storage during optimization (avoid polluting entity objects)
 const viewpointInitialVps = new WeakMap<Viewpoint, Record<string, { u: number; v: number }>>();
@@ -442,6 +445,7 @@ export function optimizeProject(
 
   const startTime = performance.now();
 
+  log(`[Optimize] v${OPTIMIZER_VERSION}`);
   log(`[Optimize] WP:${project.worldPoints.size} L:${project.lines.size} VP:${project.viewpoints.size} IP:${project.imagePoints.size} C:${project.constraints.size}`);
 
   const camerasInitialized: string[] = [];
@@ -513,6 +517,8 @@ export function optimizeProject(
 
     if (uninitializedCameras.length >= 1 && autoInitializeCameras) {
       const worldPointArray = Array.from(project.worldPoints) as WorldPoint[];
+      // Use isFullyConstrained() - this includes both locked AND inferred coordinates
+      // VP initialization can use inferred coordinates for camera position solving
       const lockedPoints = worldPointArray.filter(wp => wp.isFullyConstrained());
       const worldPointSet = new Set<WorldPoint>(worldPointArray);
 
@@ -548,7 +554,9 @@ export function optimizeProject(
       );
 
       // Debug logging for initialization path
-      log(`[Init Debug] uninitCameras=${uninitializedCameras.length}, lockedPts=${lockedPoints.length}, canVP=${canAnyUninitCameraUseVP}`);
+      // lockedPts = fully constrained (locked OR inferred), trulyLocked = only user-locked points
+      const trulyLockedCount = worldPointArray.filter(wp => wp.isFullyLocked()).length;
+      log(`[Init Debug] uninitCameras=${uninitializedCameras.length}, lockedPts=${lockedPoints.length} (trulyLocked=${trulyLockedCount}), canVP=${canAnyUninitCameraUseVP}`);
 
       if (lockedPoints.length >= 2 || canAnyUninitCameraUseVP || (uninitializedCameras.length === 1 && lockedPoints.length >= 1)) {
         const canAnyCameraUsePnP = uninitializedCameras.some(vp => {
@@ -659,6 +667,92 @@ export function optimizeProject(
             log(`[Init] EssentialMatrix: ${vp1.name}=[${vp1.position.map(x => x.toFixed(1)).join(',')}], ${vp2.name}=[${vp2.position.map(x => x.toFixed(1)).join(',')}]`);
             camerasInitialized.push(vp1.name, vp2.name);
             usedEssentialMatrix = true;
+
+            // HYBRID VP+EM: If cameras have vanishing lines, use VP rotation BEFORE triangulation
+            // This ensures the coordinate frame is world-axis-aligned from the start
+            log(`[VP+EM] Checking cameras for VP rotation...`);
+            for (const vp of [vp1, vp2]) {
+              const vpValidation = validateVanishingPoints(vp);
+              const vpCount = vpValidation.vanishingPoints ? Object.keys(vpValidation.vanishingPoints).length : 0;
+              log(`[VP+EM] ${vp.name}: isValid=${vpValidation.isValid}, vpCount=${vpCount}`);
+              if (vpValidation.isValid && vpCount >= 2) {
+                // Compute focal length from VPs if we have 2+
+                const vps = vpValidation.vanishingPoints!;
+                const pp = { u: vp.principalPointX, v: vp.principalPointY };
+                const vpKeys = Object.keys(vps) as ('x' | 'y' | 'z')[];
+
+                // Try to estimate focal length from orthogonal VPs
+                let vpFocalLength: number | null = null;
+                if (vpKeys.length >= 2) {
+                  vpFocalLength = estimateFocalLength(vps[vpKeys[0]]!, vps[vpKeys[1]]!, pp);
+                }
+                const focalLength = vpFocalLength && vpFocalLength > 100 ? vpFocalLength : vp.focalLength;
+
+                const vpRotations = computeRotationsFromVPs(vps, focalLength, pp);
+                if (vpRotations && vpRotations.length > 0) {
+                  const q_vp = vpRotations[0]; // Use first candidate rotation
+
+                  // Save the EM-derived rotation before overwriting
+                  const q_em_1 = [...vp1.rotation] as [number, number, number, number];
+                  const q_em_2 = [...vp2.rotation] as [number, number, number, number];
+                  const pos_2 = [...vp2.position] as [number, number, number];
+
+                  // Apply VP rotation as global rotation to the scene
+                  // vp1 gets the VP rotation directly
+                  vp1.rotation = q_vp;
+
+                  // vp2's rotation: q_vp * (q_em_1^-1 * q_em_2) = q_vp * relative_rotation
+                  // Since q_em_1 = identity, relative = q_em_2, so: q_vp * q_em_2
+                  const qMult = (a: number[], b: number[]): [number, number, number, number] => {
+                    return [
+                      a[0]*b[0] - a[1]*b[1] - a[2]*b[2] - a[3]*b[3],
+                      a[0]*b[1] + a[1]*b[0] + a[2]*b[3] - a[3]*b[2],
+                      a[0]*b[2] - a[1]*b[3] + a[2]*b[0] + a[3]*b[1],
+                      a[0]*b[3] + a[1]*b[2] - a[2]*b[1] + a[3]*b[0]
+                    ];
+                  };
+
+                  // vp2's rotation needs to account for the global rotation change
+                  // Original: R_em_2 in EM frame. New frame: rotate by R_vp
+                  // New rotation: R_vp (since the world frame is rotated by R_vp)
+                  // But R_em_2 = R_vp * R_relative, so R_relative = R_vp^-1 * R_em_2
+                  // In new frame: R_new_2 = R_vp * R_relative = R_em_2
+                  // Wait, that's not quite right. Let me think again...
+                  //
+                  // In EM frame: cam1 at identity, cam2 at q_em_2
+                  // We want cam1 at q_vp instead
+                  // This is a global rotation of the world by q_vp
+                  // In new frame: cam1 = q_vp, cam2 = q_vp * q_em_2 (quaternion multiply)
+                  vp2.rotation = qMult(q_vp, q_em_2);
+
+                  // Rotate vp2's position by q_vp (since we're rotating the world frame)
+                  const rotateVec = (q: number[], v: number[]): [number, number, number] => {
+                    const qw = q[0], qx = q[1], qy = q[2], qz = q[3];
+                    const vx = v[0], vy = v[1], vz = v[2];
+                    const tx = 2 * (qy * vz - qz * vy);
+                    const ty = 2 * (qz * vx - qx * vz);
+                    const tz = 2 * (qx * vy - qy * vx);
+                    return [
+                      vx + qw * tx + (qy * tz - qz * ty),
+                      vy + qw * ty + (qz * tx - qx * tz),
+                      vz + qw * tz + (qx * ty - qy * tx)
+                    ];
+                  };
+                  vp2.position = rotateVec(q_vp, pos_2);
+
+                  // Update focal length if VP-estimated was better
+                  if (vpFocalLength && vpFocalLength > 100) {
+                    vp.focalLength = vpFocalLength;
+                    log(`[Init] VP focal: ${vp.name} f=${vpFocalLength.toFixed(0)}`);
+                  }
+
+                  log(`[Init] VP+EM hybrid: Applied VP rotation from ${vp.name} to align world frame`);
+                  log(`[Init] VP+EM: ${vp1.name} rot=[${vp1.rotation.map(x => x.toFixed(3)).join(',')}]`);
+                  log(`[Init] VP+EM: ${vp2.name} pos=[${vp2.position.map(x => x.toFixed(1)).join(',')}] rot=[${vp2.rotation.map(x => x.toFixed(3)).join(',')}]`);
+                  break; // Only apply from first camera with good VPs
+                }
+              }
+            }
           } else {
             throw new Error(`Essential Matrix failed: ${result.error || 'Unknown'}. Need 7+ shared points.`);
           }

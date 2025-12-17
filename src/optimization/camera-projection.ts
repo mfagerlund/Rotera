@@ -12,6 +12,22 @@ import { V, Value, Vec3 } from 'scalar-autograd';
 import { Quaternion } from './Quaternion';
 
 /**
+ * Camera intrinsic and distortion parameters for projection.
+ */
+export interface CameraParameters {
+  focalLength: Value;
+  aspectRatio: Value;
+  principalPointX: Value;
+  principalPointY: Value;
+  skew: Value;
+  k1: Value;
+  k2: Value;
+  k3: Value;
+  p1: Value;
+  p2: Value;
+}
+
+/**
  * Convert Euler angles (rx, ry, rz) to rotation matrix.
  * Uses ZYX convention: R = Rz * Ry * Rx
  *
