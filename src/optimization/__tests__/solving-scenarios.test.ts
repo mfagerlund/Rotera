@@ -852,4 +852,69 @@ describe('Solving Scenarios - Phase 4: Single Camera with Inferred Coordinates',
       }
     });
   });
+
+  describe.skip('Scenario 15: Single Camera VP Initialization from Axis-Aligned Lines', () => {
+    /**
+     * Regression test for Tower VL fixture:
+     * - Single camera scene
+     * - No explicit VanishingLines, but many axis-aligned Lines (x, y, z directions)
+     * - These should serve as "virtual" vanishing lines for VP initialization
+     * - Tests ray-based sign determination for ambiguous point coordinates
+     */
+    it('should solve using axis-aligned lines as virtual vanishing lines', () => {
+      const project = loadFixture('Tower-VL-axis-aligned-only.json');
+
+      expect(project.worldPoints.size).toBe(14);
+      expect(project.viewpoints.size).toBe(1);
+      expect(project.imagePoints.size).toBe(14);
+      expect(project.lines.size).toBe(20);
+
+      // Count direction-constrained lines
+      let axisAlignedCount = 0;
+      for (const line of project.lines.values()) {
+        if (line.direction && ['x', 'y', 'z'].includes(line.direction)) {
+          axisAlignedCount++;
+        }
+      }
+      expect(axisAlignedCount).toBeGreaterThanOrEqual(15); // Many axis-aligned lines
+
+      const result = optimizeProject(project, {
+        autoInitializeCameras: true,
+        autoInitializeWorldPoints: true,
+        detectOutliers: true,
+        maxIterations: 1000,
+        tolerance: 1e-8,
+      });
+
+      // Should converge with low error
+      expect(result.converged).toBe(true);
+      expect(result.residual).toBeLessThan(2); // Target: error < 2px
+
+      // Camera should be initialized away from origin
+      const camera = Array.from(project.viewpoints.values())[0] as Viewpoint;
+      const camDist = Math.sqrt(
+        camera.position[0] ** 2 + camera.position[1] ** 2 + camera.position[2] ** 2
+      );
+      expect(camDist).toBeGreaterThan(50); // Camera should be well away from origin
+
+      // Origin point should remain at origin
+      const originPoint = Array.from(project.worldPoints.values()).find(
+        wp => wp.name === 'O'
+      ) as WorldPoint;
+      expect(originPoint.optimizedXyz).toBeDefined();
+      expect(originPoint.optimizedXyz![0]).toBeCloseTo(0, 1);
+      expect(originPoint.optimizedXyz![1]).toBeCloseTo(0, 1);
+      expect(originPoint.optimizedXyz![2]).toBeCloseTo(0, 1);
+
+      // Y point should be on the Y-axis (X=0, Z=0)
+      const yPoint = Array.from(project.worldPoints.values()).find(
+        wp => wp.name === 'Y'
+      ) as WorldPoint;
+      expect(yPoint.optimizedXyz).toBeDefined();
+      expect(yPoint.optimizedXyz![0]).toBeCloseTo(0, 1);
+      expect(yPoint.optimizedXyz![2]).toBeCloseTo(0, 1);
+      // Y should be ~20 in magnitude (positive or negative depending on scene orientation)
+      expect(Math.abs(yPoint.optimizedXyz![1])).toBeCloseTo(20, 1);
+    });
+  });
 });

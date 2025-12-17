@@ -9,6 +9,7 @@ import { Plane } from '../entities/plane'
 import { WorldPoint } from '../entities/world-point'
 import type { ISelectable } from '../types/selectable'
 import { useConfirm } from './ConfirmDialog'
+import { getEntityKey } from '../utils/entityKeys'
 
 interface PlanesManagerProps {
   isOpen: boolean
@@ -85,7 +86,7 @@ export const PlanesManager: React.FC<PlanesManagerProps> = observer(({
               <tbody>
                 {planes.map(plane => (
                   <tr
-                    key={plane.name}
+                    key={getEntityKey(plane)}
                     className={isSelected(plane) ? 'selected' : ''}
                     onClick={(e) => {
                       e.stopPropagation()

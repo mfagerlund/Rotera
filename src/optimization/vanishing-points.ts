@@ -188,6 +188,7 @@ function isPointInFrontOfCamera(
   cameraPosition: [number, number, number],
   rotation: [number, number, number, number]
 ): boolean {
+
   const [qw, qx, qy, qz] = rotation
   // Third row of rotation matrix (camera Z axis in world coordinates)
   const R2 = [
@@ -582,8 +583,11 @@ export function validateVanishingPoints(viewpoint: Viewpoint): ValidationResult 
 
 export function canInitializeWithVanishingPoints(
   viewpoint: Viewpoint,
-  worldPoints: Set<WorldPoint>
+  worldPoints: Set<WorldPoint>,
+  options: { allowSinglePoint?: boolean } = {}
 ): boolean {
+  const { allowSinglePoint = false } = options
+
   const validation = validateVanishingPoints(viewpoint)
   if (!validation.isValid) {
     return false
@@ -598,6 +602,11 @@ export function canInitializeWithVanishingPoints(
   const fullyConstrainedPoints = Array.from(worldPoints).filter(wp => wp.isFullyConstrained())
 
   if (fullyConstrainedPoints.length >= 2) {
+    return true
+  }
+
+  // With 1 constrained point + VPs, we can estimate camera position
+  if (allowSinglePoint && fullyConstrainedPoints.length >= 1) {
     return true
   }
 
@@ -1096,8 +1105,42 @@ export function computeCameraPosition(
     effectiveXyz: [number, number, number]
   }>
 ): [number, number, number] | null {
-  if (lockedPoints.length < 2) {
+  if (lockedPoints.length < 1) {
     return null
+  }
+
+  // Special case: 1 locked point - place camera along ray at default distance
+  if (lockedPoints.length === 1) {
+    const { effectiveXyz, imagePoint } = lockedPoints[0]
+    const P = effectiveXyz
+
+    // Compute ray direction from image point
+    const u_norm = (imagePoint.u - principalPoint.u) / focalLength
+    const v_norm = (principalPoint.v - imagePoint.v) / focalLength
+    const ray_cam = normalize([u_norm, v_norm, 1])
+
+    // Transform ray to world coordinates using R^T
+    const qw = rotation[0], qx = rotation[1], qy = rotation[2], qz = rotation[3]
+    const Rt = [
+      [1 - 2 * (qy * qy + qz * qz), 2 * (qx * qy + qw * qz), 2 * (qx * qz - qw * qy)],
+      [2 * (qx * qy - qw * qz), 1 - 2 * (qx * qx + qz * qz), 2 * (qy * qz + qw * qx)],
+      [2 * (qx * qz + qw * qy), 2 * (qy * qz - qw * qx), 1 - 2 * (qx * qx + qy * qy)]
+    ]
+    const ray_world = normalize([
+      Rt[0][0] * ray_cam[0] + Rt[0][1] * ray_cam[1] + Rt[0][2] * ray_cam[2],
+      Rt[1][0] * ray_cam[0] + Rt[1][1] * ray_cam[1] + Rt[1][2] * ray_cam[2],
+      Rt[2][0] * ray_cam[0] + Rt[2][1] * ray_cam[1] + Rt[2][2] * ray_cam[2]
+    ])
+
+    // Default distance - will be refined by optimizer
+    const defaultDistance = 50
+
+    // Camera is at P - distance * ray_direction (camera looks along +Z in camera space)
+    return [
+      P[0] - defaultDistance * ray_world[0],
+      P[1] - defaultDistance * ray_world[1],
+      P[2] - defaultDistance * ray_world[2]
+    ]
   }
 
   const qw = rotation[0]
@@ -1415,8 +1458,11 @@ export function validateAxisLineDistribution(
 
 export function initializeCameraWithVanishingPoints(
   viewpoint: Viewpoint,
-  worldPoints: Set<WorldPoint>
+  worldPoints: Set<WorldPoint>,
+  options: { allowSinglePoint?: boolean } = {}
 ): boolean {
+  const { allowSinglePoint = false } = options
+
   log('[initializeCameraWithVanishingPoints] Starting vanishing point initialization...')
 
   const validation = validateVanishingPoints(viewpoint)
@@ -1455,9 +1501,42 @@ export function initializeCameraWithVanishingPoints(
   }
 
   let focalLength = viewpoint.focalLength
-  // DON'T estimate focal length from VPs - it changes the projection math and breaks
-  // reprojection of locked points. The viewpoint's focal length is the actual camera intrinsic.
-  log(`[initializeCameraWithVanishingPoints] Using existing focal length: ${focalLength.toFixed(1)}`)
+
+  // Try to estimate focal length from VPs if the current one seems like a default value
+  const isDefaultFocalLength =
+    Math.abs(focalLength - viewpoint.imageWidth) < 10 ||
+    Math.abs(focalLength - viewpoint.imageHeight) < 10 ||
+    Math.abs(focalLength - Math.max(viewpoint.imageWidth, viewpoint.imageHeight)) < 10;
+
+  if (isDefaultFocalLength) {
+    // Try all pairs of VPs and take the median valid estimate
+    const vpKeys = Object.keys(vps) as Array<keyof typeof vps>
+    const estimates: number[] = []
+    
+    for (let i = 0; i < vpKeys.length; i++) {
+      for (let j = i + 1; j < vpKeys.length; j++) {
+        const vp1 = vps[vpKeys[i]]
+        const vp2 = vps[vpKeys[j]]
+        if (vp1 && vp2) {
+          const f = estimateFocalLength(vp1, vp2, principalPoint)
+          if (f !== null && f > 0 && f < 50000) {
+            log('[VP Focal] ' + vpKeys[i].toUpperCase() + '-' + vpKeys[j].toUpperCase() + ' pair: f=' + f.toFixed(1))
+            estimates.push(f)
+          }
+        }
+      }
+    }
+    
+    if (estimates.length > 0) {
+      estimates.sort((a, b) => a - b)
+      const medianF = estimates[Math.floor(estimates.length / 2)]
+      log('[initializeCameraWithVanishingPoints] Estimated focal length from VPs: ' + medianF.toFixed(1) + ' (was ' + focalLength + ')')
+      focalLength = medianF
+      viewpoint.focalLength = medianF
+    }
+  } else {
+    log('[initializeCameraWithVanishingPoints] Using existing focal length: ' + focalLength.toFixed(1))
+  }
 
   const baseRotations = computeRotationsFromVPs(vps, focalLength, principalPoint)
   if (!baseRotations || baseRotations.length === 0) {
@@ -1488,8 +1567,9 @@ export function initializeCameraWithVanishingPoints(
     effectiveXyz: [number, number, number]
   }>
 
-  if (lockedPointsData.length < 2) {
-    log('[initializeCameraWithVanishingPoints] Not enough locked points with image observations')
+  const minLockedPoints = allowSinglePoint ? 1 : 2
+  if (lockedPointsData.length < minLockedPoints) {
+    log(`[initializeCameraWithVanishingPoints] Not enough locked points with image observations (have ${lockedPointsData.length}, need ${minLockedPoints})`)
     return false
   }
 

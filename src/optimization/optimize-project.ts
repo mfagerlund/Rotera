@@ -9,7 +9,7 @@ import { Line } from '../entities/line';
 import { initializeCamerasWithEssentialMatrix } from './essential-matrix';
 import { initializeWorldPoints as unifiedInitialize } from './unified-initialization';
 import { initializeSingleCameraPoints } from './single-camera-initialization';
-import { initializeCameraWithVanishingPoints } from './vanishing-points';
+import { initializeCameraWithVanishingPoints, canInitializeWithVanishingPoints } from './vanishing-points';
 import { alignSceneToLineDirections, alignSceneToLockedPoints, AlignmentQualityCallback, AlignmentResult } from './coordinate-alignment';
 import type { IOptimizableCamera } from './IOptimizable';
 import { log, clearOptimizationLogs, optimizationLogs } from './optimization-logger';
@@ -462,7 +462,7 @@ export function optimizeProject(
     if (autoInitializeCameras) {
       for (const vp of viewpointArray) {
         const v = vp as Viewpoint;
-        // Reset pose
+        // Reset pose - always reset when autoInitializeCameras is true
         v.position = [0, 0, 0];
         v.rotation = [1, 0, 0, 0];
         // Reset intrinsics that could be garbage from a previous failed solve
@@ -516,7 +516,15 @@ export function optimizeProject(
       const lockedPoints = worldPointArray.filter(wp => wp.isFullyConstrained());
       const worldPointSet = new Set<WorldPoint>(worldPointArray);
 
-      if (lockedPoints.length >= 2 || uninitializedCameras.some(vp => (vp as Viewpoint).canInitializeWithVanishingPoints(worldPointSet))) {
+      // Use standalone function that counts direction-constrained Lines as virtual VLs
+      const canAnyUninitCameraUseVP = uninitializedCameras.some(vp =>
+        canInitializeWithVanishingPoints(vp as Viewpoint, worldPointSet, { allowSinglePoint: uninitializedCameras.length === 1 })
+      );
+
+      // Debug logging for initialization path
+      log(`[Init Debug] uninitCameras=${uninitializedCameras.length}, lockedPts=${lockedPoints.length}, canVP=${canAnyUninitCameraUseVP}`);
+
+      if (lockedPoints.length >= 2 || canAnyUninitCameraUseVP || (uninitializedCameras.length === 1 && lockedPoints.length >= 1)) {
         const canAnyCameraUsePnP = uninitializedCameras.some(vp => {
           const vpConcrete = vp as Viewpoint;
           const vpLockedPoints = Array.from(vpConcrete.imagePoints).filter(ip =>
@@ -525,8 +533,9 @@ export function optimizeProject(
           return vpLockedPoints.length >= 3;
         });
 
+        // Use standalone function that counts direction-constrained Lines as virtual VLs
         const canAnyCameraUseVP = uninitializedCameras.some(vp =>
-          (vp as Viewpoint).canInitializeWithVanishingPoints(worldPointSet)
+          canInitializeWithVanishingPoints(vp as Viewpoint, worldPointSet, { allowSinglePoint: uninitializedCameras.length === 1 })
         );
 
         const willUseEssentialMatrix = !canAnyCameraUsePnP && !canAnyCameraUseVP;
@@ -541,8 +550,18 @@ export function optimizeProject(
         for (const vp of uninitializedCameras) {
           const vpConcrete = vp as Viewpoint;
 
-          if (vpConcrete.canInitializeWithVanishingPoints(worldPointSet)) {
-            const success = initializeCameraWithVanishingPoints(vpConcrete, worldPointSet);
+          // For single-camera scenes with only 1-2 locked points AND no actual vanishing lines,
+          // skip VP init and use late PnP instead. Late PnP uses ALL constrained points (including
+          // inferred) and gives better results. VP init with only 1 locked point and only virtual VLs
+          // (from axis-aligned Lines) gives unreliable camera positions.
+          // If camera has actual VLs, VP init should be used - it handles handedness correctly.
+          const hasActualVanishingLines = vpConcrete.getVanishingLineCount() > 0;
+          const skipVPForLatePnP = uninitializedCameras.length === 1 && lockedPoints.length < 3 && !hasActualVanishingLines;
+          log(`[Init Path] skipVPForLatePnP=${skipVPForLatePnP} (uninit=${uninitializedCameras.length}, locked=${lockedPoints.length}, hasVL=${hasActualVanishingLines})`);
+
+          // Use standalone function that counts direction-constrained Lines as virtual VLs
+          if (!skipVPForLatePnP && canInitializeWithVanishingPoints(vpConcrete, worldPointSet, { allowSinglePoint: false })) {
+            const success = initializeCameraWithVanishingPoints(vpConcrete, worldPointSet, { allowSinglePoint: false });
             if (success) {
               log(`[Init] ${vpConcrete.name} via VP, f=${vpConcrete.focalLength.toFixed(0)}`);
               camerasInitialized.push(vpConcrete.name);
@@ -550,6 +569,9 @@ export function optimizeProject(
               continue;
             }
           }
+
+          // NOTE: Single-camera VP init with 1 locked point disabled - late PnP gives better results.
+          // Late PnP uses ALL constrained points (locked + inferred) for better camera positioning.
 
           const vpLockedPoints = Array.from(vpConcrete.imagePoints).filter(ip =>
             (ip.worldPoint as WorldPoint).isFullyConstrained()
@@ -572,38 +594,53 @@ export function optimizeProject(
       }
 
       if (camerasInitialized.length === 0) {
-        if (uninitializedCameras.length < 2) {
+        // For single-camera scenes, check if late PnP is viable (has constrained points from inference)
+        const singleCameraWithConstrainedPoints = uninitializedCameras.length === 1 &&
+          Array.from((uninitializedCameras[0] as Viewpoint).imagePoints).some(ip =>
+            (ip.worldPoint as WorldPoint).isFullyConstrained()
+          );
+
+        log(`[Init Debug] No cameras initialized. uninitCameras=${uninitializedCameras.length}, canUseLatePnP=${singleCameraWithConstrainedPoints}`);
+
+        if (uninitializedCameras.length < 2 && !singleCameraWithConstrainedPoints) {
+          log(`[Init Debug] FAILING: Need 2+ cameras for Essential Matrix`);
           throw new Error(`Need 2+ cameras for Essential Matrix, have ${uninitializedCameras.length}. Lock 3+ WPs for PnP.`);
         }
 
-        // VALIDATION: Essential Matrix requires at least one locked point to anchor the scene.
-        // Without a locked point, the scene has no fixed position/scale reference, and axis
-        // constraints alone only provide orientation - the result is arbitrary garbage.
-        if (lockedPoints.length < 1) {
-          throw new Error(
-            'Cannot optimize: at least one point must be locked to anchor the scene. ' +
-            'Lock a point with known coordinates (e.g., origin at [0,0,0]).'
-          );
-        }
-
-        const vp1 = uninitializedCameras[0] as Viewpoint;
-        const vp2 = uninitializedCameras[1] as Viewpoint;
-
-        // Reset intrinsics to safe defaults for Essential Matrix
-        for (const vp of [vp1, vp2]) {
-          vp.focalLength = Math.max(vp.imageWidth, vp.imageHeight);
-          vp.principalPointX = vp.imageWidth / 2;
-          vp.principalPointY = vp.imageHeight / 2;
-        }
-
-        const result = initializeCamerasWithEssentialMatrix(vp1, vp2, 10.0);
-
-        if (result.success) {
-          log(`[Init] EssentialMatrix: ${vp1.name}=[${vp1.position.map(x => x.toFixed(1)).join(',')}], ${vp2.name}=[${vp2.position.map(x => x.toFixed(1)).join(',')}]`);
-          camerasInitialized.push(vp1.name, vp2.name);
-          usedEssentialMatrix = true;
+        // Single camera will use late PnP - skip Essential Matrix
+        if (singleCameraWithConstrainedPoints) {
+          log(`[Init Debug] Single camera will use late PnP with constrained points`);
+          // Skip Essential Matrix - camera will be initialized via late PnP
         } else {
-          throw new Error(`Essential Matrix failed: ${result.error || 'Unknown'}. Need 7+ shared points.`);
+          // VALIDATION: Essential Matrix requires at least one locked point to anchor the scene.
+          // Without a locked point, the scene has no fixed position/scale reference, and axis
+          // constraints alone only provide orientation - the result is arbitrary garbage.
+          if (lockedPoints.length < 1) {
+            throw new Error(
+              'Cannot optimize: at least one point must be locked to anchor the scene. ' +
+              'Lock a point with known coordinates (e.g., origin at [0,0,0]).'
+            );
+          }
+
+          const vp1 = uninitializedCameras[0] as Viewpoint;
+          const vp2 = uninitializedCameras[1] as Viewpoint;
+
+          // Reset intrinsics to safe defaults for Essential Matrix
+          for (const vp of [vp1, vp2]) {
+            vp.focalLength = Math.max(vp.imageWidth, vp.imageHeight);
+            vp.principalPointX = vp.imageWidth / 2;
+            vp.principalPointY = vp.imageHeight / 2;
+          }
+
+          const result = initializeCamerasWithEssentialMatrix(vp1, vp2, 10.0);
+
+          if (result.success) {
+            log(`[Init] EssentialMatrix: ${vp1.name}=[${vp1.position.map(x => x.toFixed(1)).join(',')}], ${vp2.name}=[${vp2.position.map(x => x.toFixed(1)).join(',')}]`);
+            camerasInitialized.push(vp1.name, vp2.name);
+            usedEssentialMatrix = true;
+          } else {
+            throw new Error(`Essential Matrix failed: ${result.error || 'Unknown'}. Need 7+ shared points.`);
+          }
         }
       }
     }

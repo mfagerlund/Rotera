@@ -24,7 +24,6 @@ import type { ImageViewerRef } from '../ImageViewer'
 import type { WorldViewRef } from '../WorldView'
 import { WorkspaceManager, WorkspaceStatus } from '../WorkspaceManager'
 import { MainToolbar } from './MainToolbar'
-import { ToolOptionsStrip } from './ToolOptionsStrip'
 import ImageWorkspace from './ImageWorkspace'
 import WorldWorkspace from './WorldWorkspace'
 import SplitWorkspace from './SplitWorkspace'
@@ -638,12 +637,6 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
               onSaveAsProject={handleSaveAsProject}
               onOpenOptimization={handleTriggerOptimization}
               isDirty={isDirty}
-            />
-
-            <ToolOptionsStrip
-              activeTool={activeTool}
-              currentVanishingLineAxis={currentVanishingLineAxis}
-              onVanishingLineAxisChange={setCurrentVanishingLineAxis}
             />
 
             <div className="content-area">

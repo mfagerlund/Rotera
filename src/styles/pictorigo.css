@@ -1096,7 +1096,7 @@ body {
 }
 
 .sidebar-right {
-  width: var(--sidebar-right-width);
+  width: fit-content;
   background: var(--bg-panel);
   border-left: 1px solid #666;
   flex-shrink: 0;
@@ -1104,11 +1104,6 @@ body {
   display: flex;
   flex-direction: column;
   height: var(--content-height);
-  transition: width 0.2s ease;
-}
-
-.sidebar-right:has(.creation-tools-panel.collapsed) {
-  width: fit-content;
 }
 
 .sidebar-right > * {

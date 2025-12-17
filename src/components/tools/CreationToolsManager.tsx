@@ -3,12 +3,13 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faLocationDot, faRuler, faSquare, faPaintBrush, faChevronLeft, faChevronRight, faLink, faDraftingCompass, faXmark } from '@fortawesome/free-solid-svg-icons'
+import { faLocationDot, faRuler, faSquare, faPaintBrush, faChevronLeft, faLink, faDraftingCompass } from '@fortawesome/free-solid-svg-icons'
 import { faCircle as faCircleRegular } from '@fortawesome/free-regular-svg-icons'
 import LineCreationTool from './LineCreationTool'
 import LoopTraceTool from './LoopTraceTool'
 import OrientationPaintTool from './OrientationPaintTool'
 import CoplanarCreationTool from './CoplanarCreationTool'
+import VanishingLineTool from './VanishingLineTool'
 import FloatingWindow from '../FloatingWindow'
 import { Line, LineDirection } from '../../entities/line'
 import { WorldPoint } from '../../entities/world-point'
@@ -238,13 +239,12 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = observe
   return (
     <div className={`creation-tools-panel ${isCollapsed ? 'collapsed' : ''}`}>
       <div className="tools-header">
-        {!isCollapsed && <h4>Tools</h4>}
         <button
           className="collapse-toggle"
           onClick={toggleCollapsed}
           title={isCollapsed ? 'Expand toolbar' : 'Collapse toolbar'}
         >
-          <FontAwesomeIcon icon={isCollapsed ? faChevronRight : faChevronLeft} />
+          <FontAwesomeIcon icon={faChevronLeft} />
         </button>
         {!isCollapsed && toolMessage && (
           <div className="tool-status-message">
@@ -336,187 +336,6 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = observe
         </button>
       </div>
 
-      {/* Active Tool Panel - hidden when collapsed */}
-      {!isCollapsed && (
-        <div className="active-tool-panel">
-          {activeTool === 'line' && (
-            <div className="tool-placeholder">
-              <div className="tool-message">
-                Use the floating Line Creation window.
-              </div>
-            </div>
-          )}
-
-          {activeTool === 'point' && (
-            <div className="point-creation-tool">
-              <div className="tool-header">
-                <h4>Create Point</h4>
-                <button className="btn-cancel" onClick={handleToolCancel}><FontAwesomeIcon icon={faXmark} /></button>
-              </div>
-              <div className="tool-message">
-                Click on an image to place a point
-              </div>
-              <div className="tool-help">
-                <div className="help-text">
-                  • Switch to Image View to place points
-                  • Press Esc to cancel
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTool === 'plane' && (
-            <div className="tool-placeholder">
-              <div className="tool-message">
-                Use the floating Coplanar Constraint window.
-              </div>
-            </div>
-          )}
-
-          {activeTool === 'circle' && (
-            <div className="circle-creation-tool">
-              <div className="tool-header">
-                <h4>Create Circle</h4>
-                <button className="btn-cancel" onClick={handleToolCancel}><FontAwesomeIcon icon={faXmark} /></button>
-              </div>
-              <div className="tool-message">
-                Circle creation tool - Coming soon
-              </div>
-            </div>
-          )}
-
-          {activeTool === 'vanishing' && (
-            <div className="vanishing-line-tool">
-              <div className="tool-header">
-                <h4>Vanishing Lines</h4>
-                <button className="btn-cancel" onClick={handleToolCancel}><FontAwesomeIcon icon={faXmark} /></button>
-              </div>
-              <div className="tool-message">
-                Click two points to draw a vanishing line
-              </div>
-              <div style={{ margin: '10px 0' }}>
-                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '12px' }}>Axis:</label>
-                <div style={{ display: 'flex', gap: '5px' }}>
-                  <button
-                    onClick={() => onVanishingLineAxisChange?.('x')}
-                    style={{
-                      backgroundColor: currentVanishingLineAxis === 'x' ? '#333' : '#1a1a1a',
-                      border: currentVanishingLineAxis === 'x' ? '2px solid #ff0000' : '1px solid #555',
-                      padding: '8px',
-                      cursor: 'pointer',
-                      flex: 1,
-                      display: 'flex',
-                      justifyContent: 'center',
-                      alignItems: 'center'
-                    }}
-                  >
-                    <span style={{ color: '#ff0000', fontSize: '18px', fontWeight: 'bold' }}>X</span>
-                  </button>
-                  <button
-                    onClick={() => onVanishingLineAxisChange?.('y')}
-                    style={{
-                      backgroundColor: currentVanishingLineAxis === 'y' ? '#333' : '#1a1a1a',
-                      border: currentVanishingLineAxis === 'y' ? '2px solid #00ff00' : '1px solid #555',
-                      padding: '8px',
-                      cursor: 'pointer',
-                      flex: 1,
-                      display: 'flex',
-                      justifyContent: 'center',
-                      alignItems: 'center'
-                    }}
-                  >
-                    <span style={{ color: '#00ff00', fontSize: '18px', fontWeight: 'bold' }}>Y</span>
-                  </button>
-                  <button
-                    onClick={() => onVanishingLineAxisChange?.('z')}
-                    style={{
-                      backgroundColor: currentVanishingLineAxis === 'z' ? '#333' : '#1a1a1a',
-                      border: currentVanishingLineAxis === 'z' ? '2px solid #0000ff' : '1px solid #555',
-                      padding: '8px',
-                      cursor: 'pointer',
-                      flex: 1,
-                      display: 'flex',
-                      justifyContent: 'center',
-                      alignItems: 'center'
-                    }}
-                  >
-                    <span style={{ color: '#0000ff', fontSize: '18px', fontWeight: 'bold' }}>Z</span>
-                  </button>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px' }}>
-                  <button
-                    type="button"
-                    title="Show right-hand rule guide"
-                    onClick={openRightHandGuide}
-                    style={{
-                      backgroundColor: '#1a1a1a',
-                      border: '1px solid #555',
-                      borderRadius: '4px',
-                      width: '32px',
-                      height: '32px',
-                      color: '#fff',
-                      fontWeight: 'bold',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    ?
-                  </button>
-                </div>
-              </div>
-              <div className="tool-help">
-                <div className="help-text">
-                  • Draw lines parallel to world axes
-                  • Need 2+ lines per axis for vanishing point
-                  • Press Esc to cancel
-                </div>
-              </div>
-            </div>
-          )}
-
-        </div>
-      )}
-
-      {/* Selected Vanishing Lines Panel - also hidden when collapsed */}
-      {!isCollapsed && selectedVanishingLines.length > 0 && activeTool !== 'vanishing' && (
-        <div className="active-tool-panel" style={{ marginTop: '10px' }}>
-          <div className="vanishing-line-tool">
-            <div className="tool-header">
-              <h4>Selected Vanishing {selectedVanishingLines.length === 1 ? 'Line' : 'Lines'}</h4>
-            </div>
-            <div style={{ margin: '10px 0' }}>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '12px' }}>
-                {selectedVanishingLines.length === 1 ? 'Change Axis:' : 'Set All to Axis:'}
-              </label>
-              <div style={{ display: 'flex', gap: '5px' }}>
-                {(['x', 'y', 'z'] as const).map(axis => {
-                  const allSameAxis = selectedVanishingLines.every(vl => vl.axis === axis)
-                  const colors = { x: '#ff0000', y: '#00ff00', z: '#0000ff' }
-                  return (
-                    <button
-                      key={axis}
-                      onClick={() => handleSelectedVLAxisChange(axis)}
-                      style={{
-                        backgroundColor: allSameAxis ? '#333' : '#1a1a1a',
-                        border: allSameAxis ? `2px solid ${colors[axis]}` : '1px solid #555',
-                        padding: '8px',
-                        cursor: 'pointer',
-                        flex: 1,
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center'
-                      }}
-                    >
-                      <span style={{ color: colors[axis], fontSize: '18px', fontWeight: 'bold' }}>
-                        {axis.toUpperCase()}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Floating Line Tool - handles both creation and editing */}
       <FloatingWindow
@@ -650,6 +469,25 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = observe
           }}
           selectedDirection={orientationPaintDirection}
           onDirectionChange={onOrientationPaintDirectionChange || (() => {})}
+        />
+      </FloatingWindow>
+
+      {/* Floating Vanishing Line Tool */}
+      <FloatingWindow
+        title="Vanishing Lines"
+        isOpen={activeTool === 'vanishing'}
+        onClose={handleToolCancel}
+        storageKey="vanishing-line-tool"
+        showOkCancel={false}
+        minWidth={100}
+        minHeight={40}
+      >
+        <VanishingLineTool
+          isActive={activeTool === 'vanishing'}
+          onCancel={handleToolCancel}
+          selectedAxis={currentVanishingLineAxis}
+          onAxisChange={onVanishingLineAxisChange || (() => {})}
+          onShowGuide={openRightHandGuide}
         />
       </FloatingWindow>
 

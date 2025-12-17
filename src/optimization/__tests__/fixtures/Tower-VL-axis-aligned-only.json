@@ -1,0 +1,784 @@
+{
+  "formatVersion": 1,
+  "name": "Tower VL",
+  "worldPoints": [
+    {
+      "id": "WorldPoint_0",
+      "name": "WP1",
+      "lockedXyz": [
+        null,
+        null,
+        null
+      ],
+      "inferredXyz": [
+        null,
+        null,
+        0
+      ],
+      "optimizedXyz": [
+        13.051730982345683,
+        19.960394945477955,
+        0
+      ],
+      "color": "#FF6B6B"
+    },
+    {
+      "id": "WorldPoint_1",
+      "name": "WP2",
+      "lockedXyz": [
+        null,
+        null,
+        null
+      ],
+      "inferredXyz": [
+        null,
+        0,
+        0
+      ],
+      "optimizedXyz": [
+        13.054217355947905,
+        0,
+        0
+      ],
+      "color": "#4ECDC4"
+    },
+    {
+      "id": "WorldPoint_2",
+      "name": "O",
+      "lockedXyz": [
+        0,
+        0,
+        0
+      ],
+      "inferredXyz": [
+        0,
+        0,
+        0
+      ],
+      "optimizedXyz": [
+        0,
+        0,
+        0
+      ],
+      "color": "#45B7D1"
+    },
+    {
+      "id": "WorldPoint_3",
+      "name": "Y",
+      "lockedXyz": [
+        null,
+        null,
+        null
+      ],
+      "inferredXyz": [
+        0,
+        null,
+        0
+      ],
+      "optimizedXyz": [
+        0,
+        19.94439580634943,
+        0
+      ],
+      "color": "#FFA07A"
+    },
+    {
+      "id": "WorldPoint_4",
+      "name": "WP5",
+      "lockedXyz": [
+        null,
+        null,
+        null
+      ],
+      "inferredXyz": [
+        0,
+        0,
+        null
+      ],
+      "optimizedXyz": [
+        0,
+        0,
+        9.911374161322552
+      ],
+      "color": "#98D8C8"
+    },
+    {
+      "id": "WorldPoint_5",
+      "name": "WP6",
+      "lockedXyz": [
+        null,
+        null,
+        null
+      ],
+      "inferredXyz": [
+        0,
+        null,
+        null
+      ],
+      "optimizedXyz": [
+        0,
+        19.939241507451612,
+        3.674234693757016
+      ],
+      "color": "#F7DC6F"
+    },
+    {
+      "id": "WorldPoint_6",
+      "name": "WP7",
+      "lockedXyz": [
+        null,
+        null,
+        null
+      ],
+      "inferredXyz": [
+        0,
+        null,
+        null
+      ],
+      "optimizedXyz": [
+        0,
+        30.039529479750954,
+        3.6792096874322606
+      ],
+      "color": "#BB8FCE"
+    },
+    {
+      "id": "WorldPoint_7",
+      "name": "WP8",
+      "lockedXyz": [
+        null,
+        null,
+        null
+      ],
+      "inferredXyz": [
+        0,
+        null,
+        null
+      ],
+      "optimizedXyz": [
+        0,
+        30.02627659231754,
+        9.92666571177907
+      ],
+      "color": "#85C1E2"
+    },
+    {
+      "id": "WorldPoint_8",
+      "name": "WP9",
+      "lockedXyz": [
+        null,
+        null,
+        null
+      ],
+      "inferredXyz": [
+        null,
+        null,
+        null
+      ],
+      "optimizedXyz": [
+        13.05120385300318,
+        19.94483189897483,
+        3.670014550441006
+      ],
+      "color": "#F8B739"
+    },
+    {
+      "id": "WorldPoint_9",
+      "name": "WP10",
+      "lockedXyz": [
+        null,
+        null,
+        null
+      ],
+      "inferredXyz": [
+        null,
+        null,
+        null
+      ],
+      "optimizedXyz": [
+        13.057455220540849,
+        30.043223656774,
+        3.6700128981700657
+      ],
+      "color": "#52B788"
+    },
+    {
+      "id": "WorldPoint_10",
+      "name": "WP11",
+      "lockedXyz": [
+        null,
+        null,
+        null
+      ],
+      "inferredXyz": [
+        null,
+        null,
+        null
+      ],
+      "optimizedXyz": [
+        5.0604753564097775,
+        30.032133855821453,
+        9.929634407950406
+      ],
+      "color": "#E63946"
+    },
+    {
+      "id": "WorldPoint_11",
+      "name": "WP12",
+      "lockedXyz": [
+        null,
+        null,
+        null
+      ],
+      "inferredXyz": [
+        null,
+        null,
+        null
+      ],
+      "optimizedXyz": [
+        5.063942714434404,
+        30.040412810533144,
+        3.677086970537771
+      ],
+      "color": "#A8DADC"
+    },
+    {
+      "id": "WorldPoint_12",
+      "name": "WP13",
+      "lockedXyz": [
+        null,
+        null,
+        null
+      ],
+      "inferredXyz": [
+        null,
+        null,
+        null
+      ],
+      "optimizedXyz": [
+        13.178458532469977,
+        36.93621846641769,
+        9.915641187762345
+      ],
+      "color": "#457B9D"
+    },
+    {
+      "id": "WorldPoint_13",
+      "name": "WP14",
+      "lockedXyz": [
+        null,
+        null,
+        null
+      ],
+      "inferredXyz": [
+        null,
+        null,
+        null
+      ],
+      "optimizedXyz": [
+        5.061202342165435,
+        36.94163851727584,
+        9.927924880065959
+      ],
+      "color": "#F1FAEE"
+    }
+  ],
+  "viewpoints": [
+    {
+      "id": "Viewpoint_14",
+      "name": "1",
+      "filename": "1.png",
+      "url": "",
+      "imageWidth": 651,
+      "imageHeight": 694,
+      "focalLength": 3106.31146591406,
+      "principalPointX": 280.7103339204782,
+      "principalPointY": 406.35099794535626,
+      "skewCoefficient": 0,
+      "aspectRatio": 1,
+      "useSimpleIntrinsics": true,
+      "isPossiblyCropped": true,
+      "radialDistortion": [
+        0,
+        0,
+        0
+      ],
+      "tangentialDistortion": [
+        0,
+        0
+      ],
+      "position": [
+        143.04841152151027,
+        -95.83396835831105,
+        68.50164668810382
+      ],
+      "rotation": [
+        0.5157709320473665,
+        0.1484563638164974,
+        0.7983624816513614,
+        0.2730538437960625
+      ],
+      "calibrationAccuracy": 0,
+      "isProcessed": false,
+      "opacity": 1,
+      "color": "#ffff00",
+      "isPoseLocked": false
+    }
+  ],
+  "lines": [
+    {
+      "id": "Line_15",
+      "name": "",
+      "pointAId": "WorldPoint_0",
+      "pointBId": "WorldPoint_1",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "y",
+      "targetLength": 20,
+      "tolerance": 0.001
+    },
+    {
+      "id": "Line_16",
+      "name": "",
+      "pointAId": "WorldPoint_1",
+      "pointBId": "WorldPoint_2",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "x",
+      "tolerance": 0.001
+    },
+    {
+      "id": "Line_17",
+      "name": "",
+      "pointAId": "WorldPoint_2",
+      "pointBId": "WorldPoint_3",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "y",
+      "tolerance": 0.001
+    },
+    {
+      "id": "Line_18",
+      "name": "",
+      "pointAId": "WorldPoint_3",
+      "pointBId": "WorldPoint_0",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "x",
+      "tolerance": 0.001
+    },
+    {
+      "id": "Line_19",
+      "name": "",
+      "pointAId": "WorldPoint_4",
+      "pointBId": "WorldPoint_2",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "z",
+      "tolerance": 0.001
+    },
+    {
+      "id": "Line_20",
+      "name": "",
+      "pointAId": "WorldPoint_3",
+      "pointBId": "WorldPoint_5",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "z",
+      "tolerance": 0.001
+    },
+    {
+      "id": "Line_21",
+      "name": "",
+      "pointAId": "WorldPoint_5",
+      "pointBId": "WorldPoint_6",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "y",
+      "tolerance": 0.001
+    },
+    {
+      "id": "Line_22",
+      "name": "",
+      "pointAId": "WorldPoint_6",
+      "pointBId": "WorldPoint_7",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "z",
+      "tolerance": 0.001
+    },
+    {
+      "id": "Line_23",
+      "name": "",
+      "pointAId": "WorldPoint_7",
+      "pointBId": "WorldPoint_4",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "y",
+      "targetLength": 30,
+      "tolerance": 0.001
+    },
+    {
+      "id": "Line_24",
+      "name": "",
+      "pointAId": "WorldPoint_0",
+      "pointBId": "WorldPoint_8",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "z",
+      "tolerance": 0.001
+    },
+    {
+      "id": "Line_25",
+      "name": "",
+      "pointAId": "WorldPoint_8",
+      "pointBId": "WorldPoint_5",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "x",
+      "tolerance": 0.001
+    },
+    {
+      "id": "Line_26",
+      "name": "",
+      "pointAId": "WorldPoint_8",
+      "pointBId": "WorldPoint_9",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "y",
+      "tolerance": 0.001
+    },
+    {
+      "id": "Line_27",
+      "name": "",
+      "pointAId": "WorldPoint_6",
+      "pointBId": "WorldPoint_11",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "x",
+      "tolerance": 0.001
+    },
+    {
+      "id": "Line_28",
+      "name": "",
+      "pointAId": "WorldPoint_11",
+      "pointBId": "WorldPoint_10",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "z",
+      "tolerance": 0.001
+    },
+    {
+      "id": "Line_29",
+      "name": "",
+      "pointAId": "WorldPoint_10",
+      "pointBId": "WorldPoint_7",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "x",
+      "tolerance": 0.001
+    },
+    {
+      "id": "Line_30",
+      "name": "",
+      "pointAId": "WorldPoint_9",
+      "pointBId": "WorldPoint_11",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "x",
+      "tolerance": 0.001
+    },
+    {
+      "id": "Line_31",
+      "name": "",
+      "pointAId": "WorldPoint_9",
+      "pointBId": "WorldPoint_12",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "free",
+      "tolerance": 0.001
+    },
+    {
+      "id": "Line_32",
+      "name": "",
+      "pointAId": "WorldPoint_12",
+      "pointBId": "WorldPoint_13",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "x",
+      "tolerance": 0.001
+    },
+    {
+      "id": "Line_33",
+      "name": "",
+      "pointAId": "WorldPoint_13",
+      "pointBId": "WorldPoint_11",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "free",
+      "tolerance": 0.001
+    },
+    {
+      "id": "Line_34",
+      "name": "",
+      "pointAId": "WorldPoint_13",
+      "pointBId": "WorldPoint_10",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "y",
+      "tolerance": 0.001
+    }
+  ],
+  "imagePoints": [
+    {
+      "id": "ImagePoint_35",
+      "worldPointId": "WorldPoint_0",
+      "viewpointId": "Viewpoint_14",
+      "u": 75.7399999999999,
+      "v": 302.37332824706994,
+      "confidence": 1
+    },
+    {
+      "id": "ImagePoint_36",
+      "worldPointId": "WorldPoint_1",
+      "viewpointId": "Viewpoint_14",
+      "u": 95.70000000000007,
+      "v": 559.2133282470701,
+      "confidence": 1
+    },
+    {
+      "id": "ImagePoint_37",
+      "worldPointId": "WorldPoint_2",
+      "viewpointId": "Viewpoint_14",
+      "u": 185.13999999999965,
+      "v": 684.6533282470704,
+      "confidence": 1
+    },
+    {
+      "id": "ImagePoint_38",
+      "worldPointId": "WorldPoint_3",
+      "viewpointId": "Viewpoint_14",
+      "u": 170.58000000000033,
+      "v": 417.6933282470701,
+      "confidence": 1
+    },
+    {
+      "id": "ImagePoint_39",
+      "worldPointId": "WorldPoint_4",
+      "viewpointId": "Viewpoint_14",
+      "u": 329.2199999999998,
+      "v": 639.6533282470704,
+      "confidence": 1
+    },
+    {
+      "id": "ImagePoint_40",
+      "worldPointId": "WorldPoint_5",
+      "viewpointId": "Viewpoint_14",
+      "u": 232.26000000000016,
+      "v": 400.81332824706993,
+      "confidence": 1
+    },
+    {
+      "id": "ImagePoint_41",
+      "worldPointId": "WorldPoint_6",
+      "viewpointId": "Viewpoint_14",
+      "u": 226.4599999999998,
+      "v": 256.65332824707025,
+      "confidence": 1
+    },
+    {
+      "id": "ImagePoint_42",
+      "worldPointId": "WorldPoint_7",
+      "viewpointId": "Viewpoint_14",
+      "u": 319.0200000000002,
+      "v": 231.81332824707033,
+      "confidence": 1
+    },
+    {
+      "id": "ImagePoint_43",
+      "worldPointId": "WorldPoint_8",
+      "viewpointId": "Viewpoint_14",
+      "u": 134.4685750212563,
+      "v": 285.92187958503564,
+      "confidence": 1
+    },
+    {
+      "id": "ImagePoint_44",
+      "worldPointId": "WorldPoint_9",
+      "viewpointId": "Viewpoint_14",
+      "u": 126.28853000001017,
+      "v": 147.8060737923391,
+      "confidence": 1
+    },
+    {
+      "id": "ImagePoint_45",
+      "worldPointId": "WorldPoint_10",
+      "viewpointId": "Viewpoint_14",
+      "u": 282.78898072715543,
+      "v": 194.8602517720646,
+      "confidence": 1
+    },
+    {
+      "id": "ImagePoint_46",
+      "worldPointId": "WorldPoint_11",
+      "viewpointId": "Viewpoint_14",
+      "u": 191.60053452821631,
+      "v": 217.68253495766555,
+      "confidence": 1
+    },
+    {
+      "id": "ImagePoint_47",
+      "worldPointId": "WorldPoint_12",
+      "viewpointId": "Viewpoint_14",
+      "u": 211.71558340282292,
+      "v": 38.72412027308271,
+      "confidence": 1
+    },
+    {
+      "id": "ImagePoint_48",
+      "worldPointId": "WorldPoint_13",
+      "viewpointId": "Viewpoint_14",
+      "u": 279.9314952762394,
+      "v": 105.61972417475576,
+      "confidence": 1
+    }
+  ],
+  "constraints": [
+    {
+      "id": "CoplanarPointsConstraint_49",
+      "type": "coplanar_points",
+      "name": "Loop_coplanar",
+      "pointIds": [
+        "WorldPoint_0",
+        "WorldPoint_1",
+        "WorldPoint_2",
+        "WorldPoint_3"
+      ],
+      "tolerance": 0.001
+    },
+    {
+      "id": "CoplanarPointsConstraint_50",
+      "type": "coplanar_points",
+      "name": "Loop_coplanar",
+      "pointIds": [
+        "WorldPoint_4",
+        "WorldPoint_2",
+        "WorldPoint_3",
+        "WorldPoint_5",
+        "WorldPoint_6",
+        "WorldPoint_7"
+      ],
+      "tolerance": 0.001
+    },
+    {
+      "id": "CoplanarPointsConstraint_51",
+      "type": "coplanar_points",
+      "name": "Loop_coplanar",
+      "pointIds": [
+        "WorldPoint_8",
+        "WorldPoint_9",
+        "WorldPoint_6",
+        "WorldPoint_5"
+      ],
+      "tolerance": 0.001
+    },
+    {
+      "id": "CoplanarPointsConstraint_52",
+      "type": "coplanar_points",
+      "name": "Loop_coplanar",
+      "pointIds": [
+        "WorldPoint_6",
+        "WorldPoint_11",
+        "WorldPoint_10",
+        "WorldPoint_7"
+      ],
+      "tolerance": 0.001
+    },
+    {
+      "id": "CoplanarPointsConstraint_53",
+      "type": "coplanar_points",
+      "name": "Loop_coplanar",
+      "pointIds": [
+        "WorldPoint_11",
+        "WorldPoint_9",
+        "WorldPoint_12",
+        "WorldPoint_13"
+      ],
+      "tolerance": 0.001
+    }
+  ],
+  "showPointNames": true,
+  "autoSave": true,
+  "theme": "dark",
+  "measurementUnits": "meters",
+  "precisionDigits": 3,
+  "showConstraintGlyphs": true,
+  "showMeasurements": true,
+  "autoOptimize": false,
+  "gridVisible": true,
+  "snapToGrid": false,
+  "defaultWorkspace": "world",
+  "showConstructionGeometry": true,
+  "enableSmartSnapping": true,
+  "constraintPreview": true,
+  "visualFeedbackLevel": "standard",
+  "viewSettings": {
+    "visibility": {
+      "worldPoints": true,
+      "lines": true,
+      "planes": true,
+      "vanishingLines": true,
+      "vanishingPoints": true,
+      "perspectiveGrid": false,
+      "reprojectionErrors": false,
+      "cameraVanishingGeometry": true
+    },
+    "locking": {
+      "worldPoints": false,
+      "lines": false,
+      "planes": false,
+      "vanishingLines": false
+    },
+    "isExpanded": false
+  }
+}

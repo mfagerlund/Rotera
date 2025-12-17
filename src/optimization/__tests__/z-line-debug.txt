@@ -2,6 +2,10 @@
 === Y-AXIS BASELINE ===
 Result: converged=true, iter=18, median=0.07px
 [Optimize] WP:9 L:1 VP:2 IP:17 C:2
+[validateVanishingPoints] Added 1 virtual VP lines from direction-constrained Lines
+[validateVanishingPoints] Added 1 virtual VP lines from direction-constrained Lines
+[Init Debug] uninitCameras=2, lockedPts=1, canVP=false
+[Init Debug] No cameras initialized. uninitCameras=2, canUseLatePnP=false
 [EssentialMatrix] 8 pts, t=[5.51,-4.42,7.08]
 [Init] EssentialMatrix: 1=[0.0,0.0,0.0], 2=[-7.3,-3.0,6.1]
 [Tri] 6 pts: WP1:[0.8,-1.2,7.2] WP2:[1.3,1.0,9.0] WP3:[0.0,25.0,0.0] O:[0.0,0.0,0.0] WP5:[-0.6,0.5,6.9] WP6:[-0.4,-1.1,5.5] WP7:[1.8,0.9,8.4] WP8:[1.3,-1.2,6.6]
@@ -14,7 +18,7 @@ Result: converged=true, iter=18, median=0.07px
 [Stage2] Single-cam init: 1 ok, 0 failed
 [Solve] conv=true, iter=18, median=0.07px | 1:f=1601 2:f=1431
 [Handedness] Cannot determine handedness (no axis points found)
-[Summary] *** Excellent | error=0.526 | median=0.07px | iter=18 | conv=true | 3011ms
+[Summary] *** Excellent | error=0.526 | median=0.07px | iter=18 | conv=true | 2453ms
 
 Camera positions:
   1: pos=[-49.92, 63.95, -33.44] f=1601
@@ -40,6 +44,10 @@ Result: converged=true, iter=65, median=6.62px
 
 Optimization logs:
 [Optimize] WP:8 L:1 VP:2 IP:16 C:2
+[validateVanishingPoints] Added 1 virtual VP lines from direction-constrained Lines
+[validateVanishingPoints] Added 1 virtual VP lines from direction-constrained Lines
+[Init Debug] uninitCameras=2, lockedPts=1, canVP=false
+[Init Debug] No cameras initialized. uninitCameras=2, canUseLatePnP=false
 [EssentialMatrix] 8 pts, t=[5.51,-4.42,7.08]
 [Init] EssentialMatrix: 1=[0.0,0.0,0.0], 2=[-7.3,-3.0,6.1]
 [Tri] 6 pts: WP1:[0.8,-1.2,7.2] WP2:[1.3,1.0,9.0] WP3:[-0.9,0.7,7.5] O:[0.0,0.0,0.0] WP5:[-0.6,0.5,6.9] WP6:[0.0,0.0,15.0] WP7:[1.8,0.9,8.4] WP8:[1.3,-1.2,6.6]
@@ -51,7 +59,7 @@ Optimization logs:
 [Stage1] Multi-cam only: WP:8 L:1 IP:16 -> conv=true, iter=297, res=73.290
 [Solve] conv=true, iter=65, median=6.62px | 1:f=1474 2:f=1472
 [Handedness] Cannot determine handedness (no axis points found)
-[Summary] * Poor | error=43.366 | median=6.62px | iter=65 | conv=true | 9311ms
+[Summary] * Poor | error=43.366 | median=6.62px | iter=65 | conv=true | 7298ms
 
 World point positions after optimization:
   WP1: opt=[-20.71, 35.27, -11.07] locked=[null,null,null] inferred=[null,null,null]

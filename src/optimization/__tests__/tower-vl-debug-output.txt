@@ -1,0 +1,86 @@
+=== Tower VL Debug ===
+WorldPoints: 14
+Viewpoints: 1
+Lines: 20
+ImagePoints: 14
+Constraints: 5
+Camera 1 after load:
+  position=[143.04841152151027,-95.83396835831105,68.50164668810382]
+  rotation=[0.5157709320473665,0.1484563638164974,0.7983624816513614,0.2730538437960625]
+  focalLength=3106.31146591406
+  imageSize=651x694
+WP WP1: 3 connected lines, 1 imagePoints
+WP WP2: 2 connected lines, 1 imagePoints
+WP O: 3 connected lines, 1 imagePoints
+WP Y: 3 connected lines, 1 imagePoints
+WP WP5: 2 connected lines, 1 imagePoints
+WP WP6: 3 connected lines, 1 imagePoints
+WP WP7: 3 connected lines, 1 imagePoints
+WP WP8: 3 connected lines, 1 imagePoints
+WP WP9: 3 connected lines, 1 imagePoints
+WP WP10: 3 connected lines, 1 imagePoints
+WP WP11: 3 connected lines, 1 imagePoints
+WP WP12: 4 connected lines, 1 imagePoints
+WP WP13: 2 connected lines, 1 imagePoints
+WP WP14: 3 connected lines, 1 imagePoints
+VP 1: 14 imagePoints
+Line directions: X=7, Y=6, Z=5, plane=0, free=2
+
+=== Results ===
+Converged: true
+Iterations: 138
+Total Error: 1.6141
+
+Camera 1:
+  Position: [143.247, 122.018, 57.168]
+  Rotation: [0.1357, 0.5239, 0.2428, 0.8051]
+
+World Points:
+  WP1: [-14.879, 20.001, 0.000]
+  WP2: [-14.879, 0.000, 0.000]
+  O: [0.000, 0.000, 0.000]
+  Y: [0.000, 20.001, 0.000]
+  WP5: [0.000, 0.000, -10.002]
+  WP6: [0.000, 20.001, -4.022]
+  WP7: [0.000, 29.999, -4.022]
+  WP8: [0.000, 30.000, -10.002]
+  WP9: [-14.879, 20.001, -4.021]
+  WP10: [-14.879, 29.999, -4.022]
+  WP11: [-4.991, 30.000, -10.002]
+  WP12: [-4.991, 30.000, -4.022]
+  WP13: [-14.825, 36.021, -10.003]
+  WP14: [-4.991, 36.021, -10.003]
+
+=== Optimization Logs ===
+[Optimize] WP:14 L:20 VP:1 IP:14 C:5
+[validateVanishingPoints] Added 18 virtual VP lines from direction-constrained Lines
+[Init Debug] uninitCameras=1, lockedPts=1, canVP=true
+[validateVanishingPoints] Added 18 virtual VP lines from direction-constrained Lines
+[Init Path] skipVPForLatePnP=true (uninit=1, locked=1, hasVL=false)
+[Init Debug] No cameras initialized. uninitCameras=1, canUseLatePnP=true
+[Init Debug] Single camera will use late PnP with constrained points
+[Align] y-axis: dot=-1.00 -> -
+[Align] y-axis: chose -Y
+[Fix] Camera 1 at locked point O - moved back
+  Centroid of 14 constrained points: [2.776, 15.597, 3.823]
+  Sample constrained points (first 5):
+    [5.000, 20.000, 0.000]
+    [5.000, 0.000, 0.000]
+    [0.000, 0.000, 0.000]
+    [0.000, 5.000, 0.000]
+    [0.000, 0.000, 5.000]
+  Max distance from centroid: 19.565
+  Computed camera distance: 48.913
+  Initial camera position: [2.776, 15.597, -45.090]
+PnP: Initialized 1 using 14 constrained points
+  Initial reprojection error: 726.70 px
+  Final reprojection error: 0.00 px (9 iterations)
+  Position: [34.476, 22.784, -11.813]
+  Final distance from centroid: 36.069 (ratio to initial: 0.74x)
+[Init] 1 via late PnP
+[Solve] conv=true, iter=138, median=0.40px | 1:f=3126
+[Handedness] Result is LEFT-HANDED (no locked coords to determine axis), applying Z-flip
+[AxisFlips] Applying flips: X=false, Y=false, Z=true (1 total)
+[AxisFlips] Odd number of flips - will set isZReflected=true
+[AxisFlips] Camera 1: position and rotation transformed, isZReflected=true
+[Summary] ** Good | error=1.614 | median=0.40px | iter=138 | conv=true | 3105ms

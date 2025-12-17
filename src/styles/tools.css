@@ -180,12 +180,12 @@
   border-radius: 8px;
   border: 1px solid var(--border);
   transition: width 0.2s ease, padding 0.2s ease;
+  width: fit-content;
 }
 
 .creation-tools-panel.collapsed {
   padding: 8px;
   gap: 8px;
-  width: fit-content;
 }
 
 .tools-header {
@@ -194,40 +194,63 @@
   gap: 6px;
 }
 
-.creation-tools-panel.collapsed .tools-header {
-  flex-direction: row;
-  justify-content: center;
-}
-
-.tools-header h4 {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
 .collapse-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: 6px;
   background: var(--surface-2);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   margin-left: auto;
+  position: relative;
+  overflow: hidden;
+}
+
+.collapse-toggle::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent-blue) 100%);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.collapse-toggle svg {
+  position: relative;
+  z-index: 1;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .creation-tools-panel.collapsed .collapse-toggle {
   margin-left: 0;
 }
 
+.creation-tools-panel.collapsed .collapse-toggle svg {
+  transform: rotate(180deg);
+}
+
 .collapse-toggle:hover {
-  background: var(--surface-3);
-  color: var(--text-primary);
+  border-color: var(--primary);
+  transform: scale(1.08);
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.25);
+}
+
+.collapse-toggle:hover::before {
+  opacity: 1;
+}
+
+.collapse-toggle:hover svg {
+  color: white;
+}
+
+.collapse-toggle:active {
+  transform: scale(0.95);
+  transition: transform 0.1s ease;
 }
 
 .tool-status-message {

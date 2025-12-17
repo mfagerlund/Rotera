@@ -8,6 +8,7 @@ import FloatingWindow from './FloatingWindow'
 import { WorldPoint } from '../entities/world-point'
 import { Viewpoint } from '../entities/viewpoint'
 import { useConfirm } from './ConfirmDialog'
+import { getEntityKey } from '../utils/entityKeys'
 
 interface WorldPointsManagerProps {
   isOpen: boolean
@@ -108,7 +109,7 @@ export const WorldPointsManager: React.FC<WorldPointsManagerProps> = observer(({
               <tbody>
                 {worldPointsList.map(worldPoint => (
                   <tr
-                    key={worldPoint.getName()}
+                    key={getEntityKey(worldPoint)}
                     className={isSelected(worldPoint) ? 'selected' : ''}
                     onClick={(e) => {
                       e.stopPropagation()

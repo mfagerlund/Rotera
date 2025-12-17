@@ -895,7 +895,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
                           const isHovered = hoveredCoplanarConstraint === constraint
                           return (
                             <tr
-                              key={constraint.getName()}
+                              key={getEntityKey(constraint)}
                               onClick={() => onSelectCoplanarConstraint?.(constraint)}
                               onMouseEnter={() => onHoverCoplanarConstraint?.(constraint)}
                               onMouseLeave={() => onHoverCoplanarConstraint?.(null)}
