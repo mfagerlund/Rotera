@@ -15,7 +15,7 @@ import { alignSceneToLineDirections, alignSceneToLockedPoints, AlignmentQualityC
 import type { IOptimizableCamera } from './IOptimizable';
 import { log, clearOptimizationLogs, optimizationLogs } from './optimization-logger';
 import type { ValidationResult } from './initialization-types';
-import { initializeCameras } from './camera-initialization';
+import { initializeCameras, initializeCamerasIteratively } from './camera-initialization';
 
 // Re-export for backwards compatibility
 export { log, clearOptimizationLogs, optimizationLogs } from './optimization-logger';
@@ -503,6 +503,12 @@ export interface OptimizeProjectOptions extends Omit<SolverOptions, 'optimizeCam
    * Set to false to preserve the original coordinate sign convention.
    */
   forceRightHanded?: boolean;
+  /**
+   * If true, use iterative multi-strategy initialization instead of the standard orchestrator.
+   * This allows cameras to be initialized in multiple rounds with intermediate solves,
+   * improving robustness for complex multi-camera scenes. Default: false (opt-in).
+   */
+  useIterativeInit?: boolean;
 }
 
 export interface OptimizeProjectResult extends SolverResult {
@@ -539,6 +545,7 @@ export function optimizeProject(
     optimizeCameraIntrinsics = 'auto',
     lockVPCameras = false,
     forceRightHanded = true,
+    useIterativeInit,
   } = options;
 
   // Clear logs and reset all cached state before solving
@@ -601,14 +608,34 @@ export function optimizeProject(
         canInitializeWithVanishingPoints(vp as Viewpoint, worldPointSet, { allowSinglePoint: true })
       );
 
-      // Run the camera initialization orchestrator
-      const initResult = initializeCameras({
-        uninitializedCameras: uninitializedCameras as Viewpoint[],
-        worldPoints: worldPointSet,
-        lockedPoints,
-        canAnyUseVPStrict: canAnyUninitCameraUseVPStrict,
-        canAnyUseVPRelaxed: canAnyUninitCameraUseVPRelaxed,
-      });
+      // Decide whether to use iterative initialization
+      // Default: use standard orchestrator (iterative is opt-in for now)
+      const shouldUseIterative = useIterativeInit === true;
+
+      let initResult: ReturnType<typeof initializeCameras>;
+
+      if (shouldUseIterative) {
+        log(`[Init] Using iterative multi-strategy initialization`);
+        initResult = initializeCamerasIteratively(
+          {
+            uninitializedCameras: uninitializedCameras as Viewpoint[],
+            worldPoints: worldPointSet,
+            lockedPoints,
+            canAnyUseVPStrict: canAnyUninitCameraUseVPStrict,
+            canAnyUseVPRelaxed: canAnyUninitCameraUseVPRelaxed,
+          },
+          project
+        );
+      } else {
+        log(`[Init] Using standard initialization orchestrator`);
+        initResult = initializeCameras({
+          uninitializedCameras: uninitializedCameras as Viewpoint[],
+          worldPoints: worldPointSet,
+          lockedPoints,
+          canAnyUseVPStrict: canAnyUninitCameraUseVPStrict,
+          canAnyUseVPRelaxed: canAnyUninitCameraUseVPRelaxed,
+        });
+      }
 
       // Merge results into outer scope
       camerasInitialized.push(...initResult.camerasInitialized);
@@ -703,9 +730,6 @@ export function optimizeProject(
       verbose: false,
       initializedViewpoints: initializedViewpointSet,
       skipLockedPoints: useFreeSolve,
-      // For Essential Matrix with single axis, skip inference so scale is computed from triangulated geometry
-      // Multi-axis cases need inference to properly constrain the geometry
-      skipAxisLineInference: usedEssentialMatrix && hasSingleAxisOnly,
     });
 
     if (axisConstrainedLines.length > 0) {

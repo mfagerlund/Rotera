@@ -40,6 +40,15 @@ export interface CameraInitializationResult {
 
   /** Diagnostics for downstream phases */
   diagnostics: InitializationDiagnostics;
+
+  /** Strategy used for each camera (camera name -> strategy) */
+  strategyUsed?: Map<string, string>;
+
+  /** Cameras that couldn't be initialized */
+  camerasFailed?: string[];
+
+  /** Number of iterations used (for iterative init) */
+  iterations?: number;
 }
 
 /**
