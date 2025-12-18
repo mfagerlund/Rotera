@@ -15,6 +15,7 @@ import { alignSceneToLineDirections, alignSceneToLockedPoints, AlignmentQualityC
 import type { IOptimizableCamera } from './IOptimizable';
 import { log, clearOptimizationLogs, optimizationLogs } from './optimization-logger';
 import type { ValidationResult } from './initialization-types';
+import { runFirstTierInitialization } from './camera-initialization';
 
 // Re-export for backwards compatibility
 export { log, clearOptimizationLogs, optimizationLogs } from './optimization-logger';
@@ -630,65 +631,17 @@ export function optimizeProject(
           }
         }
 
-        // CRITICAL: When multiple cameras can VP init but have < 3 locked points each,
-        // only VP init ONE camera. Independent VP init for each camera gives inconsistent
-        // world frames since VP determines rotation but not a consistent position.
-        // After one camera is VP-initialized, triangulate points, then PnP for the rest.
-        let vpInitializedOneCamera = false;
+        // Run first-tier initialization (VP with 2+ points, then PnP with 3+ points)
+        const firstTierResult = runFirstTierInitialization(
+          uninitializedCameras as Viewpoint[],
+          worldPointSet,
+          lockedPoints
+        );
 
-        for (const vp of uninitializedCameras) {
-          const vpConcrete = vp as Viewpoint;
-
-          // For single-camera scenes with only 1-2 locked points AND no actual vanishing lines,
-          // skip VP init and use late PnP instead. Late PnP uses ALL constrained points (including
-          // inferred) and gives better results. VP init with only 1 locked point and only virtual VLs
-          // (from axis-aligned Lines) gives unreliable camera positions.
-          // If camera has actual VLs, VP init should be used - it handles handedness correctly.
-          const hasActualVanishingLines = vpConcrete.getVanishingLineCount() > 0;
-          const skipVPForLatePnP = uninitializedCameras.length === 1 && lockedPoints.length < 3 && !hasActualVanishingLines;
-
-          // When multiple cameras exist and we've already VP-initialized one with < 3 locked points,
-          // skip VP init for remaining cameras - they'll use late PnP after triangulation
-          const skipVPForMultiCam = vpInitializedOneCamera && lockedPoints.length < 3;
-          if (skipVPForMultiCam) {
-            log(`[Init Path] ${vpConcrete.name}: skipping VP (already VP-inited one camera with < 3 locked points)`);
-            continue;
-          }
-
-          log(`[Init Path] skipVPForLatePnP=${skipVPForLatePnP} (uninit=${uninitializedCameras.length}, locked=${lockedPoints.length}, hasVL=${hasActualVanishingLines})`);
-
-          // Use standalone function that counts direction-constrained Lines as virtual VLs
-          if (!skipVPForLatePnP && canInitializeWithVanishingPoints(vpConcrete, worldPointSet, { allowSinglePoint: false })) {
-            const success = initializeCameraWithVanishingPoints(vpConcrete, worldPointSet, { allowSinglePoint: false });
-            if (success) {
-              log(`[Init] ${vpConcrete.name} via VP, f=${vpConcrete.focalLength.toFixed(0)}`);
-              camerasInitialized.push(vpConcrete.name);
-              camerasInitializedViaVP.add(vpConcrete);
-              vpInitializedOneCamera = true;
-              continue;
-            }
-          }
-
-          // NOTE: Single-camera VP init with 1 locked point disabled - late PnP gives better results.
-          // Late PnP uses ALL constrained points (locked + inferred) for better camera positioning.
-
-          const vpLockedPoints = Array.from(vpConcrete.imagePoints).filter(ip =>
-            (ip.worldPoint as WorldPoint).isFullyConstrained()
-          );
-
-          if (vpLockedPoints.length >= 3) {
-            const pnpResult = initializeCameraWithPnP(vpConcrete, worldPointSet);
-            if (pnpResult.success && pnpResult.reliable) {
-              log(`[Init] ${vpConcrete.name} via PnP, pos=[${vpConcrete.position.map(x => x.toFixed(1)).join(',')}]`);
-              camerasInitialized.push(vpConcrete.name);
-            } else if (pnpResult.success && !pnpResult.reliable) {
-              log(`[Init] ${vpConcrete.name} PnP unreliable: ${pnpResult.reason}`);
-              vpConcrete.position = [0, 0, 0];
-              vpConcrete.rotation = [1, 0, 0, 0];
-            } else {
-              throw new Error(`PnP failed for ${vpConcrete.name} with ${vpLockedPoints.length} locked points`);
-            }
-          }
+        // Merge results into outer scope
+        camerasInitialized.push(...firstTierResult.camerasInitialized);
+        for (const vp of firstTierResult.camerasInitializedViaVP) {
+          camerasInitializedViaVP.add(vp);
         }
       }
 
