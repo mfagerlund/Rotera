@@ -426,6 +426,59 @@ function validateProjectConstraints(project: Project): ValidationResult {
   };
 }
 
+/**
+ * Reset cameras and world points for a fresh initialization.
+ * Called when autoInitializeCameras is true.
+ */
+function resetCamerasForInitialization(project: Project): void {
+  const viewpointArray = Array.from(project.viewpoints);
+
+  for (const vp of viewpointArray) {
+    const v = vp as Viewpoint;
+    // Reset pose - always reset when autoInitializeCameras is true
+    v.position = [0, 0, 0];
+    v.rotation = [1, 0, 0, 0];
+    // Reset intrinsics that could be garbage from a previous failed solve
+    v.skewCoefficient = 0;
+    v.aspectRatio = 1;
+    v.radialDistortion = [0, 0, 0];
+    v.tangentialDistortion = [0, 0];
+
+    // Reset clearly garbage focalLength
+    const minFocalLength = Math.min(v.imageWidth, v.imageHeight) * 0.3;
+    const maxFocalLength = Math.max(v.imageWidth, v.imageHeight) * 5;
+    if (v.focalLength < minFocalLength || v.focalLength > maxFocalLength) {
+      v.focalLength = Math.max(v.imageWidth, v.imageHeight);
+    }
+
+    // BUG FIX: Reset focal length for cameras without vanishing lines if it looks optimized
+    // Optimized focal lengths are typically 1.5x-3x the sensor-based default.
+    // If focal length is far from sensor-based default, reset it to avoid using stale values from previous solve.
+    if (v.getVanishingLineCount() === 0) {
+      const sensorBasedFocal = Math.max(v.imageWidth, v.imageHeight);
+      const ratio = v.focalLength / sensorBasedFocal;
+      // If focal length is 1.3x-3x the sensor-based default, it's probably optimized - reset it
+      if (ratio > 1.3 || ratio < 0.7) {
+        v.focalLength = sensorBasedFocal;
+      }
+    }
+
+    // Principal point should be within image bounds
+    if (v.principalPointX < 0 || v.principalPointX > v.imageWidth ||
+        v.principalPointY < 0 || v.principalPointY > v.imageHeight) {
+      v.principalPointX = v.imageWidth / 2;
+      v.principalPointY = v.imageHeight / 2;
+    }
+  }
+
+  // BUG FIX: Clear optimizedXyz on ALL world points, not just unconstrained
+  // Stale optimizedXyz from previous solve can poison initialization
+  const wpArray = Array.from(project.worldPoints) as WorldPoint[];
+  for (const wp of wpArray) {
+    wp.optimizedXyz = undefined;
+  }
+}
+
 export interface OptimizeProjectOptions extends Omit<SolverOptions, 'optimizeCameraIntrinsics'> {
   autoInitializeCameras?: boolean;
   autoInitializeWorldPoints?: boolean;
@@ -518,50 +571,7 @@ export function optimizeProject(
     const viewpointArray = Array.from(project.viewpoints);
 
     if (autoInitializeCameras) {
-      for (const vp of viewpointArray) {
-        const v = vp as Viewpoint;
-        // Reset pose - always reset when autoInitializeCameras is true
-        v.position = [0, 0, 0];
-        v.rotation = [1, 0, 0, 0];
-        // Reset intrinsics that could be garbage from a previous failed solve
-        v.skewCoefficient = 0;
-        v.aspectRatio = 1;
-        v.radialDistortion = [0, 0, 0];
-        v.tangentialDistortion = [0, 0];
-
-        // Reset clearly garbage focalLength
-        const minFocalLength = Math.min(v.imageWidth, v.imageHeight) * 0.3;
-        const maxFocalLength = Math.max(v.imageWidth, v.imageHeight) * 5;
-        if (v.focalLength < minFocalLength || v.focalLength > maxFocalLength) {
-          v.focalLength = Math.max(v.imageWidth, v.imageHeight);
-        }
-
-        // BUG FIX: Reset focal length for cameras without vanishing lines if it looks optimized
-        // Optimized focal lengths are typically 1.5x-3x the sensor-based default.
-        // If focal length is far from sensor-based default, reset it to avoid using stale values from previous solve.
-        if (v.getVanishingLineCount() === 0) {
-          const sensorBasedFocal = Math.max(v.imageWidth, v.imageHeight);
-          const ratio = v.focalLength / sensorBasedFocal;
-          // If focal length is 1.3x-3x the sensor-based default, it's probably optimized - reset it
-          if (ratio > 1.3 || ratio < 0.7) {
-            v.focalLength = sensorBasedFocal;
-          }
-        }
-
-        // Principal point should be within image bounds
-        if (v.principalPointX < 0 || v.principalPointX > v.imageWidth ||
-            v.principalPointY < 0 || v.principalPointY > v.imageHeight) {
-          v.principalPointX = v.imageWidth / 2;
-          v.principalPointY = v.imageHeight / 2;
-        }
-      }
-
-      // BUG FIX: Clear optimizedXyz on ALL world points, not just unconstrained
-      // Stale optimizedXyz from previous solve can poison initialization
-      const wpArray = Array.from(project.worldPoints) as WorldPoint[];
-      for (const wp of wpArray) {
-        wp.optimizedXyz = undefined;
-      }
+      resetCamerasForInitialization(project);
     }
 
     const uninitializedCameras = viewpointArray.filter(vp => {
