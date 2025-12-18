@@ -31,6 +31,56 @@ import type {
 } from './initialization-types';
 import { createDefaultDiagnostics } from './initialization-types';
 
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+/**
+ * Count how many fully constrained points are visible in a camera.
+ */
+function getConstrainedPointCount(camera: Viewpoint): number {
+  return Array.from(camera.imagePoints).filter(ip =>
+    (ip.worldPoint as WorldPoint).isFullyConstrained()
+  ).length;
+}
+
+/**
+ * Set up locked points for initialization by copying effective coordinates to optimizedXyz.
+ */
+function setupLockedPointsForInitialization(lockedPoints: WorldPoint[]): void {
+  for (const wp of lockedPoints) {
+    const effective = wp.getEffectiveXyz();
+    wp.optimizedXyz = [effective[0]!, effective[1]!, effective[2]!];
+  }
+}
+
+/**
+ * Camera state for backup/restore during initialization attempts.
+ */
+interface CameraState {
+  position: [number, number, number];
+  rotation: [number, number, number, number];
+  focalLength: number;
+}
+
+function saveCameraState(camera: Viewpoint): CameraState {
+  return {
+    position: [...camera.position] as [number, number, number],
+    rotation: [...camera.rotation] as [number, number, number, number],
+    focalLength: camera.focalLength,
+  };
+}
+
+function restoreCameraState(camera: Viewpoint, state: CameraState): void {
+  camera.position = state.position;
+  camera.rotation = state.rotation;
+  camera.focalLength = state.focalLength;
+}
+
+// ============================================================================
+// Initialization Strategies
+// ============================================================================
+
 /**
  * Try to initialize a single camera using vanishing points.
  *
@@ -96,12 +146,10 @@ export function tryPnPInitForCamera(
   camera: Viewpoint,
   worldPoints: Set<WorldPoint>
 ): { success: boolean; reliable: boolean; reason?: string } {
-  const constrainedPoints = Array.from(camera.imagePoints).filter(ip =>
-    (ip.worldPoint as WorldPoint).isFullyConstrained()
-  );
+  const constrainedCount = getConstrainedPointCount(camera);
 
-  if (constrainedPoints.length < 3) {
-    return { success: false, reliable: false, reason: `Only ${constrainedPoints.length}/3 constrained points` };
+  if (constrainedCount < 3) {
+    return { success: false, reliable: false, reason: `Only ${constrainedCount}/3 constrained points` };
   }
 
   const pnpResult = initializeCameraWithPnP(camera, worldPoints);
@@ -172,19 +220,8 @@ export function runFirstTierInitialization(
     const pnpResult = tryPnPInitForCamera(camera, worldPoints);
     if (pnpResult.success && pnpResult.reliable) {
       camerasInitialized.push(camera.name);
-    } else if (pnpResult.success && !pnpResult.reliable) {
-      // Camera was reset to uninitialized state
-    } else if (!pnpResult.success && pnpResult.reason?.includes('3 constrained points')) {
-      // Not enough points for PnP - will try other methods
-    } else {
-      // PnP actually failed with enough points - this is an error
-      const constrainedCount = Array.from(camera.imagePoints).filter(ip =>
-        (ip.worldPoint as WorldPoint).isFullyConstrained()
-      ).length;
-      if (constrainedCount >= 3) {
-        throw new Error(`PnP failed for ${camera.name} with ${constrainedCount} locked points`);
-      }
     }
+    // Other cases (unreliable, not enough points) - camera will try other methods
   }
 
   return { camerasInitialized, camerasInitializedViaVP };
@@ -211,10 +248,7 @@ export function runSteppedVPInitialization(
   lockedPoints: WorldPoint[]
 ): SteppedVPInitResult {
   // Set up locked points first
-  for (const wp of lockedPoints) {
-    const effective = wp.getEffectiveXyz();
-    wp.optimizedXyz = [effective[0]!, effective[1]!, effective[2]!];
-  }
+  setupLockedPointsForInitialization(lockedPoints);
 
   // Find and initialize the camera that can use VP with single point
   for (const camera of uninitializedCameras) {
@@ -223,9 +257,7 @@ export function runSteppedVPInitialization(
     }
 
     // Save state in case we need to revert
-    const savedPosition = [...camera.position] as [number, number, number];
-    const savedRotation = [...camera.rotation] as [number, number, number, number];
-    const savedFocalLength = camera.focalLength;
+    const savedState = saveCameraState(camera);
 
     const success = initializeCameraWithVanishingPoints(camera, worldPoints, { allowSinglePoint: true });
     if (!success) {
@@ -240,11 +272,9 @@ export function runSteppedVPInitialization(
     const pnpCameras: Viewpoint[] = [];
 
     for (const remainingCamera of remainingCameras) {
-      const constrainedPoints = Array.from(remainingCamera.imagePoints).filter(ip =>
-        (ip.worldPoint as WorldPoint).isFullyConstrained()
-      );
+      const constrainedCount = getConstrainedPointCount(remainingCamera);
 
-      if (constrainedPoints.length >= 3) {
+      if (constrainedCount >= 3) {
         const pnpResult = initializeCameraWithPnP(remainingCamera, worldPoints);
         if (pnpResult.success && pnpResult.reliable) {
           log(`[Init Stepped] ${remainingCamera.name} via PnP (after VP), pos=[${remainingCamera.position.map(x => x.toFixed(1)).join(',')}]`);
@@ -254,7 +284,7 @@ export function runSteppedVPInitialization(
           allRemainingReliable = false;
         }
       } else {
-        log(`[Init Stepped] ${remainingCamera.name} needs ${constrainedPoints.length}/3 constrained points for PnP`);
+        log(`[Init Stepped] ${remainingCamera.name} needs ${constrainedCount}/3 constrained points for PnP`);
         allRemainingReliable = false;
       }
     }
@@ -271,9 +301,7 @@ export function runSteppedVPInitialization(
 
     // Revert VP initialization and fall back to Essential Matrix
     log(`[Init Stepped] Reverting VP init - remaining cameras not reliably initialized, trying Essential Matrix`);
-    camera.position = savedPosition;
-    camera.rotation = savedRotation;
-    camera.focalLength = savedFocalLength;
+    restoreCameraState(camera, savedState);
 
     // Clear optimizedXyz for locked points so Essential Matrix can set them fresh
     for (const wp of lockedPoints) {
@@ -473,25 +501,15 @@ export function initializeCameras(options: InitializeCamerasOptions): CameraInit
   log(`[Init Debug] uninitCameras=${uninitializedCameras.length}, lockedPts=${lockedPoints.length} (trulyLocked=${trulyLockedCount}), canVP=${canAnyUseVP} (relaxed=${canAnyUseVPRelaxed})`);
 
   if (lockedPoints.length >= 2 || canAnyUseVP || (uninitializedCameras.length === 1 && lockedPoints.length >= 1)) {
-    const canAnyCameraUsePnP = uninitializedCameras.some(vp => {
-      const vpLockedPoints = Array.from(vp.imagePoints).filter(ip =>
-        (ip.worldPoint as WorldPoint).isFullyConstrained()
-      );
-      return vpLockedPoints.length >= 3;
-    });
-
+    const canAnyCameraUsePnP = uninitializedCameras.some(vp => getConstrainedPointCount(vp) >= 3);
     const canAnyCameraUseVPInit = uninitializedCameras.some(vp =>
       canInitializeWithVanishingPoints(vp, worldPoints, { allowSinglePoint: uninitializedCameras.length === 1 })
     );
-
     const willUseEssentialMatrix = !canAnyCameraUsePnP && !canAnyCameraUseVPInit;
 
-    // Set up locked points for VP/PnP initialization
+    // Set up locked points for VP/PnP initialization (not needed for Essential Matrix)
     if (!willUseEssentialMatrix) {
-      for (const wp of lockedPoints) {
-        const effective = wp.getEffectiveXyz();
-        wp.optimizedXyz = [effective[0]!, effective[1]!, effective[2]!];
-      }
+      setupLockedPointsForInitialization(lockedPoints);
     }
 
     // Run first-tier initialization (VP with 2+ points, then PnP with 3+ points)
@@ -527,9 +545,7 @@ export function initializeCameras(options: InitializeCamerasOptions): CameraInit
   if (camerasInitialized.length === 0) {
     // For single-camera scenes, check if late PnP is viable
     const singleCameraWithConstrainedPoints = uninitializedCameras.length === 1 &&
-      Array.from(uninitializedCameras[0].imagePoints).some(ip =>
-        (ip.worldPoint as WorldPoint).isFullyConstrained()
-      );
+      getConstrainedPointCount(uninitializedCameras[0]) > 0;
 
     log(`[Init Debug] No cameras initialized. uninitCameras=${uninitializedCameras.length}, canUseLatePnP=${singleCameraWithConstrainedPoints}`);
 

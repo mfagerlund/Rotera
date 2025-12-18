@@ -125,20 +125,6 @@ export interface EssentialMatrixInitResult {
 }
 
 /**
- * Options for the camera initialization orchestrator.
- */
-export interface CameraInitializationOptions {
-  /** Auto-initialize cameras that don't have poses */
-  autoInitialize: boolean;
-
-  /** Whether to prefer VP initialization over other methods */
-  preferVP?: boolean;
-
-  /** Enable verbose logging */
-  verbose?: boolean;
-}
-
-/**
  * Create default diagnostics (no flags set).
  */
 export function createDefaultDiagnostics(): InitializationDiagnostics {
