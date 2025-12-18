@@ -8,11 +8,13 @@ import { ImagePoint } from '../entities/imagePoint';
 import { Line } from '../entities/line';
 import { initializeCamerasWithEssentialMatrix } from './essential-matrix';
 import { initializeWorldPoints as unifiedInitialize } from './unified-initialization';
+import { triangulateRayRay } from './triangulation';
 import { initializeSingleCameraPoints } from './single-camera-initialization';
 import { initializeCameraWithVanishingPoints, canInitializeWithVanishingPoints, validateVanishingPoints, computeRotationsFromVPs, estimateFocalLength } from './vanishing-points';
 import { alignSceneToLineDirections, alignSceneToLockedPoints, AlignmentQualityCallback, AlignmentResult } from './coordinate-alignment';
 import type { IOptimizableCamera } from './IOptimizable';
 import { log, clearOptimizationLogs, optimizationLogs } from './optimization-logger';
+import type { ValidationResult } from './initialization-types';
 
 // Re-export for backwards compatibility
 export { log, clearOptimizationLogs, optimizationLogs } from './optimization-logger';
@@ -378,6 +380,52 @@ function applyAxisFlips(
   }
 }
 
+/**
+ * Validate that the project has the minimum requirements for optimization.
+ *
+ * TIER 1: At least one fully constrained point (locked or inferred).
+ * TIER 2: Scale constraint (2+ locked points OR line with targetLength).
+ */
+function validateProjectConstraints(project: Project): ValidationResult {
+  const worldPointArray = Array.from(project.worldPoints) as WorldPoint[];
+  const lockedPoints = worldPointArray.filter(wp => wp.isFullyConstrained());
+
+  // TIER 1: Must have at least one fully locked point to anchor the scene
+  if (lockedPoints.length === 0) {
+    return {
+      valid: false,
+      error: 'No fully locked world points found. At least one point must have all three ' +
+        'coordinates (X, Y, Z) locked to anchor the scene. Lock a point at the origin [0,0,0] ' +
+        'or another known position.',
+      lockedPoints: 0,
+      hasScaleConstraint: false,
+    };
+  }
+
+  // TIER 2: Must have scale constraint
+  const hasLengthConstrainedLine = Array.from(project.lines).some(
+    line => line.targetLength !== undefined && line.targetLength > 0
+  );
+  const hasScaleConstraint = lockedPoints.length >= 2 || hasLengthConstrainedLine;
+
+  if (!hasScaleConstraint) {
+    return {
+      valid: false,
+      error: 'No scale constraint found. The scene needs a known distance to establish scale. Provide either:\n' +
+        '  - Two fully locked world points (the distance between them defines scale), OR\n' +
+        '  - A line with a defined length (targetLength)',
+      lockedPoints: lockedPoints.length,
+      hasScaleConstraint: false,
+    };
+  }
+
+  return {
+    valid: true,
+    lockedPoints: lockedPoints.length,
+    hasScaleConstraint: true,
+  };
+}
+
 export interface OptimizeProjectOptions extends Omit<SolverOptions, 'optimizeCameraIntrinsics'> {
   autoInitializeCameras?: boolean;
   autoInitializeWorldPoints?: boolean;
@@ -459,6 +507,12 @@ export function optimizeProject(
   let alignmentWasAmbiguous = false;
   // Track which sign was used for alignment (for retry with opposite)
   let alignmentSignUsed: 'positive' | 'negative' | undefined;
+  // Track the scale factor applied during initialization (for consistent offsets)
+  let appliedScaleFactor = 1.0;
+  // Track if stepped VP init was reverted - if so, VPs are known problematic
+  let steppedVPInitReverted = false;
+  // Track if VP+EM hybrid was applied - if so, skip alignment since VPs already define frame
+  let vpEmHybridApplied = false;
 
   if (autoInitializeCameras || autoInitializeWorldPoints) {
     const viewpointArray = Array.from(project.viewpoints);
@@ -522,30 +576,10 @@ export function optimizeProject(
       const lockedPoints = worldPointArray.filter(wp => wp.isFullyConstrained());
       const worldPointSet = new Set<WorldPoint>(worldPointArray);
 
-      // TIER 1 VALIDATION: Must have at least one fully locked point to anchor the scene
-      // This is the most fundamental requirement - without it, nothing else can work.
-      // Locked points provide the coordinate system origin and scale reference.
-      if (lockedPoints.length === 0) {
-        throw new Error(
-          'No fully locked world points found. At least one point must have all three ' +
-          'coordinates (X, Y, Z) locked to anchor the scene. Lock a point at the origin [0,0,0] ' +
-          'or another known position.'
-        );
-      }
-
-      // TIER 2 VALIDATION: Must have scale constraint
-      // Scale can come from: (a) two fully locked points, OR (b) a line with targetLength
-      const hasLengthConstrainedLine = Array.from(project.lines).some(
-        line => line.targetLength !== undefined && line.targetLength > 0
-      );
-      const hasScaleConstraint = lockedPoints.length >= 2 || hasLengthConstrainedLine;
-
-      if (!hasScaleConstraint) {
-        throw new Error(
-          'No scale constraint found. The scene needs a known distance to establish scale. Provide either:\n' +
-          '  - Two fully locked world points (the distance between them defines scale), OR\n' +
-          '  - A line with a defined length (targetLength)'
-        );
+      // Validate project constraints (Tier 1: locked point, Tier 2: scale constraint)
+      const validation = validateProjectConstraints(project);
+      if (!validation.valid) {
+        throw new Error(validation.error!);
       }
 
       // Check VP capability with both strict (2+ points) and relaxed (1 point) modes
@@ -652,6 +686,8 @@ export function optimizeProject(
         // STEPPED INITIALIZATION: Try VP init with single point for multi-camera scenes
         // If a camera has good VLs and sees a locked point, initialize it first,
         // then use the resulting points to help initialize other cameras
+        // NOTE: Only use stepped init if remaining cameras can be reliably initialized via PnP.
+        // If PnP fails or is unreliable, fall back to Essential Matrix.
         if (uninitializedCameras.length >= 2 && canAnyUninitCameraUseVPRelaxed && lockedPoints.length >= 1) {
           log(`[Init Stepped] Trying VP init with single locked point before Essential Matrix...`);
 
@@ -662,9 +698,15 @@ export function optimizeProject(
           }
 
           // Find and initialize the camera that can use VP with single point
+          let steppedInitSucceeded = false;
           for (const vp of uninitializedCameras) {
             const vpConcrete = vp as Viewpoint;
             if (canInitializeWithVanishingPoints(vpConcrete, worldPointSet, { allowSinglePoint: true })) {
+              // Save state in case we need to revert
+              const savedPosition = [...vpConcrete.position] as [number, number, number];
+              const savedRotation = [...vpConcrete.rotation] as [number, number, number, number];
+              const savedFocalLength = vpConcrete.focalLength;
+
               const success = initializeCameraWithVanishingPoints(vpConcrete, worldPointSet, { allowSinglePoint: true });
               if (success) {
                 log(`[Init Stepped] ${vpConcrete.name} via VP (single point), f=${vpConcrete.focalLength.toFixed(0)}`);
@@ -674,6 +716,9 @@ export function optimizeProject(
                 // After VP init, try to initialize remaining cameras using PnP with constrained points
                 // The inference system should have propagated coordinates to points on axis lines
                 const remainingCameras = uninitializedCameras.filter(c => c !== vpConcrete);
+                let allRemainingReliable = true;
+                const remainingCameraResults: { vp: Viewpoint, success: boolean }[] = [];
+
                 for (const remainingVp of remainingCameras) {
                   const remVpConcrete = remainingVp as Viewpoint;
                   const remConstrainedPoints = Array.from(remVpConcrete.imagePoints).filter(ip =>
@@ -683,17 +728,47 @@ export function optimizeProject(
                     const pnpResult = initializeCameraWithPnP(remVpConcrete, worldPointSet);
                     if (pnpResult.success && pnpResult.reliable) {
                       log(`[Init Stepped] ${remVpConcrete.name} via PnP (after VP), pos=[${remVpConcrete.position.map(x => x.toFixed(1)).join(',')}]`);
-                      camerasInitialized.push(remVpConcrete.name);
-                    } else if (pnpResult.success) {
-                      log(`[Init Stepped] ${remVpConcrete.name} PnP unreliable after VP: ${pnpResult.reason}`);
+                      remainingCameraResults.push({ vp: remVpConcrete, success: true });
+                    } else {
+                      log(`[Init Stepped] ${remVpConcrete.name} PnP unreliable after VP: ${pnpResult.reason || 'unknown'}`);
+                      allRemainingReliable = false;
                     }
                   } else {
                     log(`[Init Stepped] ${remVpConcrete.name} needs ${remConstrainedPoints.length}/3 constrained points for PnP`);
+                    allRemainingReliable = false;
                   }
                 }
-                break; // Done with stepped initialization
+
+                // If all remaining cameras were reliably initialized, commit the results
+                if (allRemainingReliable && remainingCameraResults.length === remainingCameras.length) {
+                  for (const result of remainingCameraResults) {
+                    camerasInitialized.push(result.vp.name);
+                  }
+                  steppedInitSucceeded = true;
+                } else {
+                  // Revert VP initialization and fall back to Essential Matrix
+                  log(`[Init Stepped] Reverting VP init - remaining cameras not reliably initialized, trying Essential Matrix`);
+                  vpConcrete.position = savedPosition;
+                  vpConcrete.rotation = savedRotation;
+                  vpConcrete.focalLength = savedFocalLength;
+                  camerasInitialized.pop(); // Remove the VP-initialized camera
+                  camerasInitializedViaVP.delete(vpConcrete);
+                  steppedVPInitReverted = true; // Mark that VP init failed - skip VP+EM hybrid
+                  // Clear optimizedXyz for locked points so Essential Matrix can set them fresh
+                  for (const wp of lockedPoints) {
+                    wp.optimizedXyz = undefined;
+                  }
+                }
+                break; // Done with stepped initialization attempt
               }
             }
+          }
+
+          // If stepped init didn't fully succeed, camerasInitialized is empty and we fall through to Essential Matrix
+          if (!steppedInitSucceeded && camerasInitialized.length > 0) {
+            // Partial success - some cameras initialized but not all reliably
+            // This shouldn't happen with the revert logic above, but just in case
+            log(`[Init Stepped] Partial success - continuing with ${camerasInitialized.length} cameras`);
           }
         }
       }
@@ -741,6 +816,10 @@ export function optimizeProject(
 
             // HYBRID VP+EM: If cameras have vanishing lines, use VP rotation BEFORE triangulation
             // This ensures the coordinate frame is world-axis-aligned from the start
+            // Skip if stepped VP init was reverted - the VP rotation may not be compatible with EM
+            if (steppedVPInitReverted) {
+              log(`[VP+EM] Skipping - stepped VP init was reverted`);
+            } else {
             log(`[VP+EM] Checking cameras for VP rotation...`);
             for (const vp of [vp1, vp2]) {
               const vpValidation = validateVanishingPoints(vp);
@@ -820,10 +899,12 @@ export function optimizeProject(
                   log(`[Init] VP+EM hybrid: Applied VP rotation from ${vp.name} to align world frame`);
                   log(`[Init] VP+EM: ${vp1.name} rot=[${vp1.rotation.map(x => x.toFixed(3)).join(',')}]`);
                   log(`[Init] VP+EM: ${vp2.name} pos=[${vp2.position.map(x => x.toFixed(1)).join(',')}] rot=[${vp2.rotation.map(x => x.toFixed(3)).join(',')}]`);
+                  vpEmHybridApplied = true;
                   break; // Only apply from first camera with good VPs
                 }
               }
             }
+            } // end of VP+EM hybrid
           } else {
             throw new Error(`Essential Matrix failed: ${result.error || 'Unknown'}. Need 7+ shared points.`);
           }
@@ -843,6 +924,10 @@ export function optimizeProject(
     const lineArray = Array.from(project.lines);
     const constraintArray = Array.from(project.constraints);
 
+    // Note: We used to clear all optimizedXyz here, but that breaks some fixtures
+    // that rely on the pre-computed values. The initialization pipeline should
+    // overwrite these anyway when needed.
+
     const initializedViewpointSet = new Set<Viewpoint>();
     for (const vpName of camerasInitialized) {
       const vp = Array.from(project.viewpoints).find(v => v.name === vpName);
@@ -854,6 +939,45 @@ export function optimizeProject(
     // Compute axis-constrained lines early so we know if free-solve is needed
     const viewpointArray = Array.from(project.viewpoints) as Viewpoint[];
     const axisConstrainedLines = lineArray.filter(l => l.direction && ['x', 'y', 'z'].includes(l.direction));
+
+    // Count unique axis directions - single axis leaves rotation underconstrained
+    const uniqueAxisDirections = new Set(axisConstrainedLines.map(l => l.direction));
+    const hasSingleAxisOnly = uniqueAxisDirections.size === 1;
+
+    // Essential Matrix places a camera at origin [0,0,0]. If a locked point is also at origin,
+    // triangulated points will be in a coordinate system where camera and locked point coincide.
+    // After scaling/translation, the camera ends up AT the locked point, causing a singularity.
+    // The camera-at-origin fix later moves the camera back, but this creates geometric inconsistency
+    // because all triangulated points were computed assuming camera was at origin.
+    // Apply offset when:
+    // - Single-axis cases (rotation underconstrained, camera-at-origin fix causes problems)
+    // - OR stepped VP init was reverted (VPs are problematic, Essential Matrix is fallback)
+    if (usedEssentialMatrix && (hasSingleAxisOnly || steppedVPInitReverted)) {
+      const hasLockedPointAtOrigin = lockedPointsForCheck.some(wp => {
+        const eff = wp.getEffectiveXyz();
+        const distFromOrigin = Math.sqrt((eff[0] ?? 0)**2 + (eff[1] ?? 0)**2 + (eff[2] ?? 0)**2);
+        return distFromOrigin < 0.1;
+      });
+
+      // Check if ANY camera is at origin (Essential Matrix can place either camera at origin)
+      const anyCameraAtOrigin = viewpointArray.some(vp =>
+        Math.sqrt(vp.position[0]**2 + vp.position[1]**2 + vp.position[2]**2) < 0.1
+      );
+
+      if (hasLockedPointAtOrigin && anyCameraAtOrigin) {
+        // Offset all cameras so none are at origin
+        // This preserves relative poses while avoiding the origin conflict
+        const offset: [number, number, number] = [0, 0, -10];
+        log(`[Init] Camera at origin conflicts with locked point - offsetting cameras by [${offset.join(',')}]`);
+        for (const vp of viewpointArray) {
+          vp.position = [
+            vp.position[0] + offset[0],
+            vp.position[1] + offset[1],
+            vp.position[2] + offset[2],
+          ];
+        }
+      }
+    }
 
     // For Essential Matrix WITHOUT axis constraints, use "free solve then align" approach:
     // 1. DON'T pre-set locked points to their target positions
@@ -871,6 +995,9 @@ export function optimizeProject(
       verbose: false,
       initializedViewpoints: initializedViewpointSet,
       skipLockedPoints: useFreeSolve,
+      // For Essential Matrix with single axis, skip inference so scale is computed from triangulated geometry
+      // Multi-axis cases need inference to properly constrain the geometry
+      skipAxisLineInference: usedEssentialMatrix && hasSingleAxisOnly,
     });
 
     if (axisConstrainedLines.length > 0) {
@@ -957,7 +1084,15 @@ export function optimizeProject(
           }
         : undefined;
 
-      const alignmentResult = alignSceneToLineDirections(viewpointArray, pointArray, lineArray, usedEssentialMatrix, qualityCallback);
+      // Align scene to line directions
+      // Skip if VP+EM hybrid was applied - the VP rotation already defines the world frame
+      let alignmentResult: AlignmentResult;
+      if (vpEmHybridApplied) {
+        log(`[Align] Skipping - VP+EM hybrid already aligned world frame`);
+        alignmentResult = { success: true, ambiguous: false };
+      } else {
+        alignmentResult = alignSceneToLineDirections(viewpointArray, pointArray, lineArray, usedEssentialMatrix, qualityCallback);
+      }
 
       // Track if alignment was ambiguous for potential retry
       alignmentWasAmbiguous = alignmentResult.ambiguous;
@@ -967,13 +1102,40 @@ export function optimizeProject(
       alignmentSignUsed = 'positive';
 
       // Apply scale from line target lengths
+      // Only use lines with TRIANGULATED endpoints - skip lines where both endpoints are inferred/locked
+      // because those are already at their target length (scale=1) and would corrupt the average
       const linesWithTargetLength = axisConstrainedLines.filter(l => l.targetLength !== undefined);
+      log(`[Scale] axisConstrainedLines=${axisConstrainedLines.length}, linesWithTargetLength=${linesWithTargetLength.length}, usedEssentialMatrix=${usedEssentialMatrix}`);
       if (linesWithTargetLength.length > 0 && usedEssentialMatrix) {
         let sumScale = 0;
         let count = 0;
         for (const line of linesWithTargetLength) {
           const posA = line.pointA.optimizedXyz;
           const posB = line.pointB.optimizedXyz;
+          // Check if each point's position came from inference (matches effective coords on constrained axes)
+          // rather than triangulation. If so, skip this line for scale computation.
+          const isFromInference = (wp: WorldPoint): boolean => {
+            if (!wp.optimizedXyz) return false;
+            const eff = wp.getEffectiveXyz();
+            // Check each constrained axis - if they all match, position is from inference
+            let hasConstraint = false;
+            for (let i = 0; i < 3; i++) {
+              if (eff[i] !== null) {
+                hasConstraint = true;
+                // Allow small tolerance for floating point
+                if (Math.abs(wp.optimizedXyz[i] - eff[i]!) > 0.01) {
+                  return false; // Position differs from constraint, so it was triangulated
+                }
+              }
+            }
+            return hasConstraint; // Has constraints and position matches them
+          };
+          const aFromInference = isFromInference(line.pointA);
+          const bFromInference = isFromInference(line.pointB);
+          if (aFromInference && bFromInference) {
+            log(`[Scale] Line ${line.pointA.name}-${line.pointB.name}: skipped (both endpoints from inference)`);
+            continue;
+          }
           if (posA && posB && line.targetLength) {
             const currentLength = Math.sqrt(
               (posB[0] - posA[0]) ** 2 + (posB[1] - posA[1]) ** 2 + (posB[2] - posA[2]) ** 2
@@ -981,11 +1143,13 @@ export function optimizeProject(
             if (currentLength > 0.01) {
               sumScale += line.targetLength / currentLength;
               count++;
+              log(`[Scale] Line ${line.pointA.name}-${line.pointB.name}: current=${currentLength.toFixed(3)}, target=${line.targetLength}, scale=${(line.targetLength / currentLength).toFixed(3)}`);
             }
           }
         }
         if (count > 0) {
           const scale = sumScale / count;
+          appliedScaleFactor = scale;
           log(`[Scale] Axis lines: scale=${scale.toFixed(3)} from ${count} lines`);
           for (const wp of pointArray) {
             if (wp.optimizedXyz) {
@@ -1069,13 +1233,14 @@ export function optimizeProject(
               2 * (q[2] * q[3] - q[0] * q[1]),
               q[0]*q[0] - q[1]*q[1] - q[2]*q[2] + q[3]*q[3],
             ];
-            // Move camera backward (opposite view direction) by 10 units
+            // Move camera backward (opposite view direction) by 10 units (scaled for large scenes)
+            const backwardDistance = 10 * appliedScaleFactor;
             vp.position = [
-              vp.position[0] - viewDir[0] * 10,
-              vp.position[1] - viewDir[1] * 10,
-              vp.position[2] - viewDir[2] * 10,
+              vp.position[0] - viewDir[0] * backwardDistance,
+              vp.position[1] - viewDir[1] * backwardDistance,
+              vp.position[2] - viewDir[2] * backwardDistance,
             ];
-            log(`[Fix] Camera ${vp.name} at locked point ${wp.name} - moved back`);
+            log(`[Fix] Camera ${vp.name} at locked point ${wp.name} - moved back by ${backwardDistance.toFixed(2)}`);
           }
         }
       }
@@ -1312,9 +1477,15 @@ export function optimizeProject(
     }
     // 'auto' mode:
     // - For cameras with vanishing lines: don't optimize (VL anchors focal length)
+    // - For single-axis constraint: don't optimize (underconstrained geometry causes instability)
     // - For cameras initialized via late PnP: DO optimize focal length (PnP only gives pose, not focal)
     // - For other cameras (e.g., essential matrix): allow optimization
     if (vp.vanishingLines.size > 0) {
+      return false;
+    }
+    // Single-axis constraint leaves geometry underconstrained - optimizing focal length
+    // causes unrealistic values as the optimizer compensates for missing DoF
+    if (hasSingleAxisConstraint) {
       return false;
     }
     // Late PnP cameras need focal length optimization since PnP doesn't determine focal length.
