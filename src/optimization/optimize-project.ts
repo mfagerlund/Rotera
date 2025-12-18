@@ -15,7 +15,7 @@ import { alignSceneToLineDirections, alignSceneToLockedPoints, AlignmentQualityC
 import type { IOptimizableCamera } from './IOptimizable';
 import { log, clearOptimizationLogs, optimizationLogs } from './optimization-logger';
 import type { ValidationResult } from './initialization-types';
-import { runFirstTierInitialization } from './camera-initialization';
+import { runFirstTierInitialization, runSteppedVPInitialization } from './camera-initialization';
 
 // Re-export for backwards compatibility
 export { log, clearOptimizationLogs, optimizationLogs } from './optimization-logger';
@@ -647,91 +647,27 @@ export function optimizeProject(
 
       if (camerasInitialized.length === 0) {
         // STEPPED INITIALIZATION: Try VP init with single point for multi-camera scenes
-        // If a camera has good VLs and sees a locked point, initialize it first,
-        // then use the resulting points to help initialize other cameras
-        // NOTE: Only use stepped init if remaining cameras can be reliably initialized via PnP.
-        // If PnP fails or is unreliable, fall back to Essential Matrix.
         if (uninitializedCameras.length >= 2 && canAnyUninitCameraUseVPRelaxed && lockedPoints.length >= 1) {
           log(`[Init Stepped] Trying VP init with single locked point before Essential Matrix...`);
 
-          // Set up locked points first
-          for (const wp of lockedPoints) {
-            const effective = wp.getEffectiveXyz();
-            wp.optimizedXyz = [effective[0]!, effective[1]!, effective[2]!];
-          }
+          const steppedResult = runSteppedVPInitialization(
+            uninitializedCameras as Viewpoint[],
+            worldPointSet,
+            lockedPoints
+          );
 
-          // Find and initialize the camera that can use VP with single point
-          let steppedInitSucceeded = false;
-          for (const vp of uninitializedCameras) {
-            const vpConcrete = vp as Viewpoint;
-            if (canInitializeWithVanishingPoints(vpConcrete, worldPointSet, { allowSinglePoint: true })) {
-              // Save state in case we need to revert
-              const savedPosition = [...vpConcrete.position] as [number, number, number];
-              const savedRotation = [...vpConcrete.rotation] as [number, number, number, number];
-              const savedFocalLength = vpConcrete.focalLength;
-
-              const success = initializeCameraWithVanishingPoints(vpConcrete, worldPointSet, { allowSinglePoint: true });
-              if (success) {
-                log(`[Init Stepped] ${vpConcrete.name} via VP (single point), f=${vpConcrete.focalLength.toFixed(0)}`);
-                camerasInitialized.push(vpConcrete.name);
-                camerasInitializedViaVP.add(vpConcrete);
-
-                // After VP init, try to initialize remaining cameras using PnP with constrained points
-                // The inference system should have propagated coordinates to points on axis lines
-                const remainingCameras = uninitializedCameras.filter(c => c !== vpConcrete);
-                let allRemainingReliable = true;
-                const remainingCameraResults: { vp: Viewpoint, success: boolean }[] = [];
-
-                for (const remainingVp of remainingCameras) {
-                  const remVpConcrete = remainingVp as Viewpoint;
-                  const remConstrainedPoints = Array.from(remVpConcrete.imagePoints).filter(ip =>
-                    (ip.worldPoint as WorldPoint).isFullyConstrained()
-                  );
-                  if (remConstrainedPoints.length >= 3) {
-                    const pnpResult = initializeCameraWithPnP(remVpConcrete, worldPointSet);
-                    if (pnpResult.success && pnpResult.reliable) {
-                      log(`[Init Stepped] ${remVpConcrete.name} via PnP (after VP), pos=[${remVpConcrete.position.map(x => x.toFixed(1)).join(',')}]`);
-                      remainingCameraResults.push({ vp: remVpConcrete, success: true });
-                    } else {
-                      log(`[Init Stepped] ${remVpConcrete.name} PnP unreliable after VP: ${pnpResult.reason || 'unknown'}`);
-                      allRemainingReliable = false;
-                    }
-                  } else {
-                    log(`[Init Stepped] ${remVpConcrete.name} needs ${remConstrainedPoints.length}/3 constrained points for PnP`);
-                    allRemainingReliable = false;
-                  }
-                }
-
-                // If all remaining cameras were reliably initialized, commit the results
-                if (allRemainingReliable && remainingCameraResults.length === remainingCameras.length) {
-                  for (const result of remainingCameraResults) {
-                    camerasInitialized.push(result.vp.name);
-                  }
-                  steppedInitSucceeded = true;
-                } else {
-                  // Revert VP initialization and fall back to Essential Matrix
-                  log(`[Init Stepped] Reverting VP init - remaining cameras not reliably initialized, trying Essential Matrix`);
-                  vpConcrete.position = savedPosition;
-                  vpConcrete.rotation = savedRotation;
-                  vpConcrete.focalLength = savedFocalLength;
-                  camerasInitialized.pop(); // Remove the VP-initialized camera
-                  camerasInitializedViaVP.delete(vpConcrete);
-                  steppedVPInitReverted = true; // Mark that VP init failed - skip VP+EM hybrid
-                  // Clear optimizedXyz for locked points so Essential Matrix can set them fresh
-                  for (const wp of lockedPoints) {
-                    wp.optimizedXyz = undefined;
-                  }
-                }
-                break; // Done with stepped initialization attempt
-              }
+          if (steppedResult.success) {
+            // Add VP-initialized cameras
+            for (const vp of steppedResult.vpCameras) {
+              camerasInitialized.push(vp.name);
+              camerasInitializedViaVP.add(vp);
             }
-          }
-
-          // If stepped init didn't fully succeed, camerasInitialized is empty and we fall through to Essential Matrix
-          if (!steppedInitSucceeded && camerasInitialized.length > 0) {
-            // Partial success - some cameras initialized but not all reliably
-            // This shouldn't happen with the revert logic above, but just in case
-            log(`[Init Stepped] Partial success - continuing with ${camerasInitialized.length} cameras`);
+            // Add PnP-initialized cameras
+            for (const vp of steppedResult.pnpCameras) {
+              camerasInitialized.push(vp.name);
+            }
+          } else if (steppedResult.reverted) {
+            steppedVPInitReverted = true; // Mark that VP init failed - skip VP+EM hybrid
           }
         }
       }
