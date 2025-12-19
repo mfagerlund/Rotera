@@ -22,6 +22,45 @@ function getAxisColorForDirection(direction: LineDirection): string | null {
   }
 }
 
+/**
+ * Draw an arrowhead at a point, pointing in the given direction.
+ * @param ctx Canvas context
+ * @param x X position of arrow tip
+ * @param y Y position of arrow tip
+ * @param angle Direction angle in radians (where the arrow points)
+ * @param size Size of the arrowhead
+ * @param color Stroke color
+ * @param lineWidth Stroke width
+ */
+function drawArrowhead(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  angle: number,
+  size: number,
+  color: string,
+  lineWidth: number
+) {
+  const headAngle = Math.PI / 6 // 30 degrees
+
+  ctx.beginPath()
+  ctx.moveTo(x, y)
+  ctx.lineTo(
+    x - size * Math.cos(angle - headAngle),
+    y - size * Math.sin(angle - headAngle)
+  )
+  ctx.moveTo(x, y)
+  ctx.lineTo(
+    x - size * Math.cos(angle + headAngle),
+    y - size * Math.sin(angle + headAngle)
+  )
+
+  ctx.strokeStyle = color
+  ctx.lineWidth = lineWidth
+  ctx.setLineDash([])
+  ctx.stroke()
+}
+
 export function renderLines(
   ctx: CanvasRenderingContext2D,
   project: Project,
@@ -68,6 +107,16 @@ export function renderLines(
     ctx.strokeStyle = strokeColor
     ctx.lineWidth = lineWidth
     ctx.stroke()
+
+    // Draw arrow for axis-aligned lines with a target length
+    // Arrow points from pointA toward pointB (positive direction)
+    if (line.isAxisAligned() && line.targetLength !== undefined) {
+      const dx = projB.x - projA.x
+      const dy = projB.y - projA.y
+      const angle = Math.atan2(dy, dx)
+      const arrowSize = 12
+      drawArrowhead(ctx, projB.x, projB.y, angle, arrowSize, strokeColor, lineWidth)
+    }
 
     // Always show line name and distance (if set)
     const midX = (projA.x + projB.x) / 2

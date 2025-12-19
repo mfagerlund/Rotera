@@ -136,16 +136,19 @@ function inferFromLine(line: Line): { pointsUpdated: number; conflicts: Inferenc
   // This enables single-point scale establishment: if one endpoint is fully known
   // and the line has a targetLength, we can infer the unknown endpoint's position
   // along the line direction.
+  // Direction is from pointA to pointB (positive), so:
+  // - When inferring pointB from pointA: add targetLength
+  // - When inferring pointA from pointB: subtract targetLength
   if (line.targetLength !== undefined && line.targetLength > 0) {
     const axisIndex = getAxisIndex(direction)
     if (axisIndex !== null) {
-      // Try to infer pointB from pointA
-      const resultB = inferAlongLineDirection(pointA, pointB, axisIndex, line.targetLength, `${direction}-line ${line.name} targetLength`)
+      // Try to infer pointB from pointA (positive direction)
+      const resultB = inferAlongLineDirection(line, pointA, pointB, axisIndex, line.targetLength, `${direction}-line ${line.name} targetLength`)
       pointsUpdated += resultB.pointsUpdated
       conflicts.push(...resultB.conflicts)
 
-      // Try to infer pointA from pointB
-      const resultA = inferAlongLineDirection(pointB, pointA, axisIndex, line.targetLength, `${direction}-line ${line.name} targetLength`)
+      // Try to infer pointA from pointB (negative direction)
+      const resultA = inferAlongLineDirection(line, pointB, pointA, axisIndex, line.targetLength, `${direction}-line ${line.name} targetLength`)
       pointsUpdated += resultA.pointsUpdated
       conflicts.push(...resultA.conflicts)
     }
@@ -178,9 +181,11 @@ function getAxisIndex(direction: string | undefined): number | null {
  * The restriction to single-camera scenarios prevents incorrect inferences in multi-camera
  * setups where Essential Matrix handles scale differently.
  *
- * Sign: We pick positive direction by default. The optimizer will correct if needed.
+ * Direction is from pointA to pointB (positive). When source is pointA, we add the length.
+ * When source is pointB, we subtract the length.
  */
 function inferAlongLineDirection(
+  line: Line,
   source: WorldPoint,
   target: WorldPoint,
   axisIndex: number,
@@ -246,8 +251,11 @@ function inferAlongLineDirection(
   }
 
   // All conditions met: infer the coordinate along the direction
-  // Pick positive direction by default; optimizer will correct via image evidence
-  const inferredValue = sourceAxisValue + targetLength
+  // Direction is from pointA to pointB (positive)
+  // If source is pointA, we're inferring pointB: add targetLength
+  // If source is pointB, we're inferring pointA: subtract targetLength
+  const sign = source === line.pointA ? 1 : -1
+  const inferredValue = sourceAxisValue + sign * targetLength
 
   target.inferredXyz[axisIndex] = inferredValue
   return { pointsUpdated: 1, conflicts }

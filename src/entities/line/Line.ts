@@ -418,6 +418,16 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
     this.pointB.removeConnectedLine(this)
   }
 
+  /**
+   * Swap pointA and pointB, reversing the line direction.
+   * For axis-aligned lines with a length constraint, this reverses the positive direction.
+   */
+  swapPoints(): void {
+    const temp = this.pointA
+    this.pointA = this.pointB
+    this.pointB = temp
+  }
+
   // ============================================================================
   // IResidualProvider implementation (optimization system)
   // ============================================================================

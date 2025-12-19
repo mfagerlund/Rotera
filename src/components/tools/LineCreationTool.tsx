@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowRight, faBullseye, faMagnifyingGlass, faTriangleExclamation, faXmark } from '@fortawesome/free-solid-svg-icons'
+import { faArrowRight, faArrowsUpDown, faBullseye, faMagnifyingGlass, faTriangleExclamation, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { useConfirm } from '../ConfirmDialog'
 import { WorldPoint } from '../../entities/world-point'
 import { Line } from '../../entities/line'
@@ -349,6 +349,19 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = observer(({
   const handleSlot1Focus = () => setActiveSlot(1)
   const handleSlot2Focus = () => setActiveSlot(2)
 
+  // Swap points (reverses direction for axis-aligned lines with length)
+  const handleSwapPoints = () => {
+    // Swap local state
+    const temp = pointSlot1
+    setPointSlot1(pointSlot2)
+    setPointSlot2(temp)
+
+    // In edit mode, also swap on the actual line entity
+    if (editMode && existingLine) {
+      existingLine.swapPoints()
+    }
+  }
+
   // Check if a line already exists between two points
   const lineAlreadyExists = useCallback((pointA: WorldPoint | null, pointB: WorldPoint | null): { exists: boolean, lineName?: string } => {
     if (!pointA || !pointB) return { exists: false }
@@ -501,6 +514,28 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = observer(({
             onFocus={handleSlot1Focus}
             onClear={clearSlot1}
           />
+
+          {/* Swap Points Button */}
+          <div style={{display: 'flex', justifyContent: 'center'}}>
+            <button
+              type="button"
+              onClick={handleSwapPoints}
+              disabled={!pointSlot1 && !pointSlot2}
+              title="Swap points (reverses direction)"
+              style={{
+                padding: '2px 12px',
+                fontSize: '11px',
+                border: '1px solid var(--border, #555)',
+                background: 'var(--bg-input, #2a2a2a)',
+                color: 'var(--text, #fff)',
+                borderRadius: '3px',
+                cursor: pointSlot1 || pointSlot2 ? 'pointer' : 'not-allowed',
+                opacity: pointSlot1 || pointSlot2 ? 1 : 0.5
+              }}
+            >
+              <FontAwesomeIcon icon={faArrowsUpDown} /> Swap
+            </button>
+          </div>
 
           <PointSlotSelector
             label="Point 2"

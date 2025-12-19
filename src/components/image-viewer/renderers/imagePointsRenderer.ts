@@ -14,6 +14,38 @@ function getAxisColorForDirection(direction: LineDirection): string | null {
   }
 }
 
+/**
+ * Draw an arrowhead at a point, pointing in the given direction.
+ */
+function drawArrowhead(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  angle: number,
+  size: number,
+  color: string,
+  lineWidth: number
+) {
+  const headAngle = Math.PI / 6 // 30 degrees
+
+  ctx.beginPath()
+  ctx.moveTo(x, y)
+  ctx.lineTo(
+    x - size * Math.cos(angle - headAngle),
+    y - size * Math.sin(angle - headAngle)
+  )
+  ctx.moveTo(x, y)
+  ctx.lineTo(
+    x - size * Math.cos(angle + headAngle),
+    y - size * Math.sin(angle + headAngle)
+  )
+
+  ctx.strokeStyle = color
+  ctx.lineWidth = lineWidth
+  ctx.setLineDash([])
+  ctx.stroke()
+}
+
 export function renderLines(params: RenderParams): void {
   const {
     ctx,
@@ -78,6 +110,16 @@ export function renderLines(params: RenderParams): void {
 
     if (line.isConstruction) {
       ctx.setLineDash([])
+    }
+
+    // Draw arrow for axis-aligned lines with a target length
+    // Arrow points from pointA toward pointB (positive direction)
+    if (line.isAxisAligned() && line.targetLength !== undefined) {
+      const dx = x2 - x1
+      const dy = y2 - y1
+      const angle = Math.atan2(dy, dx)
+      const arrowSize = 12
+      drawArrowhead(ctx, x2, y2, angle, arrowSize, strokeColor, lineWidth)
     }
 
     const midX = (x1 + x2) / 2

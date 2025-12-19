@@ -118,7 +118,7 @@ PnP: Initialized C1 using 6 constrained points
 [AxisFlips] Odd number of flips - will set isZReflected=true
 [AxisFlips] Camera C3: position and rotation transformed, isZReflected=true
 [AxisFlips] Camera C1: position and rotation transformed, isZReflected=true
-[Summary] ** Good | error=1.304 | median=0.36px | iter=20 | conv=true | 1101ms
+[Summary] ** Good | error=1.304 | median=0.36px | iter=20 | conv=true | 1033ms
 
 === FINAL CAMERA POSITIONS ===
 C3: pos=[20.1, -7.7, -58.7] f=2014
