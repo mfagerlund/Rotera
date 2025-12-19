@@ -55,7 +55,7 @@ export const PlanesManager: React.FC<PlanesManagerProps> = observer(({
   }
 
   const isSelected = (plane: Plane) => {
-    return selectedPlanes.some(p => p.getType() === 'plane' && p.getName() === plane.name)
+    return selectedPlanes.some(p => p === plane)
   }
 
   return (

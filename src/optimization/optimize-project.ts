@@ -574,6 +574,11 @@ export function optimizeProject(
   let steppedVPInitReverted = false;
   // Track if VP+EM hybrid was applied - if so, skip alignment since VPs already define frame
   let vpEmHybridApplied = false;
+  // Store pre-alignment state for potential retry with opposite alignment sign
+  let preAlignmentState: {
+    worldPoints: Map<WorldPoint, [number, number, number] | undefined>;
+    cameras: Map<Viewpoint, { position: [number, number, number]; rotation: [number, number, number, number]; focalLength: number }>;
+  } | undefined;
 
   if (autoInitializeCameras || autoInitializeWorldPoints) {
     const viewpointArray = Array.from(project.viewpoints);
@@ -732,6 +737,23 @@ export function optimizeProject(
       skipLockedPoints: useFreeSolve,
     });
 
+    // Save state after initialization but BEFORE alignment for potential retry
+    // This allows retry to test opposite alignment on the same scene geometry
+    preAlignmentState = {
+      worldPoints: new Map<WorldPoint, [number, number, number] | undefined>(),
+      cameras: new Map<Viewpoint, { position: [number, number, number]; rotation: [number, number, number, number]; focalLength: number }>(),
+    };
+    for (const wp of pointArray) {
+      preAlignmentState.worldPoints.set(wp, wp.optimizedXyz ? [...wp.optimizedXyz] as [number, number, number] : undefined);
+    }
+    for (const vp of viewpointArray) {
+      preAlignmentState.cameras.set(vp, {
+        position: [...vp.position] as [number, number, number],
+        rotation: [...vp.rotation] as [number, number, number, number],
+        focalLength: vp.focalLength,
+      });
+    }
+
     if (axisConstrainedLines.length > 0) {
       // Create quality callback for degenerate Essential Matrix cases.
       // This runs a preliminary solve and returns the residual.
@@ -797,10 +819,12 @@ export function optimizeProject(
             }
 
             // Run a solve to test alignment quality
+            // Use regularization like Stage1 to help differentiate between alignment options
             const testSystem = new ConstraintSystem({
               maxIterations,
               tolerance: 1e-4,
               verbose: false,
+              regularizationWeight: 0.5,
             });
             pointArray.forEach(p => testSystem.addPoint(p));
             lineArray.forEach(l => testSystem.addLine(l));
@@ -821,17 +845,15 @@ export function optimizeProject(
       let alignmentResult: AlignmentResult;
       if (vpEmHybridApplied) {
         log(`[Align] Skipping - VP+EM hybrid already aligned world frame`);
-        alignmentResult = { success: true, ambiguous: false };
+        alignmentResult = { success: true, ambiguous: false, signUsed: undefined };
       } else {
         alignmentResult = alignSceneToLineDirections(viewpointArray, pointArray, lineArray, usedEssentialMatrix, qualityCallback);
       }
 
       // Track if alignment was ambiguous for potential retry
       alignmentWasAmbiguous = alignmentResult.ambiguous;
-      // Track which sign was used (positive = dotPreferPositive direction)
-      // Since alignment returns ambiguous when it couldn't decide, we know it used positive
-      // (see coordinate-alignment.ts line ~509: usePositive = dotPreferPositive)
-      alignmentSignUsed = 'positive';
+      // Track which sign was actually used by alignment
+      alignmentSignUsed = alignmentResult.signUsed;
 
       // Apply scale from line target lengths
       // Only use lines with TRIANGULATED endpoints - skip lines where both endpoints are inferred/locked
@@ -1203,18 +1225,41 @@ export function optimizeProject(
     }
   }
 
+  // Pre-compute axis-constrained lines for shouldOptimizeIntrinsics check
+  const lineArray = Array.from(project.lines);
+  const axisConstrainedLinesSet = new Set(
+    lineArray.filter(l => l.direction && ['x', 'y', 'z'].includes(l.direction))
+  );
+
   const shouldOptimizeIntrinsics = (vp: IOptimizableCamera) => {
     if (typeof optimizeCameraIntrinsics === 'boolean') {
       return optimizeCameraIntrinsics;
     }
     // 'auto' mode:
     // - For cameras with vanishing lines: don't optimize (VL anchors focal length)
+    // - For cameras observing axis-constrained lines: don't optimize (they have virtual VPs)
     // - For single-axis constraint: don't optimize (underconstrained geometry causes instability)
     // - For cameras initialized via late PnP: DO optimize focal length (PnP only gives pose, not focal)
     // - For other cameras (e.g., essential matrix): allow optimization
     if (vp.vanishingLines.size > 0) {
       return false;
     }
+
+    // Check if camera observes any axis-constrained lines (virtual VPs)
+    // These lines define world axis directions and constrain the focal length
+    const vpConcrete = vp as Viewpoint;
+    for (const line of axisConstrainedLinesSet) {
+      // Check if both endpoints of the line have image points in this camera
+      const pointA = line.pointA as WorldPoint;
+      const pointB = line.pointB as WorldPoint;
+      const hasPointA = Array.from(pointA.imagePoints).some(ip => (ip as ImagePoint).viewpoint === vpConcrete);
+      const hasPointB = Array.from(pointB.imagePoints).some(ip => (ip as ImagePoint).viewpoint === vpConcrete);
+      if (hasPointA && hasPointB) {
+        // Camera observes at least one axis-constrained line - don't optimize focal
+        return false;
+      }
+    }
+
     // Single-axis constraint leaves geometry underconstrained - optimizing focal length
     // causes unrealistic values as the optimizer compensates for missing DoF
     if (hasSingleAxisConstraint) {
@@ -1235,11 +1280,17 @@ export function optimizeProject(
   }
 
   // Identify multi-camera vs single-camera world points
+  // Only include points that have been initialized (have optimizedXyz)
   const worldPointArray = Array.from(project.worldPoints) as WorldPoint[];
   const multiCameraPoints = new Set<WorldPoint>();
   const singleCameraPoints = new Set<WorldPoint>();
 
   for (const wp of worldPointArray) {
+    // Skip points that haven't been triangulated yet (floating points deferred for late triangulation)
+    if (!wp.optimizedXyz) {
+      continue;
+    }
+
     const visibleInCameras = Array.from(wp.imagePoints)
       .filter(ip => initializedViewpointSet.has((ip as ImagePoint).viewpoint as Viewpoint))
       .length;
@@ -1339,6 +1390,54 @@ export function optimizeProject(
     }
   }
 
+  // LATE TRIANGULATION: Triangulate completely unconstrained "floating" points
+  // These points were deferred during initial triangulation because they have
+  // no geometric constraints. Now that cameras are properly positioned (after Stage1),
+  // we can triangulate them accurately using multi-view geometry.
+  const floatingPoints: WorldPoint[] = [];
+  for (const wp of worldPointArray) {
+    // Check if point is completely unconstrained AND not yet initialized
+    const effective = wp.getEffectiveXyz();
+    const isCompletelyUnconstrained = effective[0] === null && effective[1] === null && effective[2] === null;
+    if (isCompletelyUnconstrained && !wp.optimizedXyz) {
+      floatingPoints.push(wp);
+    }
+  }
+
+  if (floatingPoints.length > 0) {
+    let triangulatedCount = 0;
+    for (const wp of floatingPoints) {
+      const imagePoints = Array.from(wp.imagePoints) as ImagePoint[];
+
+      // Find all initialized cameras that observe this point
+      const observingCameras = imagePoints
+        .filter(ip => initializedViewpointSet.has(ip.viewpoint as Viewpoint))
+        .map(ip => ({ ip, vp: ip.viewpoint as Viewpoint }));
+
+      if (observingCameras.length < 2) {
+        log(`[FloatingTri] ${wp.name}: only ${observingCameras.length} initialized camera(s), cannot triangulate`);
+        continue;
+      }
+
+      // Try triangulation with the first pair of initialized cameras
+      const { ip: ip1, vp: vp1 } = observingCameras[0];
+      const { ip: ip2, vp: vp2 } = observingCameras[1];
+
+      const triResult = triangulateRayRay(ip1, ip2, vp1, vp2, 10.0);
+      if (triResult) {
+        wp.optimizedXyz = triResult.worldPoint;
+        triangulatedCount++;
+      }
+    }
+
+    if (triangulatedCount > 0) {
+      const triPoints = floatingPoints
+        .filter(p => p.optimizedXyz)
+        .map(p => `${p.name}:[${p.optimizedXyz!.map(v => v.toFixed(1)).join(',')}]`);
+      log(`[FloatingTri] Late triangulation: ${triangulatedCount}/${floatingPoints.length} pts: ${triPoints.join(' ')}`);
+    }
+  }
+
   // Full optimization with all points
   // Use light regularization ONLY for single-axis constraint cases (under-constrained).
   // Single-axis = 1 rotational DoF unresolved, causing unconstrained points to diverge.
@@ -1376,11 +1475,9 @@ export function optimizeProject(
   // RETRY LOGIC: If alignment was ambiguous and residual is poor, try opposite sign
   // The threshold of 20 is chosen because good solutions typically have residual < 5,
   // and higher values indicate the solver got stuck in a bad local minimum.
-  // Note: also check median error since that's what the user cares about.
   const AMBIGUOUS_RETRY_THRESHOLD = 20;
-  const medianErrorThreshold = 3.0;
   const shouldRetry = alignmentWasAmbiguous && usedEssentialMatrix &&
-    (result.residual > AMBIGUOUS_RETRY_THRESHOLD || (result.medianReprojectionError ?? 0) > medianErrorThreshold);
+    result.residual > AMBIGUOUS_RETRY_THRESHOLD;
   if (shouldRetry) {
     log(`[Retry] Ambiguous alignment with poor result (${result.residual.toFixed(2)} > ${AMBIGUOUS_RETRY_THRESHOLD}), trying opposite sign`);
 
@@ -1405,58 +1502,33 @@ export function optimizeProject(
       });
     }
 
-    // Reset state for retry
-    resetOptimizationState(project);
-
     // Determine opposite sign
     const oppositeSign: 'positive' | 'negative' = alignmentSignUsed === 'positive' ? 'negative' : 'positive';
     log(`[Retry] Was ${alignmentSignUsed}, now trying ${oppositeSign}`);
 
-    // Re-run camera initialization
+    // Restore pre-alignment state (same triangulation, before any alignment was applied)
+    // This ensures we compare both alignment options on the exact same scene geometry
     const viewpointArray = Array.from(project.viewpoints) as Viewpoint[];
-    for (const vp of viewpointArray) {
-      vp.position = [0, 0, 0];
-      vp.rotation = [1, 0, 0, 0];
-      vp.focalLength = Math.max(vp.imageWidth, vp.imageHeight);
-      vp.principalPointX = vp.imageWidth / 2;
-      vp.principalPointY = vp.imageHeight / 2;
-    }
-
-    // Clear world point optimizedXyz
     const wpArray = Array.from(project.worldPoints) as WorldPoint[];
-    for (const wp of wpArray) {
-      wp.optimizedXyz = undefined;
-    }
+    const pointArray = wpArray;
+    const lineArray = Array.from(project.lines);
+    const constraintArray = Array.from(project.constraints);
 
-    // Re-run Essential Matrix initialization (same as initial)
-    const vp1 = viewpointArray[0];
-    const vp2 = viewpointArray[1];
-    const emResult = initializeCamerasWithEssentialMatrix(vp1, vp2, 10.0);
-    if (!emResult.success) {
-      log(`[Retry] Essential Matrix failed, keeping original result`);
-      // Restore original state
-      for (const [wp, xyz] of savedWorldPoints) {
-        wp.optimizedXyz = xyz;
+    if (!preAlignmentState) {
+      log(`[Retry] No pre-alignment state saved, skipping retry`);
+    } else {
+      for (const [wp, xyz] of preAlignmentState.worldPoints) {
+        wp.optimizedXyz = xyz ? [...xyz] as [number, number, number] : undefined;
       }
-      for (const [vp, state] of savedCameras) {
-        vp.position = state.position;
-        vp.rotation = state.rotation;
+      for (const [vp, state] of preAlignmentState.cameras) {
+        vp.position = [...state.position] as [number, number, number];
+        vp.rotation = [...state.rotation] as [number, number, number, number];
         vp.focalLength = state.focalLength;
       }
-    } else {
-      // Re-run world point initialization
-      const pointArray = Array.from(project.worldPoints) as WorldPoint[];
-      const lineArray = Array.from(project.lines);
-      const constraintArray = Array.from(project.constraints);
+      const vp1 = viewpointArray[0];
+      const vp2 = viewpointArray[1];
 
-      unifiedInitialize(pointArray, lineArray, constraintArray, {
-        sceneScale: 10.0,
-        verbose: false,
-        initializedViewpoints: new Set<Viewpoint>([vp1, vp2]),
-        skipLockedPoints: false,
-      });
-
-      // Re-run alignment with FORCED opposite sign
+      // Run alignment with FORCED opposite sign
       const axisConstrainedLines = lineArray.filter(l => l.direction && ['x', 'y', 'z'].includes(l.direction));
       alignSceneToLineDirections(viewpointArray, pointArray, lineArray, true, undefined, oppositeSign);
 

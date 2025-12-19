@@ -1582,7 +1582,9 @@ export function initializeCameraWithVanishingPoints(
     // Z-axis constraint: [0, 0, null]
     if (locked[0] === 0 && locked[1] === 0 && locked[2] === null) {
       // Get targetLength from connected line if available
-      const connectedLine = Array.from(wp.connectedLines).find(l => l.direction === 'z' && l.targetLength)
+      const connectedLine = Array.from(wp.connectedLines)
+        .map(l => l as Line)
+        .find(l => l.direction === 'z' && l.targetLength)
       const defaultValue = connectedLine?.targetLength ?? 10
       axisConstrainedPointsData.push({
         worldPoint: wp,
@@ -1594,7 +1596,9 @@ export function initializeCameraWithVanishingPoints(
     }
     // X-axis constraint: [null, 0, 0]
     if (locked[0] === null && locked[1] === 0 && locked[2] === 0) {
-      const connectedLine = Array.from(wp.connectedLines).find(l => l.direction === 'x' && l.targetLength)
+      const connectedLine = Array.from(wp.connectedLines)
+        .map(l => l as Line)
+        .find(l => l.direction === 'x' && l.targetLength)
       const defaultValue = connectedLine?.targetLength ?? 10
       axisConstrainedPointsData.push({
         worldPoint: wp,
@@ -1606,7 +1610,9 @@ export function initializeCameraWithVanishingPoints(
     }
     // Y-axis constraint: [0, null, 0]
     if (locked[0] === 0 && locked[1] === null && locked[2] === 0) {
-      const connectedLine = Array.from(wp.connectedLines).find(l => l.direction === 'y' && l.targetLength)
+      const connectedLine = Array.from(wp.connectedLines)
+        .map(l => l as Line)
+        .find(l => l.direction === 'y' && l.targetLength)
       const defaultValue = connectedLine?.targetLength ?? 10
       axisConstrainedPointsData.push({
         worldPoint: wp,

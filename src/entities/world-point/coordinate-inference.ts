@@ -1,5 +1,6 @@
 import type { WorldPoint } from './WorldPoint'
 import type { Line } from '../line'
+import { runInAction } from 'mobx'
 
 const EPSILON = 0.001
 const MAX_ITERATIONS = 10
@@ -25,25 +26,31 @@ export function propagateCoordinateInferences(
   const conflicts: InferenceConflict[] = []
   let totalPointsUpdated = 0
 
-  for (const point of points) {
-    point.inferredXyz = [...point.lockedXyz]
-  }
-
-  for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
-    let pointsUpdatedThisIteration = 0
-
-    for (const line of lines) {
-      const result = inferFromLine(line)
-      pointsUpdatedThisIteration += result.pointsUpdated
-      conflicts.push(...result.conflicts)
+  // Wrap all mutations in runInAction for proper MobX tracking
+  runInAction(() => {
+    // Reset inferred values from locked values - modify in place to preserve MobX observability
+    for (const point of points) {
+      point.inferredXyz[0] = point.lockedXyz[0]
+      point.inferredXyz[1] = point.lockedXyz[1]
+      point.inferredXyz[2] = point.lockedXyz[2]
     }
 
-    totalPointsUpdated += pointsUpdatedThisIteration
+    for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
+      let pointsUpdatedThisIteration = 0
 
-    if (pointsUpdatedThisIteration === 0) {
-      return { conflicts, iterations: iteration + 1, pointsUpdated: totalPointsUpdated }
+      for (const line of lines) {
+        const result = inferFromLine(line)
+        pointsUpdatedThisIteration += result.pointsUpdated
+        conflicts.push(...result.conflicts)
+      }
+
+      totalPointsUpdated += pointsUpdatedThisIteration
+
+      if (pointsUpdatedThisIteration === 0) {
+        break
+      }
     }
-  }
+  })
 
   return { conflicts, iterations: MAX_ITERATIONS, pointsUpdated: totalPointsUpdated }
 }

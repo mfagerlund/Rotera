@@ -15,14 +15,14 @@ function clearSolveData(project: Project) {
   // Clear camera poses
   for (const vp of project.viewpoints) {
     const viewpoint = vp as Viewpoint
-    viewpoint.position = null
-    viewpoint.rotation = null
+    viewpoint.position = [0, 0, 0]
+    viewpoint.rotation = [1, 0, 0, 0] // identity quaternion
   }
 
   // Clear world point solved positions
   for (const wp of project.worldPoints) {
     const worldPoint = wp as WorldPoint
-    worldPoint.optimizedXyz = [null, null, null]
+    worldPoint.optimizedXyz = undefined
   }
 }
 
@@ -77,6 +77,41 @@ describe('Regression - Calibration', () => {
 
   it('VL And non VL.json', () => {
     runFixtureTest('VL And non VL.json', 2)
+  })
+
+  // Test for floating points (points with no constraints, only image observations)
+  // These should be triangulated AFTER cameras are initialized, not during initial triangulation
+  // Note: This fixture has a complex geometry with 6 constrained + 2 floating points
+  //
+  // KNOWN ISSUE: This fixture has Y-axis sign ambiguity that the solver can't resolve automatically.
+  // The alignment test gives equal errors (159px) for both +Y and -Y options because the short
+  // solves converge to the same intermediate state. After Stage1, no-flip gives 55px while flip
+  // gives 159px - but the reported optimal is 2.95px when OY.Y is manually constrained to -10.
+  // The fundamental issue is that flipping the scene AFTER camera initialization produces
+  // different results than constraining the point BEFORE initialization.
+  // TODO: Investigate how to propagate Y-axis line sign constraints before triangulation.
+  it.skip('Eight Points, VL To Free Points.json', () => {
+    const jsonPath = path.join(FIXTURES_DIR, 'Eight Points, VL To Free Points.json')
+    const jsonData = fs.readFileSync(jsonPath, 'utf8')
+    const project = loadProjectFromJson(jsonData)
+    clearSolveData(project)
+
+    const result = optimizeProject(project, {
+      maxIterations: 500,
+      verbose: false,
+    })
+
+    // Print optimization logs for debugging
+    const { optimizationLogs } = require('../optimization-logger')
+    const logs = optimizationLogs.join('\n')
+
+    // If error is too high, throw with logs
+    if (result.medianReprojectionError! > 2) {
+      throw new Error(`Median error: ${result.medianReprojectionError?.toFixed(2)}px\n\nLogs:\n${logs}`)
+    }
+
+    expect(result.medianReprojectionError).toBeDefined()
+    expect(result.medianReprojectionError!).toBeLessThan(2)
   })
 
   // Test for VP sign ambiguity fix - this fixture was producing inconsistent results

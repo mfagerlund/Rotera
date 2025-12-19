@@ -215,12 +215,25 @@ function step3_triangulateFromImages(
   let triangulatedCount = 0
   let failedCount = 0
   let skippedCount = 0
+  let deferredFloatingCount = 0
 
   for (const point of points) {
     const wasAlreadyInitialized = initialized.has(point)
 
     if (wasAlreadyInitialized) {
       skippedCount++
+      continue
+    }
+
+    // Skip completely unconstrained "floating" points during initial triangulation.
+    // These points have no locked or inferred coordinates on ANY axis, meaning they
+    // have no geometric constraints. Triangulating them early with potentially
+    // inaccurate camera poses leads to garbage positions that corrupt optimization.
+    // They will be triangulated AFTER cameras are properly initialized via Stage1.
+    const effective = point.getEffectiveXyz()
+    const isCompletelyUnconstrained = effective[0] === null && effective[1] === null && effective[2] === null
+    if (isCompletelyUnconstrained) {
+      deferredFloatingCount++
       continue
     }
 
@@ -253,7 +266,15 @@ function step3_triangulateFromImages(
 
         const result = triangulateRayRay(ip1, ip2, vp1, vp2, fallbackDepth)
         if (result) {
-          point.optimizedXyz = result.worldPoint
+          // Apply partial constraints from inferred coordinates
+          // For each constrained axis, use the inferred value instead of triangulated
+          const triPos = result.worldPoint
+          const effective = point.getEffectiveXyz()
+          point.optimizedXyz = [
+            effective[0] !== null ? effective[0] : triPos[0],
+            effective[1] !== null ? effective[1] : triPos[1],
+            effective[2] !== null ? effective[2] : triPos[2],
+          ]
           initialized.add(point)
           triangulatedCount++
           triangulated = true
@@ -277,11 +298,15 @@ function step3_triangulateFromImages(
     log(`[Tri] ${triangulatedCount} pts: ${triPoints.join(' ')}`)
   }
 
+  if (deferredFloatingCount > 0) {
+    log(`[Tri] Deferred ${deferredFloatingCount} floating point(s) for late triangulation`)
+  }
+
   if (verbose) {
     if (skippedCount > 0) {
-      log(`[Step 3] Triangulated ${triangulatedCount} new points, skipped ${skippedCount} constraint-inferred points, ${failedCount} failed`)
+      log(`[Step 3] Triangulated ${triangulatedCount} new points, skipped ${skippedCount} constraint-inferred points, deferred ${deferredFloatingCount} floating, ${failedCount} failed`)
     } else {
-      log(`[Step 3] Triangulated ${triangulatedCount} points from images (${failedCount} failed)`)
+      log(`[Step 3] Triangulated ${triangulatedCount} points from images, deferred ${deferredFloatingCount} floating (${failedCount} failed)`)
     }
   }
 }
@@ -593,9 +618,20 @@ function step6_randomFallback(
   verbose: boolean
 ): void {
   let randomCount = 0
+  let deferredFloatingCount = 0
 
   for (const point of points) {
     if (!initialized.has(point)) {
+      // Skip completely unconstrained "floating" points during random fallback.
+      // These points have no geometric constraints and will be triangulated later
+      // once cameras are properly positioned (after Stage1 bundle adjustment).
+      const effective = point.getEffectiveXyz()
+      const isCompletelyUnconstrained = effective[0] === null && effective[1] === null && effective[2] === null
+      if (isCompletelyUnconstrained) {
+        deferredFloatingCount++
+        continue
+      }
+
       point.optimizedXyz = [
         (Math.random() - 0.5) * sceneScale,
         (Math.random() - 0.5) * sceneScale,
@@ -607,7 +643,7 @@ function step6_randomFallback(
   }
 
   if (verbose) {
-    log(`[Step 6] Random fallback for ${randomCount} points`)
+    log(`[Step 6] Random fallback for ${randomCount} points, deferred ${deferredFloatingCount} floating`)
   }
 }
 

@@ -66,7 +66,7 @@ export const WorldPointOverlay: React.FC<WorldPointOverlayProps> = observer(({
               // Set drag data
               e.dataTransfer.setData('application/json', JSON.stringify({
                 type: 'world-point',
-                worldPointName: wp.getName(),
+                worldPointKey: getEntityKey(wp),
                 action: image.imagePoints.size > 0 ? 'move' : 'place'
               }))
               e.dataTransfer.effectAllowed = 'copy'

@@ -271,6 +271,8 @@ export interface AlignmentResult {
   success: boolean;
   /** If true, the alignment couldn't determine the correct orientation and both should be tried */
   ambiguous: boolean;
+  /** Which sign was used for the first axis alignment (positive = original direction, negative = flipped) */
+  signUsed: 'positive' | 'negative' | undefined;
 }
 
 /**
@@ -364,7 +366,7 @@ export function alignSceneToLineDirections(
   }
 
   if (axisLinesByDirection.size === 0) {
-    return { success: false, ambiguous: false };
+    return { success: false, ambiguous: false, signUsed: undefined };
   }
 
   // Track if we couldn't determine the correct orientation
@@ -386,7 +388,7 @@ export function alignSceneToLineDirections(
   const firstDirection = computeLineDirection(firstLine.line);
 
   if (!firstDirection) {
-    return { success: false, ambiguous: false };
+    return { success: false, ambiguous: false, signUsed: undefined };
   }
 
   // Define positive and negative directions for alignment options
@@ -525,10 +527,61 @@ export function alignSceneToLineDirections(
       // Pick the alignment where second axis has positive dot (doesn't need flip)
       usePositive = dotPosAlign > dotNegAlign;
       log(`[Align] ${firstAxisKey}-axis: EM second-axis test (${secondAxisKey}): +dot=${dotPosAlign.toFixed(2)}, -dot=${dotNegAlign.toFixed(2)} -> ${usePositive ? '+' : '-'}`);
+    } else if (qualityCallback) {
+      // Second axis doesn't help - use qualityCallback to test both options
+      log(`[Align] ${firstAxisKey}-axis: EM second-axis inconclusive, testing both with solves`);
+
+      const saveState = () => ({
+        cameras: cameras.map(c => ({ pos: [...c.position], rot: [...c.rotation] })),
+        points: allPoints.map(p => ({ xyz: p.optimizedXyz ? [...p.optimizedXyz] : undefined }))
+      });
+      const restoreState = (state: ReturnType<typeof saveState>) => {
+        cameras.forEach((c, i) => {
+          c.position = state.cameras[i].pos as [number, number, number];
+          c.rotation = state.cameras[i].rot as [number, number, number, number];
+        });
+        allPoints.forEach((p, i) => {
+          p.optimizedXyz = state.points[i].xyz as [number, number, number] | undefined;
+        });
+      };
+
+      const testAlignment = (positive: boolean, iterations: number): number => {
+        const state = saveState();
+        const dir = positive ? positiveDir : negativeDir;
+        const rotation = computeRotationBetweenVectors(dir, firstLine.targetAxis);
+        applyRotation(rotation);
+        const error = qualityCallback(iterations);
+        restoreState(state);
+        return error;
+      };
+
+      // Quick test first
+      let errorPositive = testAlignment(true, 50);
+      let errorNegative = testAlignment(false, 50);
+      log(`[Align] ${firstAxisKey}-axis: quick test: +err=${errorPositive.toFixed(2)}, -err=${errorNegative.toFixed(2)}`);
+
+      // If errors are similar, run longer tests
+      const errorRatio = Math.min(errorPositive, errorNegative) / Math.max(errorPositive, errorNegative);
+      if (errorRatio > 0.8) {
+        errorPositive = testAlignment(true, 300);
+        errorNegative = testAlignment(false, 300);
+        log(`[Align] ${firstAxisKey}-axis: long test: +err=${errorPositive.toFixed(2)}, -err=${errorNegative.toFixed(2)}`);
+      }
+
+      const finalRatio = Math.min(errorPositive, errorNegative) / Math.max(errorPositive, errorNegative);
+      if (finalRatio > 0.95) {
+        isAmbiguous = true;
+        usePositive = dotPreferPositive;
+        log(`[Align] ${firstAxisKey}-axis: errors similar, AMBIGUOUS`);
+      } else {
+        usePositive = errorPositive < errorNegative;
+        log(`[Align] ${firstAxisKey}-axis: chose ${usePositive ? '+' : '-'}${firstAxisKey.toUpperCase()} (${errorPositive.toFixed(2)} vs ${errorNegative.toFixed(2)})`);
+      }
     } else {
-      // Second axis doesn't help - fall back to dot-product
+      // Second axis doesn't help and no qualityCallback - fall back to dot-product
       usePositive = dotPreferPositive;
-      log(`[Align] ${firstAxisKey}-axis: EM second-axis inconclusive, dot=${dotWithTarget.toFixed(2)} -> ${usePositive ? '+' : '-'}`);
+      isAmbiguous = true; // Mark as ambiguous since we can't verify
+      log(`[Align] ${firstAxisKey}-axis: EM second-axis inconclusive, dot=${dotWithTarget.toFixed(2)} -> ${usePositive ? '+' : '-'} (AMBIGUOUS)`);
     }
   } else if (usedEssentialMatrix && qualityCallback) {
     // Single axis EM case with quality callback - test both orientations
@@ -695,7 +748,7 @@ export function alignSceneToLineDirections(
     }
   }
 
-  return { success: true, ambiguous: isAmbiguous };
+  return { success: true, ambiguous: isAmbiguous, signUsed: usePositive ? 'positive' : 'negative' };
 }
 
 /**

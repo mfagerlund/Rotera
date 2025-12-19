@@ -367,7 +367,25 @@ export function runEssentialMatrixInitialization(
   let vpEmHybridApplied = false;
 
   if (skipVPHybrid) {
-    log(`[VP+EM] Skipping - stepped VP init was reverted`);
+    log(`[VP+EM] Skipping rotation - stepped VP init was reverted`);
+    // Still estimate focal length from VPs even when skipping VP rotation
+    for (const vp of [vp1, vp2]) {
+      const vpValidation = validateVanishingPoints(vp);
+      const vpCount = vpValidation.vanishingPoints ? Object.keys(vpValidation.vanishingPoints).length : 0;
+      if (vpValidation.isValid && vpCount >= 2) {
+        const vps = vpValidation.vanishingPoints!;
+        const pp = { u: vp.principalPointX, v: vp.principalPointY };
+        const vpKeys = Object.keys(vps) as ('x' | 'y' | 'z')[];
+        let vpFocalLength: number | null = null;
+        if (vpKeys.length >= 2) {
+          vpFocalLength = estimateFocalLength(vps[vpKeys[0]]!, vps[vpKeys[1]]!, pp);
+        }
+        if (vpFocalLength && vpFocalLength > 100) {
+          vp.focalLength = vpFocalLength;
+          log(`[VP+EM] VP focal: ${vp.name} f=${vpFocalLength.toFixed(0)}`);
+        }
+      }
+    }
   } else {
     log(`[VP+EM] Checking cameras for VP rotation...`);
 
@@ -433,9 +451,20 @@ export function runEssentialMatrixInitialization(
           vp2.position = rotateVec(q_vp, pos_2);
 
           // Update focal length if VP-estimated was better
+          // Also transfer to the other camera if it doesn't have its own VPs
           if (vpFocalLength && vpFocalLength > 100) {
             vp.focalLength = vpFocalLength;
             log(`[Init] VP focal: ${vp.name} f=${vpFocalLength.toFixed(0)}`);
+
+            // Transfer VP-derived focal length to the other camera
+            // This helps when the other camera has no explicit VanishingLine entities
+            const otherVp = vp === vp1 ? vp2 : vp1;
+            const otherVpValidation = validateVanishingPoints(otherVp);
+            const otherVpCount = otherVpValidation.vanishingPoints ? Object.keys(otherVpValidation.vanishingPoints).length : 0;
+            if (otherVpCount < 2) {
+              otherVp.focalLength = vpFocalLength;
+              log(`[Init] VP focal transferred: ${otherVp.name} f=${vpFocalLength.toFixed(0)}`);
+            }
           }
 
           log(`[Init] VP+EM hybrid: Applied VP rotation from ${vp.name} to align world frame`);
@@ -805,6 +834,8 @@ export function initializeCameras(options: InitializeCamerasOptions): CameraInit
       const vp1 = uninitializedCameras[0];
       const vp2 = uninitializedCameras[1];
 
+      // Skip VP+EM hybrid when stepped VP init was reverted, as the alignment step
+      // using line directions tends to work better for these cases
       const emResult = runEssentialMatrixInitialization(vp1, vp2, diagnostics.steppedVPInitReverted);
 
       if (emResult.success) {
