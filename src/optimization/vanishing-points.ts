@@ -1545,20 +1545,16 @@ export function initializeCameraWithVanishingPoints(
   }
   log(`[initializeCameraWithVanishingPoints] Trying ${baseRotations.length} base rotation(s)`)
 
-  // For POSITION SOLVING: Use fully constrained points (locked OR inferred)
-  // Inferred coordinates are as valid as locked coordinates after propagation
-  const constrainedPoints = Array.from(worldPoints).filter(wp => wp.isFullyConstrained())
-
-  const lockedPointsData = constrainedPoints
+  // Collect TRULY LOCKED points (all 3 coordinates explicitly set by user)
+  const trulyLockedPoints = Array.from(worldPoints).filter(wp => wp.isFullyLocked())
+  const trulyLockedPointsData = trulyLockedPoints
     .map(wp => {
       const imagePoints = viewpoint.getImagePointsForWorldPoint(wp)
-      if (imagePoints.length === 0) {
-        return null
-      }
+      if (imagePoints.length === 0) return null
       return {
         worldPoint: wp,
         imagePoint: { u: imagePoints[0].u, v: imagePoints[0].v },
-        effectiveXyz: wp.getEffectiveXyz() as [number, number, number]
+        effectiveXyz: wp.lockedXyz as [number, number, number]
       }
     })
     .filter(p => p !== null) as Array<{
@@ -1567,33 +1563,68 @@ export function initializeCameraWithVanishingPoints(
     effectiveXyz: [number, number, number]
   }>
 
-  const minLockedPoints = allowSinglePoint ? 1 : 2
-  if (lockedPointsData.length < minLockedPoints) {
-    log(`[initializeCameraWithVanishingPoints] Not enough locked points with image observations (have ${lockedPointsData.length}, need ${minLockedPoints})`)
-    return false
+  // Collect AXIS-CONSTRAINED points (have exactly one unknown coordinate on an axis)
+  // These need sign disambiguation - we'll try both +/- for the unknown coordinate
+  const axisConstrainedPointsData: Array<{
+    worldPoint: WorldPoint
+    imagePoint: { u: number; v: number }
+    lockedXyz: [number | null, number | null, number | null]
+    axisIndex: number  // 0=X, 1=Y, 2=Z
+    defaultValue: number  // Use targetLength from connected line if available
+  }> = []
+
+  for (const wp of Array.from(worldPoints)) {
+    const locked = wp.lockedXyz
+    if (!locked) continue
+    const imagePoints = viewpoint.getImagePointsForWorldPoint(wp)
+    if (imagePoints.length === 0) continue
+
+    // Z-axis constraint: [0, 0, null]
+    if (locked[0] === 0 && locked[1] === 0 && locked[2] === null) {
+      // Get targetLength from connected line if available
+      const connectedLine = Array.from(wp.connectedLines).find(l => l.direction === 'z' && l.targetLength)
+      const defaultValue = connectedLine?.targetLength ?? 10
+      axisConstrainedPointsData.push({
+        worldPoint: wp,
+        imagePoint: { u: imagePoints[0].u, v: imagePoints[0].v },
+        lockedXyz: locked,
+        axisIndex: 2,
+        defaultValue
+      })
+    }
+    // X-axis constraint: [null, 0, 0]
+    if (locked[0] === null && locked[1] === 0 && locked[2] === 0) {
+      const connectedLine = Array.from(wp.connectedLines).find(l => l.direction === 'x' && l.targetLength)
+      const defaultValue = connectedLine?.targetLength ?? 10
+      axisConstrainedPointsData.push({
+        worldPoint: wp,
+        imagePoint: { u: imagePoints[0].u, v: imagePoints[0].v },
+        lockedXyz: locked,
+        axisIndex: 0,
+        defaultValue
+      })
+    }
+    // Y-axis constraint: [0, null, 0]
+    if (locked[0] === 0 && locked[1] === null && locked[2] === 0) {
+      const connectedLine = Array.from(wp.connectedLines).find(l => l.direction === 'y' && l.targetLength)
+      const defaultValue = connectedLine?.targetLength ?? 10
+      axisConstrainedPointsData.push({
+        worldPoint: wp,
+        imagePoint: { u: imagePoints[0].u, v: imagePoints[0].v },
+        lockedXyz: locked,
+        axisIndex: 1,
+        defaultValue
+      })
+    }
   }
 
-  // For SIGN SELECTION: Also include points with effective coordinates (locked + inferred)
-  // This ensures Y-axis constraints from partially-locked points influence the sign choice
-  const effectivePointsData = Array.from(worldPoints)
-    .filter(wp => wp.isFullyConstrained())
-    .map(wp => {
-      const imagePoints = viewpoint.getImagePointsForWorldPoint(wp)
-      if (imagePoints.length === 0) {
-        return null
-      }
-      const effective = wp.getEffectiveXyz()
-      return {
-        worldPoint: wp,
-        imagePoint: { u: imagePoints[0].u, v: imagePoints[0].v },
-        effectiveXyz: effective as [number, number, number]
-      }
-    })
-    .filter(p => p !== null) as Array<{
-    worldPoint: WorldPoint
-    imagePoint: { u: number; v: number }
-    effectiveXyz: [number, number, number]
-  }>
+  log(`[VP Init] Found ${trulyLockedPointsData.length} truly locked points, ${axisConstrainedPointsData.length} axis-constrained points`)
+
+  const minLockedPoints = allowSinglePoint ? 1 : 2
+  if (trulyLockedPointsData.length + axisConstrainedPointsData.length < minLockedPoints) {
+    log(`[initializeCameraWithVanishingPoints] Not enough points with image observations`)
+    return false
+  }
 
   // Try sign combinations for axis orientations.
   // IMPORTANT: Only use EVEN-flip combinations (0 or 2 flips). Odd-flip combinations
@@ -1621,166 +1652,95 @@ export function initializeCameraWithVanishingPoints(
   let bestPointsInFront = 0
   let bestReprojError = Infinity
 
+  // Generate axis sign combinations to try for axis-constrained points
+  // Each axis-constrained point contributes 2 possibilities (+/-)
+  const numAxisPoints = axisConstrainedPointsData.length
+  const numAxisCombos = Math.pow(2, numAxisPoints)
+  log(`[VP Init] Testing ${numAxisCombos} axis sign combinations`)
+
   for (let baseIdx = 0; baseIdx < baseRotations.length; baseIdx++) {
     const baseRotation = baseRotations[baseIdx]
     const baseLabel = baseIdx === 0 ? 'Y=Z×X' : 'Y=X×Z'
 
   for (const [flipX, flipY, flipZ] of signCombinations) {
     const rotation = flipRotationAxes(baseRotation, flipX, flipY, flipZ)
-    const positionInitial = computeCameraPosition(rotation, focalLength, principalPoint, lockedPointsData)
-
-    if (!positionInitial) {
-      continue
-    }
-
     const rotationMatrix = [
       [1 - 2 * (rotation[2] * rotation[2] + rotation[3] * rotation[3]), 2 * (rotation[1] * rotation[2] - rotation[3] * rotation[0]), 2 * (rotation[1] * rotation[3] + rotation[2] * rotation[0])],
       [2 * (rotation[1] * rotation[2] + rotation[3] * rotation[0]), 1 - 2 * (rotation[1] * rotation[1] + rotation[3] * rotation[3]), 2 * (rotation[2] * rotation[3] - rotation[1] * rotation[0])],
       [2 * (rotation[1] * rotation[3] - rotation[2] * rotation[0]), 2 * (rotation[2] * rotation[3] + rotation[1] * rotation[0]), 1 - 2 * (rotation[1] * rotation[1] + rotation[2] * rotation[2])]
     ]
 
-    const position = refineTranslation(positionInitial, rotationMatrix, focalLength, principalPoint, effectivePointsData)
+    // Try all axis sign combinations
+    for (let axisCombo = 0; axisCombo < numAxisCombos; axisCombo++) {
+      // Build combined point data with axis-constrained points using this sign combo
+      const combinedPointsData = [...trulyLockedPointsData]
 
-    // Count how many points are in front of the camera (using effective coordinates)
-    let pointsInFront = 0
-    for (const { effectiveXyz } of effectivePointsData) {
-      if (isPointInFrontOfCamera(effectiveXyz, position, rotation)) {
-        pointsInFront++
-      }
-    }
+      for (let i = 0; i < axisConstrainedPointsData.length; i++) {
+        const acp = axisConstrainedPointsData[i]
+        const usePositive = (axisCombo & (1 << i)) !== 0
+        const signedValue = usePositive ? acp.defaultValue : -acp.defaultValue
 
-    // Compute reprojection error for ALL constrained points (locked + inferred)
-    // This ensures Y-axis constraints from partially-locked points influence sign selection
-    let totalReprojError = 0
-    for (const { effectiveXyz, imagePoint } of effectivePointsData) {
-      const wp = effectiveXyz
+        const xyz: [number, number, number] = [...acp.lockedXyz] as [number, number, number]
+        xyz[acp.axisIndex] = signedValue
 
-      // Transform world point to camera space using R (world→camera)
-      const rel = [wp[0] - position[0], wp[1] - position[1], wp[2] - position[2]]
-      const camSpace = [
-        rotationMatrix[0][0] * rel[0] + rotationMatrix[0][1] * rel[1] + rotationMatrix[0][2] * rel[2],
-        rotationMatrix[1][0] * rel[0] + rotationMatrix[1][1] * rel[1] + rotationMatrix[1][2] * rel[2],
-        rotationMatrix[2][0] * rel[0] + rotationMatrix[2][1] * rel[1] + rotationMatrix[2][2] * rel[2]
-      ]
-
-      if (camSpace[2] <= 0) {
-        totalReprojError += 10000 // Huge penalty for behind camera
-        continue
+        combinedPointsData.push({
+          worldPoint: acp.worldPoint,
+          imagePoint: acp.imagePoint,
+          effectiveXyz: xyz
+        })
       }
 
-      // Project to image using standard camera model: v = pp_v - f * cam_y / cam_z
-      const projU = principalPoint.u + focalLength * (camSpace[0] / camSpace[2])
-      const projV = principalPoint.v - focalLength * (camSpace[1] / camSpace[2])
+      // Compute position using combined points
+      const positionInitial = computeCameraPosition(rotation, focalLength, principalPoint, combinedPointsData)
+      if (!positionInitial) continue
 
-      const du = projU - imagePoint.u
-      const dv = projV - imagePoint.v
-      const err = Math.sqrt(du * du + dv * dv)
-      totalReprojError += err
-    }
+      const position = refineTranslation(positionInitial, rotationMatrix, focalLength, principalPoint, combinedPointsData)
 
-    // =========================================================================
-    // RIGHT-HANDED COORDINATE PREFERENCE
-    // =========================================================================
-    // For right-handed coordinates, we need X×Y to point in +Z direction.
-    // When X is at +X and Y is at +Y, this requires Z to be at +Z.
-    //
-    // Check which sign of axis-constrained coordinates produces better reprojection.
-    let optimalXIsPositive = true  // default to positive if no X constraint
-    let optimalZIsPositive = true  // default to positive if no Z constraint
+      // Count points in front of camera
+      let pointsInFront = 0
+      for (const { effectiveXyz } of combinedPointsData) {
+        if (isPointInFrontOfCamera(effectiveXyz, position, rotation)) {
+          pointsInFront++
+        }
+      }
 
-    for (const wp of Array.from(worldPoints)) {
-      const locked = wp.lockedXyz
-      if (!locked) continue
+      // Compute reprojection error
+      let totalReprojError = 0
+      for (const { effectiveXyz, imagePoint } of combinedPointsData) {
+        const wp = effectiveXyz
+        const rel = [wp[0] - position[0], wp[1] - position[1], wp[2] - position[2]]
+        const camSpace = [
+          rotationMatrix[0][0] * rel[0] + rotationMatrix[0][1] * rel[1] + rotationMatrix[0][2] * rel[2],
+          rotationMatrix[1][0] * rel[0] + rotationMatrix[1][1] * rel[1] + rotationMatrix[1][2] * rel[2],
+          rotationMatrix[2][0] * rel[0] + rotationMatrix[2][1] * rel[1] + rotationMatrix[2][2] * rel[2]
+        ]
 
-      // Check for Z-axis constraint: [0, 0, null]
-      if (locked[0] === 0 && locked[1] === 0 && locked[2] === null) {
-        const imagePoints = viewpoint.getImagePointsForWorldPoint(wp)
-        if (imagePoints.length === 0) continue
-
-        const observed = { u: imagePoints[0].u, v: imagePoints[0].v }
-
-        const testZ = (zVal: number) => {
-          const worldPos: [number, number, number] = [0, 0, zVal]
-          const rel = [worldPos[0] - position[0], worldPos[1] - position[1], worldPos[2] - position[2]]
-          const cam = [
-            rotationMatrix[0][0] * rel[0] + rotationMatrix[0][1] * rel[1] + rotationMatrix[0][2] * rel[2],
-            rotationMatrix[1][0] * rel[0] + rotationMatrix[1][1] * rel[1] + rotationMatrix[1][2] * rel[2],
-            rotationMatrix[2][0] * rel[0] + rotationMatrix[2][1] * rel[1] + rotationMatrix[2][2] * rel[2]
-          ]
-          if (cam[2] <= 0) return Infinity
-          const projU = principalPoint.u + focalLength * (cam[0] / cam[2])
-          const projV = principalPoint.v - focalLength * (cam[1] / cam[2])
-          return Math.sqrt((projU - observed.u) ** 2 + (projV - observed.v) ** 2)
+        if (camSpace[2] <= 0) {
+          totalReprojError += 10000
+          continue
         }
 
-        const errPlus = testZ(10)
-        const errMinus = testZ(-10)
-        optimalZIsPositive = errPlus < errMinus
-
-        log(`[VP RH] Z-axis point ${wp.name}: z=+10 err=${errPlus.toFixed(1)}px, z=-10 err=${errMinus.toFixed(1)}px -> ${optimalZIsPositive ? 'POSITIVE Z' : 'NEGATIVE Z'}`)
+        const projU = principalPoint.u + focalLength * (camSpace[0] / camSpace[2])
+        const projV = principalPoint.v - focalLength * (camSpace[1] / camSpace[2])
+        const du = projU - imagePoint.u
+        const dv = projV - imagePoint.v
+        totalReprojError += Math.sqrt(du * du + dv * dv)
       }
 
-      // Check for X-axis constraint: [null, 0, 0]
-      if (locked[0] === null && locked[1] === 0 && locked[2] === 0) {
-        const imagePoints = viewpoint.getImagePointsForWorldPoint(wp)
-        if (imagePoints.length === 0) continue
+      // Score: points in front is primary, reprojection error is secondary (lower is better)
+      const numPoints = combinedPointsData.length
+      const score = pointsInFront * 1000000 - totalReprojError
+      const avgError = numPoints > 0 ? totalReprojError / numPoints : 0
 
-        const observed = { u: imagePoints[0].u, v: imagePoints[0].v }
-
-        const testX = (xVal: number) => {
-          const worldPos: [number, number, number] = [xVal, 0, 0]
-          const rel = [worldPos[0] - position[0], worldPos[1] - position[1], worldPos[2] - position[2]]
-          const cam = [
-            rotationMatrix[0][0] * rel[0] + rotationMatrix[0][1] * rel[1] + rotationMatrix[0][2] * rel[2],
-            rotationMatrix[1][0] * rel[0] + rotationMatrix[1][1] * rel[1] + rotationMatrix[1][2] * rel[2],
-            rotationMatrix[2][0] * rel[0] + rotationMatrix[2][1] * rel[1] + rotationMatrix[2][2] * rel[2]
-          ]
-          if (cam[2] <= 0) return Infinity
-          const projU = principalPoint.u + focalLength * (cam[0] / cam[2])
-          const projV = principalPoint.v - focalLength * (cam[1] / cam[2])
-          return Math.sqrt((projU - observed.u) ** 2 + (projV - observed.v) ** 2)
-        }
-
-        const errPlus = testX(10)
-        const errMinus = testX(-10)
-        optimalXIsPositive = errPlus < errMinus
-
-        log(`[VP RH] X-axis point ${wp.name}: x=+10 err=${errPlus.toFixed(1)}px, x=-10 err=${errMinus.toFixed(1)}px -> ${optimalXIsPositive ? 'POSITIVE X' : 'NEGATIVE X'}`)
+      if (score > bestScore) {
+        bestScore = score
+        bestRotation = rotation
+        bestPosition = position
+        bestPointsInFront = pointsInFront
+        bestReprojError = avgError
+        log(`[VP Sign Debug] NEW BEST: [${baseLabel} ${flipX},${flipY},${flipZ} axisCombo=${axisCombo}] score=${score.toFixed(1)}, avgError=${avgError.toFixed(1)}px`)
       }
-    }
-
-    // For right-handed: X×Y should point in same direction as Z
-    // If X and Z have same sign (both + or both -), then with Y at +Y, it's right-handed
-    // If X and Z have opposite signs, it's left-handed
-    const wouldBeRightHanded = (optimalXIsPositive === optimalZIsPositive)
-    const rightHandedBonus = wouldBeRightHanded ? 300000 : 0
-
-    log(`[VP RH] optimalX=${optimalXIsPositive ? '+' : '-'}, optimalZ=${optimalZIsPositive ? '+' : '-'} -> ${wouldBeRightHanded ? 'RIGHT-HANDED (+bonus)' : 'LEFT-HANDED (no bonus)'}`)
-
-    // Score: points in front is primary (required), reprojection error is secondary (lower is better)
-    // Use negative reproj error so higher score = better
-    // Add right-handed bonus to prefer rotations with positive axis coordinates
-    const score = pointsInFront * 1000000 + rightHandedBonus - totalReprojError
-    const avgError = totalReprojError / effectivePointsData.length
-    if (VP_SIGN_DEBUG) {
-      log(
-        `[VP Sign Debug] [${baseLabel} ${flipX},${flipY},${flipZ}]` +
-        ` pointsInFront=${pointsInFront}/${effectivePointsData.length}, avgError=${avgError.toFixed(1)} px`
-      )
-      log(
-        `[VP Sign Debug]   position=[${position.map(p => p.toFixed(2)).join(', ')}],` +
-        ` score=${score.toFixed(1)}`
-      )
-    }
-
-    if (score > bestScore) {
-      bestScore = score
-      bestRotation = rotation
-      bestPosition = position
-      bestPointsInFront = pointsInFront
-      bestReprojError = totalReprojError / effectivePointsData.length
-      log(`[VP Sign Debug] NEW BEST: [${baseLabel} ${flipX},${flipY},${flipZ}] score=${score.toFixed(1)}, avgError=${avgError.toFixed(1)}px`)
-    }
+    } // end of axisCombo loop
   }
   } // end of baseRotations loop
 
@@ -1789,8 +1749,9 @@ export function initializeCameraWithVanishingPoints(
     return false
   }
 
-  if (bestPointsInFront < effectivePointsData.length) {
-    log(`[initializeCameraWithVanishingPoints] WARNING: Only ${bestPointsInFront}/${effectivePointsData.length} points are in front of camera`)
+  const totalPoints = trulyLockedPointsData.length + axisConstrainedPointsData.length
+  if (bestPointsInFront < totalPoints) {
+    log(`[initializeCameraWithVanishingPoints] WARNING: Only ${bestPointsInFront}/${totalPoints} points are in front of camera`)
   }
 
   // If the best reprojection error is too high, fail and let PnP try instead.

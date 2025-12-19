@@ -286,6 +286,26 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
     selectionStats
   } = useSelection()
 
+  const handleReloadProject = useCallback(async () => {
+    if (!project) return
+    const dbId = (project as unknown as { _dbId?: string })._dbId
+    if (!dbId) {
+      console.warn('Cannot reload: project has not been saved yet')
+      return
+    }
+    try {
+      const reloadedProject = await ProjectDB.loadProject(dbId)
+      setProject(reloadedProject)
+      markClean()
+      setIsDirtyState(false)
+      clearSelection()
+      console.log('Project reloaded from saved state')
+    } catch (error) {
+      console.error('Failed to reload project:', error)
+      alert('Failed to reload project: ' + (error as Error).message)
+    }
+  }, [project, setProject, clearSelection])
+
   const {
     getAvailableConstraints,
     getAllConstraints,
@@ -638,6 +658,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
               onReturnToBrowser={onReturnToBrowser}
               onSaveProject={handleSaveProject}
               onSaveAsProject={handleSaveAsProject}
+              onReloadProject={handleReloadProject}
               onOpenOptimization={handleTriggerOptimization}
               isDirty={isDirty}
             />

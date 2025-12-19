@@ -20,6 +20,7 @@ import { V, Vec3, Vec4 } from 'scalar-autograd'
 import { optimizationLogs } from '../optimization/optimize-project'
 import { ProjectDB } from '../services/project-db'
 import { checkOptimizationReadiness } from '../optimization/optimization-readiness'
+import { formatXyz } from '../utils/formatters'
 
 interface OptimizationPanelProps {
   isOpen: boolean
@@ -752,8 +753,8 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
                             }}
                           >
                             <td>{point.getName()}</td>
-                            <td>[{point.getEffectiveXyz().map(v => v !== null ? v.toFixed(2) : '-').join(', ')}]</td>
-                            <td>[{info.optimizedXyz?.map(v => v.toFixed(2)).join(', ')}]</td>
+                            <td>{formatXyz(point.getEffectiveXyz())}</td>
+                            <td>{formatXyz(info.optimizedXyz)}</td>
                             <td>{formatNumber(info.rmsResidual)}</td>
                           </tr>
                         )

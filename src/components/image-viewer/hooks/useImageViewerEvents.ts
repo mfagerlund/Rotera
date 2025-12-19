@@ -611,22 +611,9 @@ export function useImageViewerEvents({
     }
 
     const handleShiftKeyUp = (event: KeyboardEvent) => {
-      const wasActive = precisionMode.getPrecisionState().isPrecisionToggled
+      // Just handle the shift key - let handleMouseMove/onDragOver set isPrecisionDrag
+      // based on precState.isPrecisionActive (which they already do on every frame)
       precisionMode.handleShiftKey(event)
-      const precState = precisionMode.getPrecisionState()
-      if (precState.isPrecisionToggled) {
-        if (!wasActive) {
-          precisionMode.resetPrecision(false)
-        }
-        precisionDragState.setIsPrecisionDrag(true)
-        precisionDragState.setIsPrecisionToggleActive(true)
-      } else {
-        if (wasActive) {
-          precisionMode.resetPrecision(false)
-        }
-        precisionDragState.setIsPrecisionDrag(false)
-        precisionDragState.setIsPrecisionToggleActive(false)
-      }
     }
 
     window.addEventListener('keydown', handleKeyDown)

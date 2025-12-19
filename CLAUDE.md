@@ -6,6 +6,7 @@
 - This project should currently have NO backward compability and NO legacy code. Keep it CLEAN.
 - NEVER create multiple objects, classes, interfaces, or types that serve the same or similar purposes. Each concept gets ONE representation.
 - gogo means "Start executing and don't stop until finished. Beep when done."
+- Do NOT modify regression fixtures or lower acceptable error thresholds to make tests pass. FIX THE ACTUAL PROBLEM.
 
 ## Abbreviations
 

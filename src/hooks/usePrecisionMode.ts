@@ -7,11 +7,17 @@ const SHIFT_TAP_THRESHOLD_MS = 250
 export interface PrecisionModeState {
   isPrecisionActive: boolean
   isPrecisionToggled: boolean
+  isShiftHeld: boolean
   precisionCanvasPos: CanvasPoint | null
 }
 
+export interface ShiftKeyResult {
+  toggled: boolean
+  newToggleState: boolean
+}
+
 export interface PrecisionModeHandlers {
-  handleShiftKey: (event: KeyboardEvent) => void
+  handleShiftKey: (event: KeyboardEvent) => ShiftKeyResult
   applyPrecisionToImageDelta: (currentImageCoords: ImageCoords, baseImageCoords: ImageCoords) => ImageCoords
   applyPrecisionToCanvasDelta: (currentCanvasPos: CanvasPoint, deltaX: number, deltaY: number, scale: number, offset: { x: number; y: number }) => { canvasPos: CanvasPoint; imageCoords: ImageCoords }
   resetPrecision: (clearToggle?: boolean) => void
@@ -22,26 +28,39 @@ export function usePrecisionMode(
   imageToCanvasCoords: (u: number, v: number) => CanvasPoint
 ): PrecisionModeHandlers {
   const [isPrecisionToggled, setIsPrecisionToggled] = useState(false)
+  const [isShiftHeld, setIsShiftHeld] = useState(false)
   const precisionPointerRef = useRef<ImageCoords | null>(null)
   const precisionCanvasPosRef = useRef<CanvasPoint | null>(null)
   const shiftPressStartTimeRef = useRef<number | null>(null)
+  // Track toggle state in ref for synchronous access
+  const isPrecisionToggledRef = useRef(false)
 
-  const handleShiftKey = useCallback((event: KeyboardEvent) => {
+  const handleShiftKey = useCallback((event: KeyboardEvent): ShiftKeyResult => {
+    let toggled = false
+    let newToggleState = isPrecisionToggledRef.current
+
     if (event.key === 'Shift') {
       if (event.type === 'keydown') {
+        setIsShiftHeld(true)
         if (!shiftPressStartTimeRef.current) {
           shiftPressStartTimeRef.current = Date.now()
         }
       } else if (event.type === 'keyup') {
+        setIsShiftHeld(false)
         if (shiftPressStartTimeRef.current) {
           const pressDuration = Date.now() - shiftPressStartTimeRef.current
           if (pressDuration < SHIFT_TAP_THRESHOLD_MS) {
-            setIsPrecisionToggled(prev => !prev)
+            newToggleState = !isPrecisionToggledRef.current
+            isPrecisionToggledRef.current = newToggleState
+            setIsPrecisionToggled(newToggleState)
+            toggled = true
           }
           shiftPressStartTimeRef.current = null
         }
       }
     }
+
+    return { toggled, newToggleState }
   }, [])
 
   const applyPrecisionToImageDelta = useCallback((currentImageCoords: ImageCoords, baseImageCoords: ImageCoords): ImageCoords => {
@@ -88,15 +107,17 @@ export function usePrecisionMode(
     precisionPointerRef.current = null
     precisionCanvasPosRef.current = null
     if (clearToggle) {
+      isPrecisionToggledRef.current = false
       setIsPrecisionToggled(false)
     }
   }, [])
 
   const getPrecisionState = useCallback((): PrecisionModeState => ({
-    isPrecisionActive: isPrecisionToggled,
+    isPrecisionActive: isPrecisionToggled || isShiftHeld,
     isPrecisionToggled,
+    isShiftHeld,
     precisionCanvasPos: precisionCanvasPosRef.current
-  }), [isPrecisionToggled])
+  }), [isPrecisionToggled, isShiftHeld])
 
   return {
     handleShiftKey,
