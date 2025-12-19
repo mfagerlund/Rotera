@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "name": "Six Points and VL Positive Y",
+  "name": "Six Points and VL",
   "worldPoints": [
     {
       "id": "WorldPoint_0",
@@ -26,19 +26,19 @@
       "id": "WorldPoint_1",
       "name": "WP2",
       "lockedXyz": [
-        0,
-        0,
+        null,
+        null,
         null
       ],
       "inferredXyz": [
         0,
         0,
-        10
+        null
       ],
       "optimizedXyz": [
         0,
         0,
-        10
+        -10.000087275649767
       ],
       "color": "#4ECDC4"
     },
@@ -47,16 +47,16 @@
       "name": "WP4",
       "lockedXyz": [
         null,
-        0,
-        0
+        null,
+        null
       ],
       "inferredXyz": [
-        10,
+        null,
         0,
         0
       ],
       "optimizedXyz": [
-        10,
+        -10.00079695534186,
         0,
         0
       ],
@@ -66,18 +66,18 @@
       "id": "WorldPoint_3",
       "name": "OY",
       "lockedXyz": [
-        0,
-        10,
-        0
+        null,
+        null,
+        null
       ],
       "inferredXyz": [
         0,
-        10,
+        null,
         0
       ],
       "optimizedXyz": [
         0,
-        10,
+        9.99911560387628,
         0
       ],
       "color": "#98D8C8"
@@ -92,13 +92,13 @@
       ],
       "inferredXyz": [
         0,
-        10,
-        10
+        null,
+        null
       ],
       "optimizedXyz": [
         0,
-        10,
-        10
+        9.998929227823147,
+        -10.000336564742405
       ],
       "color": "#F7DC6F"
     },
@@ -111,13 +111,13 @@
         null
       ],
       "inferredXyz": [
-        10,
-        10,
+        null,
+        null,
         0
       ],
       "optimizedXyz": [
-        10,
-        10,
+        -10.001146219475995,
+        9.999029303191532,
         0
       ],
       "color": "#BB8FCE"
@@ -131,7 +131,7 @@
       "url": "",
       "imageWidth": 1103,
       "imageHeight": 794,
-      "focalLength": 2013.9501790365828,
+      "focalLength": 1933.2542307940969,
       "principalPointX": 551.5,
       "principalPointY": 397,
       "skewCoefficient": 0,
@@ -148,15 +148,15 @@
         0
       ],
       "position": [
-        20.50328785096177,
-        2.2781571532568363,
-        67.60864260864668
+        19.28743072301845,
+        7.549628702508833,
+        56.161046300227866
       ],
       "rotation": [
-        0.12167492396792981,
-        0.008204987268075824,
-        0.9913987552367741,
-        0.04648735983525899
+        -0.0014537933784993119,
+        0.19136358078273197,
+        -0.0077873531967808125,
+        0.9814879240468082
       ],
       "calibrationAccuracy": 0,
       "isProcessed": false,

@@ -195,7 +195,41 @@ export function checkOptimizationReadiness(project: Project): OptimizationReadin
     })
   }
 
-  const canOptimize = effectiveConstraintCount > 0 && hasEnoughEntities && canInitialize
+  // Check for floating points (underconstrained - depth cannot be determined)
+  // A point is "floating" if:
+  // 1. It's not fully constrained (missing locked/inferred coordinates)
+  // 2. It has no connected lines (no geometric constraints)
+  // 3. It's only visible in one camera (triangulation impossible)
+  const floatingPoints: WorldPoint[] = []
+  for (const wp of pointArray) {
+    if (wp.isFullyConstrained()) continue // Already constrained
+    if (wp.connectedLines.size > 0) continue // Has line constraints
+
+    // Count unique viewpoints that can see this point
+    const viewingCameras = new Set<Viewpoint>()
+    for (const ip of wp.imagePoints) {
+      viewingCameras.add(ip.viewpoint as Viewpoint)
+    }
+
+    if (viewingCameras.size === 1) {
+      // Only one camera can see this point, and it has no other constraints
+      // Its 3D position (depth) cannot be determined - it's floating along the ray
+      floatingPoints.push(wp)
+    }
+  }
+
+  if (floatingPoints.length > 0) {
+    const names = floatingPoints.map(p => `"${p.name}"`).join(', ')
+    const plural = floatingPoints.length > 1
+    issues.push({
+      type: 'error',
+      code: 'FLOATING_POINTS',
+      message: `${plural ? 'Points' : 'Point'} ${names} ${plural ? 'have' : 'has'} no geometric constraints and ${plural ? 'are' : 'is'} only visible in one camera. 3D position cannot be determined. Add lines connecting to constrained geometry, lock coordinates, or add observations from another camera.`,
+      shortMessage: `${floatingPoints.length} floating point${plural ? 's' : ''}`
+    })
+  }
+
+  const canOptimize = effectiveConstraintCount > 0 && hasEnoughEntities && canInitialize && floatingPoints.length === 0
 
   return {
     pointCount: pointArray.length,
