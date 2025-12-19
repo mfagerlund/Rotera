@@ -1374,10 +1374,14 @@ export function optimizeProject(
   let result = system.solve();
 
   // RETRY LOGIC: If alignment was ambiguous and residual is poor, try opposite sign
-  // The threshold of 50 is chosen because good solutions typically have residual < 5,
-  // and 50 indicates the solver got stuck in a bad local minimum.
-  const AMBIGUOUS_RETRY_THRESHOLD = 50;
-  if (alignmentWasAmbiguous && result.residual > AMBIGUOUS_RETRY_THRESHOLD && usedEssentialMatrix) {
+  // The threshold of 20 is chosen because good solutions typically have residual < 5,
+  // and higher values indicate the solver got stuck in a bad local minimum.
+  // Note: also check median error since that's what the user cares about.
+  const AMBIGUOUS_RETRY_THRESHOLD = 20;
+  const medianErrorThreshold = 3.0;
+  const shouldRetry = alignmentWasAmbiguous && usedEssentialMatrix &&
+    (result.residual > AMBIGUOUS_RETRY_THRESHOLD || (result.medianReprojectionError ?? 0) > medianErrorThreshold);
+  if (shouldRetry) {
     log(`[Retry] Ambiguous alignment with poor result (${result.residual.toFixed(2)} > ${AMBIGUOUS_RETRY_THRESHOLD}), trying opposite sign`);
 
     // Save current result for comparison

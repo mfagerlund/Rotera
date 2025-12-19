@@ -530,8 +530,62 @@ export function alignSceneToLineDirections(
       usePositive = dotPreferPositive;
       log(`[Align] ${firstAxisKey}-axis: EM second-axis inconclusive, dot=${dotWithTarget.toFixed(2)} -> ${usePositive ? '+' : '-'}`);
     }
+  } else if (usedEssentialMatrix && qualityCallback) {
+    // Single axis EM case with quality callback - test both orientations
+    // This is needed because when an endpoint is set from inference (not triangulation),
+    // the dot product will be 1.0 (already aligned) even though other points may be
+    // in a completely different coordinate frame. Testing both signs with actual solves
+    // lets us pick the better orientation.
+    log(`[Align] ${firstAxisKey}-axis: EM single-axis (dot=${dotWithTarget.toFixed(2)}), testing both orientations`);
+
+    const saveState = () => ({
+      cameras: cameras.map(c => ({ pos: [...c.position], rot: [...c.rotation] })),
+      points: allPoints.map(p => ({ xyz: p.optimizedXyz ? [...p.optimizedXyz] : undefined }))
+    });
+    const restoreState = (state: ReturnType<typeof saveState>) => {
+      cameras.forEach((c, i) => {
+        c.position = state.cameras[i].pos as [number, number, number];
+        c.rotation = state.cameras[i].rot as [number, number, number, number];
+      });
+      allPoints.forEach((p, i) => {
+        p.optimizedXyz = state.points[i].xyz as [number, number, number] | undefined;
+      });
+    };
+
+    const testAlignment = (positive: boolean, iterations: number): number => {
+      const state = saveState();
+      const dir = positive ? positiveDir : negativeDir;
+      const rotation = computeRotationBetweenVectors(dir, firstLine.targetAxis);
+      applyRotation(rotation);
+      const error = qualityCallback(iterations);
+      restoreState(state);
+      return error;
+    };
+
+    // Quick test first
+    let errorPositive = testAlignment(true, 50);
+    let errorNegative = testAlignment(false, 50);
+    log(`[Align] ${firstAxisKey}-axis: quick test: +err=${errorPositive.toFixed(2)}, -err=${errorNegative.toFixed(2)}`);
+
+    // If errors are similar, run longer tests
+    const errorRatio = Math.min(errorPositive, errorNegative) / Math.max(errorPositive, errorNegative);
+    if (errorRatio > 0.8) {
+      errorPositive = testAlignment(true, 300);
+      errorNegative = testAlignment(false, 300);
+      log(`[Align] ${firstAxisKey}-axis: long test: +err=${errorPositive.toFixed(2)}, -err=${errorNegative.toFixed(2)}`);
+    }
+
+    const finalRatio = Math.min(errorPositive, errorNegative) / Math.max(errorPositive, errorNegative);
+    if (finalRatio > 0.95) {
+      isAmbiguous = true;
+      usePositive = dotPreferPositive;
+      log(`[Align] ${firstAxisKey}-axis: errors similar, AMBIGUOUS`);
+    } else {
+      usePositive = errorPositive < errorNegative;
+      log(`[Align] ${firstAxisKey}-axis: chose ${usePositive ? '+' : '-'}${firstAxisKey.toUpperCase()} (${errorPositive.toFixed(2)} vs ${errorNegative.toFixed(2)})`);
+    }
   } else if (usedEssentialMatrix) {
-    // Single axis case - use dot-product (no second axis to disambiguate)
+    // Single axis case without quality callback - use dot-product
     log(`[Align] ${firstAxisKey}-axis: EM single-axis, dot=${dotWithTarget.toFixed(2)} -> ${usePositive ? '+' : '-'}`);
   } else {
     // Non-EM case: use dot-product (standard case, works for VP initialization)

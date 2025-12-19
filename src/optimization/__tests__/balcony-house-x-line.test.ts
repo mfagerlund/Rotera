@@ -10,13 +10,13 @@ function loadFixture(filename: string) {
   return loadProjectFromJson(jsonContent)
 }
 
-describe('Balcony House optimization', () => {
+describe('Balcony House X-Line optimization', () => {
   beforeEach(() => {
     clearOptimizationLogs();
   });
 
-  it('should solve full Balcony House with median error < 3px', () => {
-    const project = loadFixture('balcony-house.json')
+  it('should solve X-axis line constraint with median error < 3px', () => {
+    const project = loadFixture('balcony-house-x-line.json')
 
     const result = optimizeProject(project, {
       tolerance: 1e-6,
@@ -24,7 +24,7 @@ describe('Balcony House optimization', () => {
       verbose: false,
     })
 
-    console.log(`[Balcony House] Median: ${result.medianReprojectionError?.toFixed(2)}px, Converged: ${result.converged}`)
+    console.log(`[X Line] Median: ${result.medianReprojectionError?.toFixed(2)}px, Converged: ${result.converged}`)
 
     expect(result.medianReprojectionError).toBeDefined()
     expect(result.medianReprojectionError!).toBeLessThan(3.0)
