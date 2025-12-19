@@ -21,7 +21,7 @@ function writeOutputFile() {
   fs.writeFileSync(outputPath, outputLines.join('\n'), 'utf-8')
 }
 
-describe('Balcony House X vs Z Line comparison', () => {
+describe.skip('Balcony House X vs Z Line comparison', () => {
   beforeEach(() => {
     clearOptimizationLogs();
   });

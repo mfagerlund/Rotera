@@ -42,3 +42,4 @@ build_output.txt
 # Test debug output files
 src/optimization/__tests__/*-debug*.txt
 src/optimization/__tests__/*-output*.txt
+/src/optimization/__tests__/fixtures/comparison-output.txt

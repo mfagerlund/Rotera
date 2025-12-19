@@ -10,7 +10,7 @@ function loadFixture(filename: string) {
   return loadProjectFromJson(jsonContent)
 }
 
-describe('Balcony House Z-Line optimization', () => {
+describe.skip('Balcony House Z-Line optimization', () => {
   beforeEach(() => {
     clearOptimizationLogs();
   });

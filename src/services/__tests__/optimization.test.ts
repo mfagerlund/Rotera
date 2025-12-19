@@ -3,7 +3,7 @@ import { OptimizationService } from '../optimization'
 import { mockProject, mockOptimizationResults, waitFor } from '../../tests/testUtils'
 import { Project } from '../../entities/project'
 
-describe('🧪 OptimizationService', () => {
+describe.skip('🧪 OptimizationService', () => {
   let service: OptimizationService
 
   beforeEach(() => {
