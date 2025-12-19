@@ -4094,6 +4094,18 @@ body {
   cursor: not-allowed;
 }
 
+/* Optimization Status Group */
+.optimization-status-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.optimization-status-indicator {
+  white-space: nowrap;
+  font-weight: 500;
+}
+
 /* File Menu Dropdown */
 .file-menu-container {
   position: relative;

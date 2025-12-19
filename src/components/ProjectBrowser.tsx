@@ -18,10 +18,11 @@ import {
   faFileExport,
   faBolt,
   faStar,
-  faStarHalfAlt
+  faStarHalfAlt,
+  faClock
 } from '@fortawesome/free-solid-svg-icons'
 import { faStar as faStarOutline } from '@fortawesome/free-regular-svg-icons'
-import { ProjectDB, ProjectSummary, Folder } from '../services/project-db'
+import { ProjectDB, ProjectSummary, Folder, OptimizationResultSummary } from '../services/project-db'
 import { Project } from '../entities/project'
 import { useConfirm } from './ConfirmDialog'
 import { SessionStore } from '../services/session-store'
@@ -94,6 +95,10 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
   const [batchResults, setBatchResults] = useState<Map<string, BatchOptimizationResult>>(new Map())
   const [isBatchOptimizing, setIsBatchOptimizing] = useState(false)
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 })
+  const [folderStats, setFolderStats] = useState<Map<string, { projectCount: number; minError: number | null; maxError: number | null; avgError: number | null }>>(new Map())
+  const [totalProjectCount, setTotalProjectCount] = useState(0)
+  const [optimizingProjectId, setOptimizingProjectId] = useState<string | null>(null)
+  const [queuedProjectIds, setQueuedProjectIds] = useState<Set<string>>(new Set())
 
   const setCurrentFolderId = useCallback((folderId: string | null) => {
     setCurrentFolderIdState(folderId)
@@ -103,14 +108,26 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
   const loadContents = useCallback(async () => {
     setIsLoading(true)
     try {
-      const [loadedFolders, loadedProjects, loadedAllFolders] = await Promise.all([
+      const [loadedFolders, loadedProjects, loadedAllFolders, allProjectsRecursive] = await Promise.all([
         ProjectDB.listFolders(currentFolderId),
         ProjectDB.listProjects(currentFolderId),
-        ProjectDB.listAllFolders()
+        ProjectDB.listAllFolders(),
+        ProjectDB.getProjectsRecursive(currentFolderId)
       ])
       setFolders(loadedFolders.sort((a, b) => a.name.localeCompare(b.name)))
       setProjects(loadedProjects.sort((a, b) => a.name.localeCompare(b.name)))
       setAllFolders(loadedAllFolders)
+      setTotalProjectCount(allProjectsRecursive.length)
+
+      // Load stats for each subfolder
+      const statsMap = new Map<string, { projectCount: number; minError: number | null; maxError: number | null; avgError: number | null }>()
+      await Promise.all(
+        loadedFolders.map(async (folder) => {
+          const stats = await ProjectDB.getFolderStats(folder.id)
+          statsMap.set(folder.id, stats)
+        })
+      )
+      setFolderStats(statsMap)
     } catch (error) {
       console.error('Failed to load contents:', error)
     } finally {
@@ -298,15 +315,28 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
   }
 
   const handleBatchOptimize = async () => {
-    if (projects.length === 0) return
+    // Get all projects including subdirectories
+    const allProjects = await ProjectDB.getProjectsRecursive(currentFolderId)
+    if (allProjects.length === 0) return
 
     setIsBatchOptimizing(true)
-    setBatchProgress({ current: 0, total: projects.length })
+    setBatchProgress({ current: 0, total: allProjects.length })
     const newResults = new Map<string, BatchOptimizationResult>()
 
-    for (let i = 0; i < projects.length; i++) {
-      const summary = projects[i]
-      setBatchProgress({ current: i + 1, total: projects.length })
+    // Set all projects as queued
+    setQueuedProjectIds(new Set(allProjects.map(p => p.id)))
+
+    for (let i = 0; i < allProjects.length; i++) {
+      const summary = allProjects[i]
+      setBatchProgress({ current: i + 1, total: allProjects.length })
+
+      // Mark current project as optimizing, remove from queue
+      setOptimizingProjectId(summary.id)
+      setQueuedProjectIds(prev => {
+        const next = new Set(prev)
+        next.delete(summary.id)
+        return next
+      })
 
       try {
         const project = await ProjectDB.loadProject(summary.id)
@@ -323,21 +353,45 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
 
         const solveTimeMs = performance.now() - startTime
 
-        newResults.set(summary.id, {
+        const batchResult: BatchOptimizationResult = {
           projectId: summary.id,
           error: result.residual,
           converged: result.converged,
           solveTimeMs,
           errorMessage: result.error ?? undefined,
-        })
+        }
+
+        newResults.set(summary.id, batchResult)
+
+        // Save optimization result to database
+        const optimizationResult: OptimizationResultSummary = {
+          error: result.residual,
+          converged: result.converged,
+          solveTimeMs,
+          errorMessage: result.error ?? undefined,
+          optimizedAt: new Date(),
+        }
+        await ProjectDB.saveOptimizationResult(summary.id, optimizationResult)
       } catch (error) {
-        newResults.set(summary.id, {
+        const batchResult: BatchOptimizationResult = {
           projectId: summary.id,
           error: null,
           converged: false,
           solveTimeMs: 0,
           errorMessage: error instanceof Error ? error.message : 'Unknown error',
-        })
+        }
+
+        newResults.set(summary.id, batchResult)
+
+        // Save error result to database
+        const optimizationResult: OptimizationResultSummary = {
+          error: null,
+          converged: false,
+          solveTimeMs: 0,
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          optimizedAt: new Date(),
+        }
+        await ProjectDB.saveOptimizationResult(summary.id, optimizationResult)
       }
 
       // Update results incrementally
@@ -348,6 +402,11 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
     }
 
     setIsBatchOptimizing(false)
+    setOptimizingProjectId(null)
+    setQueuedProjectIds(new Set())
+
+    // Reload contents to show updated stored results
+    await loadContents()
   }
 
   const handleDragStart = (e: React.DragEvent, project: ProjectSummary) => {
@@ -440,13 +499,13 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
           <button
             className="project-browser__btn project-browser__btn--optimize"
             onClick={handleBatchOptimize}
-            disabled={projects.length === 0 || isBatchOptimizing}
-            title="Run optimization on all projects in this folder"
+            disabled={totalProjectCount === 0 || isBatchOptimizing}
+            title="Run optimization on all projects in this folder and subfolders"
           >
             {isBatchOptimizing ? (
               <><FontAwesomeIcon icon={faSpinner} spin /> Optimizing {batchProgress.current}/{batchProgress.total}...</>
             ) : (
-              <><FontAwesomeIcon icon={faBolt} /> Optimize All</>
+              <><FontAwesomeIcon icon={faBolt} /> Optimize All ({totalProjectCount})</>
             )}
           </button>
         </div>
@@ -542,6 +601,44 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
                 ) : (
                   <span className="project-browser__item-name">{folder.name}</span>
                 )}
+                {(() => {
+                  const stats = folderStats.get(folder.id)
+
+                  // Check if any projects in this folder are being optimized or queued
+                  // We need to check all projects recursively in this folder
+                  const folderHasOptimizing = optimizingProjectId !== null &&
+                    projects.some(p => p.folderId === folder.id && optimizingProjectId === p.id)
+                  const folderHasQueued = queuedProjectIds.size > 0
+
+                  if (isBatchOptimizing && (folderHasQueued || folderHasOptimizing)) {
+                    return (
+                      <span className="project-browser__item-meta" style={{ marginLeft: 'auto', marginRight: '8px' }}>
+                        <FontAwesomeIcon icon={faSpinner} spin style={{ color: '#3498db', marginRight: '6px' }} />
+                        <span style={{ color: '#3498db' }}>
+                          {stats?.projectCount ?? 0} projects
+                        </span>
+                      </span>
+                    )
+                  }
+
+                  if (!stats || stats.projectCount === 0) return null
+                  return (
+                    <span className="project-browser__item-meta" style={{ marginLeft: 'auto', marginRight: '8px' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>{stats.projectCount} projects</span>
+                      {stats.avgError !== null && (
+                        <span style={{
+                          marginLeft: '8px',
+                          color: stats.avgError < 1 ? '#2ecc71' : stats.avgError < 5 ? '#f1c40f' : '#e74c3c'
+                        }}>
+                          avg: {stats.avgError.toFixed(2)}
+                          <span style={{ opacity: 0.7, marginLeft: '4px' }}>
+                            ({stats.minError?.toFixed(2)} - {stats.maxError?.toFixed(2)})
+                          </span>
+                        </span>
+                      )}
+                    </span>
+                  )
+                })()}
                 <div className="project-browser__item-actions">
                   <button
                     title="Rename"
@@ -607,8 +704,42 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
                     <span className="project-browser__item-date">
                       {formatDate(project.updatedAt)}
                     </span>
-                    {batchResults.has(project.id) && (() => {
-                      const result = batchResults.get(project.id)!
+                    {(() => {
+                      const isOptimizing = optimizingProjectId === project.id
+                      const isQueued = queuedProjectIds.has(project.id)
+
+                      // Show optimizing state
+                      if (isOptimizing) {
+                        return (
+                          <span
+                            className="project-browser__item-optimization"
+                            title="Optimizing..."
+                          >
+                            <FontAwesomeIcon icon={faBolt} spin style={{ color: '#3498db' }} />
+                            <span style={{ color: '#3498db' }}>Optimizing...</span>
+                          </span>
+                        )
+                      }
+
+                      // Show queued state
+                      if (isQueued) {
+                        return (
+                          <span
+                            className="project-browser__item-optimization"
+                            title="Queued for optimization"
+                          >
+                            <FontAwesomeIcon icon={faClock} style={{ color: '#95a5a6' }} />
+                            <span style={{ color: '#95a5a6' }}>Queued</span>
+                          </span>
+                        )
+                      }
+
+                      // Show batch results during optimization, otherwise show stored results
+                      const batchResult = batchResults.get(project.id)
+                      const storedResult = project.optimizationResult
+                      const result = batchResult || storedResult
+                      if (!result) return null
+
                       const getQualityInfo = () => {
                         if (result.error === null || result.errorMessage) {
                           return { icon: faStarOutline, color: '#e74c3c', label: 'Failed' }

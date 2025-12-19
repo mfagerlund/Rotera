@@ -8,17 +8,20 @@ Viewpoints: 2
 
 === RESULT ===
 Converged: true
-Iterations: 39
-Residual: 1.3044547552163186
-Median reproj: 0.36321192476719294
+Iterations: 20
+Residual: 1.3044547552165757
+Median reproj: 0.36321177871490856
 Cameras initialized: C3, C1
 Cameras excluded: none
 
 === OPTIMIZATION LOGS ===
+[Optimize] v2.4.0-single-vp-init
 [Optimize] WP:6 L:7 VP:2 IP:12 C:0
 [validateVanishingPoints] Added 7 virtual VP lines from direction-constrained Lines
 [VP] WARNING: VP very far from origin (u=552, v=-117925)
-[Init Debug] uninitCameras=2, lockedPts=2, canVP=true
+[validateVanishingPoints] Added 7 virtual VP lines from direction-constrained Lines
+[Init] Using standard initialization orchestrator
+[Init Debug] uninitCameras=2, lockedPts=2 (trulyLocked=2), canVP=true (relaxed=true)
 [validateVanishingPoints] Added 7 virtual VP lines from direction-constrained Lines
 [Init Path] skipVPForLatePnP=false (uninit=2, locked=2, hasVL=true)
 [validateVanishingPoints] Added 7 virtual VP lines from direction-constrained Lines
@@ -84,83 +87,38 @@ Cameras excluded: none
   Z axis -> VP at (1368.77, 429.62)
 [initializeCameraWithVanishingPoints] Success! Position: [20.25, -7.49, 58.50], Rotation: [-0.008, 0.981, 0.002, -0.192]
 [Init] C3 via VP, f=2014
-[Init Path] skipVPForLatePnP=false (uninit=2, locked=2, hasVL=false)
-[validateVanishingPoints] Added 7 virtual VP lines from direction-constrained Lines
-[initializeCameraWithVanishingPoints] Starting vanishing point initialization...
-[validateVanishingPoints] Added 7 virtual VP lines from direction-constrained Lines
-[VP Init] Vanishing points:
-  X: (-1715.024, -299.352)
-  Y: (558.824, 6118.716)
-  Z: (2620.564, -393.994)
-[initializeCameraWithVanishingPoints] Using existing principal point: (553.5, 396.5)
-[VP Focal] X-Y pair: f=1998.5
-[VP Focal] X-Z pair: f=2034.5
-[VP Focal] Y-Z pair: f=2124.2
-[initializeCameraWithVanishingPoints] Estimated focal length from VPs: 2034.5 (was 1107)
-[VP Debug] X VP at (-1715, -299) -> direction LEFT/UP in camera [-0.726, 0.223, 0.651]
-[VP Debug] Y VP at (559, 6119) -> direction RIGHT/DOWN in camera [0.001, -0.942, 0.335]
-[VP Debug] Z VP at (2621, -394) -> direction RIGHT/UP in camera [0.688, 0.263, 0.677]
-[VP Debug] All 3 VPs observed. Initial directions:
-[VP Debug]   d_x = [-0.7258, 0.2226, 0.6509]
-[VP Debug]   d_y = [0.0009, -0.9422, 0.3350]
-[VP Debug]   d_z = [0.6876, 0.2630, 0.6768]
-[VP Debug] X × Y = [0.6879, 0.2437, 0.6837]
-[VP Debug] (X × Y) · Z = 0.9998 (RIGHT-HANDED)
-[VP Debug] Cross product check: X × Y dot Z = 1.000 (should be +1 for right-handed, -1 for left-handed)
-[VP Debug] Orthogonality check: X·Y=0.008, X·Z=-0.000, Y·Z=-0.020 (all should be ~0)
-[VP Debug] Rotation determinant (base): 0.999762 (should be +1 for right-handed)
-[VP Debug] Computed rotation matrix from vanishing points (base):
-[ -0.725783, 0.000877, 0.687619 ]
-[ 0.222628, -0.942219, 0.262962 ]
-[ 0.650904, 0.334997, 0.676780 ]
-[VP Debug] Quaternion (base): [0.06061,0.365849,0.163436,0.914205]
-[VP Debug] Added alternate rotation with flipped Y and X (base)
-[VP Debug] Returning 2 base rotation(s)
-[initializeCameraWithVanishingPoints] Trying 2 base rotation(s)
-[VP RH] Z-axis point WP2: z=+10 err=3.9px, z=-10 err=333.3px -> POSITIVE Z
-[VP RH] X-axis point WP4: x=+10 err=3.9px, x=-10 err=360.7px -> POSITIVE X
-[VP RH] optimalX=+, optimalZ=+ -> RIGHT-HANDED (+bonus)
-[VP Sign Debug] NEW BEST: [Y=Z×X false,false,false] score=2299997.9, avgError=1.0px
-[VP RH] Z-axis point WP2: z=+10 err=Infinitypx, z=-10 err=Infinitypx -> NEGATIVE Z
-[VP RH] X-axis point WP4: x=+10 err=Infinitypx, x=-10 err=Infinitypx -> NEGATIVE X
-[VP RH] optimalX=-, optimalZ=- -> RIGHT-HANDED (+bonus)
-[VP RH] Z-axis point WP2: z=+10 err=333.3px, z=-10 err=3.9px -> NEGATIVE Z
-[VP RH] X-axis point WP4: x=+10 err=360.7px, x=-10 err=3.9px -> NEGATIVE X
-[VP RH] optimalX=-, optimalZ=- -> RIGHT-HANDED (+bonus)
-[VP RH] Z-axis point WP2: z=+10 err=Infinitypx, z=-10 err=Infinitypx -> NEGATIVE Z
-[VP RH] X-axis point WP4: x=+10 err=Infinitypx, x=-10 err=Infinitypx -> NEGATIVE X
-[VP RH] optimalX=-, optimalZ=- -> RIGHT-HANDED (+bonus)
-[VP RH] Z-axis point WP2: z=+10 err=Infinitypx, z=-10 err=Infinitypx -> NEGATIVE Z
-[VP RH] X-axis point WP4: x=+10 err=Infinitypx, x=-10 err=Infinitypx -> NEGATIVE X
-[VP RH] optimalX=-, optimalZ=- -> RIGHT-HANDED (+bonus)
-[VP RH] Z-axis point WP2: z=+10 err=3.9px, z=-10 err=333.3px -> POSITIVE Z
-[VP RH] X-axis point WP4: x=+10 err=3.9px, x=-10 err=360.7px -> POSITIVE X
-[VP RH] optimalX=+, optimalZ=+ -> RIGHT-HANDED (+bonus)
-[VP RH] Z-axis point WP2: z=+10 err=Infinitypx, z=-10 err=Infinitypx -> NEGATIVE Z
-[VP RH] X-axis point WP4: x=+10 err=Infinitypx, x=-10 err=Infinitypx -> NEGATIVE X
-[VP RH] optimalX=-, optimalZ=- -> RIGHT-HANDED (+bonus)
-[VP RH] Z-axis point WP2: z=+10 err=333.3px, z=-10 err=3.9px -> NEGATIVE Z
-[VP RH] X-axis point WP4: x=+10 err=360.7px, x=-10 err=3.9px -> NEGATIVE X
-[VP RH] optimalX=-, optimalZ=- -> RIGHT-HANDED (+bonus)
-[initializeCameraWithVanishingPoints] Camera predicted vanishing points:
-  X axis -> VP at (-1718.73, -325.65)
-  Y axis -> VP at (605.47, 5964.64)
-  Z axis -> VP at (2617.49, -366.12)
-[initializeCameraWithVanishingPoints] Success! Position: [-55.49, -42.77, -60.71], Rotation: [0.061, 0.366, 0.163, 0.914]
-[Init] C1 via VP, f=2034
-[Tri] LARGE DEPTH: t1=44, t2=105, maxDepth=14558
-[Tri] 2 pts: O:[0.0,0.0,0.0] WP2:[0.0,0.0,10.0] WP4:[10.0,0.0,0.0] OY:[0.0,-10.0,0.0] WP6:[6.8,-7.8,16.9] WP7:[-13.4,-15.2,-16.2]
+[Init Path] C1: skipping VP (already VP-inited one camera with < 3 locked points)
 [Align] y-axis: dot=1.00 -> +
 [Align] y-axis: chose +Y
+[Scale] axisConstrainedLines=7, linesWithTargetLength=3, usedEssentialMatrix=false
+[Fix] Camera C1 at locked point O - moved back by 10.00
 [Scale] Applied scale=1.000 from 1 point pairs
+[Prelim] 1 init camera(s), 1 need late PnP
 [VP] WARNING: VP very far from origin (u=569, v=-118618)
-[Solve] conv=true, iter=39, median=0.36px | C3:f=2014 C1:f=2067
+[Prelim] Single-cam solve: conv=true, iter=14, res=1.103
+  Centroid of 6 constrained points: [-3.333, -5.000, -3.333]
+  Sample constrained points (first 5):
+    [0.000, 0.000, 0.000]
+    [0.000, 0.000, -10.000]
+    [-10.000, 0.000, 0.000]
+    [0.000, -10.000, 0.000]
+    [0.000, -10.000, -10.000]
+  Max distance from centroid: 8.976
+  Computed camera distance: 22.439
+  Initial camera position: [-3.333, -5.000, -25.772]
+PnP: Initialized C1 using 6 constrained points
+  Initial reprojection error: 4566.85 px
+  Final reprojection error: 2.99 px (59 iterations)
+  Position: [28.623, -25.200, 33.034]
+  Final distance from centroid: 52.458 (ratio to initial: 2.34x)
+[Init] C1 via late PnP
+[Solve] conv=true, iter=20, median=0.36px | C3:f=2014 C1:f=2067
 [Handedness] Result is LEFT-HANDED (no locked coords to determine axis), applying Z-flip
 [AxisFlips] Applying flips: X=false, Y=false, Z=true (1 total)
 [AxisFlips] Odd number of flips - will set isZReflected=true
 [AxisFlips] Camera C3: position and rotation transformed, isZReflected=true
 [AxisFlips] Camera C1: position and rotation transformed, isZReflected=true
-[Summary] ** Good | error=1.304 | median=0.36px | iter=39 | conv=true | 1023ms
+[Summary] ** Good | error=1.304 | median=0.36px | iter=20 | conv=true | 1804ms
 
 === FINAL CAMERA POSITIONS ===
 C3: pos=[20.1, -7.7, -58.7] f=2014

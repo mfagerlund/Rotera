@@ -8,6 +8,14 @@ const PROJECTS_STORE = 'projects'
 const IMAGES_STORE = 'images'
 const FOLDERS_STORE = 'folders'
 
+export interface OptimizationResultSummary {
+  error: number | null
+  converged: boolean
+  solveTimeMs: number
+  errorMessage?: string
+  optimizedAt: Date
+}
+
 export interface ProjectSummary {
   id: string
   name: string
@@ -17,6 +25,7 @@ export interface ProjectSummary {
   thumbnailUrl?: string
   viewpointCount: number
   worldPointCount: number
+  optimizationResult?: OptimizationResultSummary
 }
 
 export interface Folder {
@@ -48,6 +57,7 @@ interface StoredProject {
   thumbnailUrl?: string
   viewpointCount: number
   worldPointCount: number
+  optimizationResult?: OptimizationResultSummary
 }
 
 function generateId(): string {
@@ -76,7 +86,11 @@ function toProjectSummary(p: StoredProject): ProjectSummary {
     updatedAt: new Date(p.updatedAt),
     thumbnailUrl: p.thumbnailUrl,
     viewpointCount: p.viewpointCount,
-    worldPointCount: p.worldPointCount
+    worldPointCount: p.worldPointCount,
+    optimizationResult: p.optimizationResult ? {
+      ...p.optimizationResult,
+      optimizedAt: new Date(p.optimizationResult.optimizedAt)
+    } : undefined
   }
 }
 
@@ -729,5 +743,50 @@ export const ProjectDB = {
   async hasProjects(): Promise<boolean> {
     const projects = await this.listAllProjects()
     return projects.length > 0
+  },
+
+  async saveOptimizationResult(projectId: string, result: OptimizationResultSummary): Promise<void> {
+    const db = await openDatabase()
+    await getAndUpdateProject(db, projectId, (project) => {
+      project.optimizationResult = result
+    })
+  },
+
+  async getProjectsRecursive(folderId: string | null): Promise<ProjectSummary[]> {
+    const allProjects: ProjectSummary[] = []
+
+    // Get projects in this folder
+    const projects = await this.listProjects(folderId)
+    allProjects.push(...projects)
+
+    // Get subfolders and recursively get their projects
+    const subfolders = await this.listFolders(folderId)
+    for (const subfolder of subfolders) {
+      const subProjects = await this.getProjectsRecursive(subfolder.id)
+      allProjects.push(...subProjects)
+    }
+
+    return allProjects
+  },
+
+  async getFolderStats(folderId: string): Promise<{ projectCount: number; minError: number | null; maxError: number | null; avgError: number | null }> {
+    const projects = await this.getProjectsRecursive(folderId)
+
+    const errors: number[] = []
+    for (const project of projects) {
+      if (project.optimizationResult?.error !== null && project.optimizationResult?.error !== undefined) {
+        errors.push(project.optimizationResult.error)
+      }
+    }
+
+    if (errors.length === 0) {
+      return { projectCount: projects.length, minError: null, maxError: null, avgError: null }
+    }
+
+    const minError = Math.min(...errors)
+    const maxError = Math.max(...errors)
+    const avgError = errors.reduce((a, b) => a + b, 0) / errors.length
+
+    return { projectCount: projects.length, minError, maxError, avgError }
   }
 }

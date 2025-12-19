@@ -23,6 +23,7 @@ import { WorkspaceSwitcher } from '../WorkspaceManager'
 import { AppBranding } from '../AppBranding'
 import type { Project } from '../../entities/project'
 import type { ProjectDto } from '../../entities/project/ProjectDto'
+import { checkOptimizationReadiness, getOptimizationStatusSummary } from '../../optimization/optimization-readiness'
 
 interface MainToolbarProps {
   // Workspace
@@ -252,14 +253,53 @@ export const MainToolbar: React.FC<MainToolbarProps> = observer(({
         worldHasContent={worldHasContent}
       />
 
-      <button
-        className="btn-optimize"
-        onClick={onOpenOptimization}
-        title="Run bundle adjustment optimization"
-      >
-        <FontAwesomeIcon icon={faBolt} />
-        <span>Optimize</span>
-      </button>
+      {/* Optimization status and button */}
+      {(() => {
+        const readiness = project ? checkOptimizationReadiness(project) : null
+        const status = readiness ? getOptimizationStatusSummary(readiness) : null
+        return (
+          <div className="optimization-status-group">
+            {status && status.status !== 'empty' && (
+              <div
+                className="optimization-status-indicator"
+                title={readiness?.issues.map(i => i.message).join('\n') || status.message}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '4px 10px',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  backgroundColor: status.status === 'ready' ? 'rgba(39, 174, 96, 0.15)' :
+                                   status.status === 'warning' ? 'rgba(243, 156, 18, 0.15)' :
+                                   'rgba(231, 76, 60, 0.15)',
+                  color: status.color,
+                  border: `1px solid ${status.color}40`
+                }}
+              >
+                <span style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: status.color
+                }} />
+                <span>{status.message}</span>
+              </div>
+            )}
+            <button
+              className="btn-optimize"
+              onClick={onOpenOptimization}
+              title={readiness?.canOptimize ? 'Run bundle adjustment optimization' :
+                     readiness?.issues.filter(i => i.type === 'error').map(i => i.shortMessage).join(', ') || 'Cannot optimize'}
+              disabled={!readiness?.canOptimize}
+              style={!readiness?.canOptimize ? { opacity: 0.5 } : undefined}
+            >
+              <FontAwesomeIcon icon={faBolt} />
+              <span>Optimize</span>
+            </button>
+          </div>
+        )
+      })()}
 
       <div className="file-menu-container" ref={fileMenuRef}>
         <button

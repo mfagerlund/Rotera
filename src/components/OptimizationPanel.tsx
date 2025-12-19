@@ -18,6 +18,8 @@ import { CoplanarPointsConstraint } from '../entities/constraints/coplanar-point
 import { projectWorldPointToPixelQuaternion } from '../optimization/camera-projection'
 import { V, Vec3, Vec4 } from 'scalar-autograd'
 import { optimizationLogs } from '../optimization/optimize-project'
+import { ProjectDB } from '../services/project-db'
+import { checkOptimizationReadiness } from '../optimization/optimization-readiness'
 
 interface OptimizationPanelProps {
   isOpen: boolean
@@ -136,126 +138,9 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
   const clientSolver = useOptimization()
   const { cancel: cancelOptimization } = clientSolver
 
-  // Get optimization stats from actual entities
+  // Get optimization readiness from shared function
   // Note: No useMemo - let MobX observer track observable access for reactivity
-  const stats = (() => {
-    const pointArray = Array.from(project.worldPoints.values())
-    const lineArray = Array.from(project.lines.values())
-    const viewpointArray = Array.from(project.viewpoints.values())
-
-    const unlockedPoints = pointArray.filter(p => !p.isLocked())
-    const totalDOF = (unlockedPoints.length * 3) + (viewpointArray.length * 6)
-
-    // Count intrinsic line constraints (direction and length)
-    let lineConstraintCount = 0
-    for (const line of lineArray) {
-      if (line.direction !== 'free') {
-        lineConstraintCount += 2
-      }
-      if (line.hasFixedLength()) {
-        lineConstraintCount += 1
-      }
-    }
-
-    const constraintDOF = project.constraints.size + lineConstraintCount
-    const netDOF = Math.max(0, totalDOF - constraintDOF)
-
-    // Count projection constraints
-    const projectionCount = Array.from(project.constraints).filter(
-      c => c.getConstraintType() === 'projection_point_camera'
-    ).length
-
-    // Count image observations from fully locked world points (valid for PnP)
-    let pnpObservationCount = 0
-    for (const vp of viewpointArray) {
-      for (const ip of vp.imagePoints) {
-        if (ip.worldPoint.isFullyLocked()) {
-          pnpObservationCount++
-        }
-      }
-    }
-
-    // Check camera initialization requirements
-    // NOTE: We assume ALL cameras will be reset to [0,0,0] when autoInitializeCameras is true
-    // So we check if there are 2+ cameras that will need initialization
-    const camerasNeedingInit = viewpointArray.length
-
-    let initializationError: string | null = null
-    let canInitialize = true
-
-    if (camerasNeedingInit >= 2) {
-      const worldPointArray = pointArray as WorldPoint[]
-      const lockedPoints = worldPointArray.filter(wp => wp.isFullyLocked())
-
-      let anyCameraCanUsePnP = false
-      if (lockedPoints.length >= 2) {
-        // Check if at least one camera can use PnP: needs 3+ locked points visible
-        for (const vp of viewpointArray) {
-          const vpConcrete = vp as Viewpoint
-          const vpLockedPoints = Array.from(vpConcrete.imagePoints).filter(ip =>
-            (ip.worldPoint as WorldPoint).isFullyLocked()
-          )
-
-          if (vpLockedPoints.length >= 3) {
-            anyCameraCanUsePnP = true
-            break
-          }
-        }
-      }
-
-      // Check if any camera can use vanishing point initialization
-      let anyCameraCanUseVanishingPoints = false
-      if (!anyCameraCanUsePnP) {
-        for (const vp of viewpointArray) {
-          const vpConcrete = vp as Viewpoint
-          if (vpConcrete.canInitializeWithVanishingPoints(new Set(worldPointArray))) {
-            anyCameraCanUseVanishingPoints = true
-            break
-          }
-        }
-      }
-
-      if (!anyCameraCanUsePnP && !anyCameraCanUseVanishingPoints) {
-        // Fall back to Essential Matrix path: need at least 7 shared correspondences
-        const vp1 = viewpointArray[0] as Viewpoint
-        const vp2 = viewpointArray[1] as Viewpoint
-
-        const sharedWorldPoints = new Set<WorldPoint>()
-        for (const ip1 of vp1.imagePoints) {
-          for (const ip2 of vp2.imagePoints) {
-            if (ip1.worldPoint === ip2.worldPoint) {
-              sharedWorldPoints.add(ip1.worldPoint as WorldPoint)
-            }
-          }
-        }
-
-        if (sharedWorldPoints.size < 7) {
-          canInitialize = false
-          initializationError = `Need at least 7 shared point correspondences between "${vp1.name}" and "${vp2.name}" (currently have ${sharedWorldPoints.size}). Add more image points that are visible in both cameras, OR lock at least 3 world point coordinates visible in one camera for PnP initialization, OR use vanishing point initialization (2+ axes with 2+ lines each, 2+ locked points visible).`
-        }
-      }
-    }
-
-    // Total effective constraints: explicit constraints + line constraints + PnP observations
-    const effectiveConstraintCount = project.constraints.size + lineConstraintCount + pnpObservationCount
-
-    return {
-      pointCount: pointArray.length,
-      unlockedPointCount: unlockedPoints.length,
-      lineCount: lineArray.length,
-      viewpointCount: viewpointArray.length,
-      constraintCount: project.constraints.size,
-      lineConstraintCount,
-      pnpObservationCount,
-      projectionConstraintCount: projectionCount,
-      totalDOF,
-      constraintDOF,
-      netDOF,
-      canOptimize: effectiveConstraintCount > 0 && (unlockedPoints.length > 0 || viewpointArray.length > 0) && canInitialize,
-      canInitialize,
-      initializationError
-    }
-  })()
+  const stats = checkOptimizationReadiness(project)
 
   const canOptimize = useCallback(() => {
     if (isOptimizing) return false
@@ -280,6 +165,8 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
     setPnpResults([])
     setStatusMessage('Initializing cameras and world points...')
 
+    const startTime = performance.now()
+
     try {
       // Update status before the blocking solver call
       await new Promise<void>(resolve => {
@@ -299,6 +186,8 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
         }
       )
 
+      const solveTimeMs = performance.now() - startTime
+
       setStatusMessage('Processing results...')
 
       const result = {
@@ -314,6 +203,21 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
       setResults(result)
       setStatusMessage(null)
 
+      // Save optimization result to database if project is saved
+      if (project._dbId) {
+        try {
+          await ProjectDB.saveOptimizationResult(project._dbId, {
+            error: solverResult.residual,
+            converged: solverResult.converged,
+            solveTimeMs,
+            errorMessage: solverResult.error ?? undefined,
+            optimizedAt: new Date(),
+          })
+        } catch (dbError) {
+          console.warn('Failed to save optimization result to DB:', dbError)
+        }
+      }
+
       if (result.converged) {
         onOptimizationComplete(true, 'Optimization converged successfully')
       } else {
@@ -323,6 +227,8 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
     } catch (error) {
       console.error('Optimization failed:', error)
       const errorMessage = error instanceof Error ? error.message : 'Optimization failed'
+      const solveTimeMs = performance.now() - startTime
+
       setResults({
         converged: false,
         error: errorMessage,
@@ -332,6 +238,22 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
         outliers: []
       })
       setStatusMessage(null)
+
+      // Save error result to database if project is saved
+      if (project._dbId) {
+        try {
+          await ProjectDB.saveOptimizationResult(project._dbId, {
+            error: null,
+            converged: false,
+            solveTimeMs,
+            errorMessage,
+            optimizedAt: new Date(),
+          })
+        } catch (dbError) {
+          console.warn('Failed to save optimization result to DB:', dbError)
+        }
+      }
+
       onOptimizationComplete(false, errorMessage)
     } finally {
       setIsOptimizing(false)
@@ -557,20 +479,31 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
         </div>
       )}
 
-      {!canOptimize() && !isOptimizing && (
+      {!canOptimize() && !isOptimizing && stats.issues.filter(i => i.type === 'error').length > 0 && (
         <div className="optimization-requirements">
           <h4>Requirements:</h4>
           <ul>
-            {stats.unlockedPointCount === 0 && stats.viewpointCount === 0 && (
-              <li className="requirement-missing">At least 1 unlocked point or viewpoint</li>
-            )}
-            {stats.constraintCount === 0 && stats.lineConstraintCount === 0 && stats.pnpObservationCount === 0 && (
-              <li className="requirement-missing">At least 1 constraint or image observation</li>
-            )}
-            {stats.initializationError && (
-              <li className="requirement-missing">{stats.initializationError}</li>
-            )}
+            {stats.issues.filter(i => i.type === 'error').map(issue => (
+              <li key={issue.code} className="requirement-missing">{issue.message}</li>
+            ))}
           </ul>
+        </div>
+      )}
+
+      {stats.issues.filter(i => i.type === 'warning').length > 0 && (
+        <div className="optimization-warnings" style={{
+          padding: '8px 12px',
+          margin: '8px 0',
+          backgroundColor: '#fff3cd',
+          border: '1px solid #ffc107',
+          borderRadius: '4px',
+          fontSize: '12px'
+        }}>
+          {stats.issues.filter(i => i.type === 'warning').map(issue => (
+            <div key={issue.code} style={{ color: '#856404' }}>
+              <strong>Warning:</strong> {issue.message}
+            </div>
+          ))}
         </div>
       )}
 
