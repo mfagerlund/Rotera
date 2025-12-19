@@ -17,13 +17,6 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IOptimizabl
     selected = false
     isPoseLocked = false
     lastResiduals: number[] = []
-    /**
-     * When true, this viewpoint has been Z-reflected + Rz_180 transformed for right-handed output.
-     * After this transformation, cam' = -cam, so points in front have camZ < 0 (not > 0).
-     * The rendering code must use camZ < -0.01 as the "in front" check.
-     * This flag is NOT serialized - it's a runtime property set by the solver.
-     */
-    isZReflected = false
 
     name: string
     filename: string

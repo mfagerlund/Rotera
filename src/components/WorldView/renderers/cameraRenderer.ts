@@ -127,9 +127,8 @@ export function renderCameras(
     const rot = viewpoint.rotation
     let rotInverse: [number, number, number, number] = [rot[0], -rot[1], -rot[2], -rot[3]]
 
-    // When isZReflected=true, "in front of camera" is negative Z in camera space.
-    // Place the frustum plane at negative Z so it's visible.
-    const zPlane = viewpoint.isZReflected ? -frustumDepth : frustumDepth
+    // Frustum extends along positive Z in camera space
+    const zPlane = frustumDepth
 
     // Build image plane corners in camera space using intrinsics.
     const fx = viewpoint.focalLength

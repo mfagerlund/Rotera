@@ -11,32 +11,6 @@ import { renderLines } from './renderers/lineRenderer'
 import { renderAxes } from './renderers/axesRenderer'
 import { renderCameras } from './renderers/cameraRenderer'
 import { findPointAt, findLineAt, findCameraAt } from './utils'
-import type { ProjectedPoint } from './types'
-
-// Compute actual handedness from projection
-// When isZReflected=true, the solver has produced right-handed output
-function computeHandedness(project3DTo2D: (p: [number, number, number]) => ProjectedPoint, isZReflected?: boolean): 'L' | 'R' {
-  // If we're viewing from a Z-reflected camera, the world is right-handed
-  if (isZReflected) {
-    return 'R'
-  }
-
-  const o = project3DTo2D([0, 0, 0])
-  const x = project3DTo2D([1, 0, 0])
-  const y = project3DTo2D([0, 1, 0])
-  const z = project3DTo2D([0, 0, 1])
-
-  // Screen vectors
-  const vx = [x.x - o.x, x.y - o.y, (x.depth ?? 0) - (o.depth ?? 0)]
-  const vy = [y.x - o.x, y.y - o.y, (y.depth ?? 0) - (o.depth ?? 0)]
-  const vz = [z.x - o.x, z.y - o.y, (z.depth ?? 0) - (o.depth ?? 0)]
-
-  // Determinant of [vx, vy, vz]
-  const det = vx[0]*(vy[1]*vz[2] - vy[2]*vz[1]) - vx[1]*(vy[0]*vz[2] - vy[2]*vz[0]) + vx[2]*(vy[0]*vz[1] - vy[1]*vz[0])
-  return det > 0 ? 'R' : 'L'
-}
-
-
 export const WorldView = observer(React.forwardRef<WorldViewRef, WorldViewProps>(({
   project,
   selectedEntities,
@@ -86,9 +60,6 @@ export const WorldView = observer(React.forwardRef<WorldViewRef, WorldViewProps>
   const { dragState, startDrag, updateDrag, endDrag } = useDragState()
   const { hoverState, setHoverState, clearHover } = useHoverState()
   const { project3DTo2D } = useProjection(canvasRef, viewMatrix)
-
-  // Compute actual displayed handedness
-  const handedness = useMemo(() => computeHandedness(project3DTo2D, viewMatrix.isZReflected), [project3DTo2D, viewMatrix.isZReflected])
 
   // Main render function
   const render = useCallback(() => {
@@ -394,7 +365,7 @@ export const WorldView = observer(React.forwardRef<WorldViewRef, WorldViewProps>
           {viewMatrix.cameraPosition ? (
             <>Cam: {viewMatrix.cameraPosition[0].toFixed(1)}, {viewMatrix.cameraPosition[1].toFixed(1)}, {viewMatrix.cameraPosition[2].toFixed(1)} • </>
           ) : null}
-          View rot.x: {(viewMatrix.rotation.x * 180 / Math.PI).toFixed(1)}° • rot.y: {(viewMatrix.rotation.y * 180 / Math.PI).toFixed(1)}° • rot.z: {(viewMatrix.rotation.z * 180 / Math.PI).toFixed(1)}° • Zoom: {viewMatrix.scale.toFixed(0)} • {handedness}H
+          View rot.x: {(viewMatrix.rotation.x * 180 / Math.PI).toFixed(1)}° • rot.y: {(viewMatrix.rotation.y * 180 / Math.PI).toFixed(1)}° • rot.z: {(viewMatrix.rotation.z * 180 / Math.PI).toFixed(1)}° • Zoom: {viewMatrix.scale.toFixed(0)}
         </div>
         <div className="controls-hint">
           Drag: Rotate • Middle/Ctrl+Drag: Pan • Scroll: Zoom • Click camera: Focus
