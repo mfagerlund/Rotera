@@ -14,6 +14,13 @@ const isTest = typeof process !== 'undefined' && process.env.NODE_ENV === 'test'
 // Allow enabling console logs during tests via environment variable
 const FORCE_CONSOLE_LOGS = typeof process !== 'undefined' && process.env.PICTORIGO_VERBOSE_TESTS === 'true';
 
+// Callback for real-time log updates (UI can subscribe to this)
+let onLogCallback: ((message: string) => void) | null = null;
+
+export function setLogCallback(callback: ((message: string) => void) | null) {
+  onLogCallback = callback;
+}
+
 export function log(message: string) {
   const isVpDebug = message.startsWith('[VP Debug]');
 
@@ -28,6 +35,11 @@ export function log(message: string) {
   }
 
   optimizationLogs.push(message);
+
+  // Notify callback if set (for real-time UI updates)
+  if (onLogCallback && !isVpDebug) {
+    onLogCallback(message);
+  }
 }
 
 export function clearOptimizationLogs() {

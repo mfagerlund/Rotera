@@ -9,6 +9,7 @@ import { projectWorldPointToPixelQuaternion } from '../../optimization/camera-pr
 import { V, Vec3, Vec4 } from 'scalar-autograd'
 import { ProjectDB } from '../../services/project-db'
 import { checkOptimizationReadiness } from '../../optimization/optimization-readiness'
+import { setLogCallback } from '../../optimization/optimize-project'
 
 interface OptimizationSettings {
   maxIterations: number
@@ -132,10 +133,11 @@ export function useOptimizationPanel({
       setStatusMessage('Initializing cameras and world points...')
     })
 
+    // Wait for browser to paint: double RAF + small timeout to ensure paint completes
     await new Promise<void>(resolve => {
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          resolve()
+          setTimeout(resolve, 50)
         })
       })
     })

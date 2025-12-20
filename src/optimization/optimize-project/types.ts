@@ -12,6 +12,11 @@ export interface OptimizeProjectOptions extends Omit<SolverOptions, 'optimizeCam
   detectOutliers?: boolean;
   outlierThreshold?: number;
   /**
+   * Optional callback called at phase boundaries to allow UI updates.
+   * If provided, the optimizer becomes async and yields between phases.
+   */
+  onPhase?: (phase: string) => Promise<void>;
+  /**
    * If true, optimize camera intrinsics for all cameras.
    * If false, keep intrinsics fixed.
    * If 'auto' (default), optimize intrinsics only for cameras without vanishing lines.
