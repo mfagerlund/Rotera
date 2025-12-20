@@ -1,3 +1,14 @@
+/**
+ * Polynomial equation solvers for PnP algorithms.
+ *
+ * Implements solvers for quadratic, cubic, and quartic polynomial equations
+ * used in P3P pose estimation.
+ */
+
+/**
+ * Solve quartic equation: a4*x^4 + a3*x^3 + a2*x^2 + a1*x + a0 = 0
+ * Returns array of real roots.
+ */
 export function solveQuartic(a4: number, a3: number, a2: number, a1: number, a0: number): number[] {
   if (Math.abs(a4) < 1e-10) {
     return solveCubic(a3, a2, a1, a0);
@@ -42,6 +53,10 @@ export function solveQuartic(a4: number, a3: number, a2: number, a1: number, a0:
   return roots;
 }
 
+/**
+ * Solve cubic equation: a3*x^3 + a2*x^2 + a1*x + a0 = 0
+ * Returns array of real roots.
+ */
 export function solveCubic(a3: number, a2: number, a1: number, a0: number): number[] {
   if (Math.abs(a3) < 1e-10) {
     return solveQuadratic(a2, a1, a0);
@@ -73,6 +88,10 @@ export function solveCubic(a3: number, a2: number, a1: number, a0: number): numb
   return roots;
 }
 
+/**
+ * Solve quadratic equation: a*x^2 + b*x + c = 0
+ * Returns array of real roots.
+ */
 export function solveQuadratic(a: number, b: number, c: number): number[] {
   if (Math.abs(a) < 1e-10) {
     if (Math.abs(b) < 1e-10) return [];

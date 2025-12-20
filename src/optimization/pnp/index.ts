@@ -18,21 +18,15 @@
 import type { IViewpoint, IImagePoint, IWorldPoint } from '../../entities/interfaces';
 import type { Viewpoint } from '../../entities/viewpoint';
 import type { WorldPoint } from '../../entities/world-point';
+import { log } from '../optimization-logger';
 import type { PnPResult } from './types';
 import { solveP3P } from './p3p';
 import { estimatePoseDLT } from './epnp';
-import { log } from '../optimization-logger';
 
-export type { PnPResult };
+// Re-export public APIs
 export { initializeCameraWithPnP } from './iterative-refinement';
-
-function getCameraMatrix(vp: Viewpoint): number[][] {
-  return [
-    [vp.focalLength, 0, vp.principalPointX],
-    [0, vp.focalLength * vp.aspectRatio, vp.principalPointY],
-    [0, 0, 1]
-  ];
-}
+export type { PnPInitializationResult, PnPOptions } from './iterative-refinement';
+export type { PnPResult } from './types';
 
 /**
  * Solve Perspective-n-Point (PnP) problem.
@@ -104,4 +98,12 @@ export function solvePnP(
     rotation: pose.rotation,
     success: true
   };
+}
+
+function getCameraMatrix(vp: Viewpoint): number[][] {
+  return [
+    [vp.focalLength, 0, vp.principalPointX],
+    [0, vp.focalLength * vp.aspectRatio, vp.principalPointY],
+    [0, 0, 1]
+  ];
 }
