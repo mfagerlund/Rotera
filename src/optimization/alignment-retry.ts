@@ -16,7 +16,7 @@ interface ExtendedSolverResult extends SolverResult {
 }
 import { initializeCamerasWithEssentialMatrix } from './essential-matrix';
 import { initializeWorldPoints as unifiedInitialize } from './unified-initialization';
-import { alignSceneToLineDirections } from './coordinate-alignment';
+import { alignSceneToLineDirections } from './coordinate-alignment/index';
 import { resetOptimizationState } from './state-reset';
 import { log } from './optimization-logger';
 import type { IOptimizableCamera } from './IOptimizable';
