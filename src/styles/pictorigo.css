@@ -362,100 +362,6 @@
   font-style: italic;
 }
 
-.lines-manager__table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-}
-
-.lines-manager__table th {
-  text-align: left;
-  padding: 4px 8px;
-  background: var(--surface-2);
-  border-bottom: 1px solid var(--border);
-  font-weight: 500;
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
-.lines-manager__table td {
-  padding: 4px 8px;
-  border-bottom: 1px solid var(--border);
-  vertical-align: middle;
-}
-
-.lines-manager__table tr:hover {
-  background: var(--surface-2);
-}
-
-.lines-manager__table tr.selected {
-  background: var(--primary);
-  color: var(--primary-text);
-}
-
-.lines-manager__table tr.selected:hover {
-  background: var(--primary-hover);
-}
-
-.lines-manager__table .color-dot {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  margin-right: 6px;
-  vertical-align: middle;
-  border: 1px solid var(--border);
-}
-
-.lines-manager__table .points-cell {
-  color: var(--text-secondary);
-  font-size: 11px;
-}
-
-.lines-manager__table .dir-cell {
-  text-align: center;
-  font-weight: 500;
-}
-
-.lines-manager__table .length-cell {
-  text-align: right;
-  font-family: monospace;
-  font-size: 11px;
-}
-
-.lines-manager__table .residual-cell {
-  text-align: right;
-  font-family: monospace;
-  font-size: 11px;
-}
-
-.lines-manager__table .actions-cell {
-  text-align: right;
-  white-space: nowrap;
-}
-
-.lines-manager__table .btn-icon {
-  background: none;
-  border: none;
-  padding: 2px 5px;
-  cursor: pointer;
-  color: var(--text-secondary);
-  border-radius: 4px;
-  opacity: 0.6;
-  transition: opacity 0.15s, background-color 0.15s;
-  font-size: 11px;
-}
-
-.lines-manager__table .btn-icon:hover {
-  opacity: 1;
-  background: var(--surface-3);
-}
-
-.lines-manager__table .btn-danger-icon:hover {
-  background: var(--error);
-  color: white;
-}
-
 /* Constraint-specific styles */
 .constraint-details {
   margin-top: 6px;
@@ -4401,48 +4307,95 @@ body {
 .entity-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 11px;
-  background: var(--surface-1);
-  border-radius: var(--border-radius);
-  overflow: hidden;
-}
-
-.entity-table th,
-.entity-table td {
-  padding: 4px 8px;
-  text-align: left;
-  border-bottom: 1px solid var(--border);
+  font-size: 12px;
 }
 
 .entity-table th {
+  text-align: left;
+  padding: 4px 8px;
   background: var(--surface-2);
-  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
   font-weight: 500;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 .entity-table td {
-  color: var(--text-primary);
-  font-family: 'SF Mono', 'Consolas', monospace;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
 }
 
-.entity-table tr:last-child td {
-  border-bottom: none;
-}
-
-.entity-table tr:hover td {
+.entity-table tr:hover {
   background: var(--surface-2);
 }
 
-.entity-table tr.selected td {
+.entity-table tr.selected {
   background: var(--primary);
   color: var(--primary-text);
 }
 
-.entity-table tr.selected:hover td {
+.entity-table tr.selected:hover {
   background: var(--primary-hover);
+}
+
+.entity-table .color-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+  border: 1px solid var(--border);
+}
+
+.entity-table .points-cell {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.entity-table .dir-cell {
+  text-align: center;
+  font-weight: 500;
+}
+
+.entity-table .length-cell {
+  text-align: right;
+  font-family: monospace;
+  font-size: 11px;
+}
+
+.entity-table .residual-cell {
+  text-align: right;
+  font-family: monospace;
+  font-size: 11px;
+}
+
+.entity-table .actions-cell {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.entity-table .btn-icon {
+  background: none;
+  border: none;
+  padding: 2px 5px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  border-radius: 4px;
+  opacity: 0.6;
+  transition: opacity 0.15s, background-color 0.15s;
+  font-size: 11px;
+}
+
+.entity-table .btn-icon:hover {
+  opacity: 1;
+  background: var(--surface-3);
+}
+
+.entity-table .btn-danger-icon:hover {
+  background: var(--error);
+  color: white;
 }
 
 /* Constraint Editor Modal */

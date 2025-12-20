@@ -99,7 +99,7 @@ export const ImagePointsManager: React.FC<ImagePointsManagerProps> = observer(({
           {allImagePointRefs.length === 0 ? (
             <div className="lines-manager__empty">No image points found</div>
           ) : (
-            <table className="lines-manager__table">
+            <table className="entity-table">
               <thead>
                 <tr>
                   <th>World Point</th>

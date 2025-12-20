@@ -90,7 +90,7 @@ export const WorldPointsManager: React.FC<WorldPointsManagerProps> = observer(({
           {worldPointsList.length === 0 ? (
             <div className="lines-manager__empty">No world points created yet</div>
           ) : (
-            <table className="lines-manager__table">
+            <table className="entity-table">
               <thead>
                 <tr>
                   <th>Name</th>

@@ -106,7 +106,7 @@ export const LinesManager: React.FC<LinesManagerProps> = observer(({
           {linesList.length === 0 ? (
             <div className="lines-manager__empty">No lines created yet</div>
           ) : (
-            <table className="lines-manager__table">
+            <table className="entity-table">
               <thead>
                 <tr>
                   <th>Name</th>

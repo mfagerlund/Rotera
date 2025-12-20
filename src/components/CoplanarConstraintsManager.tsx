@@ -68,7 +68,7 @@ export const CoplanarConstraintsManager: React.FC<CoplanarConstraintsManagerProp
           {constraints.length === 0 ? (
             <div className="lines-manager__empty">No coplanar constraints created yet</div>
           ) : (
-            <table className="lines-manager__table">
+            <table className="entity-table">
               <thead>
                 <tr>
                   <th>Name</th>

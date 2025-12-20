@@ -75,7 +75,7 @@ export const PlanesManager: React.FC<PlanesManagerProps> = observer(({
           {planes.length === 0 ? (
             <div className="lines-manager__empty">No planes created yet</div>
           ) : (
-            <table className="lines-manager__table">
+            <table className="entity-table">
               <thead>
                 <tr>
                   <th>Name</th>

@@ -112,7 +112,7 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = observer(({
           {filteredConstraints.length === 0 ? (
             <div className="lines-manager__empty">No constraints created yet</div>
           ) : (
-            <table className="lines-manager__table">
+            <table className="entity-table">
               <thead>
                 <tr>
                   <th>Type</th>
