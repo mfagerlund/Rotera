@@ -72,4 +72,10 @@ describe('Regression - Calibration', () => {
   it('Balcony House Z Line.json', () => {
     runFixtureTest('Balcony House Z Line.json', 2)
   })
+
+  // Degenerate local minimum - cameras collapse to same position
+  // A 0.3px shift in one image point causes error to go from 132 to 0.84
+  it('Minimal 2 Image 2 Axis Degenerate.json', () => {
+    runFixtureTest('Minimal 2 Image 2 Axis Degenerate.json', 2)
+  })
 })

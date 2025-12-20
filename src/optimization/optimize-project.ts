@@ -39,7 +39,7 @@ import {
   offsetCamerasFromOrigin,
   applyScaleFromLockedPointPairs,
 } from './initialization-phases';
-import { setSeed } from './seeded-random';
+import { setSeed, random } from './seeded-random';
 
 // Re-export for backwards compatibility
 export { log, clearOptimizationLogs, optimizationLogs } from './optimization-logger';
@@ -93,6 +93,8 @@ export interface OptimizeProjectOptions extends Omit<SolverOptions, 'optimizeCam
   _attempt?: number;
   /** @internal Seed for this attempt (used during recursive multi-attempt) */
   _seed?: number;
+  /** @internal Perturbation scale for camera positions (used on retry attempts) */
+  _perturbCameras?: number;
 }
 
 export interface OptimizeProjectResult extends SolverResult {
@@ -133,11 +135,16 @@ export function optimizeProject(
       // Use deterministic seeds: 42, 12345, 98765 (easily reproducible)
       const seed = attempt === 1 ? 42 : attempt === 2 ? 12345 : 98765 + attempt;
 
+      // On retry attempts, add camera perturbation to escape local minima
+      // This helps with degenerate Essential Matrix solutions where cameras collapse
+      const perturbScale = attempt > 1 ? 0.5 * attempt : undefined;
+
       const attemptResult = optimizeProject(project, {
         ...options,
         maxAttempts: 1, // Disable recursion
         _attempt: attempt,
         _seed: seed,
+        _perturbCameras: perturbScale,
       });
 
       const medianError = attemptResult.medianReprojectionError ?? Infinity;
@@ -343,6 +350,23 @@ export function optimizeProject(
       usedEssentialMatrix = initResult.diagnostics.usedEssentialMatrix;
       steppedVPInitReverted = initResult.diagnostics.steppedVPInitReverted;
       vpEmHybridApplied = initResult.diagnostics.vpEmHybridApplied;
+
+      // Apply camera perturbation on retry attempts to escape degenerate local minima
+      // This helps when Essential Matrix produces cameras at nearly the same position
+      if (options._perturbCameras && usedEssentialMatrix) {
+        const perturbScale = options._perturbCameras;
+        const viewpointArray = Array.from(project.viewpoints) as Viewpoint[];
+
+        for (const vp of viewpointArray) {
+          // Add random perturbation to camera position (seeded for reproducibility)
+          vp.position = [
+            vp.position[0] + (random() - 0.5) * perturbScale,
+            vp.position[1] + (random() - 0.5) * perturbScale,
+            vp.position[2] + (random() - 0.5) * perturbScale,
+          ];
+        }
+        log(`[Perturb] Applied camera position perturbation (scale=${perturbScale.toFixed(2)})`);
+      }
     }
   }
 
