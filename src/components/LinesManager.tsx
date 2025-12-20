@@ -9,6 +9,7 @@ import LineCreationTool from './tools/LineCreationTool'
 import { Line } from '../entities/line'
 import { WorldPoint } from '../entities/world-point'
 import { useConfirm } from './ConfirmDialog'
+import { getEntityKey } from '../utils/entityKeys'
 
 interface LinesManagerProps {
   isOpen: boolean
@@ -121,7 +122,7 @@ export const LinesManager: React.FC<LinesManagerProps> = observer(({
                   const isSelected = selectedLines.some(l => l === line)
                   return (
                     <tr
-                      key={line.pointA.name + '-' + line.pointB.name}
+                      key={getEntityKey(line)}
                       className={isSelected ? 'selected' : ''}
                       onClick={(e) => {
                         e.stopPropagation()

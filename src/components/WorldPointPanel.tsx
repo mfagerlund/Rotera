@@ -507,7 +507,7 @@ const EnhancedWorldPointItem: React.FC<EnhancedWorldPointItemProps> = ({
           const action = imagePointCount > 0 ? 'move' : 'place'
           e.dataTransfer.setData('application/json', JSON.stringify({
             type: 'world-point',
-            worldPointName: worldPoint.getName(),
+            worldPointKey: getEntityKey(worldPoint),
             action
           }))
           e.dataTransfer.effectAllowed = 'copy'

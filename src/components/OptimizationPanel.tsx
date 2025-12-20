@@ -17,7 +17,7 @@ import { Line } from '../entities/line'
 import { CoplanarPointsConstraint } from '../entities/constraints/coplanar-points-constraint'
 import { projectWorldPointToPixelQuaternion } from '../optimization/camera-projection'
 import { V, Vec3, Vec4 } from 'scalar-autograd'
-import { optimizationLogs } from '../optimization/optimize-project'
+import { optimizationLogs, OutlierInfo } from '../optimization/optimize-project'
 import { ProjectDB } from '../services/project-db'
 import { checkOptimizationReadiness } from '../optimization/optimization-readiness'
 import { formatXyz } from '../utils/formatters'
@@ -652,12 +652,14 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
 
           {/* Outlier Detection */}
           {results && results.outliers && results.outliers.length > 0 && (() => {
-            const byWorldPoint = new Map<string, Array<{viewpoint: string, error: number}>>();
-            results.outliers.forEach((outlier: any) => {
-              if (!byWorldPoint.has(outlier.worldPointName)) {
-                byWorldPoint.set(outlier.worldPointName, []);
+            // Group outliers by WorldPoint using entity key (not name) to handle duplicate names
+            const byWorldPoint = new Map<string, { worldPoint: WorldPoint, images: Array<{viewpoint: string, error: number}> }>();
+            results.outliers.forEach((outlier: OutlierInfo) => {
+              const wpKey = getEntityKey(outlier.imagePoint.worldPoint);
+              if (!byWorldPoint.has(wpKey)) {
+                byWorldPoint.set(wpKey, { worldPoint: outlier.imagePoint.worldPoint, images: [] });
               }
-              byWorldPoint.get(outlier.worldPointName)!.push({
+              byWorldPoint.get(wpKey)!.images.push({
                 viewpoint: outlier.viewpointName,
                 error: outlier.error
               });
@@ -678,8 +680,8 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
                   These image points have large reprojection errors and may be incorrect manual clicks:
                 </p>
                 <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                  {Array.from(byWorldPoint.entries()).map(([worldPoint, images]) => (
-                    <div key={worldPoint} style={{
+                  {Array.from(byWorldPoint.entries()).map(([wpKey, { worldPoint, images }]) => (
+                    <div key={wpKey} style={{
                       padding: '8px',
                       margin: '6px 0',
                       backgroundColor: '#fff',
@@ -692,7 +694,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
                         marginBottom: '4px',
                         fontSize: '13px'
                       }}>
-                        {worldPoint} <span style={{ color: '#666', fontWeight: 'normal', fontSize: '11px' }}>({images.length} image{images.length > 1 ? 's' : ''})</span>
+                        {worldPoint.getName()} <span style={{ color: '#666', fontWeight: 'normal', fontSize: '11px' }}>({images.length} image{images.length > 1 ? 's' : ''})</span>
                       </div>
                       {images.map((img, idx) => (
                         <div key={idx} style={{

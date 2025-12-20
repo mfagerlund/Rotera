@@ -3,6 +3,7 @@ import { CanvasPoint, ImageCoords, CanvasToImage } from '../types'
 import { WorldPoint } from '../../../entities/world-point'
 import { UseImageViewerEventsReturn } from '../hooks/useImageViewerEvents'
 import { getDraggingWorldPoint, getDragAction, clearDraggingWorldPoint } from '../../../utils/dragContext'
+import { getEntityKey } from '../../../utils/entityKeys'
 
 // Drag-time shift tracking - detect taps from DragEvent.shiftKey changes
 let dragShiftToggled = false
@@ -185,9 +186,9 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
 
         try {
           const data = JSON.parse(e.dataTransfer.getData('application/json'))
-          if (data.type === 'world-point' && data.worldPointName) {
+          if (data.type === 'world-point' && data.worldPointKey) {
             worldPoint = Array.from(worldPoints.values()).find(
-              wp => wp.getName() === data.worldPointName
+              wp => getEntityKey(wp) === data.worldPointKey
             ) || null
             action = data.action
           }
