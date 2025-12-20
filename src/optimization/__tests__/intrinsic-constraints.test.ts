@@ -13,7 +13,7 @@ describe('Intrinsic Constraints', () => {
 
 
   describe('Point - Locked (Fixed Position)', () => {
-        it('should not move locked points when constrained to another point', () => {
+        it('should not move locked points when constrained to another point', async () => {
       const project = Project.create('Test');
 
       
@@ -36,7 +36,7 @@ describe('Intrinsic Constraints', () => {
       project.addWorldPoint(freePoint);
       project.addLine(line);
 
-      const result = optimizeProject(project, {
+      const result = await optimizeProject(project, {
         tolerance: 1e-6,
         maxIterations: 100,
         verbose: false,
@@ -58,7 +58,7 @@ describe('Intrinsic Constraints', () => {
   });
 
   describe('Line - Fixed Length', () => {
-        it('should enforce fixed length intrinsic constraint', () => {
+        it('should enforce fixed length intrinsic constraint', async () => {
       const project = Project.create('Test');
 
       
@@ -75,7 +75,7 @@ describe('Intrinsic Constraints', () => {
       project.addWorldPoint(p2);
       project.addLine(line); // Automatically extracts intrinsic constraints
 
-      const result = optimizeProject(project, {
+      const result = await optimizeProject(project, {
         tolerance: 1e-6,
         maxIterations: 100,
         verbose: false,
@@ -92,7 +92,7 @@ describe('Intrinsic Constraints', () => {
   });
 
   describe('Line - Horizontal', () => {
-        it('should enforce horizontal direction intrinsic constraint', () => {
+        it('should enforce horizontal direction intrinsic constraint', async () => {
       const project = Project.create('Test');
 
       
@@ -108,7 +108,7 @@ describe('Intrinsic Constraints', () => {
       project.addWorldPoint(p2);
       project.addLine(line);
 
-      const result = optimizeProject(project, {
+      const result = await optimizeProject(project, {
         tolerance: 1e-6,
         maxIterations: 100,
         verbose: false,
@@ -127,7 +127,7 @@ describe('Intrinsic Constraints', () => {
   });
 
   describe('Line - Vertical', () => {
-        it('should enforce vertical direction intrinsic constraint', () => {
+        it('should enforce vertical direction intrinsic constraint', async () => {
       const project = Project.create('Test');
 
       
@@ -143,7 +143,7 @@ describe('Intrinsic Constraints', () => {
       project.addWorldPoint(p2);
       project.addLine(line);
 
-      const result = optimizeProject(project, {
+      const result = await optimizeProject(project, {
         tolerance: 1e-6,
         maxIterations: 100,
         verbose: false,
@@ -161,7 +161,7 @@ describe('Intrinsic Constraints', () => {
   });
 
   describe('Line - X-Aligned', () => {
-        it('should enforce x-aligned direction intrinsic constraint', () => {
+        it('should enforce x-aligned direction intrinsic constraint', async () => {
       const project = Project.create('Test');
 
       
@@ -177,7 +177,7 @@ describe('Intrinsic Constraints', () => {
       project.addWorldPoint(p2);
       project.addLine(line);
 
-      const result = optimizeProject(project, {
+      const result = await optimizeProject(project, {
         tolerance: 1e-6,
         maxIterations: 100,
         verbose: false,
@@ -195,7 +195,7 @@ describe('Intrinsic Constraints', () => {
   });
 
   describe('Line - Z-Aligned', () => {
-        it('should enforce z-aligned direction intrinsic constraint', () => {
+        it('should enforce z-aligned direction intrinsic constraint', async () => {
       const project = Project.create('Test');
 
       
@@ -211,7 +211,7 @@ describe('Intrinsic Constraints', () => {
       project.addWorldPoint(p2);
       project.addLine(line);
 
-      const result = optimizeProject(project, {
+      const result = await optimizeProject(project, {
         tolerance: 1e-6,
         maxIterations: 100,
         verbose: false,
@@ -229,7 +229,7 @@ describe('Intrinsic Constraints', () => {
   });
 
   describe('Line - Combined Constraints', () => {
-        it('should enforce both direction and length intrinsic constraints', () => {
+        it('should enforce both direction and length intrinsic constraints', async () => {
       const project = Project.create('Test');
 
       
@@ -246,7 +246,7 @@ describe('Intrinsic Constraints', () => {
       project.addWorldPoint(p2);
       project.addLine(line);
 
-      const result = optimizeProject(project, {
+      const result = await optimizeProject(project, {
         tolerance: 1e-6,
         maxIterations: 100,
         verbose: false,
@@ -268,7 +268,7 @@ describe('Intrinsic Constraints', () => {
   });
 
   describe('Multiple Lines with Intrinsic Constraints', () => {
-        it('should solve multiple lines each with their own intrinsic constraints', () => {
+        it('should solve multiple lines each with their own intrinsic constraints', async () => {
       const project = Project.create('Test');
 
       
@@ -298,7 +298,7 @@ describe('Intrinsic Constraints', () => {
       project.addLine(lineY);
       project.addLine(lineZ);
 
-      const result = optimizeProject(project, {
+      const result = await optimizeProject(project, {
         tolerance: 1e-6,
         maxIterations: 100,
         verbose: false,

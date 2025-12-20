@@ -3,7 +3,7 @@ import type { Viewpoint } from '../entities/viewpoint';
 import type { WorldPoint } from '../entities/world-point';
 import { validateSolvingRequirements, type ViewpointPair } from './solving-requirements';
 import { initializeCamerasWithEssentialMatrix } from './essential-matrix';
-import { initializeWorldPoints } from './unified-initialization';
+import { initializeWorldPoints } from './unified-initialization/index';
 
 export interface SeedInitializationResult {
   success: boolean;

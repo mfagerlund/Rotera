@@ -18,7 +18,7 @@ function seededRandom(seed: number) {
 }
 
 describe('GOLDEN-8: Bundle Adjustment with Geometric Constraints', () => {
-  it('should achieve better accuracy with geometric constraints than image-only BA', () => {
+  it('should achieve better accuracy with geometric constraints than image-only BA', async () => {
     const random = seededRandom(12345);
 
     console.log('\n=== GOLDEN-8: Bundle Adjustment with Geometric Constraints ===\n');
@@ -210,7 +210,7 @@ describe('GOLDEN-8: Bundle Adjustment with Geometric Constraints', () => {
 
     console.log('\n=== STEP 5: Run optimizeProject with constraints ===');
 
-    const result = optimizeProject(project, {
+    const result = await optimizeProject(project, {
       autoInitializeCameras: true,
       autoInitializeWorldPoints: true,
       maxIterations: 500,

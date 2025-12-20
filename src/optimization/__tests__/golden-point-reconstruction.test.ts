@@ -9,7 +9,7 @@ import { Vec4, V, Vec3 } from 'scalar-autograd';
 import { projectWorldPointToPixelQuaternion } from '../camera-projection';
 
 describe('GOLDEN-1: Two-View Point Reconstruction', () => {
-  it('should perfectly reconstruct cube corners from two known cameras', () => {
+  it('should perfectly reconstruct cube corners from two known cameras', async () => {
     console.log('\n=== GOLDEN-1: TWO-VIEW POINT RECONSTRUCTION ===\n');
 
     const groundTruthPositions: [number, number, number][] = [
@@ -215,7 +215,7 @@ describe('GOLDEN-1: Two-View Point Reconstruction', () => {
 
     console.log('RUNNING OPTIMIZATION:\n');
 
-    const result = optimizeProject(project, {
+    const result = await optimizeProject(project, {
       autoInitializeCameras: false,
       autoInitializeWorldPoints: true,
       maxIterations: 100,

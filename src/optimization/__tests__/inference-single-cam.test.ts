@@ -4,7 +4,7 @@ import { loadProjectFromJson } from '../../store/project-serialization';
 import { optimizeProject } from '../optimize-project';
 
 describe('Inference Single Camera', () => {
-  it('should solve single camera with inferred coordinates from axis-aligned lines', () => {
+  it('should solve single camera with inferred coordinates from axis-aligned lines', async () => {
     const jsonPath = path.join(__dirname, 'fixtures', 'inference-single-cam.json');
 
     if (!fs.existsSync(jsonPath)) {
@@ -15,7 +15,7 @@ describe('Inference Single Camera', () => {
     const jsonData = fs.readFileSync(jsonPath, 'utf8');
     const project = loadProjectFromJson(jsonData);
 
-    const result = optimizeProject(project, {
+    const result = await optimizeProject(project, {
       maxIterations: 500,
       verbose: false
     });

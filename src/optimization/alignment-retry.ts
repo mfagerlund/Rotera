@@ -15,7 +15,7 @@ interface ExtendedSolverResult extends SolverResult {
   medianReprojectionError?: number;
 }
 import { initializeCamerasWithEssentialMatrix } from './essential-matrix';
-import { initializeWorldPoints as unifiedInitialize } from './unified-initialization';
+import { initializeWorldPoints as unifiedInitialize } from './unified-initialization/index';
 import { alignSceneToLineDirections } from './coordinate-alignment/index';
 import { resetOptimizationState } from './state-reset';
 import { log } from './optimization-logger';

@@ -8,7 +8,7 @@ import { Vec4, V, Vec3, type Value } from 'scalar-autograd';
 import { projectWorldPointToPixelQuaternion } from '../camera-projection';
 
 describe('GOLDEN-6: Camera Intrinsic Optimization', () => {
-  it('should optimize camera focal length while keeping world geometry fixed', () => {
+  it('should optimize camera focal length while keeping world geometry fixed', async () => {
     console.log('\n=== GOLDEN-6: CAMERA INTRINSIC OPTIMIZATION ===\n');
     console.log('NOTE: This test is SKIPPED because the current ConstraintSystem does not expose');
     console.log('      camera intrinsic optimization options. The Viewpoint.addToValueMap() method');
@@ -20,7 +20,7 @@ describe('GOLDEN-6: Camera Intrinsic Optimization', () => {
     console.log('\n=== TEST SKIPPED ===\n');
   });
 
-  it('MANUAL TEST: demonstrates camera intrinsic optimization capability', () => {
+  it('MANUAL TEST: demonstrates camera intrinsic optimization capability', async () => {
     console.log('\n=== GOLDEN-6: CAMERA INTRINSIC OPTIMIZATION (MANUAL) ===\n');
     console.log('This manual test demonstrates that the underlying system SUPPORTS camera');
     console.log('intrinsic optimization, even though it is not exposed through optimizeProject().\n');

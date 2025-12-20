@@ -126,11 +126,23 @@ export function useOptimizationPanel({
 
     onOptimizationStart?.()
 
+    // Track last log message for display
+    let lastLogMessage = 'Initializing cameras and world points...'
+    const statusMessageRef = { current: lastLogMessage }
+
+    // Set up log callback to capture messages during optimization
+    setLogCallback((message: string) => {
+      // Filter out verbose debug messages, keep phase/status messages
+      if (!message.startsWith('[VP Debug]')) {
+        statusMessageRef.current = message
+      }
+    })
+
     flushSync(() => {
       setIsOptimizing(true)
       setResults(null)
       setPnpResults([])
-      setStatusMessage('Initializing cameras and world points...')
+      setStatusMessage(lastLogMessage)
     })
 
     // Wait for browser to paint: double RAF + small timeout to ensure paint completes
@@ -145,13 +157,29 @@ export function useOptimizationPanel({
     const startTime = performance.now()
 
     try {
+      // Yield callback for real-time UI updates between phases
+      const yieldToUI = async (phase: string) => {
+        flushSync(() => {
+          setStatusMessage(phase)
+        })
+        // Wait for browser to paint
+        await new Promise<void>(resolve => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              setTimeout(resolve, 10)
+            })
+          })
+        })
+      }
+
       const solverResult = await clientSolver.optimize(
         project,
         {
           maxIterations: settings.maxIterations,
           tolerance: settings.tolerance,
           damping: settings.damping,
-          verbose: settings.verbose
+          verbose: settings.verbose,
+          yieldToUI
         }
       )
 
@@ -223,6 +251,7 @@ export function useOptimizationPanel({
 
       onOptimizationComplete(false, errorMessage)
     } finally {
+      setLogCallback(null)
       setIsOptimizing(false)
       setStatusMessage(null)
     }

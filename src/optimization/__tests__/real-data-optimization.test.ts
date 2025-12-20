@@ -19,7 +19,7 @@ const testDataPath = path.join(__dirname, '../../../test-data/test-project-clean
 const testProject = JSON.parse(fs.readFileSync(testDataPath, 'utf-8'));
 
 describe('Real Data Optimization', () => {
-  it('should load test project successfully', () => {
+  it('should load test project successfully', async () => {
     expect(testProject).toBeDefined();
     expect(testProject.worldPoints).toBeDefined();
     expect(Object.keys(testProject.worldPoints).length).toBe(9);
@@ -27,7 +27,7 @@ describe('Real Data Optimization', () => {
     expect(testProject.constraints.length).toBe(2);
   });
 
-  it('should convert project data to entities', () => {
+  it('should convert project data to entities', async () => {
     const pointEntities: WorldPointEntity[] = [];
     const lineEntities: LineEntity[] = [];
     const pointMap = new Map<string, WorldPointEntity>();
@@ -75,7 +75,7 @@ describe('Real Data Optimization', () => {
     });
   });
 
-  it('should convert constraints to entities', () => {
+  it('should convert constraints to entities', async () => {
     const pointEntities: WorldPointEntity[] = [];
 
     // Create point entities
@@ -95,7 +95,7 @@ describe('Real Data Optimization', () => {
     expect(pointEntities.length).toBe(9);
   });
 
-  it('should run optimization on real data', () => {
+  it('should run optimization on real data', async () => {
     const pointEntities: WorldPointEntity[] = [];
     const lineEntities: LineEntity[] = [];
     const pointMap = new Map<string, WorldPointEntity>();
@@ -151,7 +151,7 @@ describe('Real Data Optimization', () => {
     lineEntities.forEach(l => project.addLine(l));
     constraintEntities.forEach(c => project.addConstraint(c));
 
-    const result = optimizeProject(project, {
+    const result = await optimizeProject(project, {
       maxIterations: 100,
       tolerance: 1e-6,
       damping: 0.1,
@@ -184,7 +184,7 @@ describe('Real Data Optimization', () => {
     }
   });
 
-  it('should respect line constraints during optimization', () => {
+  it('should respect line constraints during optimization', async () => {
     const pointEntities: WorldPointEntity[] = [];
     const lineEntities: LineEntity[] = [];
     const pointMap = new Map<string, WorldPointEntity>();
@@ -238,7 +238,7 @@ describe('Real Data Optimization', () => {
     pointEntities.forEach(p => project.addWorldPoint(p));
     lineEntities.forEach(l => project.addLine(l));
 
-    const result = optimizeProject(project, {
+    const result = await optimizeProject(project, {
       maxIterations: 100,
       tolerance: 1e-6,
       damping: 0.1,

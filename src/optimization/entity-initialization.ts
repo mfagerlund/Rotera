@@ -1,4 +1,4 @@
-import { initializeWorldPoints as unifiedInitialize } from './unified-initialization'
+import { initializeWorldPoints as unifiedInitialize } from './unified-initialization/index'
 import type { WorldPoint } from '../entities/world-point'
 import type { Line } from '../entities/line'
 import type { Constraint } from '../entities/constraints'

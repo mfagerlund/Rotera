@@ -9,7 +9,7 @@ import { Vec4, V, Vec3 } from 'scalar-autograd';
 import { projectWorldPointToPixelQuaternion } from '../camera-projection';
 
 describe('GOLDEN-4: Coplanarity Constraints', () => {
-  it('should enforce coplanarity constraint for multiple planes', () => {
+  it('should enforce coplanarity constraint for multiple planes', async () => {
     console.log('\n=== GOLDEN-4: COPLANARITY CONSTRAINTS ===\n');
 
     const groundTruthPositions: [number, number, number][] = [
@@ -257,7 +257,7 @@ describe('GOLDEN-4: Coplanarity Constraints', () => {
 
     console.log('RUNNING OPTIMIZATION:\n');
 
-    const result = optimizeProject(project, {
+    const result = await optimizeProject(project, {
       autoInitializeCameras: false,
       autoInitializeWorldPoints: false,
       maxIterations: 500,

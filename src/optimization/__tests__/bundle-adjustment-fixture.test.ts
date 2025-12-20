@@ -4,7 +4,7 @@ import { optimizeProject } from '../optimize-project';
 import * as fs from 'fs';
 
 describe('Bundle Adjustment with Real Fixture', () => {
-  it('should optimize the real fixture data', () => {
+  it('should optimize the real fixture data', async () => {
     const fixturePath = 'C:\\Users\\matti\\Downloads\\Untitled Project-optimization-2025-10-21(1).json';
 
     if (!fs.existsSync(fixturePath)) {
@@ -29,7 +29,7 @@ describe('Bundle Adjustment with Real Fixture', () => {
 
     let result;
     try {
-      result = optimizeProject(project, {
+      result = await optimizeProject(project, {
         maxIterations: 200,
         tolerance: 1e-6,
         damping: 0.1,

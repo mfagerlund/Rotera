@@ -89,7 +89,7 @@ describe('Perspective Grid Homography', () => {
     return interLL(l1, l2)
   }
 
-  it('should compute vanishing points from three-boxes.jpg lines', () => {
+  it('should compute vanishing points from three-boxes.jpg lines', async () => {
     const vpX = computeVanishingPoint(xLines)
     const vpZ = computeVanishingPoint(zLines)
 
@@ -102,7 +102,7 @@ describe('Perspective Grid Homography', () => {
     // VPs might be outside image bounds - that's OK for perspective
   })
 
-  it('should compute quad corners from line intersections', () => {
+  it('should compute quad corners from line intersections', async () => {
     // Pick the two extreme lines for each axis (already provided as xLines and zLines)
     const [LX0, LX1] = xLines
     const [LZ0, LZ1] = zLines
@@ -161,7 +161,7 @@ describe('Perspective Grid Homography', () => {
     checkPoint(P11, 'P11')
   })
 
-  it('should generate reasonable grid lines', () => {
+  it('should generate reasonable grid lines', async () => {
     const [LX0, LX1] = xLines
     const [LZ0, LZ1] = zLines
 
@@ -208,7 +208,7 @@ describe('Perspective Grid Homography', () => {
     }
   })
 
-  it('should verify vanishing lines actually pass through image canvas', () => {
+  it('should verify vanishing lines actually pass through image canvas', async () => {
     console.log('\n=== LINE SEGMENT BOUNDS CHECK ===')
 
     // Check where actual line SEGMENTS (not infinite lines) are located
@@ -241,7 +241,7 @@ describe('Perspective Grid Homography', () => {
     })
   })
 
-  it('should find which line intersections are actually on-canvas', () => {
+  it('should find which line intersections are actually on-canvas', async () => {
     console.log('\n=== ALL LINE INTERSECTIONS ===')
 
     const isOnCanvas = (p: Pt) => {
@@ -267,7 +267,7 @@ describe('Perspective Grid Homography', () => {
     }
   })
 
-  it('DISABLED - old test using line endpoints', () => {
+  it('DISABLED - old test using line endpoints', async () => {
     const [LX0, LX1] = xLines
     const [LZ0, LZ1] = zLines
 

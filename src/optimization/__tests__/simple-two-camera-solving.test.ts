@@ -9,7 +9,7 @@ import { Project } from '../../entities/project';
 import * as fs from 'fs';
 
 describe('Simple Two-Camera Solving (Proof of Concept)', () => {
-  it('should manually solve seed pair with shared points', () => {
+  it('should manually solve seed pair with shared points', async () => {
     const fixturePath = 'C:\\Slask\\Untitled Project-optimization-2025-10-22.json';
 
     if (!fs.existsSync(fixturePath)) {
@@ -96,7 +96,7 @@ describe('Simple Two-Camera Solving (Proof of Concept)', () => {
     ipsForVp1.forEach(ip => seedProject.addImagePoint(ip));
     ipsForVp2.forEach(ip => seedProject.addImagePoint(ip));
 
-    const result = optimizeProject(seedProject, {
+    const result = await optimizeProject(seedProject, {
       maxIterations: 500,
       tolerance: 1e-4,
       damping: 10.0,

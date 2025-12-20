@@ -18,7 +18,7 @@ import { optimizeProject } from '../optimize-project';
 describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
 
   describe('Simple Projection', () => {
-    it('should optimize camera pose to match multiple observed pixels', () => {
+    it('should optimize camera pose to match multiple observed pixels', async () => {
       const project = Project.create('Camera Pose Test');
 
       // Create multiple world points at known locations (LOCKED - we're optimizing camera)
@@ -68,7 +68,7 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
       project.addImagePoint(ip2);
       project.addImagePoint(ip3);
 
-      const result = optimizeProject(project, {
+      const result = await optimizeProject(project, {
         tolerance: 1e-4,
         maxIterations: 100,
         verbose: false,
@@ -90,7 +90,7 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
       expect(result.residual).toBeLessThan(1.0); // Very small reprojection error
     });
 
-    it('should optimize point position to match observed pixel', () => {
+    it('should optimize point position to match observed pixel', async () => {
       const project = Project.create('Point Position Test');
 
       // Create a viewpoint at a known pose (LOCKED - we're optimizing the point)
@@ -126,7 +126,7 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
       project.addWorldPoint(worldPoint);
       project.addImagePoint(ip);
 
-      const result = optimizeProject(project, {
+      const result = await optimizeProject(project, {
         tolerance: 1e-4,
         maxIterations: 100,
         verbose: false,
@@ -154,7 +154,7 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
   });
 
   describe('Bundle Adjustment', () => {
-    it('should jointly optimize camera pose and point positions', () => {
+    it('should jointly optimize camera pose and point positions', async () => {
       const project = Project.create('Bundle Adjustment Test');
 
       // Create two viewpoints with wrong poses
@@ -193,7 +193,7 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
       project.addImagePoint(ip1);
       project.addImagePoint(ip2);
 
-      const result = optimizeProject(project, {
+      const result = await optimizeProject(project, {
         tolerance: 1e-4,
         maxIterations: 100,
         verbose: false,
@@ -225,7 +225,7 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
       expect(result.residual).toBeLessThan(5.0);
     });
 
-    it('should triangulate point from multiple camera views', () => {
+    it('should triangulate point from multiple camera views', async () => {
       const project = Project.create('Triangulation Test');
 
       // Create viewpoints with locked poses
@@ -265,7 +265,7 @@ describe('ProjectionConstraint - Camera Bundle Adjustment', () => {
       project.addImagePoint(ip1);
       project.addImagePoint(ip2);
 
-      const result = optimizeProject(project, {
+      const result = await optimizeProject(project, {
         tolerance: 1e-4,
         maxIterations: 100,
         verbose: false,

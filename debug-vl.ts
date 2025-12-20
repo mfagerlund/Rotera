@@ -14,21 +14,23 @@ for (const vp of project.viewpoints) {
 }
 
 console.log('\n=== OPTIMIZATION ===');
-const result = optimizeProject(project, {
-  autoInitializeCameras: true,
-  autoInitializeWorldPoints: true,
-  detectOutliers: true,
-  maxIterations: 400,
-  tolerance: 1e-6,
-  verbose: true,
-});
+(async () => {
+  const result = await optimizeProject(project, {
+    autoInitializeCameras: true,
+    autoInitializeWorldPoints: true,
+    detectOutliers: true,
+    maxIterations: 400,
+    tolerance: 1e-6,
+    verbose: true,
+  });
 
-console.log('\n=== RESULT ===');
-console.log('Converged:', result.converged);
-console.log('Iterations:', result.iterations);
-console.log('Residual:', result.residual);
-console.log('Median reproj:', result.medianReprojectionError);
-console.log('Cameras initialized:', result.camerasInitialized ? result.camerasInitialized.join(', ') : 'none');
+  console.log('\n=== RESULT ===');
+  console.log('Converged:', result.converged);
+  console.log('Iterations:', result.iterations);
+  console.log('Residual:', result.residual);
+  console.log('Median reproj:', result.medianReprojectionError);
+  console.log('Cameras initialized:', result.camerasInitialized ? result.camerasInitialized.join(', ') : 'none');
 
-console.log('\n=== LOGS ===');
-console.log(optimizationLogs.join('\n'));
+  console.log('\n=== LOGS ===');
+  console.log(optimizationLogs.join('\n'));
+})();

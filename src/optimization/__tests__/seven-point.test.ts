@@ -58,7 +58,7 @@ describe('7-Point Essential Matrix Algorithm', () => {
     return projection ? [projection[0].data, projection[1].data] : null;
   }
 
-  it('should initialize two cameras from exactly 7 point correspondences', () => {
+  it('should initialize two cameras from exactly 7 point correspondences', async () => {
     console.log('\n=== 7-Point Test: Exact 7 Points ===\n');
 
     const project = Project.create('7-Point Test');
@@ -151,7 +151,7 @@ describe('7-Point Essential Matrix Algorithm', () => {
     console.log('\n=== Test Passed ===\n');
   });
 
-  it('should handle 8+ points using 8-point algorithm', () => {
+  it('should handle 8+ points using 8-point algorithm', async () => {
     console.log('\n=== 7-Point Test: 8+ Points (fallback to 8-point) ===\n');
 
     const project = Project.create('8-Point Fallback Test');
@@ -236,7 +236,7 @@ describe('7-Point Essential Matrix Algorithm', () => {
     console.log('\n=== Test Passed ===\n');
   });
 
-  it('should fail gracefully with fewer than 7 points', () => {
+  it('should fail gracefully with fewer than 7 points', async () => {
     console.log('\n=== 7-Point Test: Insufficient Points ===\n');
 
     const project = Project.create('Insufficient Points Test');
@@ -278,7 +278,7 @@ describe('7-Point Essential Matrix Algorithm', () => {
     console.log('\n=== Test Passed ===\n');
   });
 
-  it('should block optimization when insufficient correspondences for initial cameras', () => {
+  it('should block optimization when insufficient correspondences for initial cameras', async () => {
     console.log('\n=== 7-Point Test: Block Optimization with Insufficient Points ===\n');
 
     const project = Project.create('Block Test');

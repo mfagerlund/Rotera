@@ -120,7 +120,7 @@ function computeFrustumCornerWorld(
 }
 
 describe('Camera Frustum Alignment', () => {
-  it('should project frustum corners to correct pixel positions when viewing from same camera', () => {
+  it('should project frustum corners to correct pixel positions when viewing from same camera', async () => {
     // Load a real fixture with solved camera
     const fixturePath = path.join(__dirname, 'fixtures', 'WhyNegativeYInVP.json')
     if (!fs.existsSync(fixturePath)) {
@@ -208,7 +208,7 @@ describe('Camera Frustum Alignment', () => {
     log('\n=== Test Complete ===')
   })
 
-  it('should test with a synthetic camera to isolate the math', () => {
+  it('should test with a synthetic camera to isolate the math', async () => {
     // Create a simple camera at origin looking down +Z
     // With isZReflected=false first
     log('\n=== Synthetic Camera Test ===')

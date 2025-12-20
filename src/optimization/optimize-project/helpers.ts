@@ -11,7 +11,7 @@ import { ImagePoint } from '../../entities/imagePoint';
 import { Line } from '../../entities/line';
 import { Constraint } from '../../entities/constraints';
 import { initializeCameraWithPnP } from '../pnp';
-import { initializeWorldPoints as unifiedInitialize } from '../unified-initialization';
+import { initializeWorldPoints as unifiedInitialize } from '../unified-initialization/index';
 import { initializeSingleCameraPoints } from '../single-camera-initialization';
 import type { IOptimizableCamera } from '../IOptimizable';
 import { log } from '../optimization-logger';

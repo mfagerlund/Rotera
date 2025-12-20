@@ -14,7 +14,7 @@ import { optimizeProject } from '../optimize-project';
 describe('ConstraintSystem - All Constraint Types', () => {
 
   describe('DistanceConstraint', () => {
-    it('should enforce distance between two points', () => {
+    it('should enforce distance between two points', async () => {
       const project = Project.create('Distance Test');
 
       const p1 = WorldPoint.create('P1', { lockedXyz: [null, null, null], optimizedXyz: [0, 0, 0] });
@@ -33,7 +33,7 @@ describe('ConstraintSystem - All Constraint Types', () => {
       project.addWorldPoint(p2);
       project.addConstraint(constraint);
 
-      const result = optimizeProject(project, {
+      const result = await optimizeProject(project, {
         tolerance: 1e-6,
         maxIterations: 100,
         verbose: false,
@@ -52,7 +52,7 @@ describe('ConstraintSystem - All Constraint Types', () => {
   });
 
   describe('AngleConstraint', () => {
-    it('should enforce angle at vertex', () => {
+    it('should enforce angle at vertex', async () => {
       const project = Project.create('Angle Test');
 
       const pA = WorldPoint.create('PA', { lockedXyz: [null, null, null], optimizedXyz: [10, 0, 0] });
@@ -74,7 +74,7 @@ describe('ConstraintSystem - All Constraint Types', () => {
       project.addWorldPoint(pC);
       project.addConstraint(constraint);
 
-      const result = optimizeProject(project, {
+      const result = await optimizeProject(project, {
         tolerance: 1e-6,
         maxIterations: 100,
         verbose: false,
@@ -98,7 +98,7 @@ describe('ConstraintSystem - All Constraint Types', () => {
   });
 
   describe('CollinearPointsConstraint', () => {
-    it('should make 3 points collinear', () => {
+    it('should make 3 points collinear', async () => {
       const project = Project.create('Collinear Test');
 
       const p1 = WorldPoint.create('P1', { lockedXyz: [0, 0, 0] });
@@ -116,7 +116,7 @@ describe('ConstraintSystem - All Constraint Types', () => {
       project.addWorldPoint(p3);
       project.addConstraint(constraint);
 
-      const result = optimizeProject(project, {
+      const result = await optimizeProject(project, {
         tolerance: 1e-6,
         maxIterations: 100,
         verbose: false,
@@ -134,7 +134,7 @@ describe('ConstraintSystem - All Constraint Types', () => {
   });
 
   describe('CoplanarPointsConstraint', () => {
-    it('should make 4 points coplanar', () => {
+    it('should make 4 points coplanar', async () => {
       const project = Project.create('Coplanar Test');
 
       const p1 = WorldPoint.create('P1', { lockedXyz: [0, 0, 0] });
@@ -154,7 +154,7 @@ describe('ConstraintSystem - All Constraint Types', () => {
       project.addWorldPoint(p4);
       project.addConstraint(constraint);
 
-      const result = optimizeProject(project, {
+      const result = await optimizeProject(project, {
         tolerance: 1e-6,
         maxIterations: 100,
         verbose: false,
@@ -171,7 +171,7 @@ describe('ConstraintSystem - All Constraint Types', () => {
   });
 
   describe('EqualDistancesConstraint', () => {
-    it('should enforce equal distances between point pairs', () => {
+    it('should enforce equal distances between point pairs', async () => {
       const project = Project.create('Equal Distances Test');
 
       const p1 = WorldPoint.create('P1', { lockedXyz: [0, 0, 0] });
@@ -195,7 +195,7 @@ describe('ConstraintSystem - All Constraint Types', () => {
       project.addWorldPoint(p4);
       project.addConstraint(constraint);
 
-      const result = optimizeProject(project, {
+      const result = await optimizeProject(project, {
         tolerance: 1e-6,
         maxIterations: 100,
         verbose: false,
@@ -218,7 +218,7 @@ describe('ConstraintSystem - All Constraint Types', () => {
   });
 
   describe('EqualAnglesConstraint', () => {
-    it('should enforce equal angles', () => {
+    it('should enforce equal angles', async () => {
       const project = Project.create('Equal Angles Test');
 
       // First angle: PA1 - V1 - PC1
@@ -249,7 +249,7 @@ describe('ConstraintSystem - All Constraint Types', () => {
       project.addWorldPoint(pC2);
       project.addConstraint(constraint);
 
-      const result = optimizeProject(project, {
+      const result = await optimizeProject(project, {
         tolerance: 1e-6,
         maxIterations: 100,
         verbose: false,
@@ -283,7 +283,7 @@ describe('ConstraintSystem - All Constraint Types', () => {
   });
 
   describe('Complex scenarios', () => {
-    it('should solve multiple constraints simultaneously', () => {
+    it('should solve multiple constraints simultaneously', async () => {
       const project = Project.create('Complex Test');
 
       // Create an equilateral triangle
@@ -319,7 +319,7 @@ describe('ConstraintSystem - All Constraint Types', () => {
       project.addConstraint(equalDist);
       project.addConstraint(equalAngles);
 
-      const result = optimizeProject(project, {
+      const result = await optimizeProject(project, {
         tolerance: 1e-6,
         maxIterations: 100,
         verbose: false,

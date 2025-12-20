@@ -9,7 +9,7 @@ import { Viewpoint } from '../../entities/viewpoint';
 import { WorldPoint } from '../../entities/world-point';
 import { ImagePoint } from '../../entities/imagePoint';
 import { Line } from '../../entities/line';
-import { initializeWorldPoints as unifiedInitialize } from '../unified-initialization';
+import { initializeWorldPoints as unifiedInitialize } from '../unified-initialization/index';
 import { canInitializeWithVanishingPoints } from '../vanishing-points';
 import { alignSceneToLineDirections, alignSceneToLockedPoints, AlignmentQualityCallback, AlignmentResult } from '../coordinate-alignment/index';
 import type { IOptimizableCamera } from '../IOptimizable';
@@ -49,11 +49,15 @@ const OPTIMIZER_VERSION = '2.6.0-branch-first';
 /**
  * Main optimization entry point for the project.
  * Orchestrates camera initialization, world point initialization, and bundle adjustment.
+ *
+ * If yieldToUI callback is provided, the function runs async with UI updates between phases.
+ * Otherwise it runs synchronously for maximum performance.
  */
-export function optimizeProject(
+export async function optimizeProject(
   project: Project,
   options: OptimizeProjectOptions = {}
-): OptimizeProjectResult {
+): Promise<OptimizeProjectResult> {
+  const { yieldToUI } = options;
   // GUARD: Ensure we have an actual Project instance, not a plain object
   if (typeof project.propagateInferences !== 'function') {
     throw new Error(
@@ -64,7 +68,7 @@ export function optimizeProject(
   }
 
   // MULTI-ATTEMPT SOLVING: Try different random seeds when solve fails
-  const multiAttemptResult = tryMultipleAttempts(project, options, optimizeProject);
+  const multiAttemptResult = await tryMultipleAttempts(project, options, optimizeProject);
   if (multiAttemptResult) {
     return multiAttemptResult;
   }
@@ -73,7 +77,7 @@ export function optimizeProject(
   setAttemptSeed(options._seed, options._attempt ?? 0);
 
   // BRANCH-FIRST OPTIMIZATION: Test all inference branches
-  const branchTestResult = testInferenceBranches(project, options, optimizeProject);
+  const branchTestResult = await testInferenceBranches(project, options, optimizeProject);
   if (branchTestResult) {
     return branchTestResult;
   }
@@ -120,6 +124,7 @@ export function optimizeProject(
   let vpEmHybridApplied = false;
 
   // PHASE 1: Camera Initialization
+  await yieldToUI?.('Phase 1: Camera Initialization');
   if (autoInitializeCameras || autoInitializeWorldPoints) {
     const viewpointArray = Array.from(project.viewpoints);
 
@@ -194,6 +199,7 @@ export function optimizeProject(
   let hasSingleAxisConstraint = false;
 
   // PHASE 2: World Point Initialization
+  await yieldToUI?.('Phase 2: World Point Initialization');
   if (autoInitializeWorldPoints) {
     const pointArray = Array.from(project.worldPoints) as WorldPoint[];
     const lineArray = Array.from(project.lines) as Line[];
@@ -306,6 +312,7 @@ export function optimizeProject(
   }
 
   // PHASE 3: Late PnP Initialization
+  await yieldToUI?.('Phase 3: Late PnP Initialization');
   if (autoInitializeCameras) {
     runLatePnPInitialization(
       project,
@@ -341,6 +348,7 @@ export function optimizeProject(
   }
 
   // PHASE 4: Stage1 Multi-camera Optimization
+  await yieldToUI?.('Phase 4: Stage1 Multi-camera Optimization');
   const worldPointArray = Array.from(project.worldPoints) as WorldPoint[];
   const multiCameraPoints = new Set<WorldPoint>();
   const singleCameraPoints = new Set<WorldPoint>();
@@ -372,7 +380,8 @@ export function optimizeProject(
     );
   }
 
-  // PHASE 5: Full Optimization
+  // PHASE 5: Full Optimization (LM Solver)
+  await yieldToUI?.('Phase 5: Running Levenberg-Marquardt solver...');
   const excludedCameras = new Set<Viewpoint>();
   const excludedCameraNames: string[] = [];
 
@@ -405,6 +414,7 @@ export function optimizeProject(
   let result: OptimizeProjectResult = system.solve();
 
   // PHASE 6: Retry with opposite alignment if needed
+  await yieldToUI?.('Phase 6: Checking alignment...');
   const retryCtx: RetryContext = {
     project,
     alignmentWasAmbiguous,
@@ -423,6 +433,7 @@ export function optimizeProject(
   result = retryResult.result;
 
   // PHASE 7: Outlier Detection
+  await yieldToUI?.('Phase 7: Detecting outliers...');
   let outliers: OutlierInfo[] | undefined;
   let medianReprojectionError: number | undefined;
 
@@ -469,6 +480,7 @@ export function optimizeProject(
   }
 
   // PHASE 8: Post-solve Handedness Check
+  await yieldToUI?.('Phase 8: Finalizing...');
   if (forceRightHanded) {
     const wpArray = Array.from(project.worldPoints) as WorldPoint[];
     const vpArray = Array.from(project.viewpoints) as Viewpoint[];

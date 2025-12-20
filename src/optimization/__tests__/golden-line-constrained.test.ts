@@ -9,7 +9,7 @@ import { Vec4, V, Vec3 } from 'scalar-autograd';
 import { projectWorldPointToPixelQuaternion } from '../camera-projection';
 
 describe('GOLDEN-2: Line-Constrained Reconstruction', () => {
-  it('should reconstruct cube with line constraints from partial visibility', () => {
+  it('should reconstruct cube with line constraints from partial visibility', async () => {
     console.log('\n=== GOLDEN-2: LINE-CONSTRAINED RECONSTRUCTION ===\n');
 
     const groundTruthPositions: [number, number, number][] = [
@@ -255,7 +255,7 @@ describe('GOLDEN-2: Line-Constrained Reconstruction', () => {
 
     console.log('RUNNING OPTIMIZATION:\n');
 
-    const result = optimizeProject(project, {
+    const result = await optimizeProject(project, {
       autoInitializeCameras: false,
       autoInitializeWorldPoints: true,
       maxIterations: 500,

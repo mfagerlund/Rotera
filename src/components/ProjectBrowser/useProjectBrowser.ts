@@ -285,8 +285,8 @@ export const useProjectBrowser = () => {
         const project = await ProjectDB.loadProject(summary.id)
         const startTime = performance.now()
 
-        // Run optimization
-        const result = optimizeProject(project, {
+        // Run optimization (no yieldToUI for batch - we want speed)
+        const result = await optimizeProject(project, {
           tolerance: 1e-6,
           maxIterations: 500,
           damping: 0.1,

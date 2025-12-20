@@ -24,7 +24,7 @@ import { V, Vec3, Vec4 } from 'scalar-autograd';
 import { projectWorldPointToPixelQuaternion } from '../camera-projection';
 
 describe('GOLDEN-VP: Single Camera with Vanishing Point Initialization', () => {
-  it('should achieve near-zero reprojection error with analytically generated image points', () => {
+  it('should achieve near-zero reprojection error with analytically generated image points', async () => {
     console.log('\n=== GOLDEN-VP: SINGLE CAMERA WITH VP INITIALIZATION ===\n');
 
     // Ground truth world points forming a rectangle in XY plane at z=0 plus points above
@@ -218,7 +218,7 @@ describe('GOLDEN-VP: Single Camera with Vanishing Point Initialization', () => {
 
     // Run optimization
     console.log('\nRUNNING OPTIMIZATION:');
-    const result = optimizeProject(project, {
+    const result = await optimizeProject(project, {
       autoInitializeCameras: true,
       autoInitializeWorldPoints: true,
       maxIterations: 100,

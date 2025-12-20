@@ -5,7 +5,7 @@ import { Project } from '../../entities/project';
 import { optimizeProject } from '../optimize-project';
 
 describe('Simple Length Constraint Test', () => {
-  it('should adjust two points to satisfy target length constraint', () => {
+  it('should adjust two points to satisfy target length constraint', async () => {
     const p1 = WorldPoint.create('P1');
     const p2 = WorldPoint.create('P2');
     p1.optimizedXyz = [0, 0, 0];
@@ -23,7 +23,7 @@ describe('Simple Length Constraint Test', () => {
     console.log(`Initial length: ${line.length()?.toFixed(3)}`);
     console.log(`Target length: ${line.targetLength}`);
 
-    const result = optimizeProject(project, {
+    const result = await optimizeProject(project, {
       maxIterations: 100,
       tolerance: 1e-6,
       verbose: true,

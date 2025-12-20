@@ -16,7 +16,7 @@ function seededRandom(seed: number) {
 }
 
 describe('GOLDEN-7: Full Bundle Adjustment (CORRECT VERSION)', () => {
-  it('should recover cameras and points from PnP initialization', () => {
+  it('should recover cameras and points from PnP initialization', async () => {
     const random = seededRandom(42);
 
     console.log('\n=== GOLDEN-7: Full Bundle Adjustment ===\n');
@@ -169,7 +169,7 @@ describe('GOLDEN-7: Full Bundle Adjustment (CORRECT VERSION)', () => {
       }
     });
 
-    const result = optimizeProject(project, {
+    const result = await optimizeProject(project, {
       autoInitializeCameras: true,
       autoInitializeWorldPoints: true,
       maxIterations: 500,

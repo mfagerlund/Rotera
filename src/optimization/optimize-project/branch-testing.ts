@@ -13,11 +13,11 @@ import type { OptimizeProjectOptions, OptimizeProjectResult } from './types';
  * Test all inference branches and return the best result.
  * Returns null if no branching is needed (single branch).
  */
-export function testInferenceBranches(
+export async function testInferenceBranches(
   project: Project,
   options: OptimizeProjectOptions,
-  optimizeProject: (project: Project, options: OptimizeProjectOptions) => OptimizeProjectResult
-): OptimizeProjectResult | null {
+  optimizeProject: (project: Project, options: OptimizeProjectOptions) => Promise<OptimizeProjectResult>
+): Promise<OptimizeProjectResult | null> {
   const { _skipBranching = false } = options;
 
   if (_skipBranching) {
@@ -49,7 +49,7 @@ export function testInferenceBranches(
     const choiceStr = branch.choices.length > 0 ? branch.choices.join(', ') : 'default';
 
     // Run full optimization with this branch
-    const branchResult = optimizeProject(project, {
+    const branchResult = await optimizeProject(project, {
       ...options,
       _skipBranching: true,
       _branch: branch,

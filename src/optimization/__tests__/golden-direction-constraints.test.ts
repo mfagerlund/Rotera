@@ -252,7 +252,7 @@ describe('GOLDEN-3: Line Direction Constraints', () => {
 
     console.log('RUNNING OPTIMIZATION:\n');
 
-    const result = optimizeProject(project, {
+    const result = await optimizeProject(project, {
       autoInitializeCameras: false,
       autoInitializeWorldPoints: false,
       maxIterations: 500,

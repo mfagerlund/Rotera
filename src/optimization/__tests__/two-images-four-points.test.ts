@@ -10,7 +10,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 describe('Two Images Four Points Fixture', () => {
-  it('should recognize line constraints and allow optimization', () => {
+  it('should recognize line constraints and allow optimization', async () => {
     const fixturePath = path.join(__dirname, 'fixtures', 'two-images-four-points.json');
 
     if (!fs.existsSync(fixturePath)) {
@@ -96,7 +96,7 @@ describe('Two Images Four Points Fixture', () => {
 
     console.log('=== STAGE 2: BUNDLE ADJUSTMENT WITH LINE CONSTRAINTS ===\n');
 
-    const result = optimizeProject(project, {
+    const result = await optimizeProject(project, {
       maxIterations: 200,
       tolerance: 1e-6,
       damping: 10.0,

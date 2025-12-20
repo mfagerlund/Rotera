@@ -7,7 +7,7 @@ import { Quaternion } from '../Quaternion';
 import { Vec3, V } from 'scalar-autograd';
 
 describe('Vec4', () => {
-  it('should create vec4 from constants', () => {
+  it('should create vec4 from constants', async () => {
     const v = Vec4.C(1, 2, 3, 4);
     expect(v.w.data).toBe(1);
     expect(v.x.data).toBe(2);
@@ -15,7 +15,7 @@ describe('Vec4', () => {
     expect(v.z.data).toBe(4);
   });
 
-  it('should compute magnitude correctly', () => {
+  it('should compute magnitude correctly', async () => {
     const v = Vec4.C(1, 0, 0, 0);
     expect(v.magnitude.data).toBeCloseTo(1, 6);
 
@@ -26,7 +26,7 @@ describe('Vec4', () => {
     expect(v3.magnitude.data).toBeCloseTo(2, 6);
   });
 
-  it('should normalize quaternion correctly', () => {
+  it('should normalize quaternion correctly', async () => {
     const v = Vec4.C(2, 0, 0, 0);
     const normalized = v.normalized;
     expect(normalized.w.data).toBeCloseTo(1, 6);
@@ -35,7 +35,7 @@ describe('Vec4', () => {
 });
 
 describe('Quaternion', () => {
-  it('should create identity quaternion', () => {
+  it('should create identity quaternion', async () => {
     const q = Quaternion.identity();
     expect(q.w.data).toBe(1);
     expect(q.x.data).toBe(0);
@@ -43,7 +43,7 @@ describe('Quaternion', () => {
     expect(q.z.data).toBe(0);
   });
 
-  it('should convert euler to quaternion and back', () => {
+  it('should convert euler to quaternion and back', async () => {
     const roll = 0.1;
     const pitch = 0.2;
     const yaw = 0.3;
@@ -56,7 +56,7 @@ describe('Quaternion', () => {
     expect(y2).toBeCloseTo(yaw, 5);
   });
 
-  it('should create unit quaternions from euler angles', () => {
+  it('should create unit quaternions from euler angles', async () => {
     const q = Quaternion.fromEuler(0, 0, 0);
     const mag = q.magnitude.data;
     expect(mag).toBeCloseTo(1, 6);
@@ -66,7 +66,7 @@ describe('Quaternion', () => {
     expect(mag2).toBeCloseTo(1, 6);
   });
 
-  it('should rotate vector around X axis by 90 degrees', () => {
+  it('should rotate vector around X axis by 90 degrees', async () => {
     // Rotate Y axis to Z axis (90° around X)
     const q = Quaternion.fromEuler(Math.PI / 2, 0, 0);
     const v = new Vec3(V.C(0), V.C(1), V.C(0)); // Y axis
@@ -77,7 +77,7 @@ describe('Quaternion', () => {
     expect(rotated.z.data).toBeCloseTo(1, 5);
   });
 
-  it('should rotate vector around Z axis by 90 degrees', () => {
+  it('should rotate vector around Z axis by 90 degrees', async () => {
     // Rotate X axis to Y axis (90° around Z)
     const q = Quaternion.fromEuler(0, 0, Math.PI / 2);
     const v = new Vec3(V.C(1), V.C(0), V.C(0)); // X axis
@@ -88,7 +88,7 @@ describe('Quaternion', () => {
     expect(rotated.z.data).toBeCloseTo(0, 5);
   });
 
-  it('should compose rotations via quaternion multiplication', () => {
+  it('should compose rotations via quaternion multiplication', async () => {
     // Rotate 90° around X, then 90° around Z
     const qX = Quaternion.fromEuler(Math.PI / 2, 0, 0);
     const qZ = Quaternion.fromEuler(0, 0, Math.PI / 2);
@@ -105,7 +105,7 @@ describe('Quaternion', () => {
     expect(rotated.z.data).toBeCloseTo(0, 4);
   });
 
-  it('should have identity quaternion produce no rotation', () => {
+  it('should have identity quaternion produce no rotation', async () => {
     const q = Quaternion.identity();
     const v = new Vec3(V.C(1), V.C(2), V.C(3));
     const rotated = Quaternion.rotateVector(q, v);
@@ -115,7 +115,7 @@ describe('Quaternion', () => {
     expect(rotated.z.data).toBeCloseTo(3, 6);
   });
 
-  it('should create quaternion from axis-angle', () => {
+  it('should create quaternion from axis-angle', async () => {
     // 180° rotation around Z axis
     const axis = new Vec3(V.C(0), V.C(0), V.C(1));
     const q = Quaternion.fromAxisAngle(axis, Math.PI);
@@ -132,7 +132,7 @@ describe('Quaternion', () => {
     expect(rotated.z.data).toBeCloseTo(0, 5);
   });
 
-  it('should compute conjugate correctly', () => {
+  it('should compute conjugate correctly', async () => {
     const q = Quaternion.fromEuler(0.1, 0.2, 0.3);
     const qConj = Quaternion.conjugate(q);
 
@@ -143,7 +143,7 @@ describe('Quaternion', () => {
     expect(qConj.z.data).toBeCloseTo(-q.z.data, 6);
   });
 
-  it('should invert rotation with conjugate', () => {
+  it('should invert rotation with conjugate', async () => {
     const q = Quaternion.fromEuler(0.5, 0.3, 0.2);
     const qInv = Quaternion.conjugate(q);
 
@@ -160,7 +160,7 @@ describe('Quaternion', () => {
 });
 
 describe('Quaternion Normalization Residual', () => {
-  it('should be zero for unit quaternions', () => {
+  it('should be zero for unit quaternions', async () => {
     const { quaternionNormalizationResidual } = require('../residuals/quaternion-normalization-residual');
 
     const q = Quaternion.identity();
@@ -169,7 +169,7 @@ describe('Quaternion Normalization Residual', () => {
     expect(residual.data).toBeCloseTo(0, 6);
   });
 
-  it('should be non-zero for non-unit quaternions', () => {
+  it('should be non-zero for non-unit quaternions', async () => {
     const { quaternionNormalizationResidual } = require('../residuals/quaternion-normalization-residual');
 
     const q = Vec4.C(2, 0, 0, 0); // |q|² = 4
@@ -178,7 +178,7 @@ describe('Quaternion Normalization Residual', () => {
     expect(residual.data).toBeCloseTo(3, 6); // 4 - 1 = 3
   });
 
-  it('should compute gradients correctly', () => {
+  it('should compute gradients correctly', async () => {
     const { quaternionNormalizationResidual } = require('../residuals/quaternion-normalization-residual');
 
     const qw = V.W(1);

@@ -13,7 +13,7 @@ import { optimizeProject } from '../optimize-project';
 
 describe('FixedPointConstraint - Solver Integration', () => {
 
-  it('should lock point to specified 3D coordinates', () => {
+  it('should lock point to specified 3D coordinates', async () => {
     const project = Project.create('Fixed Point Test');
 
     // === 1. CREATE POINT (unsatisfied initial state) ===
@@ -35,7 +35,7 @@ describe('FixedPointConstraint - Solver Integration', () => {
     project.addConstraint(constraint);
 
     // === 4. SOLVE ===
-    const result = optimizeProject(project, {
+    const result = await optimizeProject(project, {
       tolerance: 1e-6,
       maxIterations: 100,
       verbose: false,
@@ -58,7 +58,7 @@ describe('FixedPointConstraint - Solver Integration', () => {
     // The solver successfully converged, which is the main test
   });
 
-  it('should lock point to arbitrary target position', () => {
+  it('should lock point to arbitrary target position', async () => {
     const project = Project.create('Target Position Test');
 
     // Point starts far from target
@@ -79,7 +79,7 @@ describe('FixedPointConstraint - Solver Integration', () => {
     project.addWorldPoint(point);
     project.addConstraint(constraint);
 
-    const result = optimizeProject(project, {
+    const result = await optimizeProject(project, {
       tolerance: 1e-6,
       maxIterations: 100,
       damping: 1e-3, // Use low damping for high precision with limited iterations
@@ -96,7 +96,7 @@ describe('FixedPointConstraint - Solver Integration', () => {
     expect(finalCoords![2]).toBeCloseTo(targetXyz[2], 4);
   });
 
-  it('should not move locked points', () => {
+  it('should not move locked points', async () => {
     const project = Project.create('Locked Point Test');
 
     // Locked point should not be affected by constraints
@@ -114,7 +114,7 @@ describe('FixedPointConstraint - Solver Integration', () => {
     project.addWorldPoint(point);
     project.addConstraint(constraint);
 
-    const result = optimizeProject(project, {
+    const result = await optimizeProject(project, {
       tolerance: 1e-6,
       maxIterations: 100,
       verbose: false,
@@ -132,7 +132,7 @@ describe('FixedPointConstraint - Solver Integration', () => {
     expect(finalCoords![2]).toBeCloseTo(7, 4);
   });
 
-  it('should handle multiple independent fixed points', () => {
+  it('should handle multiple independent fixed points', async () => {
     const project = Project.create('Multiple Fixed Points Test');
 
     const point1 = WorldPoint.create('P1', {
@@ -164,7 +164,7 @@ describe('FixedPointConstraint - Solver Integration', () => {
     project.addConstraint(constraint1);
     project.addConstraint(constraint2);
 
-    const result = optimizeProject(project, {
+    const result = await optimizeProject(project, {
       tolerance: 1e-6,
       maxIterations: 100,
       verbose: false,
@@ -189,7 +189,7 @@ describe('FixedPointConstraint - Solver Integration', () => {
     // We've already verified the points are at correct positions via solver
   });
 
-  it('should report residual magnitude correctly', () => {
+  it('should report residual magnitude correctly', async () => {
     const project = Project.create('Residual Test');
 
     const point = WorldPoint.create('P1', {
@@ -207,7 +207,7 @@ describe('FixedPointConstraint - Solver Integration', () => {
     project.addWorldPoint(point);
     project.addConstraint(constraint);
 
-    const result = optimizeProject(project, {
+    const result = await optimizeProject(project, {
       tolerance: 1e-6,
       maxIterations: 100,
       damping: 1e-3, // Use low damping for high precision with limited iterations

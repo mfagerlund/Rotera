@@ -19,6 +19,8 @@ export interface OptimizationOptions {
   tolerance?: number;
   damping?: number;
   verbose?: boolean;
+  /** Optional callback for UI updates between phases */
+  yieldToUI?: (phase: string) => Promise<void>;
 }
 
 export interface ConstraintResidual {
@@ -144,14 +146,15 @@ export const useOptimization = () => {
           return cancelledResult;
         }
 
-        // Run synchronously - no async yields that can be abandoned by React re-renders
-        const result = optimizeProject(project, {
+        // Run optimization with optional UI yield callback
+        const result = await optimizeProject(project, {
           tolerance: options.tolerance ?? 1e-6,
           maxIterations: options.maxIterations ?? 500,
           damping: options.damping ?? 0.1,
           verbose: options.verbose ?? false,
           autoInitializeCameras: true,
           autoInitializeWorldPoints: true,
+          yieldToUI: options.yieldToUI,
         });
 
         const points = Array.from(project.worldPoints);

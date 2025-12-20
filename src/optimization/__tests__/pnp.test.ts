@@ -5,7 +5,7 @@ import { WorldPoint } from '../../entities/world-point';
 import { ImagePoint } from '../../entities/imagePoint';
 
 describe('PnP Camera Initialization', () => {
-  it('should initialize camera using geometric heuristic', () => {
+  it('should initialize camera using geometric heuristic', async () => {
     const vp = Viewpoint.create(
       'TestCamera',
       'test.jpg',
@@ -50,7 +50,7 @@ describe('PnP Camera Initialization', () => {
     expect(vp.position[2]).toBeLessThan(0);
   });
 
-  it('should fail with insufficient points', () => {
+  it('should fail with insufficient points', async () => {
     const vp = Viewpoint.create(
       'TestCamera',
       'test.jpg',
@@ -81,7 +81,7 @@ describe('PnP Camera Initialization', () => {
     expect(result.success).toBe(false);
   });
 
-  it('should handle points without optimizedXyz', () => {
+  it('should handle points without optimizedXyz', async () => {
     const vp = Viewpoint.create(
       'TestCamera',
       'test.jpg',

@@ -13,11 +13,11 @@ import type { OptimizeProjectOptions, OptimizeProjectResult } from './types';
  * Try different random seeds and return the best result.
  * Returns null if multi-attempt is disabled or not needed.
  */
-export function tryMultipleAttempts(
+export async function tryMultipleAttempts(
   project: Project,
   options: OptimizeProjectOptions,
-  optimizeProject: (project: Project, options: OptimizeProjectOptions) => OptimizeProjectResult
-): OptimizeProjectResult | null {
+  optimizeProject: (project: Project, options: OptimizeProjectOptions) => Promise<OptimizeProjectResult>
+): Promise<OptimizeProjectResult | null> {
   const { maxAttempts = 3, _attempt = 0 } = options;
 
   // Only run multi-attempt at top level
@@ -39,7 +39,7 @@ export function tryMultipleAttempts(
     // This helps with degenerate Essential Matrix solutions where cameras collapse
     const perturbScale = attempt > 1 ? 0.5 * attempt : undefined;
 
-    const attemptResult = optimizeProject(project, {
+    const attemptResult = await optimizeProject(project, {
       ...options,
       maxAttempts: 1, // Disable recursion
       _attempt: attempt,
