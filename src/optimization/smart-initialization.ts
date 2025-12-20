@@ -3,13 +3,14 @@ import type { WorldPoint } from '../entities/world-point'
 import type { Line } from '../entities/line'
 import type { Constraint } from '../entities/constraints'
 import type { CoplanarPointsConstraint } from '../entities/constraints/coplanar-points-constraint'
+import { random } from './seeded-random'
 
 function randomUnitVector(): [number, number, number] {
   let x, y, z, len;
   do {
-    x = Math.random() * 2 - 1;
-    y = Math.random() * 2 - 1;
-    z = Math.random() * 2 - 1;
+    x = random() * 2 - 1;
+    y = random() * 2 - 1;
+    z = random() * 2 - 1;
     len = x * x + y * y + z * z;
   } while (len > 1 || len < 0.01);
 
@@ -24,9 +25,9 @@ export function randomInitialization(
   project.worldPoints.forEach(point => {
     if (!point.optimizedXyz) {
       point.optimizedXyz = [
-        (Math.random() - 0.5) * 2 * sceneRadius,
-        (Math.random() - 0.5) * 2 * sceneRadius,
-        (Math.random() - 0.5) * 2 * sceneRadius
+        (random() - 0.5) * 2 * sceneRadius,
+        (random() - 0.5) * 2 * sceneRadius,
+        (random() - 0.5) * 2 * sceneRadius
       ];
     }
   });
@@ -139,9 +140,9 @@ function propagateViaLineGraph(
   points.forEach(point => {
     if (!initialized.has(point)) {
       point.optimizedXyz = [
-        (Math.random() - 0.5) * sceneScale,
-        (Math.random() - 0.5) * sceneScale,
-        (Math.random() - 0.5) * sceneScale
+        (random() - 0.5) * sceneScale,
+        (random() - 0.5) * sceneScale,
+        (random() - 0.5) * sceneScale
       ];
     }
   });

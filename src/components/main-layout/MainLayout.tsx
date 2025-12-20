@@ -19,7 +19,7 @@ import type { ISelectable } from '../../types/selectable'
 import { COMPONENT_OVERLAY_EVENT, isComponentOverlayEnabled, setComponentOverlayEnabled } from '../../utils/componentNameOverlay'
 import { useConfirm } from '../ConfirmDialog'
 import { getEntityKey } from '../../utils/entityKeys'
-import { generateWorldPointColor } from '../../utils/colorGenerator'
+import { generateWorldPointColor, getNextWorldPointNumber } from '../../utils/colorGenerator'
 import type { ImageViewerRef } from '../ImageViewer'
 import type { WorldViewRef } from '../WorldView'
 import { WorkspaceManager, WorkspaceStatus } from '../WorkspaceManager'
@@ -422,16 +422,16 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
       addImagePointToWorldPoint(placementMode.worldPoint, currentImage, u, v)
       cancelPlacementMode()
     } else if (activeTool === 'point' && currentImage) {
-      const wpCount = worldPointsArray.length + 1
-      const color = generateWorldPointColor(worldPointsArray.length)
-      const newWp = WorldPoint.create(`WP${wpCount}`, { color, lockedXyz: [null, null, null] })
+      const wpNumber = getNextWorldPointNumber(worldPointsArray)
+      const color = generateWorldPointColor(wpNumber - 1)
+      const newWp = WorldPoint.create(`WP${wpNumber}`, { color, lockedXyz: [null, null, null] })
       project.addWorldPoint(newWp)
       addImagePointToWorldPoint(newWp, currentImage, u, v)
       setActiveTool('select')
     } else if (activeTool === 'loop' && currentImage) {
-      const wpCount = worldPointsArray.length + 1
-      const color = generateWorldPointColor(worldPointsArray.length)
-      const newWp = WorldPoint.create(`WP${wpCount}`, { color, lockedXyz: [null, null, null] })
+      const wpNumber = getNextWorldPointNumber(worldPointsArray)
+      const color = generateWorldPointColor(wpNumber - 1)
+      const newWp = WorldPoint.create(`WP${wpNumber}`, { color, lockedXyz: [null, null, null] })
       project.addWorldPoint(newWp)
       addImagePointToWorldPoint(newWp, currentImage, u, v)
       addToSelection(newWp)

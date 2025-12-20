@@ -1,3 +1,5 @@
+import { random } from '../seeded-random';
+
 export function dot3D(a: [number, number, number], b: [number, number, number]): number {
   return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
@@ -316,7 +318,7 @@ export function computeEigenVectors3x3(M: number[][]): number[][] | null {
   const vectors: number[][] = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
 
   for (let iter = 0; iter < 3; iter++) {
-    let v = [Math.random(), Math.random(), Math.random()];
+    let v = [random(), random(), random()];
 
     for (let i = 0; i < iter; i++) {
       const proj = v[0] * vectors[i][0] + v[1] * vectors[i][1] + v[2] * vectors[i][2];
@@ -365,7 +367,7 @@ export function computeEigenVectors(A: number[][]): number[][] | null {
   const vectors: number[][] = [];
 
   for (let iter = 0; iter < n; iter++) {
-    let v = Array(n).fill(0).map(() => Math.random());
+    let v = Array(n).fill(0).map(() => random());
 
     for (let i = 0; i < vectors.length; i++) {
       const proj = dotProduct(v, vectors[i]);

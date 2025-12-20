@@ -23,6 +23,7 @@ import { projectWorldPointToPixelQuaternion } from './camera-projection';
 import { V, Vec3, Vec4 } from 'scalar-autograd';
 import { log, logOnce } from './optimization-logger';
 import type { PnPResult } from './pnp/types';
+import { random } from './seeded-random';
 import { distance } from '../utils/vec3';
 
 /**
@@ -439,7 +440,7 @@ function computeEigenVectors3x3(M: number[][]): number[][] | null {
   const vectors: number[][] = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
 
   for (let iter = 0; iter < 3; iter++) {
-    let v = [Math.random(), Math.random(), Math.random()];
+    let v = [random(), random(), random()];
 
     for (let i = 0; i < iter; i++) {
       const proj = v[0] * vectors[i][0] + v[1] * vectors[i][1] + v[2] * vectors[i][2];
@@ -649,7 +650,7 @@ function computeEigenVectors(A: number[][]): number[][] | null {
   const vectors: number[][] = [];
 
   for (let iter = 0; iter < n; iter++) {
-    let v = Array(n).fill(0).map(() => Math.random());
+    let v = Array(n).fill(0).map(() => random());
 
     for (let i = 0; i < vectors.length; i++) {
       const proj = dotProduct(v, vectors[i]);

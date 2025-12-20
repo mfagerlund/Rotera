@@ -62,4 +62,14 @@ describe('Regression - Calibration', () => {
   it('Fixture With 2 Images - branching.json', () => {
     runFixtureTest('Fixture With 2 Images - branching.json', 2)
   })
+
+  // Multi-camera with X, Y, and Z direction lines
+  it('Balcony House X,Y and Z Lines.json', () => {
+    runFixtureTest('Balcony House X,Y and Z Lines.json', 2)
+  })
+
+  // Single Z-aligned line - fixed by using perpendicular camera offset
+  it('Balcony House Z Line.json', () => {
+    runFixtureTest('Balcony House Z Line.json', 2)
+  })
 })

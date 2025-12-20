@@ -14,6 +14,7 @@ import {
   multiplyTranspose
 } from './math-utils';
 import { decomposePMatrix } from './decompose-p-matrix';
+import { random } from '../seeded-random';
 
 export function estimatePoseDLT(
   points3D: [number, number, number][],
@@ -80,7 +81,7 @@ function computeEigenVectors(A: number[][]): number[][] | null {
   const vectors: number[][] = [];
 
   for (let iter = 0; iter < n; iter++) {
-    let v = Array(n).fill(0).map(() => Math.random());
+    let v = Array(n).fill(0).map(() => random());
 
     for (let i = 0; i < vectors.length; i++) {
       const proj = dotProduct(v, vectors[i]);

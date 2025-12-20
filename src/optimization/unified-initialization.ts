@@ -7,6 +7,7 @@ import { triangulateRayRay } from './triangulation'
 import type { ImagePoint } from '../entities/imagePoint'
 import * as vec3 from '../utils/vec3'
 import { log } from './optimization-logger'
+import { random } from './seeded-random'
 
 export interface InitializationOptions {
   sceneScale?: number
@@ -597,9 +598,9 @@ function step6_randomFallback(
   for (const point of points) {
     if (!initialized.has(point)) {
       point.optimizedXyz = [
-        (Math.random() - 0.5) * sceneScale,
-        (Math.random() - 0.5) * sceneScale,
-        (Math.random() - 0.5) * sceneScale
+        (random() - 0.5) * sceneScale,
+        (random() - 0.5) * sceneScale,
+        (random() - 0.5) * sceneScale
       ]
       initialized.add(point)
       randomCount++
@@ -616,9 +617,9 @@ function randomUnitVector(): [number, number, number] {
   let len: number
   do {
     vec = [
-      Math.random() * 2 - 1,
-      Math.random() * 2 - 1,
-      Math.random() * 2 - 1
+      random() * 2 - 1,
+      random() * 2 - 1,
+      random() * 2 - 1
     ]
     len = vec3.magnitude(vec)
   } while (len === 0 || len > 1)

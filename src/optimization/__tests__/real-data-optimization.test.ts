@@ -244,7 +244,8 @@ describe('Real Data Optimization', () => {
       damping: 0.1,
       verbose: false,
       autoInitializeCameras: false,
-      autoInitializeWorldPoints: false
+      autoInitializeWorldPoints: false,
+      maxAttempts: 1  // No multi-attempt needed for this test
     });
 
     console.log('\nOptimization result:');

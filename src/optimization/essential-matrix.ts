@@ -9,6 +9,7 @@
 import type { IImagePoint } from '../entities/interfaces';
 import type { Viewpoint } from '../entities/viewpoint';
 import { log } from './optimization-logger';
+import { random } from './seeded-random';
 
 export interface Correspondence {
   x1: number;
@@ -930,7 +931,7 @@ function ransacEssentialMatrix(
   const getRandomSample = (size: number, max: number): number[] => {
     const indices: number[] = [];
     while (indices.length < size) {
-      const idx = Math.floor(Math.random() * max);
+      const idx = Math.floor(random() * max);
       if (!indices.includes(idx)) {
         indices.push(idx);
       }
