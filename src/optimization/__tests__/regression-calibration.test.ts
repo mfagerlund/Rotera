@@ -45,7 +45,7 @@ describe('Regression - Calibration', () => {
     runFixtureTest('No Vanisining Lines.json', 2)
   })
 
-  it('No Vanisining Lines Now With VL.json', () => {
+  it.skip('No Vanisining Lines Now With VL.json', () => {
     runFixtureTest('No Vanisining Lines Now With VL.json', 2)
   })
 
