@@ -737,18 +737,14 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
                       .map(point => {
                         const info = point.getOptimizationInfo()
                         const isSelected = isWorldPointSelected?.(point) ?? false
-                        const isHovered = hoveredWorldPoint === point
                         return (
                           <tr
                             key={getEntityKey(point)}
+                            className={isSelected ? 'selected' : ''}
                             onClick={() => onSelectWorldPoint?.(point)}
                             onMouseEnter={() => onHoverWorldPoint?.(point)}
                             onMouseLeave={() => onHoverWorldPoint?.(null)}
-                            style={{
-                              cursor: 'pointer',
-                              backgroundColor: isSelected ? '#0696d7' : isHovered ? '#3a3a3a' : undefined,
-                              color: isSelected ? '#fff' : undefined
-                            }}
+                            style={{ cursor: 'pointer' }}
                           >
                             <td>{point.getName()}</td>
                             <td>{formatXyz(point.getEffectiveXyz())}</td>
@@ -782,14 +778,11 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
                         return (
                           <tr
                             key={getEntityKey(line)}
+                            className={isSelected ? 'selected' : ''}
                             onClick={() => onSelectLine?.(line)}
                             onMouseEnter={() => onHoverLine?.(line)}
                             onMouseLeave={() => onHoverLine?.(null)}
-                            style={{
-                              cursor: 'pointer',
-                              backgroundColor: isSelected ? '#0696d7' : undefined,
-                              color: isSelected ? '#fff' : undefined
-                            }}
+                            style={{ cursor: 'pointer' }}
                           >
                             <td>{line.getName()}</td>
                             <td>{info.length !== undefined && info.length !== null ? formatNumber(info.length) : '-'}</td>
@@ -824,18 +817,14 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
                         {coplanarConstraints.map(constraint => {
                           const info = constraint.getOptimizationInfo()
                           const isSelected = isCoplanarConstraintSelected?.(constraint) ?? false
-                          const isHovered = hoveredCoplanarConstraint === constraint
                           return (
                             <tr
                               key={getEntityKey(constraint)}
+                              className={isSelected ? 'selected' : ''}
                               onClick={() => onSelectCoplanarConstraint?.(constraint)}
                               onMouseEnter={() => onHoverCoplanarConstraint?.(constraint)}
                               onMouseLeave={() => onHoverCoplanarConstraint?.(null)}
-                              style={{
-                                cursor: 'pointer',
-                                backgroundColor: isSelected ? '#0696d7' : isHovered ? '#3a3a3a' : undefined,
-                                color: isSelected ? '#fff' : undefined
-                              }}
+                              style={{ cursor: 'pointer' }}
                             >
                               <td>{constraint.getName()}</td>
                               <td>{constraint.points.length}</td>

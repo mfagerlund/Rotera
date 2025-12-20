@@ -59,7 +59,7 @@ export function solvePnP(
 
   const validCorrespondences = correspondences.filter(c => {
     const wp = c.worldPoint as WorldPoint;
-    return wp.optimizedXyz !== null;
+    return wp.optimizedXyz !== undefined && wp.optimizedXyz !== null;
   });
 
   if (validCorrespondences.length < 3) {

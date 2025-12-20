@@ -370,7 +370,7 @@
 
 .lines-manager__table th {
   text-align: left;
-  padding: 6px 8px;
+  padding: 4px 8px;
   background: var(--surface-2);
   border-bottom: 1px solid var(--border);
   font-weight: 500;
@@ -379,7 +379,7 @@
 }
 
 .lines-manager__table td {
-  padding: 6px 8px;
+  padding: 4px 8px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
 }
@@ -437,12 +437,13 @@
 .lines-manager__table .btn-icon {
   background: none;
   border: none;
-  padding: 4px 6px;
+  padding: 2px 5px;
   cursor: pointer;
   color: var(--text-secondary);
   border-radius: 4px;
   opacity: 0.6;
   transition: opacity 0.15s, background-color 0.15s;
+  font-size: 11px;
 }
 
 .lines-manager__table .btn-icon:hover {
@@ -4433,6 +4434,15 @@ body {
 
 .entity-table tr:hover td {
   background: var(--surface-2);
+}
+
+.entity-table tr.selected td {
+  background: var(--primary);
+  color: var(--primary-text);
+}
+
+.entity-table tr.selected:hover td {
+  background: var(--primary-hover);
 }
 
 /* Constraint Editor Modal */

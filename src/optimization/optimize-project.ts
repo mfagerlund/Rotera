@@ -808,6 +808,7 @@ export function optimizeProject(
       sceneScale: 10.0,
       verbose: false,
       initializedViewpoints: initializedViewpointSet,
+      vpInitializedViewpoints: camerasInitializedViaVP,
       skipLockedPoints: useFreeSolve,
     });
 
@@ -1265,7 +1266,7 @@ export function optimizeProject(
       const vpConcrete = vp as Viewpoint;
       const hasImagePoints = vpConcrete.imagePoints.size > 0;
       const hasTriangulatedPoints = Array.from(vpConcrete.imagePoints).some(ip =>
-        (ip.worldPoint as WorldPoint).optimizedXyz !== null
+        (ip.worldPoint as WorldPoint).optimizedXyz !== undefined && (ip.worldPoint as WorldPoint).optimizedXyz !== null
       );
 
       if (hasImagePoints && hasTriangulatedPoints) {
@@ -1776,9 +1777,10 @@ export function optimizeProject(
 
       // Re-triangulate with good cameras only
       const goodCameras = Array.from(project.viewpoints).filter(v => !excludedCameras.has(v as Viewpoint)) as Viewpoint[];
+      const goodVPCameras = Array.from(camerasInitializedViaVP).filter(vp => !excludedCameras.has(vp));
       unifiedInitialize(
         Array.from(project.worldPoints), Array.from(project.lines), Array.from(project.constraints),
-        { sceneScale: 10.0, verbose: false, initializedViewpoints: new Set<Viewpoint>(goodCameras) }
+        { sceneScale: 10.0, verbose: false, initializedViewpoints: new Set<Viewpoint>(goodCameras), vpInitializedViewpoints: new Set<Viewpoint>(goodVPCameras) }
       );
 
       // Re-run optimization

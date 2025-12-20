@@ -72,11 +72,12 @@ export function checkOptimizationReadiness(project: Project): OptimizationReadin
     c => c.getConstraintType() === 'projection_point_camera'
   ).length
 
-  // Count image observations from fully locked world points (valid for PnP)
+  // Count image observations from fully constrained world points (valid for PnP)
+  // Use isFullyConstrained() to match what initialization actually does
   let pnpObservationCount = 0
   for (const vp of viewpointArray) {
     for (const ip of vp.imagePoints) {
-      if (ip.worldPoint.isFullyLocked()) {
+      if (ip.worldPoint.isFullyConstrained()) {
         pnpObservationCount++
       }
     }
@@ -112,18 +113,19 @@ export function checkOptimizationReadiness(project: Project): OptimizationReadin
   const camerasNeedingInit = viewpointArray.length
 
   if (camerasNeedingInit >= 2) {
-    const lockedPoints = pointArray.filter(wp => wp.isFullyLocked())
+    // Use isFullyConstrained() to match what initialization actually does
+    const constrainedPoints = pointArray.filter(wp => wp.isFullyConstrained())
 
     let anyCameraCanUsePnP = false
-    if (lockedPoints.length >= 2) {
-      // Check if at least one camera can use PnP: needs 3+ locked points visible
+    if (constrainedPoints.length >= 2) {
+      // Check if at least one camera can use PnP: needs 3+ constrained points visible
       for (const vp of viewpointArray) {
         const vpConcrete = vp as Viewpoint
-        const vpLockedPoints = Array.from(vpConcrete.imagePoints).filter(ip =>
-          (ip.worldPoint as WorldPoint).isFullyLocked()
+        const vpConstrainedPoints = Array.from(vpConcrete.imagePoints).filter(ip =>
+          (ip.worldPoint as WorldPoint).isFullyConstrained()
         )
 
-        if (vpLockedPoints.length >= 3) {
+        if (vpConstrainedPoints.length >= 3) {
           anyCameraCanUsePnP = true
           break
         }
@@ -168,10 +170,11 @@ export function checkOptimizationReadiness(project: Project): OptimizationReadin
     }
   }
 
-  // Check for scale constraint (at least one locked point or length constraint)
-  const hasLockedPoint = pointArray.some(p => p.isFullyLocked())
+  // Check for scale constraint (at least one constrained point or length constraint)
+  // Use isFullyConstrained() to match what optimization actually uses
+  const hasConstrainedPoint = pointArray.some(p => p.isFullyConstrained())
   const hasLengthConstraint = lineArray.some(l => l.hasFixedLength())
-  if (!hasLockedPoint && !hasLengthConstraint && viewpointArray.length > 0) {
+  if (!hasConstrainedPoint && !hasLengthConstraint && viewpointArray.length > 0) {
     issues.push({
       type: 'warning',
       code: 'NO_SCALE',
