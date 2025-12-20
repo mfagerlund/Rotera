@@ -564,6 +564,15 @@ export function optimizeProject(
     if (branches.length > 1) {
       log(`[Branch] Found ${branches.length} inference branches - testing each from scratch`);
 
+      // Save deterministic inferredXyz values BEFORE branching overwrites them
+      // These are the "true" inferred values from propagateInferences(), not branch choices
+      project.propagateInferences();
+      const savedDeterministicInferred = new Map<WorldPoint, [number | null, number | null, number | null]>();
+      for (const wp of project.worldPoints) {
+        const point = wp as WorldPoint;
+        savedDeterministicInferred.set(point, [...point.inferredXyz] as [number | null, number | null, number | null]);
+      }
+
       let bestResult: OptimizeProjectResult | null = null;
       let bestMedianError = Infinity;
       const GOOD_ENOUGH_THRESHOLD = 2.0;
@@ -583,9 +592,13 @@ export function optimizeProject(
         const medianError = branchResult.medianReprojectionError ?? Infinity;
         log(`[Branch] #${i + 1}: median=${medianError.toFixed(1)}px, choices=[${choiceStr}]`);
 
-        // If good enough, return immediately
+        // If good enough, restore deterministic inferences and return
         if (medianError < GOOD_ENOUGH_THRESHOLD) {
           log(`[Branch] Selected #${i + 1} (good enough: ${medianError.toFixed(1)}px < ${GOOD_ENOUGH_THRESHOLD}px)`);
+          // Restore deterministic inferredXyz (branch choices go to optimizedXyz only)
+          for (const [point, inferred] of savedDeterministicInferred) {
+            point.inferredXyz = inferred;
+          }
           return branchResult;
         }
 
@@ -599,6 +612,10 @@ export function optimizeProject(
       // Return best result if none were good enough
       if (bestResult) {
         log(`[Branch] Selected best: median=${bestMedianError.toFixed(1)}px`);
+        // Restore deterministic inferredXyz (branch choices go to optimizedXyz only)
+        for (const [point, inferred] of savedDeterministicInferred) {
+          point.inferredXyz = inferred;
+        }
         return bestResult;
       }
     }
