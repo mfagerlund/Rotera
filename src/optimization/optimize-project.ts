@@ -22,7 +22,7 @@ import { generateAllInferenceBranches, type InferenceBranch } from './inference-
 export { log, clearOptimizationLogs, optimizationLogs } from './optimization-logger';
 
 // Version for tracking code updates
-const OPTIMIZER_VERSION = '2.5.1-inference-branching';
+const OPTIMIZER_VERSION = '2.6.0-branch-first';
 
 // WeakMaps for temporary storage during optimization (avoid polluting entity objects)
 const viewpointInitialVps = new WeakMap<Viewpoint, Record<string, { u: number; v: number }>>();
@@ -429,107 +429,18 @@ function validateProjectConstraints(project: Project): ValidationResult {
 }
 
 /**
- * Try all inference branches and return the best one based on reprojection error.
- *
- * When axis-aligned lines have target lengths, there's ambiguity about the sign
- * (e.g., OY.Y could be +10 or -10 from origin). This function:
- * 1. Generates all valid coordinate combinations
- * 2. Runs a quick solve for each
- * 3. Returns the branch with lowest median reprojection error
+ * Apply branch coordinates to inferredXyz on world points.
+ * This overrides the default inference with specific sign choices.
  */
-function selectBestInferenceBranch(
-  project: Project,
-  branches: InferenceBranch[],
-  initializedViewpoints: Set<Viewpoint>
-): InferenceBranch | null {
-  if (branches.length === 0) return null;
-  if (branches.length === 1) {
-    log(`[Branch] Single branch: ${branches[0].choices.join(', ') || 'default'}`);
-    return branches[0];
-  }
-
-  log(`[Branch] Testing ${branches.length} inference branches...`);
-
-  const worldPointArray = Array.from(project.worldPoints) as WorldPoint[];
-  const lineArray = Array.from(project.lines) as Line[];
-  const viewpointArray = Array.from(project.viewpoints) as Viewpoint[];
-
-  let bestBranch: InferenceBranch | null = null;
-  let bestMedianError = Infinity;
-
-  for (let i = 0; i < branches.length; i++) {
-    const branch = branches[i];
-
-    // Apply branch coordinates to world points
-    for (const wp of worldPointArray) {
-      const coords = branch.coordinates.get(wp);
-      if (coords) {
-        // Set optimizedXyz from branch coordinates (only fully-defined axes)
-        const x = coords[0] ?? wp.lockedXyz[0] ?? 0;
-        const y = coords[1] ?? wp.lockedXyz[1] ?? 0;
-        const z = coords[2] ?? wp.lockedXyz[2] ?? 0;
-        wp.optimizedXyz = [x, y, z];
-      }
-    }
-
-    // Run a quick solve to evaluate this branch
-    const testSystem = new ConstraintSystem({
-      maxIterations: 50,
-      tolerance: 1e-4,
-      verbose: false,
-    });
-
-    worldPointArray.forEach(p => testSystem.addPoint(p));
-    lineArray.forEach(l => testSystem.addLine(l));
-
-    // Only add initialized cameras
-    for (const vp of viewpointArray) {
-      if (initializedViewpoints.has(vp)) {
-        testSystem.addCamera(vp);
-      }
-    }
-
-    // Add image points only for initialized cameras
-    for (const ip of project.imagePoints) {
-      const ipConcrete = ip as ImagePoint;
-      if (initializedViewpoints.has(ipConcrete.viewpoint as Viewpoint)) {
-        testSystem.addImagePoint(ipConcrete);
-      }
-    }
-
-    for (const c of project.constraints) {
-      testSystem.addConstraint(c);
-    }
-
-    const result = testSystem.solve();
-
-    // Compute median reprojection error
-    const errors: number[] = [];
-    for (const ip of project.imagePoints) {
-      const ipConcrete = ip as ImagePoint;
-      if (ipConcrete.lastResiduals && ipConcrete.lastResiduals.length === 2) {
-        const error = Math.sqrt(ipConcrete.lastResiduals[0] ** 2 + ipConcrete.lastResiduals[1] ** 2);
-        errors.push(error);
-      }
-    }
-    errors.sort((a, b) => a - b);
-    const medianError = errors.length > 0 ? errors[Math.floor(errors.length / 2)] : Infinity;
-
-    const choiceStr = branch.choices.length > 0 ? branch.choices.join(', ') : 'default';
-    log(`[Branch] #${i + 1}: median=${medianError.toFixed(1)}px, choices=[${choiceStr}]`);
-
-    if (medianError < bestMedianError) {
-      bestMedianError = medianError;
-      bestBranch = branch;
+function applyBranchToInferredXyz(project: Project, branch: InferenceBranch): void {
+  for (const wp of project.worldPoints) {
+    const point = wp as WorldPoint;
+    const coords = branch.coordinates.get(point);
+    if (coords) {
+      // Override inferredXyz with branch coordinates
+      point.inferredXyz = [...coords] as [number | null, number | null, number | null];
     }
   }
-
-  if (bestBranch) {
-    const choiceStr = bestBranch.choices.length > 0 ? bestBranch.choices.join(', ') : 'default';
-    log(`[Branch] Selected: [${choiceStr}] with median=${bestMedianError.toFixed(1)}px`);
-  }
-
-  return bestBranch;
 }
 
 /**
@@ -614,6 +525,10 @@ export interface OptimizeProjectOptions extends Omit<SolverOptions, 'optimizeCam
    * improving robustness for complex multi-camera scenes. Default: false (opt-in).
    */
   useIterativeInit?: boolean;
+  /** @internal Skip branch testing (used during recursive branch attempts) */
+  _skipBranching?: boolean;
+  /** @internal The branch to apply (used during recursive branch attempts) */
+  _branch?: InferenceBranch;
 }
 
 export interface OptimizeProjectResult extends SolverResult {
@@ -638,6 +553,57 @@ export function optimizeProject(
     );
   }
 
+  // BRANCH-FIRST OPTIMIZATION: When axis-aligned lines have target lengths,
+  // there's sign ambiguity (e.g., +10 or -10). Generate all valid branches
+  // and try each from scratch, picking the best result.
+  const { _skipBranching = false, _branch } = options;
+
+  if (!_skipBranching) {
+    const branches = generateAllInferenceBranches(project);
+
+    if (branches.length > 1) {
+      log(`[Branch] Found ${branches.length} inference branches - testing each from scratch`);
+
+      let bestResult: OptimizeProjectResult | null = null;
+      let bestMedianError = Infinity;
+      const GOOD_ENOUGH_THRESHOLD = 2.0;
+
+      for (let i = 0; i < branches.length; i++) {
+        const branch = branches[i];
+        const choiceStr = branch.choices.length > 0 ? branch.choices.join(', ') : 'default';
+
+        // Run full optimization with this branch
+        const branchResult = optimizeProject(project, {
+          ...options,
+          _skipBranching: true,
+          _branch: branch,
+          verbose: false, // Reduce noise during branch testing
+        });
+
+        const medianError = branchResult.medianReprojectionError ?? Infinity;
+        log(`[Branch] #${i + 1}: median=${medianError.toFixed(1)}px, choices=[${choiceStr}]`);
+
+        // If good enough, return immediately
+        if (medianError < GOOD_ENOUGH_THRESHOLD) {
+          log(`[Branch] Selected #${i + 1} (good enough: ${medianError.toFixed(1)}px < ${GOOD_ENOUGH_THRESHOLD}px)`);
+          return branchResult;
+        }
+
+        // Track best result
+        if (medianError < bestMedianError) {
+          bestMedianError = medianError;
+          bestResult = branchResult;
+        }
+      }
+
+      // Return best result if none were good enough
+      if (bestResult) {
+        log(`[Branch] Selected best: median=${bestMedianError.toFixed(1)}px`);
+        return bestResult;
+      }
+    }
+  }
+
   const {
     autoInitializeCameras = true,
     autoInitializeWorldPoints = true,
@@ -653,9 +619,17 @@ export function optimizeProject(
     useIterativeInit,
   } = options;
 
-  // Clear logs and reset all cached state before solving
-  clearOptimizationLogs();
+  // Only clear logs at top level, not during recursive branch testing
+  // This preserves "[Branch] Found..." and other parent logs
+  if (!_skipBranching) {
+    clearOptimizationLogs();
+  }
   resetOptimizationState(project);
+
+  // Apply branch coordinates if provided (overrides default inference from propagateInferences)
+  if (_branch) {
+    applyBranchToInferredXyz(project, _branch);
+  }
 
   const startTime = performance.now();
 
@@ -1082,53 +1056,7 @@ export function optimizeProject(
         }
       }
 
-      // INFERENCE BRANCHING: When axis-aligned lines have target lengths, there's
-      // ambiguity about the sign (e.g., point could be +10 or -10 from origin).
-      // Generate all valid branches, test them with initialized cameras, and pick the best.
-      // This runs AFTER unifiedInitialize so we override its default inference with the correct one.
-      //
-      // NOTE: Only apply branching for SINGLE-CAMERA setups. For multi-camera, the second camera's
-      // late PnP depends on point positions, creating a chicken-and-egg problem. The retry logic
-      // in the main solve handles multi-camera ambiguity.
-      const linesWithTargetLengthForBranching = axisConstrainedLines.filter(l => l.targetLength !== undefined);
-      const isSingleCamera = viewpointArray.length === 1;
-      if (linesWithTargetLengthForBranching.length > 0 && initializedViewpointSet.size > 0 && isSingleCamera) {
-        const branches = generateAllInferenceBranches(project);
-
-        if (branches.length > 1) {
-          const bestBranch = selectBestInferenceBranch(project, branches, initializedViewpointSet);
-
-          if (bestBranch) {
-            // Apply best branch coordinates, overwriting unifiedInitialize's inference
-            for (const wp of pointArray) {
-              const coords = bestBranch.coordinates.get(wp as WorldPoint);
-              if (coords) {
-                const x = coords[0];
-                const y = coords[1];
-                const z = coords[2];
-                if (x !== null && y !== null && z !== null) {
-                  (wp as WorldPoint).optimizedXyz = [x, y, z];
-                }
-              }
-            }
-          }
-        } else if (branches.length === 1) {
-          // Single branch - apply directly without testing
-          const branch = branches[0];
-          log(`[Branch] Single valid configuration: ${branch.choices.join(', ') || 'default'}`);
-          for (const wp of pointArray) {
-            const coords = branch.coordinates.get(wp as WorldPoint);
-            if (coords) {
-              const x = coords[0];
-              const y = coords[1];
-              const z = coords[2];
-              if (x !== null && y !== null && z !== null) {
-                (wp as WorldPoint).optimizedXyz = [x, y, z];
-              }
-            }
-          }
-        }
-      }
+      // Note: Branching moved to after Stage1 optimization
     } else if (usedEssentialMatrix && lockedPointsForCheck.length < 2) {
       log('[WARN] No axis constraints + <2 locked points - orientation arbitrary');
     }

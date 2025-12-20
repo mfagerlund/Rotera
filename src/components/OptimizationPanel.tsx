@@ -291,11 +291,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
         stats.canOptimize &&
         !isOptimizing) {
       prevOptimizeTriggerRef.current = optimizeTrigger
-      // Small delay to ensure UI is rendered first
-      const timer = setTimeout(() => {
-        handleOptimize()
-      }, 100)
-      return () => clearTimeout(timer)
+      handleOptimize()
     }
     prevOptimizeTriggerRef.current = optimizeTrigger
   }, [optimizeTrigger, isOpen, stats.canOptimize, isOptimizing, handleOptimize])

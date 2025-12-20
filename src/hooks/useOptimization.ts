@@ -126,9 +126,6 @@ export const useOptimization = () => {
       }));
 
       try {
-        // Yield to event loop before starting heavy computation
-        await new Promise<void>((resolve) => setTimeout(resolve, 0));
-
         // Check for cancellation before starting
         if (cancelRequestedRef.current) {
           const cancelledResult: OptimizeProjectResult = {
@@ -147,42 +144,15 @@ export const useOptimization = () => {
           return cancelledResult;
         }
 
-        const result = await new Promise<OptimizeProjectResult>((resolve, reject) => {
-          // Use requestAnimationFrame to ensure UI updates before blocking
-          requestAnimationFrame(() => {
-            try {
-              const solverResult = optimizeProject(project, {
-                tolerance: options.tolerance ?? 1e-6,
-                maxIterations: options.maxIterations ?? 500,
-                damping: options.damping ?? 0.1,
-                verbose: options.verbose ?? false,
-                autoInitializeCameras: true,
-                autoInitializeWorldPoints: true,
-              });
-              resolve(solverResult);
-            } catch (error) {
-              reject(error);
-            }
-          });
+        // Run synchronously - no async yields that can be abandoned by React re-renders
+        const result = optimizeProject(project, {
+          tolerance: options.tolerance ?? 1e-6,
+          maxIterations: options.maxIterations ?? 500,
+          damping: options.damping ?? 0.1,
+          verbose: options.verbose ?? false,
+          autoInitializeCameras: true,
+          autoInitializeWorldPoints: true,
         });
-
-        // Check for cancellation after optimization completes
-        if (cancelRequestedRef.current) {
-          const cancelledResult: OptimizeProjectResult = {
-            converged: false,
-            iterations: result.iterations,
-            residual: result.residual,
-            error: 'Cancelled by user',
-          };
-          setState({
-            isRunning: false,
-            currentIteration: result.iterations,
-            currentResidual: result.residual,
-            result: cancelledResult,
-            constraintResiduals: [],
-          });
-          return cancelledResult;
-        }
 
         const points = Array.from(project.worldPoints);
         const lines = Array.from(project.lines);

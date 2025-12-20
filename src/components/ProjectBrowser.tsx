@@ -317,6 +317,7 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
   const handleBatchOptimize = async () => {
     // Get all projects including subdirectories
     const allProjects = await ProjectDB.getProjectsRecursive(currentFolderId)
+    console.log('[DEBUG] handleBatchOptimize: allProjects.length =', allProjects.length)
     if (allProjects.length === 0) return
 
     setIsBatchOptimizing(true)
@@ -371,8 +372,11 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
           errorMessage: result.error ?? undefined,
           optimizedAt: new Date(),
         }
+        console.log('[DEBUG] About to save to database')
         await ProjectDB.saveOptimizationResult(summary.id, optimizationResult)
+        console.log('[DEBUG] Database save completed')
       } catch (error) {
+        console.log('[DEBUG] Caught error:', error)
         const batchResult: BatchOptimizationResult = {
           projectId: summary.id,
           error: null,
@@ -395,12 +399,14 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
       }
 
       // Update results incrementally
+      console.log('[DEBUG] Updating batch results')
       setBatchResults(new Map(newResults))
 
-      // Yield to event loop between projects
-      await new Promise(resolve => setTimeout(resolve, 0))
+      // Continue to next project (removed async yield that was blocking)
+      console.log('[DEBUG] Continuing to next project')
     }
 
+    console.log('[DEBUG] Loop completed, setting batch optimizing to false')
     setIsBatchOptimizing(false)
     setOptimizingProjectId(null)
     setQueuedProjectIds(new Set())

@@ -313,11 +313,8 @@ async function createThumbnail(imageUrl: string, geometry?: ThumbnailGeometry, m
 export const ProjectDB = {
   async listProjects(folderId: string | null = null): Promise<ProjectSummary[]> {
     const db = await openDatabase()
-    console.log('[ProjectDB.listProjects] Listing projects in folder:', folderId)
     const allProjects = await getAllFromStore<StoredProject>(db, PROJECTS_STORE)
-    console.log('[ProjectDB.listProjects] All projects in DB:', allProjects.length)
     const filtered = allProjects.filter(p => p.folderId === folderId)
-    console.log('[ProjectDB.listProjects] Filtered for folderId', folderId, ':', filtered.length)
     return filtered.map(toProjectSummary)
   },
 
@@ -374,12 +371,9 @@ export const ProjectDB = {
 
   async saveProject(project: Project, folderId?: string | null): Promise<string> {
     const db = await openDatabase()
-    console.log('[ProjectDB.saveProject] Saving project:', project.name, 'to folder:', folderId)
 
     const existingId = project._dbId
-    console.log('[ProjectDB.saveProject] Existing _dbId:', existingId)
     const id = existingId || generateId()
-    console.log('[ProjectDB.saveProject] Using id:', id)
 
     // If folderId is not explicitly provided and project already exists, preserve the existing folderId
     let effectiveFolderId: string | null = folderId ?? null
@@ -387,7 +381,6 @@ export const ProjectDB = {
       const existingProject = await this.getStoredProject(id)
       if (existingProject) {
         effectiveFolderId = existingProject.folderId
-        console.log('[ProjectDB.saveProject] Preserving existing folderId:', effectiveFolderId)
       }
     }
     const now = new Date()
@@ -474,9 +467,8 @@ export const ProjectDB = {
         }
 
         thumbnailUrl = await createThumbnail(firstViewpoint.url, geometry)
-        console.log('[ProjectDB.saveProject] Created thumbnail, size:', thumbnailUrl.length)
-      } catch (err) {
-        console.warn('[ProjectDB.saveProject] Failed to create thumbnail:', err)
+      } catch {
+        // Thumbnail creation failed, continue without thumbnail
       }
     }
 
@@ -520,7 +512,6 @@ export const ProjectDB = {
     })
 
     project._dbId = id
-    console.log('[ProjectDB.saveProject] Save complete, assigned _dbId:', id)
 
     return id
   },
@@ -590,7 +581,6 @@ export const ProjectDB = {
     const db = await openDatabase()
     const newId = generateId()
     const now = new Date()
-    console.log('[ProjectDB.copyProject] Copying project:', id, 'as:', newName)
 
     const { tx, projectStore, imageStore } = await createProjectAndImagesTransaction(db, 'readwrite')
 
@@ -637,14 +627,12 @@ export const ProjectDB = {
       }
     })
 
-    console.log('[ProjectDB.copyProject] Copy complete, new id:', newId)
     return newId
   },
 
   async createFolder(name: string, parentId: string | null = null): Promise<string> {
     const db = await openDatabase()
     const id = generateId()
-    console.log('[ProjectDB.createFolder] Creating folder:', name, 'in parent:', parentId, 'with id:', id)
 
     const folder: Folder = {
       id,
@@ -659,10 +647,7 @@ export const ProjectDB = {
       store.add(folder)
 
       tx.onerror = () => reject(tx.error)
-      tx.oncomplete = () => {
-        console.log('[ProjectDB.createFolder] Folder created successfully:', id)
-        resolve()
-      }
+      tx.oncomplete = () => resolve()
     })
 
     return id
@@ -670,11 +655,8 @@ export const ProjectDB = {
 
   async listFolders(parentId: string | null = null): Promise<Folder[]> {
     const db = await openDatabase()
-    console.log('[ProjectDB.listFolders] Listing folders in parent:', parentId)
     const allFolders = await getAllFromStore<Folder>(db, FOLDERS_STORE)
-    console.log('[ProjectDB.listFolders] All folders in DB:', allFolders.length)
     const filtered = allFolders.filter(f => f.parentId === parentId)
-    console.log('[ProjectDB.listFolders] Filtered for parentId', parentId, ':', filtered.length)
     return filtered.map((f: Folder) => ({
       ...f,
       createdAt: new Date(f.createdAt)
@@ -732,10 +714,8 @@ export const ProjectDB = {
       localStorage.removeItem(key)
       localStorage.removeItem(`${key}-timestamp`)
 
-      console.log('Migrated project from localStorage to IndexedDB')
       return id
-    } catch (error) {
-      console.error('Failed to migrate from localStorage:', error)
+    } catch {
       return null
     }
   },
