@@ -16,7 +16,7 @@ export const ResizableSidebar: React.FC<ResizableSidebarProps> = ({
   width,
   onWidthChange,
   minWidth = 120,
-  maxWidth = 400,
+  maxWidth = 800,
   side = 'left',
   persistKey
 }) => {
