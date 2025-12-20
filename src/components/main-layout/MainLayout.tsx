@@ -8,6 +8,8 @@ import { useMainLayoutState } from '../../hooks/useMainLayoutState'
 import { useMainLayoutHandlers } from '../../hooks/useMainLayoutHandlers'
 import { useMainLayoutKeyboard } from '../../hooks/useMainLayoutKeyboard'
 import { useLayoutState } from './hooks/useLayoutState'
+import { useBottomPanelHandlers } from './hooks/useBottomPanelHandlers'
+import { usePanelHandlers } from './hooks/usePanelHandlers'
 import { ConstructionPreview } from '../image-viewer/types'
 import { Line as LineEntity, LineDirection } from '../../entities/line'
 import { WorldPoint } from '../../entities/world-point'
@@ -30,7 +32,7 @@ import SplitWorkspace from './SplitWorkspace'
 import { LeftPanel, LeftPanelRef } from './LeftPanel'
 import { RightPanel } from './RightPanel'
 import { BottomPanel } from './BottomPanel'
-import { VisibilityPanel } from '../VisibilityPanel'
+import { StatusBar } from './StatusBar'
 import { VisibilitySettings, LockSettings, DEFAULT_VIEW_SETTINGS } from '../../types/visibility'
 import { ToolContext, SELECT_TOOL_CONTEXT, LINE_TOOL_CONTEXT, VANISHING_LINE_TOOL_CONTEXT, LOOP_TOOL_CONTEXT } from '../../types/tool-context'
 import { ProjectDB } from '../../services/project-db'
@@ -102,31 +104,6 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
     }, 1000)
     return () => clearInterval(interval)
   }, [])
-
-  // Track dirty state before optimization to restore it after
-  // (optimization changes computed values, not real user data)
-  const dirtyStateBeforeOptimizeRef = useRef(false)
-  const isOptimizingRef = useRef(false)
-
-  // Task 6: Mark dirty on changes using MobX reaction
-  useEffect(() => {
-    if (!project) return
-
-    const dispose = reaction(
-      () => Serialization.serialize(project),
-      () => {
-        // Don't mark dirty during optimization - optimization changes computed values,
-        // not user data, so we preserve the pre-optimization dirty state
-        if (!isOptimizingRef.current) {
-          markDirty()
-          setIsDirtyState(true)
-        }
-      },
-      { fireImmediately: false }
-    )
-
-    return () => dispose()
-  }, [project])
 
   const handleSaveProject = useCallback(async () => {
     if (!project) return
@@ -206,13 +183,6 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
     projectImageSortOrder: Array.isArray(project?.imageSortOrder) ? project.imageSortOrder : undefined,
     onOpenWorldPointEdit: handleOpenWorldPointEdit
   })
-
-  // Wrap triggerOptimization to capture dirty state before optimization starts
-  const handleTriggerOptimization = useCallback(() => {
-    dirtyStateBeforeOptimizeRef.current = getIsDirty()
-    isOptimizingRef.current = true
-    triggerOptimization()
-  }, [triggerOptimization])
 
   const [constructionPreview, setConstructionPreview] = useState<ConstructionPreview | null>(null)
   const [currentVanishingLineAxis, setCurrentVanishingLineAxis] = useState<'x' | 'y' | 'z'>('x')
@@ -351,6 +321,18 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
   const worldViewRef = useRef<WorldViewRef>(null)
   const leftPanelRef = useRef<LeftPanelRef>(null)
 
+  // Panel handlers for LeftPanel and RightPanel
+  const panelHandlers = usePanelHandlers({
+    project,
+    currentViewpoint,
+    deleteImage,
+    setCurrentViewpoint,
+    copyPointsFromImageToImage,
+    createLine,
+    worldViewRef,
+    setConstructionPreview
+  })
+
   const { workspaceState, updateWorkspaceState } = useLayoutState(currentViewpoint)
 
   const selectedLineEntities = getSelectedByType<LineEntity>('line')
@@ -398,6 +380,49 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
       renameWorldPoint(updatedPoint, updatedPoint.getName())
     }
   }, [renameWorldPoint])
+
+  // Bottom panel handlers
+  const bottomPanelHandlers = useBottomPanelHandlers({
+    project,
+    deleteLine,
+    deleteConstraint,
+    deleteWorldPoint,
+    handleEntityClick: (entity: unknown, ctrlKey: boolean, shiftKey: boolean) => handleEntityClick(entity as ISelectable, ctrlKey, shiftKey),
+    handleEditLineOpen,
+    setEntityPopup,
+    setEditingCoplanarConstraint,
+    setActiveTool,
+    closeWorldPointEdit,
+    saveProject,
+    worldViewRef,
+    setIsDirtyState
+  })
+
+  // Task 6: Mark dirty on changes using MobX reaction
+  useEffect(() => {
+    if (!project) return
+
+    const dispose = reaction(
+      () => Serialization.serialize(project),
+      () => {
+        // Don't mark dirty during optimization - optimization changes computed values,
+        // not user data, so we preserve the pre-optimization dirty state
+        if (!bottomPanelHandlers.isOptimizingRef.current) {
+          markDirty()
+          setIsDirtyState(true)
+        }
+      },
+      { fireImmediately: false }
+    )
+
+    return () => dispose()
+  }, [project, bottomPanelHandlers.isOptimizingRef])
+
+  // Wrap triggerOptimization to capture dirty state before optimization starts
+  const handleTriggerOptimization = useCallback(() => {
+    bottomPanelHandlers.handleOptimizationStart()
+    triggerOptimization()
+  }, [triggerOptimization, bottomPanelHandlers])
 
   const { handleEnhancedPointClick, handleEnhancedLineClick, handlePlaneClick, handleEmptySpaceClick } = useMainLayoutHandlers({
     activeTool,
@@ -677,19 +702,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
                 onImageSelect={(viewpoint) => setCurrentViewpoint(viewpoint)}
                 onImageAdd={addImage}
                 onImageRename={renameImage}
-                onImageDelete={(viewpoint) => {
-                  const wasCurrentViewpoint = viewpoint === currentViewpoint
-                  deleteImage(viewpoint)
-
-                  if (wasCurrentViewpoint && project) {
-                    const remainingViewpoints = Array.from(project.viewpoints)
-                    if (remainingViewpoints.length > 0) {
-                      setCurrentViewpoint(remainingViewpoints[0])
-                    } else {
-                      setCurrentViewpoint(null)
-                    }
-                  }
-                }}
+                onImageDelete={panelHandlers.handleImageDelete}
                 getImagePointCount={getImagePointCount}
                 getSelectedPointsInImage={(viewpoint) => getSelectedPointsInImage(viewpoint).length}
                 imageHeights={imageHeights}
@@ -699,19 +712,9 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
                 onWorldPointHover={setHoveredWorldPoint}
                 onWorldPointClick={handleEnhancedPointClick}
                 onWorldPointRightClick={openWorldPointEdit}
-                onViewFromCamera={(viewpoint) => {
-                  workspaceActions.setWorkspace('world')
-                  setTimeout(() => worldViewRef.current?.lookFromCamera(viewpoint), 100)
-                }}
-                onCopyPointsToCurrentImage={(sourceViewpoint) => {
-                  if (currentImage) {
-                    copyPointsFromImageToImage(sourceViewpoint, currentImage)
-                  }
-                }}
-                onShowInImageView={(viewpoint) => {
-                  setCurrentViewpoint(viewpoint)
-                  workspaceActions.setWorkspace('image')
-                }}
+                onViewFromCamera={(viewpoint) => panelHandlers.handleViewFromCamera(viewpoint, workspaceActions)}
+                onCopyPointsToCurrentImage={panelHandlers.handleCopyPointsToCurrentImage}
+                onShowInImageView={(viewpoint) => panelHandlers.handleShowInImageView(viewpoint, workspaceActions)}
               />
 
               <div className="viewer-area">
@@ -727,28 +730,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
                 allWorldPoints={worldPointsArray}
                 existingLines={linesMap}
                 onCreatePoint={(imageId: string, u: number, v: number) => handleImageClick(u, v)}
-                onCreateLine={(pointA, pointB, lineConstraints) => {
-                  try {
-                    const lineEntity = createLine(
-                      pointA,
-                      pointB,
-                      {
-                        name: lineConstraints?.name,
-                        color: lineConstraints?.color,
-                        isConstruction: lineConstraints?.isConstruction,
-                        direction: lineConstraints?.direction,
-                        targetLength: lineConstraints?.targetLength,
-                        tolerance: lineConstraints?.tolerance
-                      }
-                    )
-
-                    if (lineEntity) {
-                      setConstructionPreview(null)
-                    }
-                  } catch (error) {
-                    console.error('Error creating line:', error)
-                  }
-                }}
+                onCreateLine={panelHandlers.handleCreateLineFromPanel}
                 onCreateConstraint={addConstraint}
                 onCreatePlane={(definition) => {}}
                 onCreateCircle={(definition) => {}}
@@ -784,100 +766,19 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
               />
             </div>
 
-            <div className="status-bar">
-              <WorkspaceStatus
-                workspace={currentWorkspace}
-                imageInfo={imageInfo}
-                worldInfo={worldInfo}
-              />
-
-              <div className="entity-status-bar">
-                <button
-                  className="entity-status-item"
-                  onClick={() => setEntityPopup('showWorldPointsPopup', true)}
-                  title="Manage world points"
-                >
-                  <span className="entity-status-label">WP</span>
-                  <span className="entity-status-count">{project?.worldPoints.size || 0}</span>
-                  {selectionStats.point > 0 && <span className="entity-status-selected">({selectionStats.point})</span>}
-                </button>
-                <button
-                  className="entity-status-item"
-                  onClick={() => setEntityPopup('showImagePointsPopup', true)}
-                  title="Manage image points"
-                >
-                  <span className="entity-status-label">IP</span>
-                  <span className="entity-status-count">{Array.from(project?.viewpoints || []).reduce((total, vp) => total + vp.imagePoints.size, 0)}</span>
-                </button>
-                <button
-                  className="entity-status-item"
-                  onClick={() => setEntityPopup('showLinesPopup', true)}
-                  title="Manage lines"
-                >
-                  <span className="entity-status-label">Lines</span>
-                  <span className="entity-status-count">{project?.lines.size || 0}</span>
-                  {selectionStats.line > 0 && <span className="entity-status-selected">({selectionStats.line})</span>}
-                </button>
-                <button
-                  className="entity-status-item"
-                  onClick={() => setEntityPopup('showCoplanarConstraintsPopup', true)}
-                  title="Manage coplanar constraints"
-                >
-                  <span className="entity-status-label">Coplanar</span>
-                  <span className="entity-status-count">{project?.coplanarConstraints.length || 0}</span>
-                </button>
-                <button
-                  className="entity-status-item"
-                  onClick={() => setEntityPopup('showConstraintsPopup', true)}
-                  title="Manage constraints"
-                >
-                  <span className="entity-status-label">Constraints</span>
-                  <span className="entity-status-count">{project?.nonCoplanarConstraints.length || 0}</span>
-                </button>
-                {mousePosition && (
-                  <span className="mouse-position">
-                    ({mousePosition.u.toFixed(0)}, {mousePosition.v.toFixed(0)})
-                  </span>
-                )}
-              </div>
-
-              <button
-                type="button"
-                className="status-bar__toggle"
-                data-active={showComponentNames}
-                aria-pressed={showComponentNames}
-                onClick={handleComponentOverlayToggle}
-                title="Toggle component label overlay"
-              >
-                <span className="status-bar__toggle-indicator" aria-hidden="true" />
-                <span className="status-bar__toggle-label">Component labels</span>
-              </button>
-
-              <div style={{
-                marginLeft: '12px',
-                padding: '4px 12px',
-                backgroundColor: __WORKTREE_NAME__ === 'main' ? '#1a4d2e' : '#8b4513',
-                color: '#fff',
-                borderRadius: '4px',
-                fontWeight: 'bold',
-                fontSize: '13px',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-                border: '2px solid ' + (__WORKTREE_NAME__ === 'main' ? '#2d7a4d' : '#d2691e')
-              }}>
-                {__WORKTREE_NAME__ === 'main' ? __WORKTREE_NAME__ : __WORKTREE_NAME__.replace('Pictorigo-', '')}
-              </div>
-
-              <span style={{ marginLeft: '12px', color: '#888' }}>v0.4-ENHANCED</span>
-
-              {project && (
-                <VisibilityPanel
-                  viewSettings={project.viewSettings}
-                  onVisibilityChange={handleVisibilityChange}
-                  onLockingChange={handleLockingChange}
-                />
-              )}
-            </div>
+            <StatusBar
+              currentWorkspace={currentWorkspace}
+              imageInfo={imageInfo}
+              worldInfo={worldInfo}
+              project={project}
+              selectionStats={selectionStats}
+              mousePosition={mousePosition}
+              showComponentNames={showComponentNames}
+              onEntityPopupOpen={(popup) => setEntityPopup(popup, true)}
+              onComponentOverlayToggle={handleComponentOverlayToggle}
+              onVisibilityChange={handleVisibilityChange}
+              onLockingChange={handleLockingChange}
+            />
           </div>
         )}
       </WorkspaceManager>
@@ -889,22 +790,13 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
         linesMap={linesMap}
         allWorldPoints={worldPointsArray}
         selectedLines={selectedLineEntities}
-        onEditLine={(line) => {
-          handleEditLineOpen(line)
-          setEntityPopup('showLinesPopup', false)
-        }}
-        onDeleteLine={(line) => deleteLine(line)}
-        onDeleteAllLines={() => {
-          Array.from(project?.lines || []).forEach(line => deleteLine(line))
-        }}
-        onUpdateLine={(updatedLine) => {
-          saveProject()
-        }}
+        onEditLine={bottomPanelHandlers.handleEditLine}
+        onDeleteLine={deleteLine}
+        onDeleteAllLines={bottomPanelHandlers.handleDeleteAllLines}
+        onUpdateLine={bottomPanelHandlers.handleUpdateLine}
         onToggleLineVisibility={(line) => {}}
-        onSelectLine={(line) => handleEntityClick(line, false, false)}
-        onCreateLine={(pointA, pointB, lineConstraints) => {
-          createLine(pointA, pointB, lineConstraints)
-        }}
+        onSelectLine={bottomPanelHandlers.handleSelectLine}
+        onCreateLine={createLine}
         selectedPlanes={selectedPlaneEntities}
         onEditPlane={(plane) => {}}
         onDeletePlane={(plane) => {}}
@@ -913,57 +805,25 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
         worldPointsMap={worldPointsMap}
         viewpointsMap={viewpointsMap}
         onEditImagePoint={(ref) => {}}
-        onDeleteAllImagePoints={() => {
-          if (project) {
-            Array.from(project.imagePoints).forEach(ip => project.removeImagePoint(ip))
-          }
-        }}
+        onDeleteAllImagePoints={bottomPanelHandlers.handleDeleteAllImagePoints}
         onSelectImagePoint={(ref) => {}}
         constraints={constraints}
         allLines={linesArray}
         onEditConstraint={(constraint) => {}}
-        onDeleteConstraint={(constraint) => deleteConstraint(constraint)}
-        onDeleteAllConstraints={() => {
-          constraints.forEach(c => deleteConstraint(c))
-        }}
+        onDeleteConstraint={deleteConstraint}
+        onDeleteAllConstraints={bottomPanelHandlers.handleDeleteAllConstraints}
         onSelectConstraint={(constraint) => {}}
-        onEditCoplanarConstraint={(constraint) => {
-          setEditingCoplanarConstraint(constraint)
-          setActiveTool('plane')
-          // Don't close the popup - keep it open like WorldPointsManager
-        }}
-        onDeleteCoplanarConstraint={(constraint) => deleteConstraint(constraint)}
-        onDeleteAllCoplanarConstraints={() => {
-          project?.coplanarConstraints.forEach(c => deleteConstraint(c))
-        }}
-        onSelectCoplanarConstraint={(constraint) => {
-          handleEntityClick(constraint, false, false)
-        }}
+        onEditCoplanarConstraint={bottomPanelHandlers.handleEditCoplanarConstraint}
+        onDeleteCoplanarConstraint={deleteConstraint}
+        onDeleteAllCoplanarConstraints={bottomPanelHandlers.handleDeleteAllCoplanarConstraints}
+        onSelectCoplanarConstraint={bottomPanelHandlers.handleSelectCoplanarConstraint}
         onHoverCoplanarConstraint={setHoveredCoplanarConstraint}
         selectedCoplanarConstraints={selectedCoplanarConstraints}
         hoveredCoplanarConstraint={hoveredCoplanarConstraint}
         project={project}
-        onOptimizationStart={() => {
-          // Capture dirty state before optimization makes changes
-          dirtyStateBeforeOptimizeRef.current = getIsDirty()
-          isOptimizingRef.current = true
-        }}
-        onOptimizationComplete={(success, message) => {
-          // Optimization is done - stop suppressing dirty changes
-          isOptimizingRef.current = false
-          // Restore the dirty state from before optimization
-          // (optimization only changes computed values, not user data)
-          if (dirtyStateBeforeOptimizeRef.current) {
-            markDirty()
-          } else {
-            markClean()
-          }
-          setIsDirtyState(dirtyStateBeforeOptimizeRef.current)
-          if (success && worldViewRef.current) {
-            worldViewRef.current.zoomFit()
-          }
-        }}
-        onSelectWorldPoint={(worldPoint) => handleEntityClick(worldPoint, false, false)}
+        onOptimizationStart={bottomPanelHandlers.handleOptimizationStart}
+        onOptimizationComplete={bottomPanelHandlers.handleOptimizationComplete}
+        onSelectWorldPoint={bottomPanelHandlers.handleSelectWorldPoint}
         onHoverWorldPoint={setHoveredWorldPoint}
         isWorldPointSelected={(wp) => selection.has(wp)}
         isLineSelected={(line) => selection.has(line)}
@@ -971,25 +831,11 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
         worldPointEditWindow={worldPointEditWindow}
         onCloseWorldPointEdit={closeWorldPointEdit}
         onUpdateWorldPoint={handleWorldPointUpdate}
-        onDeleteWorldPoint={(worldPoint) => {
-          deleteWorldPoint(worldPoint)
-          closeWorldPointEdit()
-        }}
-        onDeleteAllWorldPoints={() => {
-          Array.from(project?.worldPoints || []).forEach(wp => deleteWorldPoint(wp))
-        }}
+        onDeleteWorldPoint={bottomPanelHandlers.handleDeleteWorldPoint}
+        onDeleteAllWorldPoints={bottomPanelHandlers.handleDeleteAllWorldPoints}
         onEditWorldPointFromManager={openWorldPointEdit}
         selectedWorldPoints={selectedPointEntities}
-        onDeleteImagePoint={(ref) => {
-          if (project) {
-            const imagePoint = Array.from(project.imagePoints).find(
-              (ip) => ip.worldPoint === ref.worldPoint && ip.viewpoint === ref.viewpoint
-            )
-            if (imagePoint) {
-              project.removeImagePoint(imagePoint)
-            }
-          }
-        }}
+        onDeleteImagePoint={bottomPanelHandlers.handleDeleteImagePoint}
         showVPQualityWindow={showVPQualityWindow}
         onCloseVPQualityWindow={closeVPQualityWindow}
         currentViewpoint={currentViewpoint}
