@@ -1371,7 +1371,7 @@ export function optimizeProject(
   });
   project.constraints.forEach(c => system.addConstraint(c));
 
-  let result = system.solve();
+  let result: OptimizeProjectResult = system.solve();
 
   // RETRY LOGIC: If alignment was ambiguous and residual is poor, try opposite sign
   // The threshold of 20 is chosen because good solutions typically have residual < 5,

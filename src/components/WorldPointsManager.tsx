@@ -9,6 +9,7 @@ import { WorldPoint } from '../entities/world-point'
 import { Viewpoint } from '../entities/viewpoint'
 import { useConfirm } from './ConfirmDialog'
 import { getEntityKey } from '../utils/entityKeys'
+import { formatXyz } from '../utils/formatters'
 
 interface WorldPointsManagerProps {
   isOpen: boolean
@@ -46,17 +47,11 @@ export const WorldPointsManager: React.FC<WorldPointsManagerProps> = observer(({
     return count
   }
 
-  const formatCoords = (worldPoint: WorldPoint): string => {
-    const xyz = worldPoint.getEffectiveXyz()
-    if (xyz.every(v => v === null)) return '-'
-    return xyz.map(v => v !== null ? v.toFixed(2) : '?').join(', ')
-  }
+  const formatLockedCoords = (worldPoint: WorldPoint): string => formatXyz(worldPoint.lockedXyz)
 
-  const formatOptimizedCoords = (worldPoint: WorldPoint): string => {
-    const xyz = worldPoint.optimizedXyz
-    if (!xyz) return '-'
-    return xyz.map(v => v.toFixed(2)).join(', ')
-  }
+  const formatInferredCoords = (worldPoint: WorldPoint): string => formatXyz(worldPoint.inferredXyz)
+
+  const formatOptimizedCoords = (worldPoint: WorldPoint): string => formatXyz(worldPoint.optimizedXyz)
 
   const formatResidual = (worldPoint: WorldPoint): string => {
     const info = worldPoint.getOptimizationInfo()
@@ -85,7 +80,7 @@ export const WorldPointsManager: React.FC<WorldPointsManagerProps> = observer(({
         title={`World Points (${worldPointsList.length})`}
         isOpen={isOpen}
         onClose={onClose}
-        width={580}
+        width={700}
         maxHeight={400}
         storageKey="world-points-popup"
         showOkCancel={false}
@@ -100,7 +95,8 @@ export const WorldPointsManager: React.FC<WorldPointsManagerProps> = observer(({
                 <tr>
                   <th>Name</th>
                   <th>Images</th>
-                  <th>Coords</th>
+                  <th>Locked</th>
+                  <th>Inferred</th>
                   <th>Optimized</th>
                   <th>Residual</th>
                   <th></th>
@@ -133,7 +129,8 @@ export const WorldPointsManager: React.FC<WorldPointsManagerProps> = observer(({
                       <FontAwesomeIcon icon={faCamera} style={{ opacity: 0.5, marginRight: 4 }} />
                       {getImagePointCount(worldPoint)}
                     </td>
-                    <td className="length-cell">{formatCoords(worldPoint)}</td>
+                    <td className="length-cell">{formatLockedCoords(worldPoint)}</td>
+                    <td className="length-cell">{formatInferredCoords(worldPoint)}</td>
                     <td className="length-cell">{formatOptimizedCoords(worldPoint)}</td>
                     <td className="residual-cell">{formatResidual(worldPoint)}</td>
                     <td className="actions-cell">

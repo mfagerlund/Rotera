@@ -6,6 +6,8 @@ import FloatingWindow from './FloatingWindow'
 import { useConfirm } from './ConfirmDialog'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCircleDot, faTrash } from '@fortawesome/free-solid-svg-icons'
+import { triggerInference } from '../store/project-store'
+import { formatXyz } from '../utils/formatters'
 
 type ProjectImage = Viewpoint
 
@@ -150,6 +152,9 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
       lockedY.trim() !== '' ? parseFloat(lockedY) : null,
       lockedZ.trim() !== '' ? parseFloat(lockedZ) : null
     ]
+
+    // Re-run inference after coordinate changes
+    triggerInference()
 
     onUpdateWorldPoint(worldPoint)
     setHasChanges(false)
@@ -351,6 +356,41 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
                 >
                   <FontAwesomeIcon icon={faCircleDot} />
                 </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLockedX('')
+                    setLockedY('')
+                    setLockedZ('')
+                    handleChange()
+                  }}
+                  title="Clear all coordinates"
+                  style={{
+                    padding: '4px 8px',
+                    fontSize: '12px',
+                    border: '1px solid #555',
+                    borderRadius: '3px',
+                    background: '#2a2a2a',
+                    color: '#999',
+                    cursor: 'pointer',
+                    height: '26px',
+                    minWidth: '26px',
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#3a3a3a'
+                    e.currentTarget.style.color = '#fff'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = '#2a2a2a'
+                    e.currentTarget.style.color = '#999'
+                  }}
+                >
+                  ×
+                </button>
               </div>
             </div>
 
@@ -364,14 +404,10 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
                   fontSize: '12px',
                   color: '#9c9',
                   padding: '4px',
-                  display: 'flex',
-                  gap: '8px',
                   fontWeight: 'bold',
                   textShadow: '0 0 3px rgba(0,0,0,0.8)'
                 }}>
-                  <span>X: {worldPoint.inferredXyz[0] !== null ? worldPoint.inferredXyz[0].toFixed(3) : 'free'}</span>
-                  <span>Y: {worldPoint.inferredXyz[1] !== null ? worldPoint.inferredXyz[1].toFixed(3) : 'free'}</span>
-                  <span>Z: {worldPoint.inferredXyz[2] !== null ? worldPoint.inferredXyz[2].toFixed(3) : 'free'}</span>
+                  {formatXyz(worldPoint.inferredXyz, 3)}
                 </div>
               </div>
             )}
@@ -387,9 +423,7 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
                   color: '#aaa',
                   padding: '4px'
                 }}>
-                  X: {worldPoint.optimizedXyz[0].toFixed(3)},
-                  Y: {worldPoint.optimizedXyz[1].toFixed(3)},
-                  Z: {worldPoint.optimizedXyz[2].toFixed(3)}
+                  {formatXyz(worldPoint.optimizedXyz, 3)}
                 </div>
               </div>
             )}

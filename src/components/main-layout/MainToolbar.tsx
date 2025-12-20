@@ -16,7 +16,8 @@ import {
   faChevronDown,
   faImage,
   faFileLines,
-  faCube
+  faCube,
+  faRotate
 } from '@fortawesome/free-solid-svg-icons'
 import { downloadBlenderScript } from '../../services/blender-export'
 import { WorkspaceSwitcher } from '../WorkspaceManager'
@@ -44,6 +45,7 @@ interface MainToolbarProps {
   onReturnToBrowser?: () => void
   onSaveProject?: () => Promise<void>
   onSaveAsProject?: (newName: string) => Promise<void>
+  onReloadProject?: () => Promise<void>
   onOpenOptimization?: () => void
 
   // Dirty state
@@ -62,6 +64,7 @@ export const MainToolbar: React.FC<MainToolbarProps> = observer(({
   onReturnToBrowser,
   onSaveProject,
   onSaveAsProject,
+  onReloadProject,
   onOpenOptimization,
   isDirty
 }) => {
@@ -108,6 +111,26 @@ export const MainToolbar: React.FC<MainToolbarProps> = observer(({
     )
     if (confirmed) {
       onClearProject()
+    }
+  }
+
+  const [isReloading, setIsReloading] = React.useState(false)
+
+  const handleReloadProject = async () => {
+    if (!onReloadProject || isReloading) return
+    setFileMenuOpen(false)
+    const confirmed = await confirm(
+      'Reload project and discard all unsaved changes?\n\n' +
+      'This will restore the project to its last saved state.',
+      { confirmLabel: 'Reload', variant: 'danger' }
+    )
+    if (confirmed) {
+      setIsReloading(true)
+      try {
+        await onReloadProject()
+      } finally {
+        setIsReloading(false)
+      }
     }
   }
 
@@ -348,6 +371,15 @@ export const MainToolbar: React.FC<MainToolbarProps> = observer(({
                 <span>Save As...</span>
               </button>
             )}
+            <button
+              className="file-menu-item"
+              onClick={handleReloadProject}
+              disabled={!onReloadProject || isReloading || !isDirty}
+              title={!isDirty ? 'No unsaved changes to discard' : 'Discard changes and reload from last save'}
+            >
+              <FontAwesomeIcon icon={faRotate} />
+              <span>{isReloading ? 'Reloading...' : 'Reload Project'}</span>
+            </button>
             <div className="file-menu-divider" />
             <button
               className="file-menu-item"

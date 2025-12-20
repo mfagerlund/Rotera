@@ -4,6 +4,39 @@ import { WorldPoint } from '../../../entities/world-point'
 import { UseImageViewerEventsReturn } from '../hooks/useImageViewerEvents'
 import { getDraggingWorldPoint, getDragAction, clearDraggingWorldPoint } from '../../../utils/dragContext'
 
+// Drag-time shift tracking - detect taps from DragEvent.shiftKey changes
+let dragShiftToggled = false
+let lastShiftState = false
+let shiftPressStart: number | null = null
+const TAP_THRESHOLD = 250
+
+function resetDragShiftState() {
+  dragShiftToggled = false
+  lastShiftState = false
+  shiftPressStart = null
+}
+
+function updateDragShiftState(currentShiftKey: boolean): boolean {
+  // Detect shift state transitions from consecutive dragOver events
+  if (currentShiftKey && !lastShiftState) {
+    // Shift just pressed
+    shiftPressStart = Date.now()
+  } else if (!currentShiftKey && lastShiftState) {
+    // Shift just released - check if it was a tap
+    if (shiftPressStart !== null) {
+      const duration = Date.now() - shiftPressStart
+      if (duration < TAP_THRESHOLD) {
+        dragShiftToggled = !dragShiftToggled
+      }
+      shiftPressStart = null
+    }
+  }
+  lastShiftState = currentShiftKey
+
+  // Return true if precision should be active (held OR toggled)
+  return currentShiftKey || dragShiftToggled
+}
+
 interface PrecisionState {
   isPrecisionActive: boolean
   isPrecisionToggled: boolean
@@ -89,6 +122,10 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
       onMouseLeave={events.handleMouseLeave}
       onContextMenu={events.handleContextMenu}
       onWheel={events.handleWheel}
+      onDragEnter={(e) => {
+        e.preventDefault()
+        resetDragShiftState()
+      }}
       onDragOver={(e) => {
         e.preventDefault()
         e.dataTransfer.dropEffect = 'copy'
@@ -102,15 +139,17 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
         const y = e.clientY - rect.top
         setCurrentMousePos({ x, y })
 
-        const precState = getPrecisionState()
-        if (precState.isPrecisionActive) {
+        // Detect shift taps from DragEvent.shiftKey changes
+        const shouldActivatePrecision = updateDragShiftState(e.shiftKey)
+
+        if (shouldActivatePrecision) {
           setIsPrecisionDrag(true)
           const imageCoords = canvasToImageCoords(x, y)
           if (imageCoords) {
             const baseCoords = draggedPointImageCoordsRef.current || imageCoords
             const targetCoords = applyPrecisionToImageDelta(imageCoords, baseCoords)
             draggedPointImageCoordsRef.current = targetCoords
-            precisionCanvasPosRef.current = precState.precisionCanvasPos
+            precisionCanvasPosRef.current = getPrecisionState().precisionCanvasPos
           }
         } else {
           setIsPrecisionDrag(false)
@@ -121,6 +160,7 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
       }}
       onDragLeave={(e) => {
         e.preventDefault()
+        resetDragShiftState()
         setIsDragOverTarget(false)
         setIsDragDropActive(false)
         setCurrentMousePos(null)
@@ -191,6 +231,7 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
         precisionPointerRef.current = null
         precisionCanvasPosRef.current = null
         draggedPointImageCoordsRef.current = null
+        resetDragShiftState()
       }}
       data-drop-target={isDragOverTarget}
       style={{

@@ -21,10 +21,12 @@ export function getProject(): Project {
 
 export function addWorldPoint(point: WorldPoint): void {
   project.addWorldPoint(point)
+  project.propagateInferences()
 }
 
 export function addLine(line: Line): void {
   project.addLine(line)
+  project.propagateInferences()
 }
 
 export function addViewpoint(viewpoint: Viewpoint): void {
@@ -37,11 +39,13 @@ export function addConstraint(constraint: Constraint): void {
 
 export function deleteWorldPoint(point: WorldPoint): boolean {
   project.removeWorldPoint(point)
+  project.propagateInferences()
   return true
 }
 
 export function deleteLine(line: Line): boolean {
   project.removeLine(line)
+  project.propagateInferences()
   return true
 }
 
@@ -110,4 +114,12 @@ export function getIsDirty(): boolean {
 
 export function getLastSaveTime(): Date | null {
   return lastSaveTime
+}
+
+/**
+ * Trigger inference propagation after coordinate or line direction changes.
+ * Call this after modifying lockedXyz on a WorldPoint or direction on a Line.
+ */
+export function triggerInference(): void {
+  project.propagateInferences()
 }
