@@ -10,7 +10,7 @@ import { projectWorldPointToPixelQuaternion } from '../camera-projection';
 
 describe('GOLDEN-3: Line Direction Constraints', () => {
   // Skipped: Too slow after inference-branching - 6 axis-aligned lines = 64 branches
-  it.skip('should enforce horizontal, vertical, and axis-aligned direction constraints', () => {
+  it.skip('should enforce horizontal, vertical, and axis-aligned direction constraints', async () => {
     console.log('\n=== GOLDEN-3: LINE DIRECTION CONSTRAINTS ===\n');
 
     const groundTruthPositions: [number, number, number][] = [

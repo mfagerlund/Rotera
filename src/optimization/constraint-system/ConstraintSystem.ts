@@ -11,77 +11,15 @@
  */
 
 import { Value, V, nonlinearLeastSquares } from 'scalar-autograd';
-import type { ValueMap, IOptimizableCamera } from './IOptimizable';
-import type { WorldPoint } from '../entities/world-point/WorldPoint';
-import { Line } from '../entities/line/Line';
-import type { Viewpoint } from '../entities/viewpoint/Viewpoint';
-import type { ImagePoint } from '../entities/imagePoint/ImagePoint';
-import { Constraint } from '../entities/constraints/base-constraint';
-import type { VanishingLine, VanishingLineAxis } from '../entities/vanishing-line';
-import { computeVanishingPoint } from './vanishing-points';
-
-function rotateDirectionByQuaternion(
-  rotation: { w: Value; x: Value; y: Value; z: Value },
-  direction: [number, number, number]
-): { x: Value; y: Value; z: Value } {
-  const vx = V.C(direction[0]);
-  const vy = V.C(direction[1]);
-  const vz = V.C(direction[2]);
-
-  const qx = rotation.x;
-  const qy = rotation.y;
-  const qz = rotation.z;
-  const qw = rotation.w;
-
-  const cross1 = {
-    x: V.sub(V.mul(qy, vz), V.mul(qz, vy)),
-    y: V.sub(V.mul(qz, vx), V.mul(qx, vz)),
-    z: V.sub(V.mul(qx, vy), V.mul(qy, vx)),
-  };
-
-  const t = {
-    x: V.mul(V.C(2), V.add(cross1.x, V.mul(qw, vx))),
-    y: V.mul(V.C(2), V.add(cross1.y, V.mul(qw, vy))),
-    z: V.mul(V.C(2), V.add(cross1.z, V.mul(qw, vz))),
-  };
-
-  const cross2 = {
-    x: V.sub(V.mul(qy, t.z), V.mul(qz, t.y)),
-    y: V.sub(V.mul(qz, t.x), V.mul(qx, t.z)),
-    z: V.sub(V.mul(qx, t.y), V.mul(qy, t.x)),
-  };
-
-  return {
-    x: V.add(vx, cross2.x),
-    y: V.add(vy, cross2.y),
-    z: V.add(vz, cross2.z),
-  };
-}
-
-export interface SolverResult {
-  converged: boolean;
-  iterations: number;
-  residual: number;
-  error: string | null;
-}
-
-export interface SolverOptions {
-  tolerance?: number;
-  maxIterations?: number;
-  damping?: number;
-  verbose?: boolean;
-  /**
-   * If true (or function returns true), camera intrinsics are optimized.
-   * If false, intrinsics stay fixed.
-   */
-  optimizeCameraIntrinsics?: boolean | ((camera: IOptimizableCamera) => boolean);
-  /**
-   * If > 0, adds soft regularization to prevent unconstrained points from diverging.
-   * The weight is multiplied by distance from initial position.
-   * Typical values: 0.01-0.1. Default: 0 (no regularization).
-   */
-  regularizationWeight?: number;
-}
+import type { ValueMap, IOptimizableCamera } from '../IOptimizable';
+import type { WorldPoint } from '../../entities/world-point/WorldPoint';
+import { Line } from '../../entities/line/Line';
+import type { ImagePoint } from '../../entities/imagePoint/ImagePoint';
+import { Constraint } from '../../entities/constraints/base-constraint';
+import type { VanishingLine, VanishingLineAxis } from '../../entities/vanishing-line';
+import { computeVanishingPoint } from '../vanishing-points';
+import { rotateDirectionByQuaternion } from './utils';
+import type { SolverResult, SolverOptions } from './types';
 
 export class ConstraintSystem {
   private tolerance: number;
