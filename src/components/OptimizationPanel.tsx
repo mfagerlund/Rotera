@@ -2,6 +2,7 @@
 // NO DTOs
 
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
+import { flushSync } from 'react-dom'
 import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faBolt, faGear, faStop, faClipboard } from '@fortawesome/free-solid-svg-icons'
@@ -161,21 +162,26 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
     // Notify parent before any changes (so it can capture dirty state)
     onOptimizationStart?.()
 
-    setIsOptimizing(true)
-    setResults(null)
-    setPnpResults([])
-    setStatusMessage('Initializing cameras and world points...')
+    // Use flushSync to force React to synchronously update the DOM
+    flushSync(() => {
+      setIsOptimizing(true)
+      setResults(null)
+      setPnpResults([])
+      setStatusMessage('Initializing cameras and world points...')
+    })
+
+    // Wait for browser to paint the updated UI before the blocking solver call
+    await new Promise<void>(resolve => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          resolve()
+        })
+      })
+    })
 
     const startTime = performance.now()
 
     try {
-      // Update status before the blocking solver call
-      await new Promise<void>(resolve => {
-        requestAnimationFrame(() => {
-          setStatusMessage('Running Levenberg-Marquardt optimization...')
-          resolve()
-        })
-      })
 
       const solverResult = await clientSolver.optimize(
         project,
