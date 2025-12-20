@@ -52,4 +52,11 @@ describe('Regression - Calibration', () => {
   it('VL And non VL.json', () => {
     runFixtureTest('VL And non VL.json', 2)
   })
+
+  // This test currently fails because the solver picks OY.Y = +10 instead of -10
+  // Both are valid given constraints, but only -10 produces a good solution
+  // Needs inference-branching integration to try both configurations
+  it('Six Points and VL.json', () => {
+    runFixtureTest('Six Points and VL.json', 2)
+  })
 })
