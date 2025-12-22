@@ -4,6 +4,7 @@ import type { Viewpoint } from '../../entities/viewpoint'
 import type { ImagePoint } from '../../entities/imagePoint'
 import { log } from '../optimization-logger'
 import { randomUnitVector } from './helpers'
+import { quaternionRotateVector } from '../coordinate-alignment/quaternion-utils'
 
 /**
  * Phase 4: Propagate positions through the line graph
@@ -195,36 +196,9 @@ function computeCameraRay(vp: Viewpoint, u: number, v: number): [number, number,
 
   // Quaternion rotation: v' = q * v * q^-1
   // For unit quaternions, q^-1 = conjugate = [qw, -qx, -qy, -qz]
-  const dirWorld = rotateVectorByQuaternion(dirCam, [qw, qx, qy, qz])
+  const dirWorld = quaternionRotateVector([qw, qx, qy, qz], dirCam) as [number, number, number]
 
   return dirWorld
-}
-
-/**
- * Rotate a vector by a quaternion
- */
-function rotateVectorByQuaternion(
-  v: [number, number, number],
-  q: [number, number, number, number]
-): [number, number, number] {
-  const [qw, qx, qy, qz] = q
-  const [vx, vy, vz] = v
-
-  // v' = q * v * q^-1
-  // Using the formula: v' = v + 2*w*(cross(q_xyz, v)) + 2*(cross(q_xyz, cross(q_xyz, v)))
-  const cx = qy * vz - qz * vy
-  const cy = qz * vx - qx * vz
-  const cz = qx * vy - qy * vx
-
-  const cx2 = qy * cz - qz * cy
-  const cy2 = qz * cx - qx * cz
-  const cz2 = qx * cy - qy * cx
-
-  return [
-    vx + 2 * (qw * cx + cx2),
-    vy + 2 * (qw * cy + cy2),
-    vz + 2 * (qw * cz + cz2)
-  ]
 }
 
 /**
@@ -249,7 +223,7 @@ function computeReprojectionError(
   const dz = worldPos[2] - camPos[2]
 
   // Rotate by inverse quaternion (conjugate for unit quaternion)
-  const pCam = rotateVectorByQuaternion([dx, dy, dz], [qw, -qx, -qy, -qz])
+  const pCam = quaternionRotateVector([qw, -qx, -qy, -qz], [dx, dy, dz])
 
   // Project to image plane
   if (pCam[2] <= 0) {

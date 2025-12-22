@@ -6,6 +6,7 @@ import type { ImagePoint } from '../entities/imagePoint';
 import { CoplanarPointsConstraint } from '../entities/constraints/coplanar-points-constraint';
 import { log } from './optimization-logger';
 import * as vec3 from '../utils/vec3';
+import { quaternionRotateVector } from './coordinate-alignment/quaternion-utils';
 
 interface SingleCameraInitOptions {
   verbose?: boolean;
@@ -312,24 +313,9 @@ function computeRayFromImagePoint(ip: ImagePoint, vp: Viewpoint): Ray | null {
 
   // Transform to world coordinates using quaternion
   const q_inv = [vp.rotation[0], -vp.rotation[1], -vp.rotation[2], -vp.rotation[3]];
-  const direction = quaternionRotateVector(q_inv, ray_cam);
+  const direction = quaternionRotateVector(q_inv, ray_cam) as [number, number, number];
 
   return { origin, direction };
-}
-
-function quaternionRotateVector(q: number[], v: [number, number, number]): [number, number, number] {
-  const qw = q[0], qx = q[1], qy = q[2], qz = q[3];
-  const vx = v[0], vy = v[1], vz = v[2];
-
-  const tx = 2 * (qy * vz - qz * vy);
-  const ty = 2 * (qz * vx - qx * vz);
-  const tz = 2 * (qx * vy - qy * vx);
-
-  return [
-    vx + qw * tx + (qy * tz - qz * ty),
-    vy + qw * ty + (qz * tx - qx * tz),
-    vz + qw * tz + (qx * ty - qy * tx)
-  ];
 }
 
 function computePositionFromDirectionConstraint(

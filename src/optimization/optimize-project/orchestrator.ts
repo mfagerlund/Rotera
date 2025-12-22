@@ -113,6 +113,13 @@ export async function optimizeProject(
 
   const startTime = performance.now();
 
+  // Create arrays once from project collections - reuse throughout
+  const worldPointArray = Array.from(project.worldPoints) as WorldPoint[];
+  const lineArray = Array.from(project.lines) as Line[];
+  const viewpointArray = Array.from(project.viewpoints) as Viewpoint[];
+  const constraintArray = Array.from(project.constraints);
+  const worldPointSet = new Set<WorldPoint>(worldPointArray);
+
   const camerasInitialized: string[] = [];
   const camerasInitializedViaLatePnP = new Set<Viewpoint>();
   const camerasInitializedViaVP = new Set<Viewpoint>();
@@ -126,21 +133,16 @@ export async function optimizeProject(
   // PHASE 1: Camera Initialization
   await yieldToUI?.('Phase 1: Camera Initialization');
   if (autoInitializeCameras || autoInitializeWorldPoints) {
-    const viewpointArray = Array.from(project.viewpoints);
-
     if (autoInitializeCameras) {
       resetCamerasForInitialization(project);
     }
 
     const uninitializedCameras = viewpointArray.filter(vp => {
-      const v = vp as Viewpoint;
-      return v.position[0] === 0 && v.position[1] === 0 && v.position[2] === 0;
+      return vp.position[0] === 0 && vp.position[1] === 0 && vp.position[2] === 0;
     });
 
     if (uninitializedCameras.length >= 1 && autoInitializeCameras) {
-      const worldPointArray = Array.from(project.worldPoints) as WorldPoint[];
       const lockedPoints = worldPointArray.filter(wp => wp.isFullyConstrained());
-      const worldPointSet = new Set<WorldPoint>(worldPointArray);
 
       const validation = validateProjectConstraints(project);
       if (!validation.valid) {
@@ -194,25 +196,23 @@ export async function optimizeProject(
     }
   }
 
-  const wpArrayForCheck = Array.from(project.worldPoints) as WorldPoint[];
-  const lockedPointsForCheck = wpArrayForCheck.filter(wp => wp.isFullyConstrained());
+  const lockedPointsForCheck = worldPointArray.filter(wp => wp.isFullyConstrained());
   let hasSingleAxisConstraint = false;
+
+  // Helper to build initialized viewpoint set from camera names
+  const buildInitializedViewpointSet = () => {
+    const set = new Set<Viewpoint>();
+    for (const vpName of camerasInitialized) {
+      const vp = viewpointArray.find(v => v.name === vpName);
+      if (vp) set.add(vp);
+    }
+    return set;
+  };
 
   // PHASE 2: World Point Initialization
   await yieldToUI?.('Phase 2: World Point Initialization');
   if (autoInitializeWorldPoints) {
-    const pointArray = Array.from(project.worldPoints) as WorldPoint[];
-    const lineArray = Array.from(project.lines) as Line[];
-    const constraintArray = Array.from(project.constraints);
-    const viewpointArray = Array.from(project.viewpoints) as Viewpoint[];
-
-    const initializedViewpointSet = new Set<Viewpoint>();
-    for (const vpName of camerasInitialized) {
-      const vp = Array.from(project.viewpoints).find(v => v.name === vpName);
-      if (vp) {
-        initializedViewpointSet.add(vp as Viewpoint);
-      }
-    }
+    const initializedViewpointSet = buildInitializedViewpointSet();
 
     const axisConstrainedLines = lineArray.filter(l => l.direction && ['x', 'y', 'z'].includes(l.direction));
     const uniqueAxisDirections = new Set(axisConstrainedLines.map(l => l.direction));
@@ -228,7 +228,7 @@ export async function optimizeProject(
       log('[FreeSolve] No axis constraints - using free solve then align');
     }
 
-    unifiedInitialize(pointArray, lineArray, constraintArray, {
+    unifiedInitialize(worldPointArray, lineArray, constraintArray, {
       sceneScale: 10.0,
       verbose: false,
       initializedViewpoints: initializedViewpointSet,
@@ -241,14 +241,14 @@ export async function optimizeProject(
       const qualityCallback: AlignmentQualityCallback | undefined = usedEssentialMatrix
         ? (maxIter: number) => {
             // Apply scale and translation before testing
-            applyScaleAndTranslateForTest(axisConstrainedLines, pointArray, viewpointArray, lockedPointsForCheck);
+            applyScaleAndTranslateForTest(axisConstrainedLines, worldPointArray, viewpointArray, lockedPointsForCheck);
 
             const testSystem = new ConstraintSystem({
               maxIterations: maxIter,
               tolerance: 1e-4,
               verbose: false,
             });
-            pointArray.forEach(p => testSystem.addPoint(p));
+            worldPointArray.forEach(p => testSystem.addPoint(p));
             lineArray.forEach(l => testSystem.addLine(l));
             viewpointArray.forEach(v => testSystem.addCamera(v));
             for (const ip of project.imagePoints) {
@@ -268,7 +268,7 @@ export async function optimizeProject(
         log(`[Align] Skipping - VP+EM hybrid already aligned world frame`);
         alignmentResult = { success: true, ambiguous: false };
       } else {
-        alignmentResult = alignSceneToLineDirections(viewpointArray, pointArray, lineArray, usedEssentialMatrix, qualityCallback);
+        alignmentResult = alignSceneToLineDirections(viewpointArray, worldPointArray, lineArray, usedEssentialMatrix, qualityCallback);
       }
 
       alignmentWasAmbiguous = alignmentResult.ambiguous;
@@ -278,12 +278,12 @@ export async function optimizeProject(
       const linesWithTargetLength = axisConstrainedLines.filter(l => l.targetLength !== undefined);
       log(`[Scale] axisConstrainedLines=${axisConstrainedLines.length}, linesWithTargetLength=${linesWithTargetLength.length}, usedEssentialMatrix=${usedEssentialMatrix}`);
       if (linesWithTargetLength.length > 0) {
-        appliedScaleFactor = applyScaleFromAxisLines(lineArray, pointArray, viewpointArray);
+        appliedScaleFactor = applyScaleFromAxisLines(lineArray, worldPointArray, viewpointArray);
       }
 
       // Translate to anchor point
       if (usedEssentialMatrix && lockedPointsForCheck.length >= 1) {
-        translateToAnchorPoint(lockedPointsForCheck, pointArray, viewpointArray);
+        translateToAnchorPoint(lockedPointsForCheck, worldPointArray, viewpointArray);
       }
 
       if (usedEssentialMatrix && uniqueAxisDirections.size < 2) {
@@ -300,15 +300,14 @@ export async function optimizeProject(
 
     // Free solve path
     if (useFreeSolve && constraintArray.length > 0) {
-      runFreeSolve(project, pointArray, lineArray, constraintArray, lockedPointsForCheck, tolerance, damping);
+      runFreeSolve(project, worldPointArray, lineArray, constraintArray, lockedPointsForCheck, tolerance, damping);
     }
 
     // Apply similarity transform for free-solve path or scale for PnP path
     if (useFreeSolve && lockedPointsForCheck.length >= 1) {
-      const vpArrayForAlignment = Array.from(project.viewpoints) as Viewpoint[];
-      alignSceneToLockedPoints(vpArrayForAlignment, pointArray, lockedPointsForCheck);
+      alignSceneToLockedPoints(viewpointArray, worldPointArray, lockedPointsForCheck);
     } else if (!usedEssentialMatrix && lockedPointsForCheck.length >= 2) {
-      applyScaleFromLockedPointPairs(lockedPointsForCheck, pointArray, viewpointArray);
+      applyScaleFromLockedPointPairs(lockedPointsForCheck, worldPointArray, viewpointArray);
     }
   }
 
@@ -339,18 +338,11 @@ export async function optimizeProject(
     return true;
   };
 
-  // Build initialized viewpoint set
-  const initializedViewpointSet = new Set<Viewpoint>();
-  for (const vpName of camerasInitialized) {
-    const vp = Array.from(project.viewpoints).find(v => v.name === vpName);
-    if (vp) {
-      initializedViewpointSet.add(vp as Viewpoint);
-    }
-  }
+  // Build initialized viewpoint set (reuse helper from earlier)
+  const initializedViewpointSet = buildInitializedViewpointSet();
 
   // PHASE 4: Stage1 Multi-camera Optimization
   await yieldToUI?.('Phase 4: Stage1 Multi-camera Optimization');
-  const worldPointArray = Array.from(project.worldPoints) as WorldPoint[];
   const multiCameraPoints = new Set<WorldPoint>();
   const singleCameraPoints = new Set<WorldPoint>();
 
@@ -451,8 +443,7 @@ export async function optimizeProject(
   }
 
   // Log solve result
-  const vpArray = Array.from(project.viewpoints) as Viewpoint[];
-  const camInfo = vpArray.map(v => `${v.name}:f=${v.focalLength.toFixed(0)}`).join(' ');
+  const camInfo = viewpointArray.map(v => `${v.name}:f=${v.focalLength.toFixed(0)}`).join(' ');
   log(`[Solve] conv=${result.converged}, iter=${result.iterations}, median=${medianReprojectionError?.toFixed(2) ?? '?'}px | ${camInfo}${result.error ? ` | err=${result.error}` : ''}`);
 
   // Handle outliers and potential re-run
@@ -483,22 +474,19 @@ export async function optimizeProject(
   // PHASE 8: Post-solve Handedness Check
   await yieldToUI?.('Phase 8: Finalizing...');
   if (forceRightHanded) {
-    const wpArray = Array.from(project.worldPoints) as WorldPoint[];
-    const vpArray = Array.from(project.viewpoints) as Viewpoint[];
-
-    const { flipX, flipY, flipZ } = checkAxisSigns(wpArray);
+    const { flipX, flipY, flipZ } = checkAxisSigns(worldPointArray);
 
     if (flipX || flipY || flipZ) {
       log(`[Handedness] Axis sign corrections needed: flipX=${flipX}, flipY=${flipY}, flipZ=${flipZ}`);
-      applyAxisFlips(wpArray, vpArray, flipX, flipY, flipZ);
+      applyAxisFlips(worldPointArray, viewpointArray, flipX, flipY, flipZ);
 
-      const afterFlips = checkAxisSigns(wpArray);
+      const afterFlips = checkAxisSigns(worldPointArray);
       log(`[Handedness] After flips: flipX=${afterFlips.flipX}, flipY=${afterFlips.flipY}, flipZ=${afterFlips.flipZ}`);
     } else {
-      const handedness = checkHandedness(wpArray);
+      const handedness = checkHandedness(worldPointArray);
       if (handedness && !handedness.isRightHanded) {
         log('[Handedness] Result is LEFT-HANDED (no locked coords to determine axis), applying Z-flip');
-        applyAxisFlips(wpArray, vpArray, false, false, true);
+        applyAxisFlips(worldPointArray, viewpointArray, false, false, true);
       } else if (handedness) {
         log('[Handedness] Result is already RIGHT-HANDED');
       } else {
