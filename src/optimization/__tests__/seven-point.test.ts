@@ -278,8 +278,8 @@ describe('7-Point Essential Matrix Algorithm', () => {
     console.log('\n=== Test Passed ===\n');
   });
 
-  it('should block optimization when insufficient correspondences for initial cameras', async () => {
-    console.log('\n=== 7-Point Test: Block Optimization with Insufficient Points ===\n');
+  it('should block optimization when no locked world points exist', async () => {
+    console.log('\n=== 7-Point Test: Block Optimization with No Locked Points ===\n');
 
     const project = Project.create('Block Test');
     const { optimizeProject } = require('../optimize-project');
@@ -289,7 +289,7 @@ describe('7-Point Essential Matrix Algorithm', () => {
     project.addViewpoint(camera1);
     project.addViewpoint(camera2);
 
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 7; i++) {
       const wp = WorldPoint.create(`P${i}`, {
         lockedXyz: [null, null, null],
         optimizedXyz: undefined
@@ -307,18 +307,18 @@ describe('7-Point Essential Matrix Algorithm', () => {
       wp.addImagePoint(ip2);
     }
 
-    console.log('Testing optimization with only 5 points (should throw)...');
+    console.log('Testing optimization with 7 points but no locked coordinates (should throw)...');
 
-    expect(() => {
+    await expect(
       optimizeProject(project, {
         autoInitializeCameras: true,
         autoInitializeWorldPoints: true,
         maxIterations: 10,
         verbose: false
-      });
-    }).toThrow(/No fully locked world points found/);
+      })
+    ).rejects.toThrow(/No fully locked world points found/);
 
-    console.log('Optimization correctly blocked due to insufficient correspondences');
+    console.log('Optimization correctly blocked due to no locked world points');
     console.log('\n=== Test Passed ===\n');
   });
 });

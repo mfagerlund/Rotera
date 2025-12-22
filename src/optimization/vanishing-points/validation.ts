@@ -143,15 +143,16 @@ export function canInitializeWithVanishingPoints(
     return false
   }
 
-  // Use fully constrained points (locked OR inferred) for camera position solving
-  const fullyConstrainedPoints = Array.from(worldPoints).filter(wp => wp.isFullyConstrained())
+  // Count fully constrained points (all 3 coordinates known via locking or inference)
+  const constrainedCount = Array.from(worldPoints).filter(wp => wp.isFullyConstrained()).length
 
-  if (fullyConstrainedPoints.length >= 2) {
+  // Strict mode: require 2+ constrained points
+  if (!allowSinglePoint && constrainedCount >= 2) {
     return true
   }
 
-  // With 1 constrained point + VPs, we can estimate camera position
-  if (allowSinglePoint && fullyConstrainedPoints.length >= 1) {
+  // Relaxed mode: allow 1+ constrained points
+  if (allowSinglePoint && constrainedCount >= 1) {
     return true
   }
 

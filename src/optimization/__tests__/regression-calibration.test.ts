@@ -78,4 +78,11 @@ describe('Regression - Calibration', () => {
   it('Minimal 2 Image 2 Axis Degenerate.json', async () => {
     await runFixtureTest('Minimal 2 Image 2 Axis Degenerate.json', 2)
   })
+
+  // REGRESSION: Distance constraint on O-Y line fails, but works on WP11-WP12
+  // Fixed: First-tier now has fallback logic like stepped-vp. If VP succeeds but
+  // remaining cameras can't be reliably PnP'd, it reverts and falls back to Essential Matrix.
+  it('Tower 2 - O-Y Distance.json', async () => {
+    await runFixtureTest('Tower 2 - O-Y Distance.json', 2)
+  })
 })

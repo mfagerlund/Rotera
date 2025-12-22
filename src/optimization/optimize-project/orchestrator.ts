@@ -67,6 +67,13 @@ export async function optimizeProject(
     );
   }
 
+  // Log version FIRST and ONLY at top-level (not during recursive branch/attempt calls)
+  if (!options._skipBranching && options._attempt === undefined) {
+    clearOptimizationLogs();
+    log(`[Optimize] v${OPTIMIZER_VERSION}`);
+    log(`[Optimize] WP:${project.worldPoints.size} L:${project.lines.size} VP:${project.viewpoints.size} IP:${project.imagePoints.size} C:${project.constraints.size}`);
+  }
+
   // MULTI-ATTEMPT SOLVING: Try different random seeds when solve fails
   const multiAttemptResult = await tryMultipleAttempts(project, options, optimizeProject);
   if (multiAttemptResult) {
@@ -97,10 +104,6 @@ export async function optimizeProject(
     useIterativeInit,
   } = options;
 
-  // Only clear logs at top level, not during recursive branch testing
-  if (!options._skipBranching) {
-    clearOptimizationLogs();
-  }
   resetOptimizationState(project);
 
   // Apply branch coordinates if provided
@@ -109,9 +112,6 @@ export async function optimizeProject(
   }
 
   const startTime = performance.now();
-
-  log(`[Optimize] v${OPTIMIZER_VERSION}`);
-  log(`[Optimize] WP:${project.worldPoints.size} L:${project.lines.size} VP:${project.viewpoints.size} IP:${project.imagePoints.size} C:${project.constraints.size}`);
 
   const camerasInitialized: string[] = [];
   const camerasInitializedViaLatePnP = new Set<Viewpoint>();
@@ -274,9 +274,10 @@ export async function optimizeProject(
       alignmentWasAmbiguous = alignmentResult.ambiguous;
       alignmentSignUsed = 'positive';
 
-      // Apply scale from axis lines
-      log(`[Scale] axisConstrainedLines=${axisConstrainedLines.length}, linesWithTargetLength=${axisConstrainedLines.filter(l => l.targetLength !== undefined).length}, usedEssentialMatrix=${usedEssentialMatrix}`);
-      if (usedEssentialMatrix) {
+      // Apply scale from axis lines (both Essential Matrix and VP paths can have targetLength lines)
+      const linesWithTargetLength = axisConstrainedLines.filter(l => l.targetLength !== undefined);
+      log(`[Scale] axisConstrainedLines=${axisConstrainedLines.length}, linesWithTargetLength=${linesWithTargetLength.length}, usedEssentialMatrix=${usedEssentialMatrix}`);
+      if (linesWithTargetLength.length > 0) {
         appliedScaleFactor = applyScaleFromAxisLines(lineArray, pointArray, viewpointArray);
       }
 

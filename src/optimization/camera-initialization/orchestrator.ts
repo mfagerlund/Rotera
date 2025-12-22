@@ -36,9 +36,11 @@ export function initializeCameras(options: InitializeCamerasOptions): CameraInit
   const canAnyUseVP = canAnyUseVPStrict || (uninitializedCameras.length === 1 && canAnyUseVPRelaxed);
 
   // Debug logging for initialization path
-  const trulyLockedCount = Array.from(worldPoints).filter(wp => wp.isFullyLocked()).length;
-  log(`[Init Debug] uninitCameras=${uninitializedCameras.length}, lockedPts=${lockedPoints.length} (trulyLocked=${trulyLockedCount}), canVP=${canAnyUseVP} (relaxed=${canAnyUseVPRelaxed})`);
+  log(`[Init Debug] uninitCameras=${uninitializedCameras.length}, lockedPts=${lockedPoints.length}, canVP=${canAnyUseVP} (relaxed=${canAnyUseVPRelaxed})`);
 
+  // Try first-tier initialization if we have enough constraints.
+  // First-tier now has fallback logic - if VP succeeds but PnP fails for remaining
+  // cameras, it reverts and returns empty to allow other paths to be tried.
   if (lockedPoints.length >= 2 || canAnyUseVP || (uninitializedCameras.length === 1 && lockedPoints.length >= 1)) {
     const canAnyCameraUsePnP = uninitializedCameras.some(vp => getConstrainedPointCount(vp) >= 3);
     const canAnyCameraUseVPInit = uninitializedCameras.some(vp =>
