@@ -42,6 +42,8 @@ export const useProjectBrowser = () => {
   const [optimizingProjectId, setOptimizingProjectId] = useState<string | null>(null)
   const [queuedProjectIds, setQueuedProjectIds] = useState<Set<string>>(new Set())
   const [justCompletedProjectIds, setJustCompletedProjectIds] = useState<Set<string>>(new Set())
+  const [folderProgress, setFolderProgress] = useState<Map<string, { completed: number; total: number }>>(new Map())
+  const [justCompletedFolderIds, setJustCompletedFolderIds] = useState<Set<string>>(new Set())
 
   const setCurrentFolderId = useCallback((folderId: string | null) => {
     setCurrentFolderIdState(folderId)
@@ -262,9 +264,52 @@ export const useProjectBrowser = () => {
     const allProjects = await ProjectDB.getProjectsRecursive(currentFolderId)
     if (allProjects.length === 0) return
 
+    // Build folder parent map for ancestry checks
+    const folderParentMap = new Map<string, string | null>()
+    for (const folder of allFolders) {
+      folderParentMap.set(folder.id, folder.parentId)
+    }
+
+    // Check if a project's folder is a descendant of a target folder
+    const isDescendantOf = (projectFolderId: string | null, targetFolderId: string): boolean => {
+      let current = projectFolderId
+      while (current) {
+        if (current === targetFolderId) return true
+        current = folderParentMap.get(current) ?? null
+      }
+      return false
+    }
+
+    // Build mapping: which visible folders contain which projects
+    const folderToProjects = new Map<string, Set<string>>()
+    const projectToFolders = new Map<string, Set<string>>()
+    for (const folder of folders) {
+      const projectIds = new Set<string>()
+      for (const project of allProjects) {
+        if (isDescendantOf(project.folderId, folder.id)) {
+          projectIds.add(project.id)
+          // Also track reverse mapping
+          if (!projectToFolders.has(project.id)) {
+            projectToFolders.set(project.id, new Set())
+          }
+          projectToFolders.get(project.id)!.add(folder.id)
+        }
+      }
+      folderToProjects.set(folder.id, projectIds)
+    }
+
+    // Initialize folder progress
+    const initialProgress = new Map<string, { completed: number; total: number }>()
+    for (const folder of folders) {
+      const projectIds = folderToProjects.get(folder.id) ?? new Set()
+      initialProgress.set(folder.id, { completed: 0, total: projectIds.size })
+    }
+    setFolderProgress(initialProgress)
+
     setIsBatchOptimizing(true)
     setBatchProgress({ current: 0, total: allProjects.length })
     const newResults = new Map<string, BatchOptimizationResult>()
+    const completedPerFolder = new Map<string, number>()
 
     // Set all projects as queued
     setQueuedProjectIds(new Set(allProjects.map(p => p.id)))
@@ -281,11 +326,13 @@ export const useProjectBrowser = () => {
         return next
       })
 
+      let batchResult: BatchOptimizationResult
+
       try {
         const project = await ProjectDB.loadProject(summary.id)
         const startTime = performance.now()
 
-        // Run optimization (no yieldToUI for batch - we want speed)
+        // Run optimization
         const result = await optimizeProject(project, {
           tolerance: 1e-6,
           maxIterations: 500,
@@ -296,7 +343,7 @@ export const useProjectBrowser = () => {
 
         const solveTimeMs = performance.now() - startTime
 
-        const batchResult: BatchOptimizationResult = {
+        batchResult = {
           projectId: summary.id,
           error: result.residual,
           converged: result.converged,
@@ -316,7 +363,7 @@ export const useProjectBrowser = () => {
         }
         await ProjectDB.saveOptimizationResult(summary.id, optimizationResult)
       } catch (error) {
-        const batchResult: BatchOptimizationResult = {
+        batchResult = {
           projectId: summary.id,
           error: null,
           converged: false,
@@ -356,14 +403,67 @@ export const useProjectBrowser = () => {
         })
       }, 1500)
 
-      // Reload folder stats to update aggregated values
-      const statsMap = new Map<string, { projectCount: number; minError: number | null; maxError: number | null; avgError: number | null }>()
-      await Promise.all(
-        folders.map(async (folder) => {
-          const stats = await ProjectDB.getFolderStats(folder.id)
-          statsMap.set(folder.id, stats)
+      // Update folder progress and trigger pulse for affected folders
+      const affectedFolders = projectToFolders.get(summary.id) ?? new Set()
+      for (const folderId of affectedFolders) {
+        completedPerFolder.set(folderId, (completedPerFolder.get(folderId) ?? 0) + 1)
+      }
+
+      // Update folder progress state
+      const updatedProgress = new Map<string, { completed: number; total: number }>()
+      for (const folder of folders) {
+        const projectIds = folderToProjects.get(folder.id) ?? new Set()
+        updatedProgress.set(folder.id, {
+          completed: completedPerFolder.get(folder.id) ?? 0,
+          total: projectIds.size
         })
-      )
+      }
+      setFolderProgress(updatedProgress)
+
+      // Trigger pulse for affected folders
+      if (affectedFolders.size > 0) {
+        setJustCompletedFolderIds(prev => {
+          const next = new Set(prev)
+          for (const folderId of affectedFolders) {
+            next.add(folderId)
+          }
+          return next
+        })
+
+        // Clear folder pulse after animation
+        setTimeout(() => {
+          setJustCompletedFolderIds(prev => {
+            const next = new Set(prev)
+            for (const folderId of affectedFolders) {
+              next.delete(folderId)
+            }
+            return next
+          })
+        }, 1500)
+      }
+
+      // Compute folder stats locally from batch results
+      const statsMap = new Map<string, { projectCount: number; minError: number | null; maxError: number | null; avgError: number | null }>()
+      for (const folder of folders) {
+        const projectIds = folderToProjects.get(folder.id) ?? new Set()
+        const errors: number[] = []
+        for (const projectId of projectIds) {
+          const result = newResults.get(projectId)
+          if (result && result.error !== null) {
+            errors.push(result.error)
+          }
+        }
+        if (errors.length === 0) {
+          statsMap.set(folder.id, { projectCount: projectIds.size, minError: null, maxError: null, avgError: null })
+        } else {
+          statsMap.set(folder.id, {
+            projectCount: projectIds.size,
+            minError: Math.min(...errors),
+            maxError: Math.max(...errors),
+            avgError: errors.reduce((a, b) => a + b, 0) / errors.length
+          })
+        }
+      }
       setFolderStats(statsMap)
 
       // Yield to UI to allow React to render updates
@@ -373,6 +473,7 @@ export const useProjectBrowser = () => {
     setIsBatchOptimizing(false)
     setOptimizingProjectId(null)
     setQueuedProjectIds(new Set())
+    setFolderProgress(new Map())
 
     // Reload contents to show updated stored results
     await loadContents()
@@ -469,6 +570,8 @@ export const useProjectBrowser = () => {
     optimizingProjectId,
     queuedProjectIds,
     justCompletedProjectIds,
+    folderProgress,
+    justCompletedFolderIds,
 
     // Setters
     setCurrentFolderId,

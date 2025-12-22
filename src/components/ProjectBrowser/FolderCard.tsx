@@ -20,6 +20,8 @@ interface FolderCardProps {
     maxError: number | null
     avgError: number | null
   } | undefined
+  progress: { completed: number; total: number } | undefined
+  isJustCompleted: boolean
   editingItem: { type: 'folder' | 'project'; id: string; name: string } | null
   onOpen: (folderId: string) => void
   onRename: (folder: Folder) => void
@@ -37,6 +39,8 @@ export const FolderCard: React.FC<FolderCardProps> = ({
   isDragOver,
   isBatchOptimizing,
   stats,
+  progress,
+  isJustCompleted,
   editingItem,
   onOpen,
   onRename,
@@ -53,13 +57,15 @@ export const FolderCard: React.FC<FolderCardProps> = ({
   const renderStats = () => {
     if (!stats || stats.projectCount === 0) return null
 
+    const showProgress = isBatchOptimizing && progress && progress.total > 0
+
     return (
       <span className="project-browser__item-meta" style={{ marginLeft: 'auto', marginRight: '8px' }}>
         {isBatchOptimizing && (
           <FontAwesomeIcon icon={faSpinner} spin style={{ color: '#3498db', marginRight: '6px' }} />
         )}
         <span style={{ color: isBatchOptimizing ? '#3498db' : 'var(--text-muted)' }}>
-          {stats.projectCount} projects
+          {showProgress ? `${progress.completed}/${progress.total}` : stats.projectCount} projects
         </span>
         {stats.avgError !== null && (
           <span style={{
@@ -80,7 +86,7 @@ export const FolderCard: React.FC<FolderCardProps> = ({
     <div
       className={`project-browser__item project-browser__item--folder ${
         isDragOver ? 'project-browser__item--drag-over' : ''
-      }`}
+      } ${isJustCompleted ? 'project-browser__item--just-completed' : ''}`}
       onClick={() => !editingItem && onOpen(folder.id)}
       onDragOver={e => onDragOver(e, folder.id)}
       onDragLeave={onDragLeave}

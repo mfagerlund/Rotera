@@ -56,6 +56,8 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
     optimizingProjectId,
     queuedProjectIds,
     justCompletedProjectIds,
+    folderProgress,
+    justCompletedFolderIds,
 
     // Setters
     setCurrentFolderId,
@@ -202,6 +204,8 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
                 isDragOver={dragOverFolderId === folder.id}
                 isBatchOptimizing={isBatchOptimizing}
                 stats={folderStats.get(folder.id)}
+                progress={folderProgress.get(folder.id)}
+                isJustCompleted={justCompletedFolderIds.has(folder.id)}
                 editingItem={editingItem}
                 onOpen={handleOpenFolder}
                 onRename={(folder) => setEditingItem({ type: 'folder', id: folder.id, name: folder.name })}
