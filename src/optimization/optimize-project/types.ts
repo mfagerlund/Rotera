@@ -36,12 +36,6 @@ export interface OptimizeProjectOptions extends Omit<SolverOptions, 'optimizeCam
    */
   forceRightHanded?: boolean;
   /**
-   * If true, use iterative multi-strategy initialization instead of the standard orchestrator.
-   * This allows cameras to be initialized in multiple rounds with intermediate solves,
-   * improving robustness for complex multi-camera scenes. Default: false (opt-in).
-   */
-  useIterativeInit?: boolean;
-  /**
    * Maximum number of solve attempts with different random seeds.
    * If a solve fails (median error > 2px), retry with a new seed.
    * Default: 3. Set to 1 to disable multi-attempt solving.

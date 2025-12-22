@@ -12,7 +12,26 @@ import { setupLockedPointsForInitialization, getConstrainedPointCount } from './
 import { runFirstTierInitialization } from './first-tier';
 import { runSteppedVPInitialization } from './stepped-vp';
 import { runEssentialMatrixInitialization } from './essential-matrix-strategy';
-import type { InitializeCamerasOptions } from './iterative';
+
+/**
+ * Options for the camera initialization orchestrator.
+ */
+export interface InitializeCamerasOptions {
+  /** Cameras that need initialization (position at origin) */
+  uninitializedCameras: Viewpoint[];
+
+  /** All world points in the scene */
+  worldPoints: Set<WorldPoint>;
+
+  /** Fully constrained points (locked or inferred) */
+  lockedPoints: WorldPoint[];
+
+  /** Whether any camera can use VP with strict mode (2+ constrained points) */
+  canAnyUseVPStrict: boolean;
+
+  /** Whether any camera can use VP with relaxed mode (1 constrained point) */
+  canAnyUseVPRelaxed: boolean;
+}
 
 /**
  * Main camera initialization orchestrator.

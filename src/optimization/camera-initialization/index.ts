@@ -9,13 +9,11 @@
  *
  * Public API:
  * - initializeCameras: Main orchestrator for camera initialization
- * - initializeCamerasIteratively: Iterative initialization with triangulation
  */
 
 // Public API
 export { initializeCameras } from './orchestrator';
-export { initializeCamerasIteratively } from './iterative';
-export type { InitializeCamerasOptions } from './iterative';
+export type { InitializeCamerasOptions } from './orchestrator';
 
 // Internal exports (used by other optimization modules)
 export { tryVPInitForCamera } from './vp-strategy';

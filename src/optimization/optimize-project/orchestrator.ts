@@ -14,7 +14,7 @@ import { canInitializeWithVanishingPoints } from '../vanishing-points';
 import { alignSceneToLineDirections, alignSceneToLockedPoints, AlignmentQualityCallback, AlignmentResult } from '../coordinate-alignment/index';
 import type { IOptimizableCamera } from '../IOptimizable';
 import { log, clearOptimizationLogs } from '../optimization-logger';
-import { initializeCameras, initializeCamerasIteratively } from '../camera-initialization';
+import { initializeCameras } from '../camera-initialization';
 import { checkAxisSigns, checkHandedness, applyAxisFlips } from '../coordinate-transforms';
 import { detectOutliers } from '../outlier-detection';
 import type { OutlierInfo } from '../outlier-detection';
@@ -101,7 +101,6 @@ export async function optimizeProject(
     optimizeCameraIntrinsics = 'auto',
     lockVPCameras = false,
     forceRightHanded = true,
-    useIterativeInit,
   } = options;
 
   resetOptimizationState(project);
@@ -156,32 +155,13 @@ export async function optimizeProject(
         canInitializeWithVanishingPoints(vp as Viewpoint, worldPointSet, { allowSinglePoint: true })
       );
 
-      const shouldUseIterative = useIterativeInit === true;
-
-      let initResult: ReturnType<typeof initializeCameras>;
-
-      if (shouldUseIterative) {
-        log(`[Init] Using iterative multi-strategy initialization`);
-        initResult = initializeCamerasIteratively(
-          {
-            uninitializedCameras: uninitializedCameras as Viewpoint[],
-            worldPoints: worldPointSet,
-            lockedPoints,
-            canAnyUseVPStrict: canAnyUninitCameraUseVPStrict,
-            canAnyUseVPRelaxed: canAnyUninitCameraUseVPRelaxed,
-          },
-          project
-        );
-      } else {
-        log(`[Init] Using standard initialization orchestrator`);
-        initResult = initializeCameras({
-          uninitializedCameras: uninitializedCameras as Viewpoint[],
-          worldPoints: worldPointSet,
-          lockedPoints,
-          canAnyUseVPStrict: canAnyUninitCameraUseVPStrict,
-          canAnyUseVPRelaxed: canAnyUninitCameraUseVPRelaxed,
-        });
-      }
+      const initResult = initializeCameras({
+        uninitializedCameras: uninitializedCameras as Viewpoint[],
+        worldPoints: worldPointSet,
+        lockedPoints,
+        canAnyUseVPStrict: canAnyUninitCameraUseVPStrict,
+        canAnyUseVPRelaxed: canAnyUninitCameraUseVPRelaxed,
+      });
 
       camerasInitialized.push(...initResult.camerasInitialized);
       for (const vp of initResult.camerasInitializedViaVP) {
