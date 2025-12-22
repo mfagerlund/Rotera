@@ -40,4 +40,5 @@ export interface ProjectDto {
   visualFeedbackLevel: VisualFeedbackLevel
   viewSettings?: ViewSettings
   imageSortOrder?: ImageSortOrder
+  optimizationMaxIterations?: number
 }

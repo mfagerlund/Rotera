@@ -9,6 +9,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { Folder } from '../../services/project-db'
 import { InlineRenameInput } from './InlineRenameInput'
+import { getSolveQuality } from '../../optimization/optimize-project'
 
 interface FolderCardProps {
   folder: Folder
@@ -70,7 +71,7 @@ export const FolderCard: React.FC<FolderCardProps> = ({
         {stats.avgError !== null && (
           <span style={{
             marginLeft: '8px',
-            color: stats.avgError < 1 ? '#2ecc71' : stats.avgError < 5 ? '#f1c40f' : '#e74c3c'
+            color: getSolveQuality(stats.avgError).vividColor
           }}>
             avg: {stats.avgError.toFixed(2)}
             <span style={{ opacity: 0.7, marginLeft: '4px' }}>

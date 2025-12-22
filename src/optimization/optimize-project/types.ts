@@ -6,6 +6,44 @@ import type { SolverResult, SolverOptions } from '../constraint-system';
 import type { OutlierInfo } from '../outlier-detection';
 import type { InferenceBranch } from '../inference-branching';
 
+/**
+ * Solve quality assessment based on total residual error.
+ * This is the SINGLE SOURCE OF TRUTH for quality classification.
+ */
+export interface SolveQuality {
+  label: 'Excellent' | 'Good' | 'Poor' | 'Unknown';
+  stars: 3 | 2 | 1 | 0;
+  starDisplay: '★★★' | '★★' | '★' | '?';
+  /** Muted color for text on badge backgrounds */
+  color: string;
+  /** Background color for badges */
+  bgColor: string;
+  /** Vivid color for standalone inline text */
+  vividColor: string;
+}
+
+/**
+ * Compute solve quality from total residual error.
+ * CANONICAL function - use this everywhere, never duplicate the thresholds.
+ *
+ * Thresholds:
+ * - Excellent (★★★): error < 2.5
+ * - Good (★★): error < 5
+ * - Poor (★): error >= 5
+ */
+export function getSolveQuality(totalError: number | undefined): SolveQuality {
+  if (totalError === undefined) {
+    return { label: 'Unknown', stars: 0, starDisplay: '?', color: '#666', bgColor: '#f0f0f0', vividColor: '#999' };
+  }
+  if (totalError < 2.5) {
+    return { label: 'Excellent', stars: 3, starDisplay: '★★★', color: '#155724', bgColor: '#d4edda', vividColor: '#2ecc71' };
+  }
+  if (totalError < 5) {
+    return { label: 'Good', stars: 2, starDisplay: '★★', color: '#856404', bgColor: '#fff3cd', vividColor: '#f1c40f' };
+  }
+  return { label: 'Poor', stars: 1, starDisplay: '★', color: '#721c24', bgColor: '#f8d7da', vividColor: '#e74c3c' };
+}
+
 export interface OptimizeProjectOptions extends Omit<SolverOptions, 'optimizeCameraIntrinsics'> {
   autoInitializeCameras?: boolean;
   autoInitializeWorldPoints?: boolean;
@@ -51,6 +89,10 @@ export interface OptimizeProjectOptions extends Omit<SolverOptions, 'optimizeCam
   _seed?: number;
   /** @internal Perturbation scale for camera positions (used on retry attempts) */
   _perturbCameras?: number;
+  /** @internal Skip candidate testing (used during recursive calls) */
+  _skipCandidateTesting?: boolean;
+  /** @internal Force specific alignment sign (used during candidate testing) */
+  _alignmentSign?: 'positive' | 'negative';
 }
 
 export interface OptimizeProjectResult extends SolverResult {
@@ -59,4 +101,6 @@ export interface OptimizeProjectResult extends SolverResult {
   outliers?: OutlierInfo[];
   medianReprojectionError?: number;
   solveTimeMs?: number;
+  /** Solve quality assessment - computed by optimizer, use this instead of computing locally */
+  quality: SolveQuality;
 }

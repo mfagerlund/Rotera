@@ -4,7 +4,7 @@
  */
 
 import { Project } from '../../entities/project';
-import { ConstraintSystem } from '../constraint-system';
+import { ConstraintSystem, SolverResult } from '../constraint-system';
 import { Viewpoint } from '../../entities/viewpoint';
 import { WorldPoint } from '../../entities/world-point';
 import { ImagePoint } from '../../entities/imagePoint';
@@ -24,7 +24,6 @@ import {
   applyBranchToInferredXyz,
 } from '../state-reset';
 import { validateProjectConstraints } from '../validation';
-import { retryWithOppositeAlignment, RetryContext } from '../alignment-retry';
 import {
   applyScaleFromAxisLines,
   translateToAnchorPoint,
@@ -33,8 +32,10 @@ import {
   applyScaleFromLockedPointPairs,
 } from '../initialization-phases';
 import type { OptimizeProjectOptions, OptimizeProjectResult } from './types';
+import { getSolveQuality } from './types';
 import { tryMultipleAttempts, applyCameraPerturbation, setAttemptSeed } from './multi-attempt';
 import { testInferenceBranches } from './branch-testing';
+import { testAllCandidates } from './candidate-testing';
 import {
   applyScaleAndTranslateForTest,
   runFreeSolve,
@@ -67,27 +68,22 @@ export async function optimizeProject(
     );
   }
 
-  // Log version FIRST and ONLY at top-level (not during recursive branch/attempt calls)
-  if (!options._skipBranching && options._attempt === undefined) {
+  // Log version FIRST and ONLY at top-level (not during recursive calls)
+  if (!options._skipCandidateTesting && !options._skipBranching && options._attempt === undefined) {
     clearOptimizationLogs();
     log(`[Optimize] v${OPTIMIZER_VERSION}`);
     log(`[Optimize] WP:${project.worldPoints.size} L:${project.lines.size} VP:${project.viewpoints.size} IP:${project.imagePoints.size} C:${project.constraints.size}`);
   }
 
-  // MULTI-ATTEMPT SOLVING: Try different random seeds when solve fails
-  const multiAttemptResult = await tryMultipleAttempts(project, options, optimizeProject);
-  if (multiAttemptResult) {
-    return multiAttemptResult;
+  // UNIFIED CANDIDATE TESTING: Replaces multi-attempt, branch-testing, and alignment-retry
+  // Tests all combinations (seed × branch × alignment) with lightweight probes, then runs full solve on winner
+  const candidateResult = await testAllCandidates(project, options, optimizeProject);
+  if (candidateResult) {
+    return candidateResult;
   }
 
-  // Set random seed for this attempt
+  // Set random seed for this solve
   setAttemptSeed(options._seed, options._attempt ?? 0);
-
-  // BRANCH-FIRST OPTIMIZATION: Test all inference branches
-  const branchTestResult = await testInferenceBranches(project, options, optimizeProject);
-  if (branchTestResult) {
-    return branchTestResult;
-  }
 
   const {
     autoInitializeCameras = true,
@@ -123,8 +119,6 @@ export async function optimizeProject(
   const camerasInitializedViaLatePnP = new Set<Viewpoint>();
   const camerasInitializedViaVP = new Set<Viewpoint>();
   let usedEssentialMatrix = false;
-  let alignmentWasAmbiguous = false;
-  let alignmentSignUsed: 'positive' | 'negative' | undefined;
   let appliedScaleFactor = 1.0;
   let steppedVPInitReverted = false;
   let vpEmHybridApplied = false;
@@ -248,11 +242,10 @@ export async function optimizeProject(
         log(`[Align] Skipping - VP+EM hybrid already aligned world frame`);
         alignmentResult = { success: true, ambiguous: false };
       } else {
-        alignmentResult = alignSceneToLineDirections(viewpointArray, worldPointArray, lineArray, usedEssentialMatrix, qualityCallback);
+        // Use forced alignment sign if provided (from candidate testing)
+        const forceSign = options._alignmentSign;
+        alignmentResult = alignSceneToLineDirections(viewpointArray, worldPointArray, lineArray, usedEssentialMatrix, qualityCallback, forceSign);
       }
-
-      alignmentWasAmbiguous = alignmentResult.ambiguous;
-      alignmentSignUsed = 'positive';
 
       // Apply scale from axis lines (both Essential Matrix and VP paths can have targetLength lines)
       const linesWithTargetLength = axisConstrainedLines.filter(l => l.targetLength !== undefined);
@@ -384,26 +377,7 @@ export async function optimizeProject(
   });
   project.constraints.forEach(c => system.addConstraint(c));
 
-  let result: OptimizeProjectResult = system.solve();
-
-  // PHASE 6: Retry with opposite alignment if needed
-  await yieldToUI?.('Phase 6: Checking alignment...');
-  const retryCtx: RetryContext = {
-    project,
-    alignmentWasAmbiguous,
-    usedEssentialMatrix,
-    alignmentSignUsed,
-    hasSingleAxisConstraint,
-    excludedCameras,
-    tolerance,
-    maxIterations,
-    damping,
-    verbose,
-    shouldOptimizeIntrinsics,
-  };
-
-  const retryResult = retryWithOppositeAlignment(result, retryCtx);
-  result = retryResult.result;
+  let result: SolverResult = system.solve();
 
   // PHASE 7: Outlier Detection
   await yieldToUI?.('Phase 7: Detecting outliers...');
@@ -477,9 +451,8 @@ export async function optimizeProject(
 
   // Final summary
   const solveTimeMs = performance.now() - startTime;
-  const quality = result.residual < 1 ? 'Excellent' : result.residual < 5 ? 'Good' : 'Poor';
-  const qualityStars = result.residual < 1 ? '***' : result.residual < 5 ? '**' : '*';
-  log(`[Summary] ${qualityStars} ${quality} | error=${result.residual.toFixed(3)} | median=${medianReprojectionError?.toFixed(2) ?? '?'}px | iter=${result.iterations} | conv=${result.converged} | ${solveTimeMs.toFixed(0)}ms`);
+  const quality = getSolveQuality(result.residual);
+  log(`[Summary] ${'*'.repeat(quality.stars)} ${quality.label} | error=${result.residual.toFixed(3)} | median=${medianReprojectionError?.toFixed(2) ?? '?'}px | iter=${result.iterations} | conv=${result.converged} | ${solveTimeMs.toFixed(0)}ms`);
 
   return {
     ...result,
@@ -488,5 +461,6 @@ export async function optimizeProject(
     outliers,
     medianReprojectionError,
     solveTimeMs,
+    quality,
   };
 }

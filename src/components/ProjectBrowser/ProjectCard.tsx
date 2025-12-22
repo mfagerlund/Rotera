@@ -10,13 +10,11 @@ import {
   faPencil,
   faTrash,
   faBolt,
-  faStar,
-  faStarHalfAlt,
   faClock
 } from '@fortawesome/free-solid-svg-icons'
-import { faStar as faStarOutline } from '@fortawesome/free-regular-svg-icons'
 import { ProjectSummary } from '../../services/project-db'
 import { InlineRenameInput } from './InlineRenameInput'
+import { getSolveQuality } from '../../optimization/optimize-project'
 
 interface ProjectCardProps {
   project: ProjectSummary
@@ -103,30 +101,16 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     const result = batchResult || storedResult
     if (!result) return null
 
-    const getQualityInfo = () => {
-      if (result.error === null || result.errorMessage) {
-        return { icon: faStarOutline, color: '#e74c3c', label: 'Failed' }
-      }
-      if (result.error < 1) {
-        return { icon: faStar, color: '#2ecc71', label: 'Excellent' }
-      }
-      if (result.error < 5) {
-        return { icon: faStarHalfAlt, color: '#f1c40f', label: 'Good' }
-      }
-      return { icon: faStarOutline, color: '#e74c3c', label: 'Poor' }
-    }
-    const quality = getQualityInfo()
+    // Use canonical getSolveQuality - convert null to undefined for the function
+    const quality = getSolveQuality(result.error ?? undefined)
+
     return (
       <span
         className="project-browser__item-optimization"
-        title={result.errorMessage || `Error: ${result.error?.toFixed(3)}, Time: ${result.solveTimeMs.toFixed(0)}ms${result.converged ? '' : ' (not converged)'}`}
+        title={result.errorMessage || `${quality.label}: ${result.error?.toFixed(3)}, Time: ${result.solveTimeMs.toFixed(0)}ms${result.converged ? '' : ' (not converged)'}`}
       >
-        <FontAwesomeIcon icon={quality.icon} style={{ color: quality.color }} />
-        {result.error !== null ? (
-          <span style={{ color: quality.color }}>{result.error.toFixed(2)}</span>
-        ) : (
-          <span style={{ color: quality.color }}>Error</span>
-        )}
+        <span style={{ color: quality.vividColor }}>{quality.starDisplay}</span>
+        <span style={{ color: quality.vividColor }}>{result.error?.toFixed(2) ?? 'Error'}</span>
         <span className="project-browser__item-time">{result.solveTimeMs.toFixed(0)}ms</span>
       </span>
     )

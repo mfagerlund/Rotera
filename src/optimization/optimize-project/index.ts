@@ -8,8 +8,9 @@
 // Re-export main optimization function
 export { optimizeProject } from './orchestrator';
 
-// Re-export types
-export type { OptimizeProjectOptions, OptimizeProjectResult } from './types';
+// Re-export types and quality utilities
+export type { OptimizeProjectOptions, OptimizeProjectResult, SolveQuality } from './types';
+export { getSolveQuality } from './types';
 
 // Re-export utilities from other modules (backwards compatibility)
 export { log, clearOptimizationLogs, optimizationLogs, setLogCallback } from '../optimization-logger';

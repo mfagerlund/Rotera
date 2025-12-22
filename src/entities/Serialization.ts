@@ -48,7 +48,8 @@ export class Serialization {
       constraintPreview: project.constraintPreview,
       visualFeedbackLevel: project.visualFeedbackLevel,
       viewSettings: project.viewSettings,
-      imageSortOrder: project.imageSortOrder
+      imageSortOrder: project.imageSortOrder,
+      optimizationMaxIterations: project.optimizationMaxIterations
     }
 
     return JSON.stringify(dto, null, 2)
@@ -108,7 +109,8 @@ export class Serialization {
       dto.constraintPreview,
       dto.visualFeedbackLevel,
       dto.viewSettings || DEFAULT_VIEW_SETTINGS,
-      dto.imageSortOrder
+      dto.imageSortOrder,
+      dto.optimizationMaxIterations
     )
   }
 

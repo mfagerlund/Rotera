@@ -4,14 +4,26 @@ import { Project } from '../../entities/project'
 import { WorldPoint } from '../../entities/world-point'
 import { Line } from '../../entities/line'
 import { CoplanarPointsConstraint } from '../../entities/constraints/coplanar-points-constraint'
-import { OutlierInfo } from '../../optimization/optimize-project'
+import { OutlierInfo, SolveQuality } from '../../optimization/optimize-project'
 import { getEntityKey } from '../../utils/entityKeys'
 import { formatXyz } from '../../utils/formatters'
+
+/** Result structure passed from useOptimizationPanel. Quality comes from optimizer's getSolveQuality. */
+interface OptimizationResultData {
+  converged: boolean
+  error: string | null
+  totalError: number
+  pointAccuracy: number
+  iterations: number
+  outliers: OutlierInfo[]
+  medianReprojectionError?: number
+  quality: SolveQuality
+}
 
 interface OptimizationResultsProps {
   project: Project
   pnpResults: {camera: string, before: number, after: number, iterations: number}[]
-  results: any | null
+  results: OptimizationResultData | null
   onSelectWorldPoint?: (worldPoint: WorldPoint) => void
   onSelectLine?: (line: Line) => void
   onSelectCoplanarConstraint?: (constraint: CoplanarPointsConstraint) => void
@@ -28,19 +40,6 @@ function formatNumber(value: number): string {
     return '0.000';
   }
   return value.toFixed(3);
-}
-
-function getQualityInfo(totalError: number | undefined): { label: string; color: string; bgColor: string; icon: string } {
-  if (totalError === undefined) {
-    return { label: 'Unknown', color: '#666', bgColor: '#f0f0f0', icon: '?' };
-  }
-  if (totalError < 1) {
-    return { label: 'Excellent', color: '#155724', bgColor: '#d4edda', icon: '★★★' };
-  }
-  if (totalError < 5) {
-    return { label: 'Good', color: '#856404', bgColor: '#fff3cd', icon: '★★' };
-  }
-  return { label: 'Poor', color: '#721c24', bgColor: '#f8d7da', icon: '★' };
 }
 
 export const OptimizationResults: React.FC<OptimizationResultsProps> = observer(({
@@ -86,8 +85,8 @@ export const OptimizationResults: React.FC<OptimizationResultsProps> = observer(
             </span>
           </div>
           {/* Quality Indicator Badge - show even if not converged so user can assess quality */}
-          {results.totalError !== undefined && (() => {
-            const quality = getQualityInfo(results.totalError);
+          {results.quality && (() => {
+            const quality = results.quality;
             return (
               <div style={{
                 display: 'flex',
@@ -104,7 +103,7 @@ export const OptimizationResults: React.FC<OptimizationResultsProps> = observer(
                   lineHeight: 1,
                   color: quality.color,
                   textShadow: `0 0 2px ${quality.bgColor}, 0 0 1px rgba(0,0,0,0.3)`,
-                }}>{quality.icon}</span>
+                }}>{quality.starDisplay}</span>
                 <div style={{ flex: 1 }}>
                   <div style={{
                     fontWeight: 'bold',
@@ -127,8 +126,8 @@ export const OptimizationResults: React.FC<OptimizationResultsProps> = observer(
                   color: '#666',
                   textAlign: 'right',
                 }}>
-                  {results.totalError < 1 && '<1'}
-                  {results.totalError >= 1 && results.totalError < 5 && '1-5'}
+                  {results.totalError < 2.5 && '<2.5'}
+                  {results.totalError >= 2.5 && results.totalError < 5 && '2.5-5'}
                   {results.totalError >= 5 && '>5'}
                 </div>
               </div>

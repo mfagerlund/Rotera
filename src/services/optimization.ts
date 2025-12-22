@@ -484,8 +484,10 @@ export class OptimizationService {
 }
 
 // Default optimization settings
+// Note: When candidate testing is active, probe iterations are capped at 200
+// See candidate-testing.ts PROBE_ITERATIONS
 export const defaultOptimizationSettings = {
-  maxIterations: 500,
+  maxIterations: 200,
   tolerance: 1e-6,
   damping: 0.1,  // Higher damping for faster convergence
   verbose: false

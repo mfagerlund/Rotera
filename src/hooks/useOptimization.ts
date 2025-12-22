@@ -9,7 +9,7 @@ import { WorldPoint } from '../entities/world-point/WorldPoint';
 import { Line } from '../entities/line/Line';
 import { Viewpoint } from '../entities/viewpoint/Viewpoint';
 import { Constraint } from '../entities/constraints/base-constraint';
-import { optimizeProject, OptimizeProjectResult } from '../optimization/optimize-project';
+import { optimizeProject, OptimizeProjectResult, getSolveQuality } from '../optimization/optimize-project';
 import { Project } from '../entities/project';
 
 type ConstraintId = string;
@@ -135,6 +135,7 @@ export const useOptimization = () => {
             iterations: 0,
             residual: Infinity,
             error: 'Cancelled by user',
+            quality: getSolveQuality(undefined),
           };
           setState({
             isRunning: false,
@@ -173,11 +174,12 @@ export const useOptimization = () => {
 
         return result;
       } catch (error) {
-        const errorResult: SolverResult = {
+        const errorResult: OptimizeProjectResult = {
           converged: false,
           iterations: 0,
           residual: Infinity,
           error: error instanceof Error ? error.message : 'Unknown error',
+          quality: getSolveQuality(undefined),
         };
 
         setState({

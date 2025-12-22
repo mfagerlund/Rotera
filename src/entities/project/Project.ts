@@ -60,6 +60,7 @@ export class Project {
     visualFeedbackLevel: VisualFeedbackLevel
     imageSortOrder?: ImageSortOrder
     viewSettings: ViewSettings
+    optimizationMaxIterations?: number
 
     // Internal database ID (used by ProjectDB service only)
     _dbId?: string
@@ -87,7 +88,8 @@ export class Project {
         constraintPreview: boolean,
         visualFeedbackLevel: VisualFeedbackLevel,
         viewSettings: ViewSettings,
-        imageSortOrder?: ImageSortOrder
+        imageSortOrder?: ImageSortOrder,
+        optimizationMaxIterations?: number
     ) {
         this.name = name
         this.worldPoints = worldPoints
@@ -112,6 +114,7 @@ export class Project {
         this.visualFeedbackLevel = visualFeedbackLevel
         this.viewSettings = viewSettings
         this.imageSortOrder = imageSortOrder
+        this.optimizationMaxIterations = optimizationMaxIterations
 
         makeAutoObservable(this, {}, { autoBind: true })
     }
@@ -167,7 +170,8 @@ export class Project {
         constraintPreview: boolean,
         visualFeedbackLevel: VisualFeedbackLevel,
         viewSettings: ViewSettings,
-        imageSortOrder?: ImageSortOrder
+        imageSortOrder?: ImageSortOrder,
+        optimizationMaxIterations?: number
     ): Project {
         return new Project(
             name,
@@ -192,7 +196,8 @@ export class Project {
             constraintPreview,
             visualFeedbackLevel,
             viewSettings,
-            imageSortOrder
+            imageSortOrder,
+            optimizationMaxIterations
         )
     }
 

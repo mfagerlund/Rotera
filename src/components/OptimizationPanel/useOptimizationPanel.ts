@@ -9,7 +9,7 @@ import { projectWorldPointToPixelQuaternion } from '../../optimization/camera-pr
 import { V, Vec3, Vec4 } from 'scalar-autograd'
 import { ProjectDB } from '../../services/project-db'
 import { checkOptimizationReadiness } from '../../optimization/optimization-readiness'
-import { setLogCallback } from '../../optimization/optimize-project'
+import { setLogCallback, getSolveQuality } from '../../optimization/optimize-project'
 
 interface OptimizationSettings {
   maxIterations: number
@@ -95,7 +95,10 @@ export function useOptimizationPanel({
   onOptimizationStart
 }: UseOptimizationPanelProps) {
   const [isOptimizing, setIsOptimizing] = useState(false)
-  const [settings, setSettings] = useState<OptimizationSettings>(defaultOptimizationSettings)
+  const [settings, setSettings] = useState<OptimizationSettings>(() => ({
+    ...defaultOptimizationSettings,
+    maxIterations: project.optimizationMaxIterations ?? defaultOptimizationSettings.maxIterations
+  }))
   const [results, setResults] = useState<any>(null)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [pnpResults, setPnpResults] = useState<{camera: string, before: number, after: number, iterations: number}[]>([])
@@ -194,7 +197,8 @@ export function useOptimizationPanel({
         pointAccuracy: solverResult.residual / Math.max(1, project.worldPoints.size),
         iterations: solverResult.iterations,
         outliers: solverResult.outliers || [],
-        medianReprojectionError: solverResult.medianReprojectionError
+        medianReprojectionError: solverResult.medianReprojectionError,
+        quality: solverResult.quality
       }
 
       setResults(result)
@@ -231,7 +235,8 @@ export function useOptimizationPanel({
         totalError: Infinity,
         pointAccuracy: 0,
         iterations: 0,
-        outliers: []
+        outliers: [],
+        quality: getSolveQuality(undefined)
       })
       setStatusMessage(null)
 
@@ -346,11 +351,16 @@ export function useOptimizationPanel({
 
   const handleSettingChange = useCallback((key: string, value: any) => {
     setSettings((prev: OptimizationSettings) => ({ ...prev, [key]: value }))
-  }, [])
+    // Persist maxIterations to project so it saves with the project
+    if (key === 'maxIterations') {
+      project.optimizationMaxIterations = value
+    }
+  }, [project])
 
   const resetToDefaults = useCallback(() => {
     setSettings(defaultOptimizationSettings)
-  }, [])
+    project.optimizationMaxIterations = undefined
+  }, [project])
 
   const toggleAdvanced = useCallback(() => {
     setShowAdvanced(prev => !prev)
