@@ -410,7 +410,14 @@ cameras_data = [
       // Blender uses sensor_width in mm and focal length in mm
       // We'll use a standard 36mm sensor width and calculate focal length accordingly
       const sensorWidth = 36.0  // mm (full frame equivalent)
+      const sensorHeight = sensorWidth * (vp.imageHeight / vp.imageWidth)  // Match image aspect ratio
       const focalLengthMm = (vp.focalLength / vp.imageWidth) * sensorWidth
+
+      // Principal point: convert from pixel coords to Blender shift
+      // Image Y goes down (0=top), Blender shift_y goes up (positive = up)
+      // shift = (pp / size) - 0.5, but Y needs to be flipped
+      const shiftX = (vp.principalPointX / vp.imageWidth) - 0.5
+      const shiftY = 0.5 - (vp.principalPointY / vp.imageHeight)  // Flipped for Y-down to Y-up
 
       scriptParts.push(`    {
         "name": "${escapeString(vp.name)}",
@@ -419,10 +426,11 @@ cameras_data = [
         "rotation": (${rot[0].toFixed(6)}, ${rot[1].toFixed(6)}, ${rot[2].toFixed(6)}, ${rot[3].toFixed(6)}),
         "focal_length": ${focalLengthMm.toFixed(4)},
         "sensor_width": ${sensorWidth.toFixed(1)},
+        "sensor_height": ${sensorHeight.toFixed(4)},
         "image_width": ${vp.imageWidth},
         "image_height": ${vp.imageHeight},
-        "principal_point_x": ${(vp.principalPointX / vp.imageWidth).toFixed(6)},
-        "principal_point_y": ${(vp.principalPointY / vp.imageHeight).toFixed(6)},
+        "shift_x": ${shiftX.toFixed(6)},
+        "shift_y": ${shiftY.toFixed(6)},
 ${opts.exportBackgroundImages ? `        "image_path": "${escapeString(opts.imageBasePath + vp.filename)}",
 ` : ''}    },
 `)
@@ -437,12 +445,13 @@ def create_cameras():
         cam = bpy.data.cameras.new(cam_data["name"])
         cam.lens = cam_data["focal_length"]
         cam.sensor_width = cam_data["sensor_width"]
-        cam.sensor_fit = 'HORIZONTAL'
+        cam.sensor_height = cam_data["sensor_height"]
+        cam.sensor_fit = 'AUTO'  # Let Blender choose based on aspect ratio
 
         # Set principal point offset (shift)
-        # Blender's shift is normalized: 0 = center, 1 = full sensor width/height offset
-        cam.shift_x = cam_data["principal_point_x"] - 0.5
-        cam.shift_y = cam_data["principal_point_y"] - 0.5
+        # Pre-computed with correct Y-flip for image coords -> Blender coords
+        cam.shift_x = cam_data["shift_x"]
+        cam.shift_y = cam_data["shift_y"]
 
         # Create camera object
         cam_obj = bpy.data.objects.new(cam_data["name"], cam)
@@ -455,6 +464,12 @@ def create_cameras():
         # Blender quaternion is (w, x, y, z)
         cam_obj.rotation_mode = 'QUATERNION'
         cam_obj.rotation_quaternion = cam_data["rotation"]
+
+        # Set render resolution to match this camera's image (for texture extraction)
+        # This ensures the background image aligns perfectly with the render
+        bpy.context.scene.render.resolution_x = cam_data["image_width"]
+        bpy.context.scene.render.resolution_y = cam_data["image_height"]
+        bpy.context.scene.render.resolution_percentage = 100
 
 `)
 
