@@ -2,9 +2,8 @@
 
 import React from 'react'
 import { observer } from 'mobx-react-lite'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
 import FloatingWindow from './FloatingWindow'
+import { EntityTable, EntityTableColumn } from './EntityTable'
 import type { Constraint } from '../entities/constraints'
 import { getConstraintDisplayName } from '../utils/constraintDisplay'
 import {
@@ -35,6 +34,36 @@ interface ConstraintsPopupProps {
   onSelectConstraint?: (constraint: Constraint) => void
 }
 
+const getConstraintEntities = (constraint: Constraint): string => {
+  if (constraint instanceof DistanceConstraint) {
+    return `${constraint.pointA.getName()}-${constraint.pointB.getName()}`
+  } else if (constraint instanceof AngleConstraint) {
+    return `${constraint.pointA.getName()}-${constraint.vertex.getName()}-${constraint.pointC.getName()}`
+  } else if (constraint instanceof ParallelLinesConstraint || constraint instanceof PerpendicularLinesConstraint) {
+    return `${constraint.lineA.getName()}, ${constraint.lineB.getName()}`
+  } else if (constraint instanceof FixedPointConstraint) {
+    return constraint.point.getName()
+  } else if (constraint instanceof CollinearPointsConstraint) {
+    return constraint.points.map(p => p.getName()).join(', ')
+  } else if (constraint instanceof EqualDistancesConstraint) {
+    return `${constraint.distancePairs.length} pairs`
+  } else if (constraint instanceof EqualAnglesConstraint) {
+    return `${constraint.angleTriplets.length} angles`
+  }
+  return '-'
+}
+
+const getConstraintValue = (constraint: Constraint): string => {
+  if (constraint instanceof DistanceConstraint) {
+    return `${constraint.targetDistance.toFixed(2)}m`
+  } else if (constraint instanceof AngleConstraint) {
+    return `${constraint.targetAngle.toFixed(1)}deg`
+  } else if (constraint instanceof FixedPointConstraint) {
+    return `[${constraint.targetXyz.map(v => v.toFixed(1)).join(',')}]`
+  }
+  return '-'
+}
+
 export const ConstraintsManager: React.FC<ConstraintsPopupProps> = observer(({
   isOpen,
   onClose,
@@ -42,43 +71,12 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = observer(({
   selectedConstraints = [],
   onEditConstraint,
   onDeleteConstraint,
-  onDeleteAllConstraints,
   onSelectConstraint
 }) => {
   const { confirm, dialog } = useConfirm()
 
   // Filter out CoplanarPointsConstraint - they have their own dedicated manager
   const filteredConstraints = constraints.filter(c => !(c instanceof CoplanarPointsConstraint))
-
-  const getConstraintEntities = (constraint: Constraint): string => {
-    if (constraint instanceof DistanceConstraint) {
-      return `${constraint.pointA.getName()}-${constraint.pointB.getName()}`
-    } else if (constraint instanceof AngleConstraint) {
-      return `${constraint.pointA.getName()}-${constraint.vertex.getName()}-${constraint.pointC.getName()}`
-    } else if (constraint instanceof ParallelLinesConstraint || constraint instanceof PerpendicularLinesConstraint) {
-      return `${constraint.lineA.getName()}, ${constraint.lineB.getName()}`
-    } else if (constraint instanceof FixedPointConstraint) {
-      return constraint.point.getName()
-    } else if (constraint instanceof CollinearPointsConstraint) {
-      return constraint.points.map(p => p.getName()).join(', ')
-    } else if (constraint instanceof EqualDistancesConstraint) {
-      return `${constraint.distancePairs.length} pairs`
-    } else if (constraint instanceof EqualAnglesConstraint) {
-      return `${constraint.angleTriplets.length} angles`
-    }
-    return '-'
-  }
-
-  const getConstraintValue = (constraint: Constraint): string => {
-    if (constraint instanceof DistanceConstraint) {
-      return `${constraint.targetDistance.toFixed(2)}m`
-    } else if (constraint instanceof AngleConstraint) {
-      return `${constraint.targetAngle.toFixed(1)}deg`
-    } else if (constraint instanceof FixedPointConstraint) {
-      return `[${constraint.targetXyz.map(v => v.toFixed(1)).join(',')}]`
-    }
-    return '-'
-  }
 
   const handleDelete = async (constraint: Constraint) => {
     if (await confirm(`Delete ${getConstraintDisplayName(constraint.getConstraintType())} constraint?`)) {
@@ -88,12 +86,26 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = observer(({
 
   const handleDeleteAll = async () => {
     if (await confirm(`Delete all ${filteredConstraints.length} constraints?`)) {
-      // Only delete non-coplanar constraints
       filteredConstraints.forEach(c => onDeleteConstraint?.(c))
     }
   }
 
-  const isSelected = (constraint: Constraint) => selectedConstraints.includes(constraint)
+  const columns: EntityTableColumn<Constraint>[] = [
+    {
+      header: 'Type',
+      render: (c) => getConstraintDisplayName(c.getConstraintType())
+    },
+    {
+      header: 'Entities',
+      render: (c) => getConstraintEntities(c),
+      className: 'points-cell'
+    },
+    {
+      header: 'Value',
+      render: (c) => getConstraintValue(c),
+      className: 'length-cell'
+    }
+  ]
 
   return (
     <>
@@ -109,64 +121,16 @@ export const ConstraintsManager: React.FC<ConstraintsPopupProps> = observer(({
         onDelete={filteredConstraints.length > 0 && onDeleteConstraint ? handleDeleteAll : undefined}
       >
         <div className="lines-manager">
-          {filteredConstraints.length === 0 ? (
-            <div className="lines-manager__empty">No constraints created yet</div>
-          ) : (
-            <table className="entity-table">
-              <thead>
-                <tr>
-                  <th>Type</th>
-                  <th>Entities</th>
-                  <th>Value</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredConstraints.map((constraint, index) => {
-                  return (
-                    <tr
-                      key={index}
-                      className={isSelected(constraint) ? 'selected' : ''}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onSelectConstraint?.(constraint)
-                      }}
-                    >
-                      <td>{getConstraintDisplayName(constraint.getConstraintType())}</td>
-                      <td className="points-cell">{getConstraintEntities(constraint)}</td>
-                      <td className="length-cell">{getConstraintValue(constraint)}</td>
-                      <td className="actions-cell">
-                        {onEditConstraint && (
-                          <button
-                            className="btn-icon"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              onEditConstraint(constraint)
-                            }}
-                            title="Edit"
-                          >
-                            <FontAwesomeIcon icon={faPencil} />
-                          </button>
-                        )}
-                        {onDeleteConstraint && (
-                          <button
-                            className="btn-icon btn-danger-icon"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleDelete(constraint)
-                            }}
-                            title="Delete"
-                          >
-                            <FontAwesomeIcon icon={faTrash} />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          )}
+          <EntityTable
+            items={filteredConstraints}
+            columns={columns}
+            emptyMessage="No constraints created yet"
+            selectedItems={selectedConstraints}
+            onSelect={onSelectConstraint}
+            onEdit={onEditConstraint}
+            onDelete={onDeleteConstraint ? handleDelete : undefined}
+            getKey={(_, index) => index}
+          />
         </div>
       </FloatingWindow>
     </>

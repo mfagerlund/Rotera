@@ -1,5 +1,5 @@
 /* Ground Plane Panel Styles */
-@import './common-buttons.css';
+@import './panel-common.css';
 
 .ground-plane-panel {
   background: var(--panel-bg);
@@ -68,26 +68,7 @@
   transform: none;
 }
 
-.requirement-notice {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: var(--warning-bg);
-  border: 1px solid var(--warning-color);
-  border-radius: var(--border-radius);
-  padding: 12px;
-  margin-top: 16px;
-}
-
-.notice-icon {
-  font-size: 16px;
-}
-
-.notice-text {
-  font-size: 13px;
-  color: var(--warning-color);
-}
+/* requirement-notice, notice-icon, notice-text - from panel-common.css */
 
 .plane-definition {
   background: var(--bg-secondary);
@@ -97,48 +78,7 @@
   margin-bottom: 20px;
 }
 
-.definition-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-
-.definition-header h4 {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.step-indicator {
-  background: var(--accent-color);
-  color: white;
-  padding: 4px 8px;
-  border-radius: var(--border-radius-sm);
-  font-size: 11px;
-  font-weight: 500;
-}
-
-.step-instructions {
-  background: var(--accent-bg);
-  border: 1px solid var(--accent-color);
-  border-radius: var(--border-radius);
-  padding: 12px;
-  margin-bottom: 16px;
-}
-
-.instruction-text {
-  font-size: 13px;
-  color: var(--accent-color);
-  font-weight: 500;
-  margin-bottom: 4px;
-}
-
-.selection-status {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
+/* definition-header, step-indicator, step-instructions, instruction-text, selection-status - from panel-common.css */
 
 .definition-settings {
   background: var(--bg-primary);
@@ -147,34 +87,7 @@
   margin-bottom: 16px;
 }
 
-.settings-row {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 12px;
-}
-
-.settings-row:last-child {
-  margin-bottom: 0;
-}
-
-.settings-row label {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.settings-row input,
-.settings-row select {
-  padding: 6px 8px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius-sm);
-  background: var(--input-bg);
-  color: var(--text-primary);
-  font-size: 13px;
-}
+/* settings-row - from panel-common.css */
 
 .definition-preview {
   margin-top: 16px;
@@ -189,31 +102,9 @@
   font-weight: 600;
 }
 
-.preview-details {
-  display: grid;
-  gap: 4px;
-}
+/* preview-details, detail-item - from panel-common.css */
 
-.detail-item {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-}
-
-.detail-item span:first-child {
-  color: var(--text-secondary);
-}
-
-.detail-item span:last-child {
-  color: var(--text-primary);
-  font-weight: 500;
-}
-
-.definition-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-}
+/* definition-actions - from panel-common.css */
 
 .existing-planes {
   border-top: 1px solid var(--border-color);

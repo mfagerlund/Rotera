@@ -2,9 +2,8 @@
 
 import React from 'react'
 import { observer } from 'mobx-react-lite'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
 import FloatingWindow from './FloatingWindow'
+import { EntityTable, EntityTableColumn } from './EntityTable'
 import { CoplanarPointsConstraint } from '../entities/constraints/coplanar-points-constraint'
 import { useConfirm } from './ConfirmDialog'
 
@@ -19,6 +18,12 @@ interface CoplanarConstraintsManagerProps {
   onSelectConstraint?: (constraint: CoplanarPointsConstraint) => void
 }
 
+const formatResidual = (constraint: CoplanarPointsConstraint): string => {
+  const info = constraint.getOptimizationInfo()
+  if (info.residuals.length === 0) return '-'
+  return info.rmsResidual.toFixed(4)
+}
+
 export const CoplanarConstraintsManager: React.FC<CoplanarConstraintsManagerProps> = observer(({
   isOpen,
   onClose,
@@ -30,12 +35,6 @@ export const CoplanarConstraintsManager: React.FC<CoplanarConstraintsManagerProp
   onSelectConstraint
 }) => {
   const { confirm, dialog } = useConfirm()
-
-  const formatResidual = (constraint: CoplanarPointsConstraint): string => {
-    const info = constraint.getOptimizationInfo()
-    if (info.residuals.length === 0) return '-'
-    return info.rmsResidual.toFixed(4)
-  }
 
   const handleDelete = async (constraint: CoplanarPointsConstraint) => {
     if (await confirm(`Delete coplanar constraint "${constraint.getName()}"?`)) {
@@ -49,7 +48,22 @@ export const CoplanarConstraintsManager: React.FC<CoplanarConstraintsManagerProp
     }
   }
 
-  const isSelected = (constraint: CoplanarPointsConstraint) => selectedConstraints.includes(constraint)
+  const columns: EntityTableColumn<CoplanarPointsConstraint>[] = [
+    {
+      header: 'Name',
+      render: (c) => c.getName()
+    },
+    {
+      header: 'Points',
+      render: (c) => c.points.length,
+      className: 'dir-cell'
+    },
+    {
+      header: 'Residual',
+      render: (c) => formatResidual(c),
+      className: 'residual-cell'
+    }
+  ]
 
   return (
     <>
@@ -65,64 +79,16 @@ export const CoplanarConstraintsManager: React.FC<CoplanarConstraintsManagerProp
         onDelete={constraints.length > 0 && onDeleteAllConstraints ? handleDeleteAll : undefined}
       >
         <div className="lines-manager">
-          {constraints.length === 0 ? (
-            <div className="lines-manager__empty">No coplanar constraints created yet</div>
-          ) : (
-            <table className="entity-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Points</th>
-                  <th>Residual</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {constraints.map((constraint, index) => {
-                  return (
-                    <tr
-                      key={index}
-                      className={isSelected(constraint) ? 'selected' : ''}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onSelectConstraint?.(constraint)
-                      }}
-                    >
-                      <td>{constraint.getName()}</td>
-                      <td className="dir-cell">{constraint.points.length}</td>
-                      <td className="residual-cell">{formatResidual(constraint)}</td>
-                      <td className="actions-cell">
-                        {onEditConstraint && (
-                          <button
-                            className="btn-icon"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              onEditConstraint(constraint)
-                            }}
-                            title="Edit"
-                          >
-                            <FontAwesomeIcon icon={faPencil} />
-                          </button>
-                        )}
-                        {onDeleteConstraint && (
-                          <button
-                            className="btn-icon btn-danger-icon"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleDelete(constraint)
-                            }}
-                            title="Delete"
-                          >
-                            <FontAwesomeIcon icon={faTrash} />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          )}
+          <EntityTable
+            items={constraints}
+            columns={columns}
+            emptyMessage="No coplanar constraints created yet"
+            selectedItems={selectedConstraints}
+            onSelect={onSelectConstraint}
+            onEdit={onEditConstraint}
+            onDelete={onDeleteConstraint ? handleDelete : undefined}
+            getKey={(_, index) => index}
+          />
         </div>
       </FloatingWindow>
     </>
