@@ -51,22 +51,16 @@ export const FolderCard: React.FC<FolderCardProps> = ({
   const isEditing = editingItem?.type === 'folder' && editingItem.id === folder.id
 
   const renderStats = () => {
-    // If batch optimizing and this folder has projects, show spinner
-    if (isBatchOptimizing && stats && stats.projectCount > 0) {
-      return (
-        <span className="project-browser__item-meta" style={{ marginLeft: 'auto', marginRight: '8px' }}>
-          <FontAwesomeIcon icon={faSpinner} spin style={{ color: '#3498db', marginRight: '6px' }} />
-          <span style={{ color: '#3498db' }}>
-            {stats.projectCount} projects
-          </span>
-        </span>
-      )
-    }
-
     if (!stats || stats.projectCount === 0) return null
+
     return (
       <span className="project-browser__item-meta" style={{ marginLeft: 'auto', marginRight: '8px' }}>
-        <span style={{ color: 'var(--text-muted)' }}>{stats.projectCount} projects</span>
+        {isBatchOptimizing && (
+          <FontAwesomeIcon icon={faSpinner} spin style={{ color: '#3498db', marginRight: '6px' }} />
+        )}
+        <span style={{ color: isBatchOptimizing ? '#3498db' : 'var(--text-muted)' }}>
+          {stats.projectCount} projects
+        </span>
         {stats.avgError !== null && (
           <span style={{
             marginLeft: '8px',

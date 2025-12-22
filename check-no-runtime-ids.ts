@@ -26,7 +26,9 @@ const ALLOWED_PATHS = [
   /[\\/]WorkspaceManager\.tsx$/,
   // Project storage layer uses IDs for IndexedDB keys (database boundary)
   /[\\/]project-db\.ts$/,
+  /[\\/]project-db[\\/]/, // All files in project-db directory (database layer)
   /[\\/]ProjectBrowser\.tsx$/,
+  /[\\/]ProjectBrowser[\\/]/, // All files in ProjectBrowser directory (browser UI layer)
 ];
 
 const ENTITY_ID_PATTERNS = [

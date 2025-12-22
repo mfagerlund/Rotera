@@ -260,7 +260,6 @@ export const useProjectBrowser = () => {
   const handleBatchOptimize = async () => {
     // Get all projects including subdirectories
     const allProjects = await ProjectDB.getProjectsRecursive(currentFolderId)
-    console.log('[DEBUG] handleBatchOptimize: allProjects.length =', allProjects.length)
     if (allProjects.length === 0) return
 
     setIsBatchOptimizing(true)
@@ -315,11 +314,8 @@ export const useProjectBrowser = () => {
           errorMessage: result.error ?? undefined,
           optimizedAt: new Date(),
         }
-        console.log('[DEBUG] About to save to database')
         await ProjectDB.saveOptimizationResult(summary.id, optimizationResult)
-        console.log('[DEBUG] Database save completed')
       } catch (error) {
-        console.log('[DEBUG] Caught error:', error)
         const batchResult: BatchOptimizationResult = {
           projectId: summary.id,
           error: null,
@@ -342,7 +338,6 @@ export const useProjectBrowser = () => {
       }
 
       // Update results incrementally
-      console.log('[DEBUG] Updating batch results')
       setBatchResults(new Map(newResults))
 
       // Mark this project as just completed (for pulse animation)
@@ -371,11 +366,10 @@ export const useProjectBrowser = () => {
       )
       setFolderStats(statsMap)
 
-      // Continue to next project (removed async yield that was blocking)
-      console.log('[DEBUG] Continuing to next project')
+      // Yield to UI to allow React to render updates
+      await new Promise(resolve => setTimeout(resolve, 0))
     }
 
-    console.log('[DEBUG] Loop completed, setting batch optimizing to false')
     setIsBatchOptimizing(false)
     setOptimizingProjectId(null)
     setQueuedProjectIds(new Set())
