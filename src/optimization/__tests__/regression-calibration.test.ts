@@ -95,10 +95,13 @@ describe('Regression - Calibration', () => {
     await runChallengingTest('Minimal 2 Image 2 Axis Degenerate.json', 2)
   })
 
-  // Challenging: Distance constraint on O-Y line - requires fallback logic
-  // First-tier now has fallback logic like stepped-vp. If VP succeeds but
-  // remaining cameras can't be reliably PnP'd, it reverts and falls back to Essential Matrix.
+  // Challenging: Distance constraint on O-Y line - requires multiple attempts
+  // 4 viewpoints, 40 image points - complex optimization
   it('Tower 2 - O-Y Distance.json', async () => {
     await runChallengingTest('Tower 2 - O-Y Distance.json', 2)
+  })
+
+  it('Balcony House Y Line Fast.json', async () => {
+    await runFixtureTest('Balcony House Y Line Fast.json', 2)
   })
 })

@@ -33,8 +33,7 @@ import {
 } from '../initialization-phases';
 import type { OptimizeProjectOptions, OptimizeProjectResult } from './types';
 import { getSolveQuality } from './types';
-import { tryMultipleAttempts, applyCameraPerturbation, setAttemptSeed } from './multi-attempt';
-import { testInferenceBranches } from './branch-testing';
+import { applyCameraPerturbation, setAttemptSeed } from './multi-attempt';
 import { testAllCandidates } from './candidate-testing';
 import {
   applyScaleAndTranslateForTest,
