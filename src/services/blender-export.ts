@@ -13,10 +13,13 @@
  * - Conversion: swap Y and Z axes
  */
 
+import JSZip from 'jszip'
 import type { Project } from '../entities/project'
 import type { WorldPoint } from '../entities/world-point'
 import type { Line } from '../entities/line'
 import type { Viewpoint } from '../entities/viewpoint'
+import { showToast } from '../utils/toast'
+import { checkAxisSigns } from '../optimization/coordinate-transforms'
 
 interface BlenderExportOptions {
   /** Include construction geometry lines */
@@ -40,25 +43,170 @@ const DEFAULT_OPTIONS: BlenderExportOptions = {
 }
 
 /**
- * Convert Pictorigo Y-up coordinates to Blender Z-up coordinates
+ * Convert Pictorigo Y-up coordinates to Blender Z-up coordinates.
+ * Conversion: [x, y, z] → [x, z, -y]
  */
-function toBlenderCoords(xyz: [number, number, number], scale: number): [number, number, number] {
+function toBlenderCoords(
+  xyz: [number, number, number],
+  scale: number,
+  flips: { flipX: boolean; flipY: boolean; flipZ: boolean }
+): [number, number, number] {
+  // Apply axis flips first (correct for inverted axes in optimization result)
+  let [x, y, z] = xyz
+  if (flips.flipX) x = -x
+  if (flips.flipY) y = -y
+  if (flips.flipZ) z = -z
+
   // Pictorigo: [X, Y, Z] with Y up
-  // Blender:   [X, Z, Y] with Z up (swap Y and Z, negate new Y for right-handedness)
-  return [xyz[0] * scale, -xyz[2] * scale, xyz[1] * scale]
+  // Blender:   [X, Y, Z] with Z up
+  // Conversion: X stays, Z→Y (forward), -Y→Z (up negated due to handedness)
+  return [x * scale, z * scale, -y * scale]
 }
 
 /**
- * Convert Pictorigo quaternion (Y-up) to Blender quaternion (Z-up)
- * Input quaternion is [w, x, y, z] representing rotation in Y-up system
+ * Convert Pictorigo camera quaternion to Blender camera quaternion.
+ *
+ * Uses direction-vector approach:
+ * 1. Extract look and up directions from Pictorigo quaternion
+ * 2. Convert directions to Blender coordinate system
+ * 3. Build Blender rotation matrix from these directions
+ * 4. Convert to quaternion
+ *
+ * @param quat The stored quaternion [w, x, y, z] (world→camera in Y-up)
+ * @param isZReflected If true, camera convention is different (currently unused but reserved)
+ * @param flips Axis flips detected from optimization
  */
-function toBlenderQuaternion(quat: [number, number, number, number]): [number, number, number, number] {
-  const [w, x, y, z] = quat
-  // Convert rotation from Y-up to Z-up coordinate system
-  // This is equivalent to: R_blender = R_convert * R_pictorigo * R_convert^-1
-  // Where R_convert rotates 90° around X axis
-  // Simplified: swap y and z components, negate the new y
-  return [w, x, -z, y]
+function toBlenderCameraQuaternion(
+  quat: [number, number, number, number],
+  isZReflected: boolean,
+  flips: { flipX: boolean; flipY: boolean; flipZ: boolean }
+): [number, number, number, number] {
+  // Apply axis flips to quaternion components first
+  let [w, x, y, z] = quat
+  if (flips.flipX) x = -x
+  if (flips.flipY) y = -y
+  if (flips.flipZ) z = -z
+
+  // Invert quaternion (world→camera becomes camera→world)
+  const qInv: [number, number, number, number] = [w, -x, -y, -z]
+
+  // Extract look direction: Q^(-1) * (0, 0, -1) - camera looks at -Z
+  const lookPict = rotateVectorByQuaternion([0, 0, -1], qInv)
+
+  // Extract up direction: Q^(-1) * (0, 1, 0)
+  const upPict = rotateVectorByQuaternion([0, 1, 0], qInv)
+
+  // Convert directions to Blender coordinates: [x, y, z] → [x, z, -y]
+  // But for up vector, don't negate Y - the -y is a reflection that would flip camera upside down
+  const lookBlend: [number, number, number] = [lookPict[0], lookPict[2], -lookPict[1]]
+  const upBlend: [number, number, number] = [upPict[0], upPict[2], upPict[1]]  // No negation for up
+
+  // Build rotation matrix for Blender camera
+  const forward = normalize(lookBlend)
+
+  // Orthogonalize: right = forward × up
+  let right = cross(forward, upBlend)
+  const rightLen = length(right)
+  if (rightLen < 0.001) {
+    // Degenerate case: use fallback up
+    right = cross(forward, [0, 0, 1])
+    if (length(right) < 0.001) {
+      right = cross(forward, [0, 1, 0])
+    }
+  }
+  right = normalize(right)
+
+  // Recompute up to be perpendicular
+  const up = normalize(cross(right, forward))
+
+  // Build rotation matrix and convert to quaternion
+  // Matrix columns: X=right, Y=up, Z=-forward
+  // For Blender camera: local -Z becomes 'forward' in world space
+  return matrixToQuaternion(right, up, [-forward[0], -forward[1], -forward[2]])
+}
+
+// Vector math helpers
+type Vec3 = [number, number, number]
+
+function rotateVectorByQuaternion(v: Vec3, q: [number, number, number, number]): Vec3 {
+  const [w, qx, qy, qz] = q
+  const [vx, vy, vz] = v
+
+  // Quaternion rotation: q * v * q^(-1)
+  // Using the formula: v' = v + 2*w*(q_xyz × v) + 2*(q_xyz × (q_xyz × v))
+  const cx = qy * vz - qz * vy
+  const cy = qz * vx - qx * vz
+  const cz = qx * vy - qy * vx
+
+  const cx2 = qy * cz - qz * cy
+  const cy2 = qz * cx - qx * cz
+  const cz2 = qx * cy - qy * cx
+
+  return [
+    vx + 2 * (w * cx + cx2),
+    vy + 2 * (w * cy + cy2),
+    vz + 2 * (w * cz + cz2)
+  ]
+}
+
+function cross(a: Vec3, b: Vec3): Vec3 {
+  return [
+    a[1] * b[2] - a[2] * b[1],
+    a[2] * b[0] - a[0] * b[2],
+    a[0] * b[1] - a[1] * b[0]
+  ]
+}
+
+function length(v: Vec3): number {
+  return Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2])
+}
+
+function normalize(v: Vec3): Vec3 {
+  const len = length(v)
+  if (len < 0.0001) return [0, 0, 1]
+  return [v[0] / len, v[1] / len, v[2] / len]
+}
+
+function matrixToQuaternion(col0: Vec3, col1: Vec3, col2: Vec3): [number, number, number, number] {
+  // Convert 3x3 rotation matrix to quaternion
+  // Matrix columns are: col0=X, col1=Y, col2=Z
+  const m00 = col0[0], m10 = col0[1], m20 = col0[2]
+  const m01 = col1[0], m11 = col1[1], m21 = col1[2]
+  const m02 = col2[0], m12 = col2[1], m22 = col2[2]
+
+  const trace = m00 + m11 + m22
+
+  let w: number, x: number, y: number, z: number
+
+  if (trace > 0) {
+    const s = 0.5 / Math.sqrt(trace + 1.0)
+    w = 0.25 / s
+    x = (m21 - m12) * s
+    y = (m02 - m20) * s
+    z = (m10 - m01) * s
+  } else if (m00 > m11 && m00 > m22) {
+    const s = 2.0 * Math.sqrt(1.0 + m00 - m11 - m22)
+    w = (m21 - m12) / s
+    x = 0.25 * s
+    y = (m01 + m10) / s
+    z = (m02 + m20) / s
+  } else if (m11 > m22) {
+    const s = 2.0 * Math.sqrt(1.0 + m11 - m00 - m22)
+    w = (m02 - m20) / s
+    x = (m01 + m10) / s
+    y = 0.25 * s
+    z = (m12 + m21) / s
+  } else {
+    const s = 2.0 * Math.sqrt(1.0 + m22 - m00 - m11)
+    w = (m10 - m01) / s
+    x = (m02 + m20) / s
+    y = (m12 + m21) / s
+    z = 0.25 * s
+  }
+
+  // Normalize
+  const len = Math.sqrt(w * w + x * x + y * y + z * z)
+  return [w / len, x / len, y / len, z / len]
 }
 
 /**
@@ -72,6 +220,9 @@ export function generateBlenderScript(project: Project, options: BlenderExportOp
   const worldPoints = Array.from(project.worldPoints).filter(wp => wp.optimizedXyz)
   const pointIndexMap = new Map<WorldPoint, number>()
   worldPoints.forEach((wp, idx) => pointIndexMap.set(wp, idx))
+
+  // Detect axis flips from optimization result
+  const flips = checkAxisSigns(worldPoints)
 
   // Collect lines (optionally filter out construction lines)
   const lines = Array.from(project.lines).filter(line => {
@@ -90,6 +241,8 @@ export function generateBlenderScript(project: Project, options: BlenderExportOp
 Pictorigo Export for Blender
 Project: ${escapeString(project.name)}
 Generated: ${new Date().toISOString()}
+
+Axis flips detected: X=${flips.flipX}, Y=${flips.flipY}, Z=${flips.flipZ}
 
 This script imports a photogrammetry reconstruction from Pictorigo.
 Run this script in Blender to recreate the 3D model and camera setup.
@@ -136,7 +289,7 @@ world_points = [
 `)
 
   for (const wp of worldPoints) {
-    const coords = toBlenderCoords(wp.optimizedXyz!, scale)
+    const coords = toBlenderCoords(wp.optimizedXyz!, scale, flips)
     scriptParts.push(`    # ${escapeString(wp.name)}
     (${coords[0].toFixed(6)}, ${coords[1].toFixed(6)}, ${coords[2].toFixed(6)}),
 `)
@@ -217,10 +370,6 @@ def create_mesh():
         vg = obj.vertex_groups.new(name=name)
         vg.add([i], 1.0, 'REPLACE')
 
-    # Add custom properties for point names
-    for i, name in enumerate(point_names):
-        mesh.vertices[i]["pictorigo_name"] = name
-
     return obj
 
 model_obj = create_mesh()
@@ -252,9 +401,10 @@ point_empties = create_point_empties()
 cameras_data = [
 `)
 
+    // Add real cameras
     for (const vp of viewpoints) {
-      const pos = toBlenderCoords(vp.position, scale)
-      const rot = toBlenderQuaternion(vp.rotation)
+      const pos = toBlenderCoords(vp.position, scale, flips)
+      const rot = toBlenderCameraQuaternion(vp.rotation, vp.isZReflected, flips)
 
       // Calculate sensor dimensions for Blender
       // Blender uses sensor_width in mm and focal length in mm
@@ -303,15 +453,8 @@ def create_cameras():
 
         # Set rotation from quaternion
         # Blender quaternion is (w, x, y, z)
-        quat = Quaternion(cam_data["rotation"])
-
-        # Pictorigo camera looks down -Z in camera space
-        # Blender camera looks down -Z in camera space too
-        # But we need to account for the coordinate system change
-        # Apply a 180° rotation around local X to flip the camera right-side up
-        correction = Quaternion((0, 1, 0, 0))  # 180° around X
         cam_obj.rotation_mode = 'QUATERNION'
-        cam_obj.rotation_quaternion = quat @ correction
+        cam_obj.rotation_quaternion = cam_data["rotation"]
 
 `)
 
@@ -358,13 +501,19 @@ camera_objects = create_cameras()
 bpy.context.view_layer.objects.active = model_obj
 model_obj.select_set(True)
 
-# Frame all objects in view
+# Frame all objects in view (compatible with Blender 2.8+)
 for area in bpy.context.screen.areas:
     if area.type == 'VIEW_3D':
         for region in area.regions:
             if region.type == 'WINDOW':
-                with bpy.context.temp_override(area=area, region=region):
-                    bpy.ops.view3d.view_all(center=True)
+                override = {'area': area, 'region': region}
+                try:
+                    # Blender 3.2+
+                    with bpy.context.temp_override(**override):
+                        bpy.ops.view3d.view_all(center=True)
+                except AttributeError:
+                    # Blender 2.8 - 3.1
+                    bpy.ops.view3d.view_all(override, center=True)
                 break
         break
 
@@ -451,10 +600,14 @@ function escapeString(str: string): string {
 }
 
 /**
- * Download the Blender script as a .py file
+ * Download the Blender script as a .py file (no images)
  */
 export function downloadBlenderScript(project: Project, options: BlenderExportOptions = {}): void {
-  const script = generateBlenderScript(project, options)
+  const scriptOptions: BlenderExportOptions = {
+    ...options,
+    exportBackgroundImages: false
+  }
+  const script = generateBlenderScript(project, scriptOptions)
   const blob = new Blob([script], { type: 'text/x-python' })
   const filename = `${sanitizeFilename(project.name || 'project')}_blender.py`
 
@@ -466,8 +619,116 @@ export function downloadBlenderScript(project: Project, options: BlenderExportOp
   a.click()
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
+
+  showToast(`Blender script downloaded: ${filename}`)
 }
 
 function sanitizeFilename(filename: string): string {
   return filename.replace(/[^a-z0-9\-_\s]/gi, '_').trim()
+}
+
+/**
+ * Fetch image as blob from URL (handles blob URLs and data URLs)
+ */
+async function fetchImageAsBlob(url: string): Promise<Blob | null> {
+  try {
+    const response = await fetch(url)
+    return await response.blob()
+  } catch (e) {
+    console.error(`Failed to fetch image: ${url}`, e)
+    return null
+  }
+}
+
+/**
+ * Export Blender script and images.
+ * Uses File System Access API if available (Chrome/Edge), otherwise falls back to zip download.
+ */
+export async function downloadBlenderToFolder(project: Project, options: BlenderExportOptions = {}): Promise<void> {
+  const projectName = sanitizeFilename(project.name || 'project')
+  const viewpoints = Array.from(project.viewpoints)
+
+  // Try File System Access API first (Chrome/Edge)
+  if ('showDirectoryPicker' in window) {
+    try {
+      const dirHandle = await (window as any).showDirectoryPicker({
+        mode: 'readwrite',
+        startIn: 'downloads'
+      })
+
+      // Create images subdirectory
+      const imagesDir = await dirHandle.getDirectoryHandle('images', { create: true })
+
+      // Write images
+      for (const vp of viewpoints) {
+        if (!vp.url) continue
+        const blob = await fetchImageAsBlob(vp.url)
+        if (blob) {
+          const fileHandle = await imagesDir.getFileHandle(vp.filename, { create: true })
+          const writable = await fileHandle.createWritable()
+          await writable.write(blob)
+          await writable.close()
+        }
+      }
+
+      // Generate and write script
+      const scriptOptions: BlenderExportOptions = {
+        ...options,
+        imageBasePath: '//images/',
+        exportBackgroundImages: true
+      }
+      const script = generateBlenderScript(project, scriptOptions)
+      const scriptHandle = await dirHandle.getFileHandle(`${projectName}_blender.py`, { create: true })
+      const scriptWritable = await scriptHandle.createWritable()
+      await scriptWritable.write(script)
+      await scriptWritable.close()
+
+      const imageCount = viewpoints.filter(vp => vp.url).length
+      showToast(`Blender export saved to "${dirHandle.name}" (${imageCount} images)`)
+      return
+    } catch (e) {
+      // User cancelled - don't fall through to zip
+      if (e instanceof DOMException && e.name === 'AbortError') {
+        return
+      }
+      // Other error - fall through to zip
+      console.log('Directory picker failed, falling back to zip:', e)
+    }
+  }
+
+  // Fallback: download as zip
+  const zip = new JSZip()
+  const imagesFolder = zip.folder('images')
+
+  // Add images to zip
+  for (const vp of viewpoints) {
+    if (!vp.url) continue
+    const blob = await fetchImageAsBlob(vp.url)
+    if (blob && imagesFolder) {
+      imagesFolder.file(vp.filename, blob)
+    }
+  }
+
+  // Generate and add script
+  const scriptOptions: BlenderExportOptions = {
+    ...options,
+    imageBasePath: '//images/',
+    exportBackgroundImages: true
+  }
+  const script = generateBlenderScript(project, scriptOptions)
+  zip.file(`${projectName}_blender.py`, script)
+
+  // Download zip
+  const zipBlob = await zip.generateAsync({ type: 'blob' })
+  const url = URL.createObjectURL(zipBlob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${projectName}_blender.zip`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+
+  const imageCount = viewpoints.filter(vp => vp.url).length
+  showToast(`Blender export downloaded as zip (${imageCount} images)`)
 }
