@@ -19,7 +19,7 @@ import {
   faCube,
   faRotate
 } from '@fortawesome/free-solid-svg-icons'
-import { downloadBlenderScript } from '../../services/blender-export'
+import { downloadBlenderToFolder, downloadBlenderScript } from '../../services/blender-export'
 import { WorkspaceSwitcher } from '../WorkspaceManager'
 import { AppBranding } from '../AppBranding'
 import type { Project } from '../../entities/project'
@@ -406,7 +406,20 @@ export const MainToolbar: React.FC<MainToolbarProps> = observer(({
               disabled={!project}
             >
               <FontAwesomeIcon icon={faCube} />
-              <span>Export to Blender</span>
+              <span>Export to Blender (.py)</span>
+            </button>
+            <button
+              className="file-menu-item"
+              onClick={async () => {
+                if (project) {
+                  await downloadBlenderToFolder(project)
+                  setFileMenuOpen(false)
+                }
+              }}
+              disabled={!project}
+            >
+              <FontAwesomeIcon icon={faCube} />
+              <span>Export to Blender (with images)</span>
             </button>
             <div className="file-menu-divider" />
             <button

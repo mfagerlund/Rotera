@@ -14,8 +14,24 @@ interface SingleCameraInitOptions {
 
 /**
  * Initialize world points that are visible in only one camera.
- * Uses geometric constraints (coplanarity, line connections) to determine positions
- * without randomness.
+ *
+ * WHY THIS EXISTS (distinct from unified-initialization):
+ * - unified-initialization/phase-4-line-propagation.ts: Uses pure geometric propagation
+ *   without camera information. Fast but can't disambiguate sign choices.
+ * - THIS FILE: Uses camera rays to determine correct positions. More accurate for
+ *   single-camera points because it uses reprojection to pick the right sign.
+ *
+ * WHEN IT'S CALLED:
+ * - After unified initialization completes
+ * - In runStage1Optimization() after multi-camera points are optimized
+ * - For points that couldn't be triangulated (only visible in 1 camera)
+ *
+ * STRATEGIES (in order):
+ * 1. Coplanarity: If point is in a coplanar constraint with 3+ solved points,
+ *    use ray-plane intersection to find its position
+ * 2. Line graph: If connected to a solved point via constrained line,
+ *    use ray-line intersection or axis-constrained propagation
+ * 3. Ray-plane: Second pass for points that now have enough solved neighbors
  */
 export function initializeSingleCameraPoints(
   allPoints: WorldPoint[],
