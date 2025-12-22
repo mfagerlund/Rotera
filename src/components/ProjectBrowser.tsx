@@ -55,6 +55,7 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
     totalProjectCount,
     optimizingProjectId,
     queuedProjectIds,
+    justCompletedProjectIds,
 
     // Setters
     setCurrentFolderId,
@@ -223,6 +224,7 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
                 isLastOpened={lastOpenedProjectId === project.id}
                 isOptimizing={optimizingProjectId === project.id}
                 isQueued={queuedProjectIds.has(project.id)}
+                isJustCompleted={justCompletedProjectIds.has(project.id)}
                 batchResult={batchResults.get(project.id)}
                 editingItem={editingItem}
                 onOpen={(project) => handleOpenProject(project, onOpenProject)}

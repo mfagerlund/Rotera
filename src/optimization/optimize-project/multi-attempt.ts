@@ -30,6 +30,10 @@ export async function tryMultipleAttempts(
   let bestMedianError = Infinity;
   let bestSeed = 42;
 
+  // Use reduced iterations for exploratory attempts
+  // If an attempt is going to work, it will show progress within 200 iterations
+  const exploratoryIterations = Math.min(options.maxIterations ?? 500, 200);
+
   // Try different seeds
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     // Use deterministic seeds: 42, 12345, 98765 (easily reproducible)
@@ -41,6 +45,7 @@ export async function tryMultipleAttempts(
 
     const attemptResult = await optimizeProject(project, {
       ...options,
+      maxIterations: exploratoryIterations,
       maxAttempts: 1, // Disable recursion
       _attempt: attempt,
       _seed: seed,

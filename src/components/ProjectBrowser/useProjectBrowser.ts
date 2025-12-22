@@ -41,6 +41,7 @@ export const useProjectBrowser = () => {
   const [totalProjectCount, setTotalProjectCount] = useState(0)
   const [optimizingProjectId, setOptimizingProjectId] = useState<string | null>(null)
   const [queuedProjectIds, setQueuedProjectIds] = useState<Set<string>>(new Set())
+  const [justCompletedProjectIds, setJustCompletedProjectIds] = useState<Set<string>>(new Set())
 
   const setCurrentFolderId = useCallback((folderId: string | null) => {
     setCurrentFolderIdState(folderId)
@@ -344,6 +345,32 @@ export const useProjectBrowser = () => {
       console.log('[DEBUG] Updating batch results')
       setBatchResults(new Map(newResults))
 
+      // Mark this project as just completed (for pulse animation)
+      setJustCompletedProjectIds(prev => {
+        const next = new Set(prev)
+        next.add(summary.id)
+        return next
+      })
+
+      // Clear the "just completed" status after animation duration
+      setTimeout(() => {
+        setJustCompletedProjectIds(prev => {
+          const next = new Set(prev)
+          next.delete(summary.id)
+          return next
+        })
+      }, 1500)
+
+      // Reload folder stats to update aggregated values
+      const statsMap = new Map<string, { projectCount: number; minError: number | null; maxError: number | null; avgError: number | null }>()
+      await Promise.all(
+        folders.map(async (folder) => {
+          const stats = await ProjectDB.getFolderStats(folder.id)
+          statsMap.set(folder.id, stats)
+        })
+      )
+      setFolderStats(statsMap)
+
       // Continue to next project (removed async yield that was blocking)
       console.log('[DEBUG] Continuing to next project')
     }
@@ -447,6 +474,7 @@ export const useProjectBrowser = () => {
     totalProjectCount,
     optimizingProjectId,
     queuedProjectIds,
+    justCompletedProjectIds,
 
     // Setters
     setCurrentFolderId,

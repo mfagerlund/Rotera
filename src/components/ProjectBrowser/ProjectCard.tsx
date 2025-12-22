@@ -25,6 +25,7 @@ interface ProjectCardProps {
   isLastOpened: boolean
   isOptimizing: boolean
   isQueued: boolean
+  isJustCompleted: boolean
   batchResult: {
     projectId: string
     error: number | null
@@ -53,6 +54,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
   isLastOpened,
   isOptimizing,
   isQueued,
+  isJustCompleted,
   batchResult,
   editingItem,
   onOpen,
@@ -136,7 +138,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
         isLoading ? 'project-browser__item--loading' : ''
       } ${isDragging ? 'project-browser__item--dragging' : ''} ${
         isLastOpened ? 'project-browser__item--last-opened' : ''
-      }`}
+      } ${isJustCompleted ? 'project-browser__item--just-completed' : ''}`}
       draggable
       onDragStart={e => onDragStart(e, project)}
       onDragEnd={onDragEnd}

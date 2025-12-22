@@ -1,11 +1,29 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import { loadProjectFromJson } from '../../store/project-serialization'
-import { optimizeProject } from '../optimize-project'
+import { optimizeProject, OptimizeProjectOptions } from '../optimize-project'
 
 const FIXTURES_DIR = path.join(__dirname, 'fixtures', 'Calibration')
 
+// Fast tests: single attempt, quick convergence expected
 async function runFixtureTest(filename: string, maxMedianError: number) {
+  await runTest(filename, maxMedianError, {
+    maxIterations: 500,
+    maxAttempts: 1,
+    verbose: false
+  })
+}
+
+// Challenging tests: need multiple attempts to escape local minima
+async function runChallengingTest(filename: string, maxMedianError: number) {
+  await runTest(filename, maxMedianError, {
+    maxIterations: 500,
+    maxAttempts: 3,
+    verbose: false
+  })
+}
+
+async function runTest(filename: string, maxMedianError: number, options: OptimizeProjectOptions) {
   const jsonPath = path.join(FIXTURES_DIR, filename)
 
   if (!fs.existsSync(jsonPath)) {
@@ -15,10 +33,7 @@ async function runFixtureTest(filename: string, maxMedianError: number) {
   const jsonData = fs.readFileSync(jsonPath, 'utf8')
   const project = loadProjectFromJson(jsonData)
 
-  const result = await optimizeProject(project, {
-    maxIterations: 500,
-    verbose: false
-  })
+  const result = await optimizeProject(project, options)
 
   expect(result.medianReprojectionError).toBeDefined()
   expect(result.medianReprojectionError!).toBeLessThan(maxMedianError)
@@ -41,8 +56,9 @@ describe('Regression - Calibration', () => {
     await runFixtureTest('Full Solve.json', 2)
   })
 
+  // Challenging: no vanishing points for guidance, needs multiple attempts
   it('No Vanisining Lines.json', async () => {
-    await runFixtureTest('No Vanisining Lines.json', 2)
+    await runChallengingTest('No Vanisining Lines.json', 2)
   })
 
   it('No Vanisining Lines Now With VL.json', async () => {
@@ -73,16 +89,16 @@ describe('Regression - Calibration', () => {
     await runFixtureTest('Balcony House Z Line.json', 2)
   })
 
-  // Degenerate local minimum - cameras collapse to same position
+  // Challenging: degenerate local minimum - cameras collapse to same position
   // A 0.3px shift in one image point causes error to go from 132 to 0.84
   it('Minimal 2 Image 2 Axis Degenerate.json', async () => {
-    await runFixtureTest('Minimal 2 Image 2 Axis Degenerate.json', 2)
+    await runChallengingTest('Minimal 2 Image 2 Axis Degenerate.json', 2)
   })
 
-  // REGRESSION: Distance constraint on O-Y line fails, but works on WP11-WP12
-  // Fixed: First-tier now has fallback logic like stepped-vp. If VP succeeds but
+  // Challenging: Distance constraint on O-Y line - requires fallback logic
+  // First-tier now has fallback logic like stepped-vp. If VP succeeds but
   // remaining cameras can't be reliably PnP'd, it reverts and falls back to Essential Matrix.
   it('Tower 2 - O-Y Distance.json', async () => {
-    await runFixtureTest('Tower 2 - O-Y Distance.json', 2)
+    await runChallengingTest('Tower 2 - O-Y Distance.json', 2)
   })
 })

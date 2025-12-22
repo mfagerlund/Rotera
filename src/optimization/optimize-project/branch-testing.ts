@@ -44,13 +44,18 @@ export async function testInferenceBranches(
   let bestMedianError = Infinity;
   const GOOD_ENOUGH_THRESHOLD = 2.0;
 
+  // Use reduced iterations for exploratory branch testing
+  // If a branch is going to work, it will show progress within 200 iterations
+  const exploratoryIterations = Math.min(options.maxIterations ?? 500, 200);
+
   for (let i = 0; i < branches.length; i++) {
     const branch = branches[i];
     const choiceStr = branch.choices.length > 0 ? branch.choices.join(', ') : 'default';
 
-    // Run full optimization with this branch
+    // Run optimization with reduced iterations for fast branch selection
     const branchResult = await optimizeProject(project, {
       ...options,
+      maxIterations: exploratoryIterations,
       _skipBranching: true,
       _branch: branch,
       verbose: false,
