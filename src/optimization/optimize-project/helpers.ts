@@ -18,69 +18,20 @@ import { log } from '../optimization-logger';
 import { detectOutliers, OutlierInfo } from '../outlier-detection';
 import { worldPointSavedInferredXyz } from '../state-reset';
 import { validateProjectConstraints, hasPointsField } from '../validation';
+import { applyScaleFromAxisLines, translateToAnchorPoint } from '../initialization-phases';
 
+/**
+ * Apply scale and translation for test solves (e.g., alignment quality callback).
+ * Delegates to canonical functions in initialization-phases.ts.
+ */
 export function applyScaleAndTranslateForTest(
   axisConstrainedLines: Line[],
   pointArray: WorldPoint[],
   viewpointArray: Viewpoint[],
   lockedPoints: WorldPoint[]
 ): void {
-  const linesWithTargetLength = axisConstrainedLines.filter(l => l.targetLength !== undefined);
-  if (linesWithTargetLength.length > 0) {
-    let sumScale = 0;
-    let count = 0;
-    for (const line of linesWithTargetLength) {
-      const posA = line.pointA.optimizedXyz;
-      const posB = line.pointB.optimizedXyz;
-      if (posA && posB && line.targetLength) {
-        const currentLength = Math.sqrt(
-          (posB[0] - posA[0]) ** 2 + (posB[1] - posA[1]) ** 2 + (posB[2] - posA[2]) ** 2
-        );
-        if (currentLength > 0.01) {
-          sumScale += line.targetLength / currentLength;
-          count++;
-        }
-      }
-    }
-    if (count > 0) {
-      const scale = sumScale / count;
-      for (const wp of pointArray) {
-        if (wp.optimizedXyz) {
-          wp.optimizedXyz = [wp.optimizedXyz[0] * scale, wp.optimizedXyz[1] * scale, wp.optimizedXyz[2] * scale];
-        }
-      }
-      for (const vp of viewpointArray) {
-        vp.position = [vp.position[0] * scale, vp.position[1] * scale, vp.position[2] * scale];
-      }
-    }
-  }
-
-  const anchorPoint = lockedPoints.find(wp => wp.optimizedXyz !== undefined);
-  if (anchorPoint && anchorPoint.optimizedXyz) {
-    const target = anchorPoint.getEffectiveXyz();
-    const current = anchorPoint.optimizedXyz;
-    const translation = [
-      target[0]! - current[0],
-      target[1]! - current[1],
-      target[2]! - current[2],
-    ];
-    for (const wp of pointArray) {
-      if (wp.optimizedXyz) {
-        wp.optimizedXyz = [
-          wp.optimizedXyz[0] + translation[0],
-          wp.optimizedXyz[1] + translation[1],
-          wp.optimizedXyz[2] + translation[2],
-        ];
-      }
-    }
-    for (const vp of viewpointArray) {
-      vp.position = [
-        vp.position[0] + translation[0],
-        vp.position[1] + translation[1],
-        vp.position[2] + translation[2],
-      ];
-    }
-  }
+  applyScaleFromAxisLines(axisConstrainedLines, pointArray, viewpointArray);
+  translateToAnchorPoint(lockedPoints, pointArray, viewpointArray);
 }
 
 export function runFreeSolve(
