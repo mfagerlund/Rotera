@@ -23,9 +23,88 @@ bl_info = {
 import bpy
 import json
 import math
+import base64
+import tempfile
+import os
 from bpy.props import StringProperty, FloatProperty, BoolProperty
 from bpy_extras.io_utils import ImportHelper
 from mathutils import Vector, Quaternion, Matrix
+
+
+# =============================================================================
+# Image Handling
+# =============================================================================
+
+def decode_data_url(data_url):
+    """
+    Decode a base64 data URL and return (extension, bytes).
+    Returns (None, None) if not a valid data URL.
+    """
+    if not data_url or not data_url.startswith('data:'):
+        return None, None
+
+    try:
+        # Format: data:image/jpeg;base64,/9j/4AAQ...
+        header, encoded = data_url.split(',', 1)
+
+        # Extract mime type
+        mime_part = header.split(';')[0]  # "data:image/jpeg"
+        mime_type = mime_part.split(':')[1] if ':' in mime_part else 'image/jpeg'
+
+        # Determine file extension
+        ext_map = {
+            'image/jpeg': '.jpg',
+            'image/jpg': '.jpg',
+            'image/png': '.png',
+            'image/gif': '.gif',
+            'image/webp': '.webp',
+            'image/bmp': '.bmp',
+        }
+        ext = ext_map.get(mime_type, '.jpg')
+
+        # Decode base64
+        image_bytes = base64.b64decode(encoded)
+        return ext, image_bytes
+    except Exception as e:
+        print(f"Failed to decode data URL: {e}")
+        return None, None
+
+
+def load_image_from_data_url(data_url, name):
+    """
+    Load an image from a base64 data URL into Blender.
+    Saves to temp file first since Blender needs a file path.
+    Returns the Blender image object or None.
+    """
+    ext, image_bytes = decode_data_url(data_url)
+    if not image_bytes:
+        return None
+
+    try:
+        # Save to temp file
+        temp_dir = tempfile.gettempdir()
+        temp_path = os.path.join(temp_dir, f"rotera_{name}{ext}")
+
+        with open(temp_path, 'wb') as f:
+            f.write(image_bytes)
+
+        # Load into Blender
+        img = bpy.data.images.load(temp_path)
+        img.name = name
+
+        # Mark as packed so it stays with the blend file
+        img.pack()
+
+        # Can delete temp file now that it's packed
+        try:
+            os.remove(temp_path)
+        except:
+            pass
+
+        return img
+    except Exception as e:
+        print(f"Failed to load image '{name}': {e}")
+        return None
 
 
 # =============================================================================
@@ -206,22 +285,35 @@ def create_cameras(project, collection, scale, import_bg_images, image_dir):
         bpy.context.scene.render.resolution_percentage = 100
 
         # Load background image if requested
-        if import_bg_images and image_dir:
-            filename = vp.get('filename', '')
-            if filename:
-                import os
+        if import_bg_images:
+            img = None
+            filename = vp.get('filename', name)
+            url = vp.get('url', '')
+
+            # First try: embedded base64 image in URL
+            if url and url.startswith('data:'):
+                img = load_image_from_data_url(url, filename)
+                if img:
+                    print(f"  Loaded embedded image for camera '{name}'")
+
+            # Second try: external file in same directory
+            if not img and image_dir and filename:
                 image_path = os.path.join(image_dir, filename)
                 if os.path.exists(image_path):
                     try:
-                        cam_data.show_background_images = True
-                        bg = cam_data.background_images.new()
                         img = bpy.data.images.load(image_path)
-                        bg.image = img
-                        bg.alpha = 0.5
-                        bg.display_depth = 'BACK'
-                        bg.frame_method = 'FIT'
+                        print(f"  Loaded external image for camera '{name}'")
                     except Exception as e:
-                        print(f"Could not load background image: {image_path}: {e}")
+                        print(f"  Could not load image file: {e}")
+
+            # Set up background image if we loaded one
+            if img:
+                cam_data.show_background_images = True
+                bg = cam_data.background_images.new()
+                bg.image = img
+                bg.alpha = 0.5
+                bg.display_depth = 'BACK'
+                bg.frame_method = 'FIT'
 
         cameras.append(cam_obj)
 

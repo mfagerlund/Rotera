@@ -750,11 +750,11 @@ export async function downloadBlenderToFolder(project: Project, options: Blender
 
 /**
  * Export project as .rotera file for import into Blender via the Rotera add-on.
- * This exports the native JSON format with .rotera extension.
+ * Images are embedded as base64 data URLs, so everything is in one file.
  */
 export async function downloadRoteraProject(project: Project): Promise<void> {
   const { Serialization } = await import('../entities/Serialization')
-  const json = Serialization.serialize(project, { excludeImages: true })
+  const json = Serialization.serialize(project, { excludeImages: false })  // Include embedded images
   const blob = new Blob([json], { type: 'application/json' })
   const filename = `${sanitizeFilename(project.name || 'project')}.rotera`
 
