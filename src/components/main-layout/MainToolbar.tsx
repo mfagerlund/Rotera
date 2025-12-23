@@ -19,7 +19,7 @@ import {
   faCube,
   faRotate
 } from '@fortawesome/free-solid-svg-icons'
-import { downloadBlenderToFolder, downloadBlenderScript } from '../../services/blender-export'
+import { downloadRoteraProject, downloadRoteraWithImages } from '../../services/blender-export'
 import { WorkspaceSwitcher } from '../WorkspaceManager'
 import { AppBranding } from '../AppBranding'
 import type { Project } from '../../entities/project'
@@ -397,29 +397,29 @@ export const MainToolbar: React.FC<MainToolbarProps> = observer(({
             </button>
             <button
               className="file-menu-item"
-              onClick={() => {
+              onClick={async () => {
                 if (project) {
-                  downloadBlenderScript(project)
+                  await downloadRoteraProject(project)
                   setFileMenuOpen(false)
                 }
               }}
               disabled={!project}
             >
               <FontAwesomeIcon icon={faCube} />
-              <span>Export to Blender (.py)</span>
+              <span>Export for Blender (.rotera)</span>
             </button>
             <button
               className="file-menu-item"
               onClick={async () => {
                 if (project) {
-                  await downloadBlenderToFolder(project)
+                  await downloadRoteraWithImages(project)
                   setFileMenuOpen(false)
                 }
               }}
               disabled={!project}
             >
               <FontAwesomeIcon icon={faCube} />
-              <span>Export to Blender (with images)</span>
+              <span>Export for Blender (with images)</span>
             </button>
             <div className="file-menu-divider" />
             <button
