@@ -1,8 +1,10 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { observer } from 'mobx-react-lite'
 import { Project } from '../../entities/project'
 import { WorldPoint } from '../../entities/world-point'
 import { Line } from '../../entities/line'
+import { Viewpoint } from '../../entities/viewpoint'
+import { ImagePoint } from '../../entities/imagePoint'
 import { CoplanarPointsConstraint } from '../../entities/constraints/coplanar-points-constraint'
 import { OutlierInfo, SolveQuality } from '../../optimization/optimize-project'
 import { getEntityKey } from '../../utils/entityKeys'
@@ -36,10 +38,40 @@ interface OptimizationResultsProps {
 }
 
 function formatNumber(value: number): string {
-  if (value === 0 || Math.abs(value) < 1e-10) {
-    return '0.000';
-  }
-  return value.toFixed(3);
+  return value.toFixed(2);
+}
+
+function formatPixelError(value: number): string {
+  return value.toFixed(2) + ' px';
+}
+
+interface CollapsibleSectionProps {
+  title: string
+  count: number
+  defaultExpanded?: boolean
+  children: React.ReactNode
+}
+
+const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({ title, count, defaultExpanded = true, children }) => {
+  const [expanded, setExpanded] = useState(defaultExpanded)
+
+  return (
+    <div className="entity-section">
+      <h5
+        onClick={() => setExpanded(!expanded)}
+        style={{ cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
+      >
+        <span style={{
+          display: 'inline-block',
+          width: '12px',
+          transition: 'transform 0.2s',
+          transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)'
+        }}>▶</span>
+        {title} ({count})
+      </h5>
+      {expanded && children}
+    </div>
+  )
 }
 
 export const OptimizationResults: React.FC<OptimizationResultsProps> = observer(({
@@ -56,6 +88,34 @@ export const OptimizationResults: React.FC<OptimizationResultsProps> = observer(
   isLineSelected,
   isCoplanarConstraintSelected
 }) => {
+  // Compute per-viewpoint errors
+  const getViewpointErrors = (vp: Viewpoint) => {
+    const imagePointErrors: Array<{imagePoint: ImagePoint, worldPointName: string, error: number, residuals: number[]}> = []
+    let totalSquaredError = 0
+    let count = 0
+
+    for (const ip of vp.imagePoints) {
+      const ipConcrete = ip as ImagePoint
+      if (ipConcrete.lastResiduals && ipConcrete.lastResiduals.length >= 2) {
+        const error = Math.sqrt(ipConcrete.lastResiduals[0] ** 2 + ipConcrete.lastResiduals[1] ** 2)
+        imagePointErrors.push({
+          imagePoint: ipConcrete,
+          worldPointName: ipConcrete.worldPoint.getName(),
+          error,
+          residuals: ipConcrete.lastResiduals
+        })
+        totalSquaredError += error ** 2
+        count++
+      }
+    }
+
+    const rmsError = count > 0 ? Math.sqrt(totalSquaredError / count) : 0
+    // Sort by error descending so worst errors are at top
+    imagePointErrors.sort((a, b) => b.error - a.error)
+
+    return { imagePointErrors, rmsError, count }
+  }
+
   return (
     <>
       {pnpResults.length > 0 && (
@@ -197,7 +257,7 @@ export const OptimizationResults: React.FC<OptimizationResultsProps> = observer(
                         }}>
                           <span style={{ color: '#555' }}>📷 {img.viewpoint}</span>
                           <span style={{ color: '#dc3545', fontWeight: 'bold', marginLeft: '12px' }}>
-                            {formatNumber(img.error)} px
+                            {formatPixelError(img.error)}
                           </span>
                         </div>
                       ))}
@@ -205,7 +265,7 @@ export const OptimizationResults: React.FC<OptimizationResultsProps> = observer(
                   ))}
                 </div>
                 <p style={{ margin: '8px 0 0 0', fontSize: '11px', color: '#856404', fontStyle: 'italic' }}>
-                  💡 Outliers are marked with red circle + X on the images. Consider re-clicking these points.
+                  Outliers are marked with red circle + X on the images. Consider re-clicking these points.
                 </p>
               </div>
             );
@@ -214,9 +274,91 @@ export const OptimizationResults: React.FC<OptimizationResultsProps> = observer(
           {/* Entity-level optimization information - show even if not converged */}
           {(results.converged || results.medianReprojectionError !== undefined) && (
             <div className="entity-optimization-info">
+              {/* Viewpoints - Per-camera error breakdown */}
+              {Array.from(project.viewpoints.values()).length > 0 && (
+                <CollapsibleSection
+                  title="Viewpoints"
+                  count={Array.from(project.viewpoints.values()).length}
+                  defaultExpanded={true}
+                >
+                  {Array.from(project.viewpoints.values()).map(vp => {
+                    const { imagePointErrors, rmsError, count } = getViewpointErrors(vp)
+                    const hasErrors = imagePointErrors.length > 0
+
+                    return (
+                      <div key={getEntityKey(vp)} style={{ marginBottom: '12px' }}>
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '6px 8px',
+                          backgroundColor: 'var(--bg-secondary)',
+                          borderRadius: '4px',
+                          marginBottom: '4px'
+                        }}>
+                          <span style={{ fontWeight: 'bold' }}>📷 {vp.getName()}</span>
+                          <span style={{
+                            fontSize: '12px',
+                            color: rmsError > 5 ? '#dc3545' : rmsError > 2 ? '#ffc107' : '#28a745'
+                          }}>
+                            RMS: {formatPixelError(rmsError)} ({count} pts)
+                          </span>
+                        </div>
+                        {hasErrors && (
+                          <table className="entity-table" style={{ fontSize: '11px' }}>
+                            <thead>
+                              <tr>
+                                <th>Point</th>
+                                <th>Error (px)</th>
+                                <th>du</th>
+                                <th>dv</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {imagePointErrors.slice(0, 10).map(({ imagePoint, worldPointName, error, residuals }) => (
+                                <tr
+                                  key={getEntityKey(imagePoint)}
+                                  style={{
+                                    backgroundColor: error > 5 ? 'rgba(220, 53, 69, 0.1)' : 'transparent',
+                                    cursor: 'pointer'
+                                  }}
+                                  onClick={() => onSelectWorldPoint?.(imagePoint.worldPoint)}
+                                  onMouseEnter={() => onHoverWorldPoint?.(imagePoint.worldPoint)}
+                                  onMouseLeave={() => onHoverWorldPoint?.(null)}
+                                >
+                                  <td>{worldPointName}</td>
+                                  <td style={{
+                                    color: error > 5 ? '#dc3545' : error > 2 ? '#856404' : 'inherit',
+                                    fontWeight: error > 5 ? 'bold' : 'normal'
+                                  }}>
+                                    {formatPixelError(error)}
+                                  </td>
+                                  <td>{formatNumber(residuals[0])}</td>
+                                  <td>{formatNumber(residuals[1])}</td>
+                                </tr>
+                              ))}
+                              {imagePointErrors.length > 10 && (
+                                <tr>
+                                  <td colSpan={4} style={{ textAlign: 'center', fontStyle: 'italic', color: '#666' }}>
+                                    ... and {imagePointErrors.length - 10} more
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        )}
+                      </div>
+                    )
+                  })}
+                </CollapsibleSection>
+              )}
+
               {/* World Points */}
-              <div className="entity-section">
-                <h5>World Points ({Array.from(project.worldPoints.values()).length})</h5>
+              <CollapsibleSection
+                title="World Points"
+                count={Array.from(project.worldPoints.values()).filter(p => p.getOptimizationInfo().optimizedXyz !== undefined).length}
+                defaultExpanded={false}
+              >
                 <table className="entity-table">
                   <thead>
                     <tr>
@@ -250,12 +392,15 @@ export const OptimizationResults: React.FC<OptimizationResultsProps> = observer(
                       })}
                   </tbody>
                 </table>
-              </div>
+              </CollapsibleSection>
 
               {/* Lines */}
               {Array.from(project.lines.values()).length > 0 && (
-                <div className="entity-section">
-                  <h5>Lines ({Array.from(project.lines.values()).length})</h5>
+                <CollapsibleSection
+                  title="Lines"
+                  count={Array.from(project.lines.values()).length}
+                  defaultExpanded={false}
+                >
                   <table className="entity-table">
                     <thead>
                       <tr>
@@ -289,7 +434,7 @@ export const OptimizationResults: React.FC<OptimizationResultsProps> = observer(
                       })}
                     </tbody>
                   </table>
-                </div>
+                </CollapsibleSection>
               )}
 
               {/* Coplanar Constraints */}
@@ -298,8 +443,11 @@ export const OptimizationResults: React.FC<OptimizationResultsProps> = observer(
                   c => c instanceof CoplanarPointsConstraint
                 ) as CoplanarPointsConstraint[]
                 return coplanarConstraints.length > 0 && (
-                  <div className="entity-section">
-                    <h5>Coplanar Constraints ({coplanarConstraints.length})</h5>
+                  <CollapsibleSection
+                    title="Coplanar Constraints"
+                    count={coplanarConstraints.length}
+                    defaultExpanded={false}
+                  >
                     <table className="entity-table">
                       <thead>
                         <tr>
@@ -329,7 +477,7 @@ export const OptimizationResults: React.FC<OptimizationResultsProps> = observer(
                         })}
                       </tbody>
                     </table>
-                  </div>
+                  </CollapsibleSection>
                 )
               })()}
             </div>
