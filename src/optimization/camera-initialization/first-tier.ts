@@ -9,6 +9,7 @@ import { tryPnPInitForCamera } from './pnp-strategy';
 import { log } from '../optimization-logger';
 import { saveCameraState, restoreCameraState, getConstrainedPointCount } from './helpers';
 import { initializeCameraWithPnP } from '../pnp';
+import { canInitializeWithVanishingPoints } from '../vanishing-points';
 
 export interface FirstTierOptions {
   /** Allow VP init with single locked point (when scale reference exists) */
@@ -94,48 +95,122 @@ export function runFirstTierInitialization(
         }
 
         if (!allRemainingReliable) {
-          // For 2-camera scenes with relaxed mode, check if late PnP is viable
-          // (cameras share enough points for triangulation)
-          let latePnPViable = false;
-          if (useRelaxedMode && remainingCameras.length === 1) {
-            const vpCameraPoints = new Set<WorldPoint>();
-            for (const ip of camera.imagePoints) {
-              vpCameraPoints.add(ip.worldPoint as WorldPoint);
-            }
+          // Some cameras couldn't immediately PnP. Try VP-init for remaining cameras
+          // that can use VP (they share constrained points with the first VP camera).
+          // If we get 2+ cameras initialized, remaining ones can use late PnP with
+          // triangulated/optimized points.
 
-            let sharedWithVP = 0;
-            for (const ip of remainingCameras[0].imagePoints) {
-              if (vpCameraPoints.has(ip.worldPoint as WorldPoint)) {
-                sharedWithVP++;
-              }
-            }
-            // Need at least 3 shared points to triangulate for PnP
-            latePnPViable = sharedWithVP >= 3;
+          // Get points visible in the first VP camera
+          const vpCameraPoints = new Set<WorldPoint>();
+          for (const ip of camera.imagePoints) {
+            vpCameraPoints.add(ip.worldPoint as WorldPoint);
           }
 
-          if (latePnPViable) {
-            log(`[Init First-tier] Late PnP viable - keeping VP init, remaining camera will use late PnP`);
-            // Don't revert - add reliably initialized cameras
-            for (const { camera: cam } of reliablyInitialized) {
-              camerasInitialized.push(cam.name);
-            }
-          } else {
-            // Revert VP camera and all reliably initialized cameras
-            log(`[Init First-tier] Reverting VP init - remaining cameras not reliably initialized`);
-            restoreCameraState(camera, savedState);
-            for (const { camera: cam, state } of reliablyInitialized) {
-              restoreCameraState(cam, state);
-            }
-            camerasInitialized.pop(); // Remove the VP camera we just added
-            camerasInitializedViaVP.delete(camera);
-
-            // Clear optimizedXyz for locked points so other paths can set them fresh
-            for (const wp of lockedPoints) {
-              wp.optimizedXyz = undefined;
+          // Try VP-init for remaining cameras that can use VP
+          const stillRemaining: Viewpoint[] = [];
+          for (const remainingCamera of remainingCameras) {
+            // Skip cameras already reliably initialized via PnP
+            if (reliablyInitialized.some(ri => ri.camera === remainingCamera)) {
+              continue;
             }
 
-            // Return empty - let orchestrator try stepped VP or Essential Matrix
-            return { camerasInitialized: [], camerasInitializedViaVP: new Set() };
+            // Check if this camera can VP-init
+            if (canInitializeWithVanishingPoints(remainingCamera, worldPoints, { allowSinglePoint: true })) {
+              const savedRemaining = saveCameraState(remainingCamera);
+              const vpResult2 = tryVPInitForCamera(remainingCamera, worldPoints, {
+                allowSinglePoint: true,
+                lockedPointCount: lockedPoints.length,
+                totalUninitializedCameras: uninitializedCameras.length,
+              });
+
+              if (vpResult2.success) {
+                camerasInitialized.push(remainingCamera.name);
+                camerasInitializedViaVP.add(remainingCamera);
+                log(`[Init First-tier] ${remainingCamera.name} also VP-init`);
+              } else {
+                restoreCameraState(remainingCamera, savedRemaining);
+                stillRemaining.push(remainingCamera);
+              }
+            } else {
+              stillRemaining.push(remainingCamera);
+            }
+          }
+
+          // Add any cameras that were reliably PnP'd earlier
+          for (const { camera: cam } of reliablyInitialized) {
+            camerasInitialized.push(cam.name);
+          }
+
+          // If we have 2+ cameras initialized, remaining cameras can use late PnP
+          // with triangulated points. Check if late PnP is viable.
+          if (camerasInitialized.length >= 2 && stillRemaining.length > 0) {
+            // Check if remaining cameras share enough points with initialized cameras
+            let latePnPViable = false;
+            for (const rem of stillRemaining) {
+              let sharedWithVP = 0;
+              for (const ip of rem.imagePoints) {
+                if (vpCameraPoints.has(ip.worldPoint as WorldPoint)) {
+                  sharedWithVP++;
+                }
+              }
+              // Need at least 3 shared points to triangulate for late PnP
+              if (sharedWithVP >= 3) {
+                latePnPViable = true;
+                break;
+              }
+            }
+
+            if (latePnPViable) {
+              log(`[Init First-tier] ${camerasInitialized.length} cameras initialized, ${stillRemaining.length} will use late PnP`);
+            } else {
+              // Remaining cameras don't share enough points - they won't be initialized
+              log(`[Init First-tier] ${camerasInitialized.length} cameras initialized, ${stillRemaining.length} lack shared points for late PnP`);
+            }
+          } else if (camerasInitialized.length < 2) {
+            // Only one camera initialized, and no remaining cameras can be initialized
+            // For 2-camera scenes with relaxed mode, check if late PnP is viable
+            if (useRelaxedMode && remainingCameras.length === 1) {
+              let sharedWithVP = 0;
+              for (const ip of remainingCameras[0].imagePoints) {
+                if (vpCameraPoints.has(ip.worldPoint as WorldPoint)) {
+                  sharedWithVP++;
+                }
+              }
+              // Need at least 3 shared points to triangulate for PnP
+              if (sharedWithVP >= 3) {
+                log(`[Init First-tier] Late PnP viable - keeping VP init`);
+              } else {
+                // Revert - can't proceed with only 1 camera in multi-camera scene
+                log(`[Init First-tier] Reverting VP init - need 2+ cameras or late PnP viable`);
+                restoreCameraState(camera, savedState);
+                for (const { camera: cam, state } of reliablyInitialized) {
+                  restoreCameraState(cam, state);
+                }
+                camerasInitialized.length = 0;
+                camerasInitializedViaVP.clear();
+
+                for (const wp of lockedPoints) {
+                  wp.optimizedXyz = undefined;
+                }
+
+                return { camerasInitialized: [], camerasInitializedViaVP: new Set() };
+              }
+            } else {
+              // Not a 2-camera relaxed scene, revert
+              log(`[Init First-tier] Reverting VP init - only 1 camera initialized in multi-camera scene`);
+              restoreCameraState(camera, savedState);
+              for (const { camera: cam, state } of reliablyInitialized) {
+                restoreCameraState(cam, state);
+              }
+              camerasInitialized.length = 0;
+              camerasInitializedViaVP.clear();
+
+              for (const wp of lockedPoints) {
+                wp.optimizedXyz = undefined;
+              }
+
+              return { camerasInitialized: [], camerasInitializedViaVP: new Set() };
+            }
           }
         } else {
           // All remaining cameras were reliably initialized

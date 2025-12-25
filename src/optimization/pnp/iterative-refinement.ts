@@ -28,6 +28,13 @@ export interface PnPOptions {
    * Default: false (only use fully constrained points)
    */
   useTriangulatedPoints?: boolean;
+
+  /**
+   * Set of initialized camera names. When provided along with useTriangulatedPoints,
+   * only use points visible in 2+ of these cameras (truly triangulated) rather than
+   * any point with optimizedXyz (which may include single-camera positions).
+   */
+  initializedCameraNames?: Set<string>;
 }
 
 /**
@@ -50,21 +57,44 @@ export function initializeCameraWithPnP(
   allWorldPoints: Set<IWorldPoint>,
   options: PnPOptions = {}
 ): PnPInitializationResult {
-  const { useTriangulatedPoints = false } = options;
+  const { useTriangulatedPoints = false, initializedCameraNames } = options;
   const vpConcrete = viewpoint as Viewpoint;
+
+  // Helper to check if point is visible in 2+ initialized cameras (truly triangulated)
+  const isTrulyTriangulated = (wp: WorldPoint): boolean => {
+    if (!initializedCameraNames || initializedCameraNames.size < 2) {
+      return true; // No filter if not enough cameras to triangulate
+    }
+    let visibleCount = 0;
+    for (const ip of wp.imagePoints) {
+      if (initializedCameraNames.has(ip.viewpoint.name)) {
+        visibleCount++;
+        if (visibleCount >= 2) return true;
+      }
+    }
+    return false;
+  };
 
   // For centroid/geometry calculation:
   // - Default mode (useTriangulatedPoints=false): Only use constrained points (locked or inferred coordinates)
   //   Unconstrained points may have garbage optimizedXyz from previous failed optimizations.
-  // - Late PnP mode (useTriangulatedPoints=true): Use any point with optimizedXyz, since these
-  //   were triangulated from successfully initialized cameras and are reliable.
+  // - Late PnP mode (useTriangulatedPoints=true): Use points with optimizedXyz.
+  //   If initializedCameraNames provided, only use truly triangulated points (visible in 2+ initialized cameras).
   const constrainedPoints: [number, number, number][] = [];
 
   for (const ip of vpConcrete.imagePoints) {
     const wp = ip.worldPoint as WorldPoint;
-    const canUsePoint = useTriangulatedPoints
-      ? wp.optimizedXyz !== undefined && wp.optimizedXyz !== null
-      : wp.optimizedXyz && wp.isFullyConstrained();
+
+    let canUsePoint: boolean;
+    if (useTriangulatedPoints) {
+      canUsePoint = wp.optimizedXyz !== undefined && wp.optimizedXyz !== null;
+      // If we have initialized camera info, only use truly triangulated points
+      if (canUsePoint && initializedCameraNames) {
+        canUsePoint = isTrulyTriangulated(wp);
+      }
+    } else {
+      canUsePoint = wp.optimizedXyz !== undefined && wp.isFullyConstrained();
+    }
 
     if (canUsePoint && wp.optimizedXyz) {
       constrainedPoints.push(wp.optimizedXyz);
