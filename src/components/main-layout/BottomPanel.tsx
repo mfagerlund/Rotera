@@ -247,7 +247,6 @@ export const BottomPanel: React.FC<BottomPanelProps> = observer(({
           isCoplanarConstraintSelected={(c) => selectedCoplanarConstraints.includes(c)}
           hoveredWorldPoint={hoveredWorldPoint}
           hoveredCoplanarConstraint={hoveredCoplanarConstraint}
-          autoStart={true}
           optimizeTrigger={optimizeTrigger}
         />
       )}

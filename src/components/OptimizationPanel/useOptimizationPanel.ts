@@ -10,6 +10,7 @@ import { V, Vec3, Vec4 } from 'scalar-autograd'
 import { ProjectDB } from '../../services/project-db'
 import { checkOptimizationReadiness } from '../../optimization/optimization-readiness'
 import { setLogCallback, getSolveQuality } from '../../optimization/optimize-project'
+import { fineTuneProject, FineTuneResult } from '../../optimization/fine-tune'
 
 interface OptimizationSettings {
   maxIterations: number
@@ -104,6 +105,7 @@ export function useOptimizationPanel({
   const [pnpResults, setPnpResults] = useState<{camera: string, before: number, after: number, iterations: number}[]>([])
   const [isInitializingCameras, setIsInitializingCameras] = useState(false)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
+  const [lockCamerasForFineTune, setLockCamerasForFineTune] = useState(false)
 
   const hasAutoStartedRef = useRef(false)
   const prevOptimizeTriggerRef = useRef(optimizeTrigger)
@@ -268,6 +270,77 @@ export function useOptimizationPanel({
     setStatusMessage(null)
   }, [cancelOptimization])
 
+  const handleFineTune = useCallback(async () => {
+    if (!canOptimize()) return
+
+    onOptimizationStart?.()
+
+    flushSync(() => {
+      setIsOptimizing(true)
+      setResults(null)
+      setPnpResults([])
+      setStatusMessage('Running fine-tune optimization...')
+    })
+
+    // Wait for browser to paint
+    await new Promise<void>(resolve => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setTimeout(resolve, 50)
+        })
+      })
+    })
+
+    try {
+      const fineTuneResult = fineTuneProject(project, {
+        tolerance: settings.tolerance,
+        maxIterations: settings.maxIterations,
+        damping: settings.damping,
+        lockCameraPoses: lockCamerasForFineTune,
+        verbose: settings.verbose
+      })
+
+      const result = {
+        converged: fineTuneResult.converged,
+        error: fineTuneResult.error,
+        totalError: fineTuneResult.residual,
+        pointAccuracy: fineTuneResult.residual / Math.max(1, project.worldPoints.size),
+        iterations: fineTuneResult.iterations,
+        outliers: [],
+        medianReprojectionError: undefined,
+        quality: getSolveQuality(fineTuneResult.residual)
+      }
+
+      setResults(result)
+      setStatusMessage(null)
+
+      if (result.converged) {
+        onOptimizationComplete(true, `Fine-tune converged in ${fineTuneResult.iterations} iterations`)
+      } else {
+        onOptimizationComplete(false, fineTuneResult.error || 'Fine-tune failed to converge')
+      }
+
+    } catch (error) {
+      console.error('Fine-tune failed:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Fine-tune failed'
+
+      setResults({
+        converged: false,
+        error: errorMessage,
+        totalError: Infinity,
+        pointAccuracy: 0,
+        iterations: 0,
+        outliers: [],
+        quality: getSolveQuality(undefined)
+      })
+      setStatusMessage(null)
+      onOptimizationComplete(false, errorMessage)
+    } finally {
+      setIsOptimizing(false)
+      setStatusMessage(null)
+    }
+  }, [canOptimize, project, settings, lockCamerasForFineTune, onOptimizationComplete, onOptimizationStart])
+
   useEffect(() => {
     if (isOpen && autoStart && !hasAutoStartedRef.current && stats.canOptimize && !isOptimizing) {
       hasAutoStartedRef.current = true
@@ -375,9 +448,12 @@ export function useOptimizationPanel({
     isInitializingCameras,
     statusMessage,
     stats,
+    lockCamerasForFineTune,
+    setLockCamerasForFineTune,
     canOptimize,
     handleOptimize,
     handleStop,
+    handleFineTune,
     handleInitializeCameras,
     handleSettingChange,
     resetToDefaults,

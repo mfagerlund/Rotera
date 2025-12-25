@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback } from 'react'
 import type { Project } from '../../../entities/project'
 import type { Line } from '../../../entities/line'
 import type { WorldPoint } from '../../../entities/world-point'
@@ -7,7 +7,6 @@ import type { CoplanarPointsConstraint } from '../../../entities/constraints/cop
 import type { WorldViewRef } from '../../WorldView'
 import type { ImagePointReference } from '../../ImagePointsManager'
 import type { ActiveTool } from '../../../hooks/useMainLayoutState'
-import { getIsDirty, markClean, markDirty } from '../../../store/project-store'
 
 type EntityPopupKey = 'showWorldPointsPopup' | 'showLinesPopup' | 'showPlanesPopup' | 'showImagePointsPopup' | 'showConstraintsPopup' | 'showCoplanarConstraintsPopup' | 'showOptimizationPanel'
 
@@ -42,9 +41,6 @@ export const useBottomPanelHandlers = ({
   worldViewRef,
   setIsDirtyState
 }: UseBottomPanelHandlersProps) => {
-  const dirtyStateBeforeOptimizeRef = useRef(false)
-  const isOptimizingRef = useRef(false)
-
   const handleEditLine = useCallback((line: Line) => {
     handleEditLineOpen(line)
     setEntityPopup('showLinesPopup', false)
@@ -88,22 +84,16 @@ export const useBottomPanelHandlers = ({
   }, [handleEntityClick])
 
   const handleOptimizationStart = useCallback(() => {
-    dirtyStateBeforeOptimizeRef.current = getIsDirty()
-    isOptimizingRef.current = true
+    // No special handling needed - optimization will mark dirty via MobX reaction
   }, [])
 
   const handleOptimizationComplete = useCallback((success: boolean, message?: string) => {
-    isOptimizingRef.current = false
-    if (dirtyStateBeforeOptimizeRef.current) {
-      markDirty()
-    } else {
-      markClean()
-    }
-    setIsDirtyState(dirtyStateBeforeOptimizeRef.current)
+    // Optimization changes entities (optimizedXyz), which triggers MobX dirty marking
+    // Just zoom to fit on success
     if (success && worldViewRef.current) {
       worldViewRef.current.zoomFit()
     }
-  }, [worldViewRef, setIsDirtyState])
+  }, [worldViewRef])
 
   const handleSelectWorldPoint = useCallback((worldPoint: WorldPoint) => {
     handleEntityClick(worldPoint, false, false)
@@ -145,7 +135,6 @@ export const useBottomPanelHandlers = ({
     handleSelectWorldPoint,
     handleDeleteWorldPoint,
     handleDeleteAllWorldPoints,
-    handleDeleteImagePoint,
-    isOptimizingRef
+    handleDeleteImagePoint
   }
 }

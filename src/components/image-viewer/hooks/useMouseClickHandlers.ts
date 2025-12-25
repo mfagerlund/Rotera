@@ -14,6 +14,7 @@ export interface UseMouseClickHandlersParams {
   selectionManager: UseSelectionManagerReturn
   transform: UseImageTransformReturn
   precisionMode: PrecisionModeHandlers
+  pointsOnlyMode?: boolean
   onPointClick: (worldPoint: WorldPoint, ctrlKey: boolean, shiftKey: boolean) => void
   onLineClick?: (lineEntity: Line, ctrlKey: boolean, shiftKey: boolean) => void
   onVanishingLineClick?: (vanishingLine: VanishingLine, ctrlKey: boolean, shiftKey: boolean) => void
@@ -37,6 +38,7 @@ export function useMouseClickHandlers({
   selectionManager,
   transform,
   precisionMode,
+  pointsOnlyMode = false,
   onPointClick,
   onLineClick,
   onVanishingLineClick,
@@ -49,9 +51,10 @@ export function useMouseClickHandlers({
   const handleClick = useCallback((x: number, y: number, ctrlKey: boolean, shiftKey: boolean) => {
     precisionDragState.setIsPrecisionDrag(false)
     const nearbyPoint = selectionManager.findNearbyPoint(x, y)
-    const vanishingLinePart = selectionManager.findNearbyVanishingLinePart(x, y)
+    // Skip line and vanishing line detection in points-only mode (e.g., loop trace)
+    const vanishingLinePart = pointsOnlyMode ? null : selectionManager.findNearbyVanishingLinePart(x, y)
     const isVanishingLineEndpoint = vanishingLinePart && (vanishingLinePart.part === 'p1' || vanishingLinePart.part === 'p2')
-    const nearbyLine = isVanishingLineEndpoint ? null : selectionManager.findNearbyLine(x, y)
+    const nearbyLine = pointsOnlyMode || isVanishingLineEndpoint ? null : selectionManager.findNearbyLine(x, y)
     const nearbyVanishingLine = vanishingLinePart?.line ?? null
 
     if (nearbyPoint) {
@@ -122,7 +125,7 @@ export function useMouseClickHandlers({
       }
       return { type: 'empty' as const }
     }
-  }, [pointDragState, precisionDragState, selectionManager, transform, precisionMode, onPointClick, onLineClick, onVanishingLineClick, onEmptySpaceClick, onCreatePoint])
+  }, [pointDragState, precisionDragState, selectionManager, transform, precisionMode, pointsOnlyMode, onPointClick, onLineClick, onVanishingLineClick, onEmptySpaceClick, onCreatePoint])
 
   const handlePlacementClick = useCallback((x: number, y: number) => {
     if (!onCreatePoint) return

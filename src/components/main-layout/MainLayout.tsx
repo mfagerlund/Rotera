@@ -39,6 +39,7 @@ import { ProjectDB } from '../../services/project-db'
 import { getIsDirty, markClean, markDirty } from '../../store/project-store'
 import { reaction } from 'mobx'
 import { Serialization } from '../../entities/Serialization'
+import { checkOptimizationReadiness } from '../../optimization/optimization-readiness'
 // Auto-save removed - user wants explicit saves only
 
 import '../../styles/enhanced-workspace.css'
@@ -396,31 +397,42 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
     setIsDirtyState
   })
 
-  // Task 6: Mark dirty on changes using MobX reaction
+  // Mark dirty on changes using MobX reaction
   useEffect(() => {
     if (!project) return
 
     const dispose = reaction(
       () => Serialization.serialize(project),
       () => {
-        // Don't mark dirty during optimization - optimization changes computed values,
-        // not user data, so we preserve the pre-optimization dirty state
-        if (!bottomPanelHandlers.isOptimizingRef.current) {
-          markDirty()
-          setIsDirtyState(true)
-        }
+        markDirty()
+        setIsDirtyState(true)
       },
       { fireImmediately: false }
     )
 
     return () => dispose()
-  }, [project, bottomPanelHandlers.isOptimizingRef])
+  }, [project])
 
-  // Wrap triggerOptimization to capture dirty state before optimization starts
+  // Handle optimization button click - show existing solve or start new one
   const handleTriggerOptimization = useCallback(() => {
-    bottomPanelHandlers.handleOptimizationStart()
-    triggerOptimization()
-  }, [triggerOptimization, bottomPanelHandlers])
+    // Check if any world point has optimized coordinates (existing solve)
+    const hasExistingOptimization = project && Array.from(project.worldPoints).some(
+      wp => wp.optimizedXyz !== undefined
+    )
+
+    // Check if we can run a new optimization
+    const readiness = project ? checkOptimizationReadiness(project) : null
+    const canOptimize = readiness?.canOptimize ?? false
+
+    if (hasExistingOptimization || !canOptimize) {
+      // Show existing solve, or show panel with status details if can't optimize
+      setEntityPopup('showOptimizationPanel', true)
+    } else {
+      // No existing solve and can optimize - trigger new optimization
+      bottomPanelHandlers.handleOptimizationStart()
+      triggerOptimization()
+    }
+  }, [project, triggerOptimization, bottomPanelHandlers, setEntityPopup])
 
   const { handleEnhancedPointClick, handleEnhancedLineClick, handlePlaneClick, handleEmptySpaceClick } = useMainLayoutHandlers({
     activeTool,

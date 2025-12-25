@@ -9,6 +9,7 @@
 import { Project } from '../entities/project'
 import { WorldPoint } from '../entities/world-point'
 import { Viewpoint } from '../entities/viewpoint'
+import { canInitializeWithVanishingPoints } from './vanishing-points'
 
 export interface OptimizationReadiness {
   // Counts
@@ -133,11 +134,19 @@ export function checkOptimizationReadiness(project: Project): OptimizationReadin
     }
 
     // Check if any camera can use vanishing point initialization
+    // This includes both explicit VanishingLines AND direction-constrained Lines
     let anyCameraCanUseVanishingPoints = false
     if (!anyCameraCanUsePnP) {
+      // Check if there's a scale reference from distance constraints
+      const hasScaleReference = lineArray.some(l => l.hasFixedLength())
+      // With a scale reference, only 1 locked point is needed instead of 2
+      const allowSinglePoint = hasScaleReference
+
       for (const vp of viewpointArray) {
         const vpConcrete = vp as Viewpoint
-        if (vpConcrete.canInitializeWithVanishingPoints(new Set(pointArray))) {
+        // Use the function from vanishing-points module which also considers
+        // direction-constrained Lines as virtual vanishing lines
+        if (canInitializeWithVanishingPoints(vpConcrete, new Set(pointArray), { allowSinglePoint })) {
           anyCameraCanUseVanishingPoints = true
           break
         }

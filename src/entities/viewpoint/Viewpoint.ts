@@ -377,29 +377,6 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IOptimizabl
         return this.vanishingLines.size
     }
 
-    canInitializeWithVanishingPoints(worldPoints: Set<IWorldPoint>): boolean {
-        if (this.vanishingLines.size < 4) {
-            return false
-        }
-
-        const linesByAxis: Record<string, number> = { x: 0, y: 0, z: 0 }
-        Array.from(this.vanishingLines).forEach(line => {
-            linesByAxis[line.axis]++
-        })
-
-        const axesWithEnoughLines = Object.values(linesByAxis).filter(count => count >= 2).length
-        if (axesWithEnoughLines < 2) {
-            return false
-        }
-
-        const fullyConstrainedPoints = Array.from(worldPoints).filter(wp => {
-            const effectiveXyz = wp.getEffectiveXyz()
-            return effectiveXyz.every((coord: number | null) => coord !== null)
-        })
-
-        return fullyConstrainedPoints.length >= 2
-    }
-
     // ============================================================================
     // Utility methods
     // ============================================================================

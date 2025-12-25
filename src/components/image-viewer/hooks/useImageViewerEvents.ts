@@ -119,6 +119,7 @@ export function useImageViewerEvents({
     selectionManager,
     transform,
     precisionMode,
+    pointsOnlyMode: isLoopTraceActive,
     onPointClick,
     onLineClick,
     onVanishingLineClick,

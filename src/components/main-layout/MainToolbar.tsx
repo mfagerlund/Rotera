@@ -273,10 +273,7 @@ export const MainToolbar: React.FC<MainToolbarProps> = observer(({
             <button
               className="btn-optimize"
               onClick={onOpenOptimization}
-              title={readiness?.canOptimize ? 'Run bundle adjustment optimization' :
-                     readiness?.issues.filter(i => i.type === 'error').map(i => i.shortMessage).join(', ') || 'Cannot optimize'}
-              disabled={!readiness?.canOptimize}
-              style={!readiness?.canOptimize ? { opacity: 0.5 } : undefined}
+              title="Open optimization panel"
             >
               <FontAwesomeIcon icon={faBolt} />
               <span>Optimize</span>

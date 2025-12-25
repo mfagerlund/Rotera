@@ -182,7 +182,13 @@ export const ImageNavigationItem: React.FC<ImageNavigationItemProps> = observer(
         className="image-thumbnail"
         style={{ height: `${thumbnailHeight}px` }}
       >
-        <img ref={imgRef} src={image.url} alt={image.getName()} />
+        <img
+          ref={imgRef}
+          src={image.url}
+          alt={image.getName()}
+          draggable={false}
+          onContextMenu={(e) => e.preventDefault()}
+        />
 
         {/* Resize handle */}
         <div

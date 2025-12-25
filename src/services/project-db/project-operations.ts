@@ -317,6 +317,7 @@ export async function copyProject(id: string, newName: string): Promise<string> 
         ...original,
         id: newId,
         name: newName,
+        folderId: original.folderId, // Explicitly preserve folder location
         data: updatedData,
         createdAt: now,
         updatedAt: now

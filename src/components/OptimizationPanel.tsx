@@ -68,9 +68,12 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
     pnpResults,
     statusMessage,
     stats,
+    lockCamerasForFineTune,
+    setLockCamerasForFineTune,
     canOptimize,
     handleOptimize,
     handleStop,
+    handleFineTune,
     handleSettingChange,
     resetToDefaults,
     toggleAdvanced
@@ -117,7 +120,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
 
   return (
     <FloatingWindow
-      title="Bundle Adjustment Optimization"
+      title="Optimization"
       isOpen={isOpen}
       onClose={onClose}
       width={530}
@@ -132,6 +135,26 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
         isOptimizing={isOptimizing}
         statusMessage={statusMessage}
       />
+
+      <div className="fine-tune-section" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 0', borderBottom: '1px solid #333' }}>
+        <button
+          onClick={handleFineTune}
+          disabled={isOptimizing || !canOptimize()}
+          className="btn-fine-tune"
+          style={{ padding: '4px 12px' }}
+        >
+          Fine-Tune
+        </button>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#aaa' }}>
+          <input
+            type="checkbox"
+            checked={lockCamerasForFineTune}
+            onChange={(e) => setLockCamerasForFineTune(e.target.checked)}
+            disabled={isOptimizing}
+          />
+          Lock camera poses
+        </label>
+      </div>
 
       {showAdvanced && (
         <OptimizationSettings

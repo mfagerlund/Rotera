@@ -18,6 +18,7 @@ import { log } from '../optimization-logger';
 import { detectOutliers, OutlierInfo } from '../outlier-detection';
 import { worldPointSavedInferredXyz } from '../state-reset';
 import { validateProjectConstraints, hasPointsField } from '../validation';
+import { canInitializeWithVanishingPoints } from '../vanishing-points';
 import { applyScaleFromAxisLines, translateToAnchorPoint } from '../initialization-phases';
 
 /**
@@ -104,7 +105,7 @@ export function runLatePnPInitialization(
     const vpConstrainedPoints = Array.from(vpConcrete.imagePoints).filter(ip =>
       (ip.worldPoint as WorldPoint).isFullyConstrained()
     );
-    const canUseVP = vpConcrete.canInitializeWithVanishingPoints(worldPointSet);
+    const canUseVP = canInitializeWithVanishingPoints(vpConcrete, worldPointSet);
     return hasImagePoints && vpConstrainedPoints.length < 3 && !canUseVP;
   });
 

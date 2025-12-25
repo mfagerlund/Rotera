@@ -95,7 +95,7 @@ export function useSelectionManager({
     return true
   }, [toolContext, visibility, locking])
 
-  const findNearbyPoint = useCallback((canvasX: number, canvasY: number, threshold: number = 15) => {
+  const findNearbyPoint = useCallback((canvasX: number, canvasY: number, threshold: number = 8) => {
     if (!isEntityTypeInteractive('worldPoints')) {
       return undefined
     }
@@ -140,7 +140,7 @@ export function useSelectionManager({
     return null
   }, [isEntityTypeInteractive, image, lineEntities, offset.x, offset.y, scale])
 
-  const findNearbyVanishingLinePart = useCallback((canvasX: number, canvasY: number, endpointThreshold: number = 15, lineThreshold: number = 10): { line: VanishingLine; part: 'p1' | 'p2' | 'whole' } | null => {
+  const findNearbyVanishingLinePart = useCallback((canvasX: number, canvasY: number, endpointThreshold: number = 8, lineThreshold: number = 10): { line: VanishingLine; part: 'p1' | 'p2' | 'whole' } | null => {
     if (!isEntityTypeInteractive('vanishingLines')) {
       return null
     }

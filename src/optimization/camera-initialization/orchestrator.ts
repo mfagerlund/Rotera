@@ -51,19 +51,21 @@ export function initializeCameras(options: InitializeCamerasOptions): CameraInit
   const camerasInitialized: string[] = [];
   const camerasInitializedViaVP = new Set<Viewpoint>();
 
-  // Use strict mode for decision-making, but note if relaxed mode is available
-  const canAnyUseVP = canAnyUseVPStrict || (uninitializedCameras.length === 1 && canAnyUseVPRelaxed);
+  // Use relaxed mode if caller determined scale reference exists (allowSinglePoint)
+  // canAnyUseVPRelaxed is computed upstream based on scale references (distance constraints)
+  const canAnyUseVP = canAnyUseVPStrict || canAnyUseVPRelaxed;
 
   // Debug logging for initialization path
-  log(`[Init Debug] uninitCameras=${uninitializedCameras.length}, lockedPts=${lockedPoints.length}, canVP=${canAnyUseVP} (relaxed=${canAnyUseVPRelaxed})`);
+  log(`[Init Debug] uninitCameras=${uninitializedCameras.length}, lockedPts=${lockedPoints.length}, canVP=${canAnyUseVP} (strict=${canAnyUseVPStrict}, relaxed=${canAnyUseVPRelaxed})`);
 
   // Try first-tier initialization if we have enough constraints.
   // First-tier now has fallback logic - if VP succeeds but PnP fails for remaining
   // cameras, it reverts and returns empty to allow other paths to be tried.
   if (lockedPoints.length >= 2 || canAnyUseVP || (uninitializedCameras.length === 1 && lockedPoints.length >= 1)) {
     const canAnyCameraUsePnP = uninitializedCameras.some(vp => getConstrainedPointCount(vp) >= 3);
+    // Use relaxed mode (1 locked point) if caller determined it's OK (scale reference exists)
     const canAnyCameraUseVPInit = uninitializedCameras.some(vp =>
-      canInitializeWithVanishingPoints(vp, worldPoints, { allowSinglePoint: uninitializedCameras.length === 1 })
+      canInitializeWithVanishingPoints(vp, worldPoints, { allowSinglePoint: canAnyUseVPRelaxed })
     );
     const willUseEssentialMatrix = !canAnyCameraUsePnP && !canAnyCameraUseVPInit;
 
@@ -72,8 +74,10 @@ export function initializeCameras(options: InitializeCamerasOptions): CameraInit
       setupLockedPointsForInitialization(lockedPoints);
     }
 
-    // Run first-tier initialization (VP with 2+ points, then PnP with 3+ points)
-    const firstTierResult = runFirstTierInitialization(uninitializedCameras, worldPoints, lockedPoints);
+    // Run first-tier initialization (VP with 2+ points normally, or 1 point if scale reference exists)
+    const firstTierResult = runFirstTierInitialization(uninitializedCameras, worldPoints, lockedPoints, {
+      allowSinglePoint: canAnyUseVPRelaxed,
+    });
 
     camerasInitialized.push(...firstTierResult.camerasInitialized);
     for (const vp of firstTierResult.camerasInitializedViaVP) {

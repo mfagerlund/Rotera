@@ -9,6 +9,7 @@ import { AngleConstraint } from '../entities/constraints/angle-constraint'
 import { CoplanarPointsConstraint } from '../entities/constraints/coplanar-points-constraint'
 import { VanishingLine } from '../entities/vanishing-line'
 import { ImageUtils } from '../utils/imageUtils'
+import { tryTriangulateWorldPoint } from '../optimization/incremental-triangulation'
 
 export interface WorldPointOptions {
   lockedXyz?: [number | null, number | null, number | null]
@@ -275,11 +276,17 @@ export function useDomainOperations(
     viewpoint.addImagePoint(imagePoint)
     worldPoint.addImagePoint(imagePoint)
     project.addImagePoint(imagePoint)
+
+    // Try to triangulate if now visible in 2+ initialized cameras
+    tryTriangulateWorldPoint(worldPoint)
   }
 
   const moveImagePoint = (imagePoint: ImagePoint, u: number, v: number) => {
     if (!project) return
     imagePoint.setPosition(u, v)
+
+    // Re-triangulate this world point with updated image position
+    tryTriangulateWorldPoint(imagePoint.worldPoint as WorldPoint)
   }
 
   const deleteImagePointFromViewpoint = (worldPoint: WorldPoint, viewpoint: Viewpoint): boolean => {
