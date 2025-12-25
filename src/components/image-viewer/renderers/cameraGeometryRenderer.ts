@@ -8,7 +8,7 @@ type RotationMatrix = readonly [
 ]
 
 function quaternionToRotationMatrix(rotation: readonly [number, number, number, number]): RotationMatrix {
-  return quaternionToMatrix(rotation as [number, number, number, number]) as RotationMatrix
+  return quaternionToMatrix(rotation as [number, number, number, number]) as unknown as RotationMatrix
 }
 
 function createProjectionFunction(
