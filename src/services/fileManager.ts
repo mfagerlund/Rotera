@@ -20,7 +20,7 @@ export interface ProjectFile {
 
 export class FileManagerService {
   private static readonly CURRENT_VERSION = '1.0.0'
-  private static readonly FILE_EXTENSION = '.pictorigo'
+  private static readonly FILE_EXTENSION = '.Rotera'
   private static readonly MIME_TYPE = 'application/json'
 
   static async saveProjectToFile(
@@ -315,7 +315,7 @@ export class FileManagerService {
           project: JSON.parse(projectJson),
           savedAt: new Date().toISOString()
         }
-        localStorage.setItem('pictorigo_autosave', JSON.stringify(autoSaveData))
+        localStorage.setItem('Rotera_autosave', JSON.stringify(autoSaveData))
       } catch (error) {
         console.warn('Failed to auto-save project:', error)
       }
@@ -331,7 +331,7 @@ export class FileManagerService {
 
   static recoverAutoSavedProject(): { project: Project; savedAt: string } | null {
     try {
-      const autoSaveData = localStorage.getItem('pictorigo_autosave')
+      const autoSaveData = localStorage.getItem('Rotera_autosave')
       if (!autoSaveData) return null
 
       const data = JSON.parse(autoSaveData)
@@ -352,7 +352,7 @@ export class FileManagerService {
   // Clear auto-save data
   static clearAutoSave(): void {
     try {
-      localStorage.removeItem('pictorigo_autosave')
+      localStorage.removeItem('Rotera_autosave')
     } catch (error) {
       console.warn('Failed to clear auto-save data:', error)
     }

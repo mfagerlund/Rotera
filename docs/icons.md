@@ -4,7 +4,7 @@
 **Last Updated:** 2025-12-13
 **Applies to:** Icon usage guidelines and Font Awesome integration
 
-This document defines the standard icons used throughout Pictorigo. All icons use Font Awesome via `@fortawesome/react-fontawesome`.
+This document defines the standard icons used throughout Rotera. All icons use Font Awesome via `@fortawesome/react-fontawesome`.
 
 ## Usage
 

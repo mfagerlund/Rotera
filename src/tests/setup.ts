@@ -41,14 +41,14 @@ global.ResizeObserver = class ResizeObserver {
   disconnect() {}
 }
 
-// Suppress console output in tests (unless PICTORIGO_VERBOSE_TESTS is set)
+// Suppress console output in tests (unless Rotera_VERBOSE_TESTS is set)
 const originalLog = console.log
 const originalWarn = console.warn
 const originalError = console.error
 const originalInfo = console.info
 const originalDebug = console.debug
 
-const isVerbose = process.env.PICTORIGO_VERBOSE_TESTS === 'true'
+const isVerbose = process.env.Rotera_VERBOSE_TESTS === 'true'
 
 beforeAll(() => {
   if (!isVerbose) {

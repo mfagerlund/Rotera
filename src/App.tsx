@@ -6,7 +6,7 @@ import { ProjectDB } from './services/project-db'
 import { Project } from './entities/project'
 import { loadProject, getIsDirty, getProject } from './store/project-store'
 import { SessionStore } from './services/session-store'
-import './styles/pictorigo.css'
+import './styles/rotera.css'
 import './styles/enhanced-workspace.css'
 import './styles/workspace.css'
 import './styles/project-browser.css'
@@ -21,7 +21,7 @@ function App() {
   useEffect(() => {
     const init = async () => {
       try {
-        // Migration
+        // Migration from localStorage
         const migratedId = await ProjectDB.migrateFromLocalStorage()
         if (migratedId) {
           console.log('Migrated project from localStorage, id:', migratedId)

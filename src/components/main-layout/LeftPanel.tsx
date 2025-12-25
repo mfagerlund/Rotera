@@ -66,7 +66,7 @@ export const LeftPanel = observer(forwardRef<LeftPanelRef, LeftPanelProps>(({
       width={width}
       onWidthChange={onWidthChange}
       side="left"
-      persistKey="pictorigo-left-sidebar-width"
+      persistKey="Rotera-left-sidebar-width"
     >
       <ImageNavigationToolbar
         ref={ref}

@@ -3,9 +3,9 @@
  * Provides a global toggle that reveals the React component responsible for each rendered region.
  */
 
-const overlayContainerId = 'pictorigo-component-overlay-root'
-const overlayStyleId = 'pictorigo-component-overlay-style'
-const changeEventName = 'pictorigo:component-overlay-change'
+const overlayContainerId = 'Rotera-component-overlay-root'
+const overlayStyleId = 'Rotera-component-overlay-style'
+const changeEventName = 'Rotera:component-overlay-change'
 
 let overlayRoot: HTMLDivElement | null = null
 let overlayStyleElement: HTMLStyleElement | null = null
@@ -615,7 +615,7 @@ const api: OverlayApi = {
 }
 
 if (typeof window !== 'undefined') {
-  (window as any).pictorigoComponentLabels = api
+  (window as any).RoteraComponentLabels = api
   ;(window as any).toggleComponentNameOverlay = (value?: boolean) => {
     if (typeof value === 'boolean') {
       setComponentOverlayEnabled(value)

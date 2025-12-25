@@ -1,4 +1,4 @@
-export const DB_NAME = 'pictorigo-db'
+export const DB_NAME = 'Rotera-db'
 export const DB_VERSION = 1
 
 export const PROJECTS_STORE = 'projects'

@@ -1,4 +1,4 @@
-const SESSION_KEY = 'pictorigo-session'
+const SESSION_KEY = 'Rotera-session'
 
 interface SessionState {
   currentProjectId: string | null

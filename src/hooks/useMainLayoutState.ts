@@ -100,32 +100,32 @@ export function useMainLayoutState(options: UseMainLayoutStateOptions = {}): Mai
 
   // Sidebar width with persistence
   const [leftSidebarWidth, setLeftSidebarWidth] = useState(() => {
-    const saved = localStorage.getItem('pictorigo-left-sidebar-width')
+    const saved = localStorage.getItem('Rotera-left-sidebar-width')
     return saved ? parseInt(saved, 10) : 180
   })
 
   // Image heights with persistence
   const [imageHeights, setImageHeights] = useState<Record<string, number>>(() => {
-    const saved = localStorage.getItem('pictorigo-image-heights')
+    const saved = localStorage.getItem('Rotera-image-heights')
     return saved ? JSON.parse(saved) : {}
   })
 
   const handleImageHeightChange = useCallback((viewpoint: Viewpoint, height: number) => {
     const newHeights = { ...imageHeights, [viewpoint.getName()]: height }
     setImageHeights(newHeights)
-    localStorage.setItem('pictorigo-image-heights', JSON.stringify(newHeights))
+    localStorage.setItem('Rotera-image-heights', JSON.stringify(newHeights))
   }, [imageHeights])
 
   // Image sort order with persistence
   const [imageSortOrder, setImageSortOrder] = useState<string[]>(() => {
     if (projectImageSortOrder) return projectImageSortOrder
-    const saved = localStorage.getItem('pictorigo-image-sort-order')
+    const saved = localStorage.getItem('Rotera-image-sort-order')
     return saved ? JSON.parse(saved) : []
   })
 
   const handleImageReorder = useCallback((newOrder: string[]) => {
     setImageSortOrder(newOrder)
-    localStorage.setItem('pictorigo-image-sort-order', JSON.stringify(newOrder))
+    localStorage.setItem('Rotera-image-sort-order', JSON.stringify(newOrder))
   }, [])
 
   // Edit line state

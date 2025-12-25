@@ -1,8 +1,8 @@
-# Pictorigo Architectural Rules
+# Rotera Architectural Rules
 
 ## Application Architecture
 
-**Pictorigo is a standalone browser application** - all code runs in the browser, no server required.
+**Rotera is a standalone browser application** - all code runs in the browser, no server required.
 
 ### Three Layers (All In-Browser)
 

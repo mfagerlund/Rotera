@@ -12,7 +12,7 @@ const VP_DEBUG_ENABLED = false;
 const isTest = typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
 
 // Allow enabling console logs during tests via environment variable
-const FORCE_CONSOLE_LOGS = typeof process !== 'undefined' && process.env.PICTORIGO_VERBOSE_TESTS === 'true';
+const FORCE_CONSOLE_LOGS = typeof process !== 'undefined' && process.env.Rotera_VERBOSE_TESTS === 'true';
 
 // Callback for real-time log updates (UI can subscribe to this)
 let onLogCallback: ((message: string) => void) | null = null;

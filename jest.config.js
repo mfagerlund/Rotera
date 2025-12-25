@@ -1,4 +1,4 @@
-// Jest configuration for Pictorigo frontend tests
+// Jest configuration for Rotera frontend tests
 export default {
   testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/src/tests/setup.ts'],

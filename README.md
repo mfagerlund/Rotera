@@ -1,5 +1,4 @@
-# Pictorigo
-<!-- Rename to "Gramzo" - for sale on BrandBucket - see scratch/naming-research.md -->
+# Rotera
 Poor Man's Photogrammetry
 
 ## 🚀 Current Status

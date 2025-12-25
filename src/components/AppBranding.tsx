@@ -52,7 +52,7 @@ export const AppBranding: React.FC<AppBrandingProps> = ({
       </svg>
       {showName && (
         <span className="app-branding__name" style={{ fontSize }}>
-          Pictorigo
+          Rotera
         </span>
       )}
     </>

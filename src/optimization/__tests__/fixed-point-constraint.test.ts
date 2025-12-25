@@ -1,7 +1,7 @@
 /**
  * Tests for FixedPointConstraint solver integration.
  *
- * This test uses Pictorigo's actual domain classes to create a complete
+ * This test uses Rotera's actual domain classes to create a complete
  * geometric system, apply constraints, solve using ScalarAutograd, and verify results.
  */
 

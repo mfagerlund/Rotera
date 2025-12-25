@@ -1,5 +1,3 @@
-<!-- Rename to "Gramzo" - for sale on BrandBucket - see scratch/naming-research.md -->
-
 - Dev server: `npm run dev` (runs on http://localhost:5173)
 - Before we're done with a task, run `bash check.sh`
 - Run `npm run duplication` frequently to check for code duplication (target: <3%)

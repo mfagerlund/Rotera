@@ -1,6 +1,6 @@
 ﻿declare global {
   interface Window {
-    pictorigoComponentLabels?: {
+    RoteraComponentLabels?: {
       isEnabled: () => boolean
       setEnabled: (value: boolean) => void
       toggle: () => void
@@ -10,11 +10,11 @@
   }
 
   interface DocumentEventMap {
-    'pictorigo:component-overlay-change': CustomEvent<{ enabled: boolean }>
+    'Rotera:component-overlay-change': CustomEvent<{ enabled: boolean }>
   }
 
   interface WindowEventMap {
-    'pictorigo:component-overlay-change': CustomEvent<{ enabled: boolean }>
+    'Rotera:component-overlay-change': CustomEvent<{ enabled: boolean }>
   }
 }
 

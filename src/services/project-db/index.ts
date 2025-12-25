@@ -36,12 +36,12 @@ export {
 } from './folder-operations'
 
 // Re-export migration
-export { migrateFromLocalStorage } from './migration'
+export { migrateFromLocalStorage, migrateFromOldDatabase, hasOldDatabase } from './migration'
 
 // Main ProjectDB object for backward compatibility
 import * as projectOps from './project-operations'
 import * as folderOps from './folder-operations'
-import { migrateFromLocalStorage } from './migration'
+import { migrateFromLocalStorage, migrateFromOldDatabase, hasOldDatabase } from './migration'
 
 export const ProjectDB = {
   // Project operations
@@ -68,5 +68,7 @@ export const ProjectDB = {
   getFolderStats: folderOps.getFolderStats,
 
   // Migration
-  migrateFromLocalStorage
+  migrateFromLocalStorage,
+  migrateFromOldDatabase,
+  hasOldDatabase
 }

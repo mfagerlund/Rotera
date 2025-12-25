@@ -9,11 +9,11 @@ export function loadProjectFromJson(json: string): Project {
   return Serialization.deserialize(json)
 }
 
-export function saveToLocalStorage(project: Project, key: string = 'pictorigo-project'): void {
+export function saveToLocalStorage(project: Project, key: string = 'Rotera-project'): void {
   Serialization.saveToLocalStorage(project, key)
 }
 
-export function loadFromLocalStorage(key: string = 'pictorigo-project'): Project | null {
+export function loadFromLocalStorage(key: string = 'Rotera-project'): Project | null {
   return Serialization.loadFromLocalStorage(key)
 }
 

@@ -1,14 +1,14 @@
 /**
  * Blender Export Module
  *
- * Exports Pictorigo projects to a Blender Python script that recreates:
+ * Exports Rotera projects to a Blender Python script that recreates:
  * - World points as mesh vertices
  * - Lines as mesh edges
  * - Cameras with correct pose and intrinsics
  * - Background images for each camera
  *
  * Coordinate system conversion:
- * - Pictorigo: Y-up, XZ ground plane (right-handed)
+ * - Rotera: Y-up, XZ ground plane (right-handed)
  * - Blender: Z-up, XY ground plane (right-handed)
  * - Conversion: swap Y and Z axes
  */
@@ -43,7 +43,7 @@ const DEFAULT_OPTIONS: BlenderExportOptions = {
 }
 
 /**
- * Convert Pictorigo Y-up coordinates to Blender Z-up coordinates.
+ * Convert Rotera Y-up coordinates to Blender Z-up coordinates.
  * Conversion: [x, y, z] → [x, z, -y]
  */
 function toBlenderCoords(
@@ -57,17 +57,17 @@ function toBlenderCoords(
   if (flips.flipY) y = -y
   if (flips.flipZ) z = -z
 
-  // Pictorigo: [X, Y, Z] with Y up
+  // Rotera: [X, Y, Z] with Y up
   // Blender:   [X, Y, Z] with Z up
   // Conversion: X stays, Z→Y (forward), -Y→Z (up negated due to handedness)
   return [x * scale, z * scale, -y * scale]
 }
 
 /**
- * Convert Pictorigo camera quaternion to Blender camera quaternion.
+ * Convert Rotera camera quaternion to Blender camera quaternion.
  *
  * Uses direction-vector approach:
- * 1. Extract look and up directions from Pictorigo quaternion
+ * 1. Extract look and up directions from Rotera quaternion
  * 2. Convert directions to Blender coordinate system
  * 3. Build Blender rotation matrix from these directions
  * 4. Convert to quaternion
@@ -210,7 +210,7 @@ function matrixToQuaternion(col0: Vec3, col1: Vec3, col2: Vec3): [number, number
 }
 
 /**
- * Generate Blender Python script for importing a Pictorigo project
+ * Generate Blender Python script for importing a Rotera project
  */
 export function generateBlenderScript(project: Project, options: BlenderExportOptions = {}): string {
   const opts = { ...DEFAULT_OPTIONS, ...options }
@@ -238,13 +238,13 @@ export function generateBlenderScript(project: Project, options: BlenderExportOp
 
   // Header
   scriptParts.push(`"""
-Pictorigo Export for Blender
+Rotera Export for Blender
 Project: ${escapeString(project.name)}
 Generated: ${new Date().toISOString()}
 
 Axis flips detected: X=${flips.flipX}, Y=${flips.flipY}, Z=${flips.flipZ}
 
-This script imports a photogrammetry reconstruction from Pictorigo.
+This script imports a photogrammetry reconstruction from Rotera.
 Run this script in Blender to recreate the 3D model and camera setup.
 
 Usage:
@@ -263,20 +263,20 @@ import bpy
 import math
 from mathutils import Vector, Quaternion, Matrix
 
-# Clear existing Pictorigo data (optional - comment out to keep existing)
-def clear_pictorigo_data():
-    # Remove existing Pictorigo collection if it exists
-    if "Pictorigo" in bpy.data.collections:
-        collection = bpy.data.collections["Pictorigo"]
+# Clear existing Rotera data (optional - comment out to keep existing)
+def clear_Rotera_data():
+    # Remove existing Rotera collection if it exists
+    if "Rotera" in bpy.data.collections:
+        collection = bpy.data.collections["Rotera"]
         for obj in collection.objects:
             bpy.data.objects.remove(obj, do_unlink=True)
         bpy.data.collections.remove(collection)
 
-clear_pictorigo_data()
+clear_Rotera_data()
 
 # Create a new collection for the imported data
-pictorigo_collection = bpy.data.collections.new("Pictorigo")
-bpy.context.scene.collection.children.link(pictorigo_collection)
+Rotera_collection = bpy.data.collections.new("Rotera")
+bpy.context.scene.collection.children.link(Rotera_collection)
 
 `)
 
@@ -357,13 +357,13 @@ line_names = [
 
 def create_mesh():
     # Create mesh data
-    mesh = bpy.data.meshes.new("Pictorigo_Mesh")
+    mesh = bpy.data.meshes.new("Rotera_Mesh")
     mesh.from_pydata(world_points, edges, [])
     mesh.update()
 
     # Create object
-    obj = bpy.data.objects.new("Pictorigo_Model", mesh)
-    pictorigo_collection.objects.link(obj)
+    obj = bpy.data.objects.new("Rotera_Model", mesh)
+    Rotera_collection.objects.link(obj)
 
     # Create vertex groups for each point (useful for rigging/animation)
     for i, name in enumerate(point_names):
@@ -384,7 +384,7 @@ def create_point_empties():
         empty.location = pos
         # Store color as custom property
         empty["color"] = color
-        pictorigo_collection.objects.link(empty)
+        Rotera_collection.objects.link(empty)
         empties.append(empty)
     return empties
 
@@ -455,7 +455,7 @@ def create_cameras():
 
         # Create camera object
         cam_obj = bpy.data.objects.new(cam_data["name"], cam)
-        pictorigo_collection.objects.link(cam_obj)
+        Rotera_collection.objects.link(cam_obj)
 
         # Set position
         cam_obj.location = cam_data["position"]
@@ -533,7 +533,7 @@ for area in bpy.context.screen.areas:
         break
 
 print("=" * 60)
-print("Pictorigo import complete!")
+print("Rotera import complete!")
 print(f"  - {len(world_points)} world points")
 print(f"  - {len(edges)} edges")
 ${viewpoints.length > 0 ? `print(f"  - {len(cameras_data)} cameras")` : ''}

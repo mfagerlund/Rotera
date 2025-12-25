@@ -7,12 +7,14 @@ import {
   faPlus,
   faFolderPlus,
   faFileExport,
-  faBolt
+  faBolt,
+  faDownload
 } from '@fortawesome/free-solid-svg-icons'
 import { Project } from '../entities/project'
 import { useConfirm } from './ConfirmDialog'
 import { AppBranding } from './AppBranding'
 import { useProjectBrowser } from './ProjectBrowser/useProjectBrowser'
+import { ProjectDB } from '../services/project-db'
 import { ProjectCard } from './ProjectBrowser/ProjectCard'
 import { FolderCard } from './ProjectBrowser/FolderCard'
 import { MoveDialog, CopyDialog, ExportDialog } from './ProjectBrowser/ProjectDialogs'
@@ -27,6 +29,12 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
   onCreateProject
 }) => {
   const { confirm, dialog } = useConfirm()
+  const [isImporting, setIsImporting] = React.useState(false)
+  const [hasOldDb, setHasOldDb] = React.useState(false)
+
+  React.useEffect(() => {
+    ProjectDB.hasOldDatabase().then(setHasOldDb)
+  }, [])
   const {
     // State
     folders,
@@ -90,7 +98,23 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
     handleDrop,
     buildFolderPath,
     formatDate,
+    loadContents,
   } = useProjectBrowser()
+
+  const handleImportOldDatabase = async () => {
+    setIsImporting(true)
+    try {
+      const count = await ProjectDB.migrateFromOldDatabase()
+      if (count > 0) {
+        await loadContents()
+      }
+      setHasOldDb(false)
+    } catch (error) {
+      console.error('Import failed:', error)
+    } finally {
+      setIsImporting(false)
+    }
+  }
 
   return (
     <div className="project-browser">
@@ -129,6 +153,20 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
               <><FontAwesomeIcon icon={faBolt} /> Optimize All ({totalProjectCount})</>
             )}
           </button>
+          {hasOldDb && (
+            <button
+              className="project-browser__btn"
+              onClick={handleImportOldDatabase}
+              disabled={isImporting}
+              title="Import projects from old Pictorigo database"
+            >
+              {isImporting ? (
+                <><FontAwesomeIcon icon={faSpinner} spin /> Importing...</>
+              ) : (
+                <><FontAwesomeIcon icon={faDownload} /> Import Old Database</>
+              )}
+            </button>
+          )}
         </div>
       </div>
 

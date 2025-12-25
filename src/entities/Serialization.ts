@@ -114,13 +114,13 @@ export class Serialization {
     )
   }
 
-  static saveToLocalStorage(project: Project, key: string = 'pictorigo-project'): void {
+  static saveToLocalStorage(project: Project, key: string = 'Rotera-project'): void {
     const json = this.serialize(project)
     localStorage.setItem(key, json)
     localStorage.setItem(`${key}-timestamp`, new Date().toISOString())
   }
 
-  static loadFromLocalStorage(key: string = 'pictorigo-project'): Project | null {
+  static loadFromLocalStorage(key: string = 'Rotera-project'): Project | null {
     const json = localStorage.getItem(key)
     if (!json) return null
 

@@ -1,7 +1,7 @@
 ﻿import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { configure } from 'mobx'
-import './styles/pictorigo.css'
+import './styles/rotera.css'
 import './utils/componentNameOverlay'
 import App from './App'
 

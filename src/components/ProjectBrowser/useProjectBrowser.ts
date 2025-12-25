@@ -604,5 +604,6 @@ export const useProjectBrowser = () => {
     handleDrop,
     buildFolderPath,
     formatDate,
+    loadContents,
   }
 }

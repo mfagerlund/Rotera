@@ -1,8 +1,8 @@
 {
-  "name": "pictorigo",
+  "name": "Rotera",
   "version": "1.0.0",
   "type": "module",
-  "description": "Pictorigo photogrammetry system",
+  "description": "Rotera photogrammetry system",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
