@@ -5,6 +5,9 @@ export const optimizationLogs: string[] = [];
 // Track messages that should only be logged once per optimization run
 const loggedOnceMessages = new Set<string>();
 
+// Track last logged message to prevent consecutive duplicates
+let lastLoggedMessage: string | null = null;
+
 // Debug flag - set to true to enable VP debug messages in console
 const VP_DEBUG_ENABLED = false;
 
@@ -22,6 +25,12 @@ export function setLogCallback(callback: ((message: string) => void) | null) {
 }
 
 export function log(message: string) {
+  // Skip consecutive duplicate messages
+  if (message === lastLoggedMessage) {
+    return;
+  }
+  lastLoggedMessage = message;
+
   const isVpDebug = message.startsWith('[VP Debug]');
 
   // Only log to console if:
@@ -45,6 +54,7 @@ export function log(message: string) {
 export function clearOptimizationLogs() {
   optimizationLogs.length = 0;
   loggedOnceMessages.clear();
+  lastLoggedMessage = null;
 }
 
 /**

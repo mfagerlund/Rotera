@@ -263,8 +263,9 @@ export async function optimizeProject(
         hasSingleAxisConstraint = true;
       }
 
-      // Fix cameras at locked points
-      fixCamerasAtLockedPoints(viewpointArray, lockedPointsForCheck, appliedScaleFactor);
+      // Fix cameras at locked points - only for cameras that are actually initialized
+      const initializedCameraSet = new Set(camerasInitialized);
+      fixCamerasAtLockedPoints(viewpointArray, lockedPointsForCheck, appliedScaleFactor, initializedCameraSet);
 
     } else if (usedEssentialMatrix && lockedPointsForCheck.length < 2) {
       log('[WARN] No axis constraints + <2 locked points - orientation arbitrary');

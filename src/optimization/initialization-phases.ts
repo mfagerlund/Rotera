@@ -37,29 +37,38 @@ export function applyScaleFromAxisLines(
     const posA = line.pointA.optimizedXyz;
     const posB = line.pointB.optimizedXyz;
 
-    // Check if each point's position came from inference (matches effective coords on constrained axes)
-    // rather than triangulation. If so, skip this line for scale computation.
-    const isFromInference = (wp: WorldPoint): boolean => {
+    // Check if each point's position came ONLY from inference (not locked or triangulated).
+    // LOCKED points are reliable anchors - they SHOULD be used for scale computation.
+    // INFERRED points might have sign ambiguity - skip them for scale.
+    // TRIANGULATED points (from multi-view) are also reliable - use them for scale.
+    const isFromInferenceOnly = (wp: WorldPoint): boolean => {
       if (!wp.optimizedXyz) return false;
+
+      // If point is fully locked, it's NOT from inference - use it for scale
+      if (wp.isFullyLocked()) {
+        return false;
+      }
+
+      // Check if position matches inferred coordinates (sign might be wrong)
       const eff = wp.getEffectiveXyz();
-      // Check each constrained axis - if they all match, position is from inference
-      let hasConstraint = false;
+      let hasInferredConstraint = false;
       for (let i = 0; i < 3; i++) {
-        if (eff[i] !== null) {
-          hasConstraint = true;
+        // Only check inferred coordinates, not locked ones
+        if (wp.inferredXyz?.[i] !== undefined && eff[i] !== null) {
+          hasInferredConstraint = true;
           // Allow small tolerance for floating point
           if (Math.abs(wp.optimizedXyz[i] - eff[i]!) > 0.01) {
-            return false; // Position differs from constraint, so it was triangulated
+            return false; // Position differs from inferred, so it was triangulated
           }
         }
       }
-      return hasConstraint; // Has constraints and position matches them
+      return hasInferredConstraint; // Has inferred coords and position matches them
     };
 
-    const aFromInference = isFromInference(line.pointA);
-    const bFromInference = isFromInference(line.pointB);
+    const aFromInference = isFromInferenceOnly(line.pointA);
+    const bFromInference = isFromInferenceOnly(line.pointB);
     if (aFromInference && bFromInference) {
-      log(`[Scale] Line ${line.pointA.name}-${line.pointB.name}: skipped (both endpoints from inference)`);
+      log(`[Scale] Line ${line.pointA.name}-${line.pointB.name}: skipped (both endpoints from inference only)`);
       continue;
     }
 
@@ -155,13 +164,20 @@ export function translateToAnchorPoint(
  * @param viewpointArray Viewpoints to check and fix
  * @param lockedPoints Locked world points to check against
  * @param scaleFactor Scale factor to use for backward distance
+ * @param initializedCameras Optional set of initialized camera names - only fix these cameras
  */
 export function fixCamerasAtLockedPoints(
   viewpointArray: Viewpoint[],
   lockedPoints: WorldPoint[],
-  scaleFactor: number = 1.0
+  scaleFactor: number = 1.0,
+  initializedCameras?: Set<string>
 ): void {
   for (const vp of viewpointArray) {
+    // Skip uninitialized cameras - they're at origin by default, not because they're at a locked point
+    if (initializedCameras && !initializedCameras.has(vp.name)) {
+      continue;
+    }
+
     for (const wp of lockedPoints) {
       // Check if this camera observes this world point
       const observes = Array.from(vp.imagePoints).some(ip => (ip as ImagePoint).worldPoint === wp);

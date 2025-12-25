@@ -46,3 +46,21 @@ export function restoreCameraState(camera: Viewpoint, state: CameraState): void 
   camera.rotation = state.rotation;
   camera.focalLength = state.focalLength;
 }
+
+/**
+ * Count how many world points are visible in both cameras.
+ */
+export function countSharedPoints(camera1: Viewpoint, camera2: Viewpoint): number {
+  const points1 = new Set<WorldPoint>();
+  for (const ip of camera1.imagePoints) {
+    points1.add(ip.worldPoint as WorldPoint);
+  }
+
+  let count = 0;
+  for (const ip of camera2.imagePoints) {
+    if (points1.has(ip.worldPoint as WorldPoint)) {
+      count++;
+    }
+  }
+  return count;
+}

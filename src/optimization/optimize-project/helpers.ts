@@ -179,6 +179,9 @@ export function runLatePnPInitialization(
     log(`[Prelim] Single-cam solve: conv=${prelimResult.converged}, iter=${prelimResult.iterations}, res=${prelimResult.residual.toFixed(3)}`);
   }
 
+  // Build set of initialized camera names for triangulation check
+  const initializedCameraSet = new Set(camerasInitialized);
+
   for (const vp of stillUninitializedCameras) {
     const vpConcrete = vp as Viewpoint;
     const hasImagePoints = vpConcrete.imagePoints.size > 0;
@@ -187,7 +190,12 @@ export function runLatePnPInitialization(
     );
 
     if (hasImagePoints && hasTriangulatedPoints) {
-      const pnpResult = initializeCameraWithPnP(vpConcrete, worldPointSet, { useTriangulatedPoints: true });
+      // Pass initialized camera names so PnP only uses truly triangulated points
+      // (visible in 2+ initialized cameras), not propagated points
+      const pnpResult = initializeCameraWithPnP(vpConcrete, worldPointSet, {
+        useTriangulatedPoints: true,
+        initializedCameraNames: initializedCameraSet
+      });
       if (pnpResult.success && pnpResult.reliable) {
         camerasInitialized.push(vpConcrete.name);
         camerasInitializedViaLatePnP.add(vpConcrete);

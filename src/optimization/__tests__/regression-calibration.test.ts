@@ -2,6 +2,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { loadProjectFromJson } from '../../store/project-serialization'
 import { optimizeProject, OptimizeProjectOptions } from '../optimize-project'
+import { optimizationLogs } from '../optimization-logger'
 
 const FIXTURES_DIR = path.join(__dirname, 'fixtures', 'Calibration')
 
@@ -23,7 +24,7 @@ async function runChallengingTest(filename: string, maxMedianError: number) {
   })
 }
 
-async function runTest(filename: string, maxMedianError: number, options: OptimizeProjectOptions) {
+async function runTest(filename: string, maxMedianError: number, options: OptimizeProjectOptions, showLogs = false) {
   const jsonPath = path.join(FIXTURES_DIR, filename)
 
   if (!fs.existsSync(jsonPath)) {
@@ -34,6 +35,14 @@ async function runTest(filename: string, maxMedianError: number, options: Optimi
   const project = loadProjectFromJson(jsonData)
 
   const result = await optimizeProject(project, options)
+
+  if (showLogs || result.medianReprojectionError! >= maxMedianError) {
+    console.log('\n=== Optimization Logs ===')
+    for (const log of optimizationLogs) {
+      console.log(log)
+    }
+    console.log('=========================\n')
+  }
 
   expect(result.medianReprojectionError).toBeDefined()
   expect(result.medianReprojectionError!).toBeLessThan(maxMedianError)
@@ -103,5 +112,32 @@ describe('Regression - Calibration', () => {
 
   it('Balcony House Y Line Fast.json', async () => {
     await runFixtureTest('Balcony House Y Line Fast.json', 2)
+  })
+
+  // 3 cameras: cameras 3 and 4 can VP-init
+  // Camera 2 cannot be initialized: only sees Y-direction lines (can't VP-init),
+  // and only 2 triangulated points (WP5, WP6 - collinear, not enough for PnP)
+  // This test verifies the system handles this gracefully (solves what it can)
+  it('3 Loose.json', async () => {
+    const jsonPath = path.join(FIXTURES_DIR, '3 Loose.json')
+    const jsonData = fs.readFileSync(jsonPath, 'utf8')
+    const project = loadProjectFromJson(jsonData)
+
+    const result = await optimizeProject(project, {
+      maxIterations: 500,
+      maxAttempts: 1,
+      verbose: false
+    })
+
+    // Only cameras 3 and 4 can be initialized (camera 2 lacks sufficient constraints)
+    expect(result.camerasInitialized).toBeDefined()
+    expect(result.camerasInitialized!.sort()).toEqual(['3', '4'])
+
+    // Camera 2 should NOT be excluded (it was never initialized, not initialized-then-excluded)
+    expect(result.camerasExcluded).toBeUndefined()
+
+    // Check median error for initialized cameras
+    expect(result.medianReprojectionError).toBeDefined()
+    expect(result.medianReprojectionError!).toBeLessThan(2)
   })
 })

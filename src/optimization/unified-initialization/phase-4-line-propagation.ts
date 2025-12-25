@@ -79,23 +79,31 @@ export function step4_propagateThroughLineGraph(
           }
         }
 
-        // For axis-aligned lines with SINGLE camera (VP initialization), use camera ray to determine correct sign
-        // This resolves ambiguity when a point's coordinate could be +/-
-        // Only apply for single-camera cases - for multi-camera (Essential Matrix), poses are approximate
-        // and the solver should determine the correct sign during bundle adjustment
-        if (line.direction && ['x', 'y', 'z'].includes(line.direction) && vpInitializedViewpoints && vpInitializedViewpoints.size === 1) {
-          const raySign = determineSignFromCameraRay(otherPoint, currentXyz, line.direction as 'x' | 'y' | 'z', distance, vpInitializedViewpoints)
-          if (raySign !== null) {
-            switch (line.direction) {
-              case 'x':
-                newPos = [currentXyz[0] + raySign * Math.abs(distance), currentXyz[1], currentXyz[2]]
-                break
-              case 'y':
-                newPos = [currentXyz[0], currentXyz[1] + raySign * Math.abs(distance), currentXyz[2]]
-                break
-              case 'z':
-                newPos = [currentXyz[0], currentXyz[1], currentXyz[2] + raySign * Math.abs(distance)]
-                break
+        // For axis-aligned lines with VP-initialized camera, compute actual position by ray-line intersection
+        // This gives BOTH the correct sign AND the correct distance (not just default sceneScale/2)
+        if (line.direction && ['x', 'y', 'z'].includes(line.direction) && vpInitializedViewpoints && vpInitializedViewpoints.size >= 1) {
+          const rayIntersection = computeRayLineIntersection(otherPoint, currentXyz, line.direction as 'x' | 'y' | 'z', vpInitializedViewpoints)
+          if (rayIntersection !== null) {
+            newPos = rayIntersection
+            log(`[Step 4] Ray intersection: ${otherPoint.name} pos=[${newPos.map(p => p.toFixed(2)).join(',')}]`)
+          }
+        }
+
+        // Also try to refine position using plane constraints from effective coordinates
+        // For points with partial constraints (e.g., X=0 but unknown Y, Z), intersect ray with the constrained plane
+        // NOTE: Only apply if we couldn't get a ray-line intersection (to avoid overwriting with different values)
+        if (vpInitializedViewpoints && vpInitializedViewpoints.size >= 1) {
+          const effective = otherPoint.getEffectiveXyz()
+          const constrainedAxes = [0, 1, 2].filter(i => effective[i] !== null)
+
+          // Only use plane intersection if:
+          // 1. We have exactly 1 constrained axis (plane case), AND
+          // 2. The line direction doesn't already constrain this via ray-line intersection
+          const lineAlreadyConstrained = line.direction && ['x', 'y', 'z'].includes(line.direction)
+          if (constrainedAxes.length === 1 && !lineAlreadyConstrained) {
+            const refinedPos = computeRayPlaneIntersection(otherPoint, effective, vpInitializedViewpoints)
+            if (refinedPos !== null) {
+              newPos = refinedPos
             }
           }
         }
@@ -112,6 +120,224 @@ export function step4_propagateThroughLineGraph(
   if (verbose) {
     log(`[Step 4] Propagated ${propagatedCount} points through line graph`)
   }
+}
+
+/**
+ * Compute 3D position by intersecting camera ray with a constrained plane or line.
+ * For a point with X=0, finds where the ray intersects the YZ plane (X=0).
+ * For a point with X=0, Y=0, finds where the ray intersects the Z-axis.
+ */
+function computeRayPlaneIntersection(
+  targetPoint: WorldPoint,
+  effective: (number | null)[],
+  initializedViewpoints: Set<Viewpoint>
+): [number, number, number] | null {
+  const imagePoints = Array.from(targetPoint.imagePoints) as ImagePoint[]
+
+  for (const ip of imagePoints) {
+    const vp = ip.viewpoint as Viewpoint
+    if (!initializedViewpoints.has(vp)) continue
+
+    const camPos = vp.position
+    if (camPos[0] === 0 && camPos[1] === 0 && camPos[2] === 0) continue
+
+    const ray = computeCameraRay(vp, ip.u, ip.v)
+    if (!ray) continue
+
+    // Determine which coordinates are constrained
+    const xFixed = effective[0] !== null
+    const yFixed = effective[1] !== null
+    const zFixed = effective[2] !== null
+
+    let result: [number, number, number] | null = null
+
+    if (xFixed && yFixed && zFixed) {
+      // All coordinates known - no need to compute
+      result = [effective[0]!, effective[1]!, effective[2]!]
+    } else if (xFixed && yFixed) {
+      // Intersect ray with line at X=x0, Y=y0
+      // Find t where camX + t*rayX = x0 AND camY + t*rayY = y0
+      const tX = Math.abs(ray[0]) > 0.001 ? (effective[0]! - camPos[0]) / ray[0] : null
+      const tY = Math.abs(ray[1]) > 0.001 ? (effective[1]! - camPos[1]) / ray[1] : null
+      const t = tX !== null ? tX : tY
+      if (t !== null && t > 0) {
+        const z = camPos[2] + t * ray[2]
+        result = [effective[0]!, effective[1]!, z]
+      }
+    } else if (xFixed && zFixed) {
+      // Intersect ray with line at X=x0, Z=z0
+      const tX = Math.abs(ray[0]) > 0.001 ? (effective[0]! - camPos[0]) / ray[0] : null
+      const tZ = Math.abs(ray[2]) > 0.001 ? (effective[2]! - camPos[2]) / ray[2] : null
+      const t = tX !== null ? tX : tZ
+      if (t !== null && t > 0) {
+        const y = camPos[1] + t * ray[1]
+        result = [effective[0]!, y, effective[2]!]
+      }
+    } else if (yFixed && zFixed) {
+      // Intersect ray with line at Y=y0, Z=z0
+      const tY = Math.abs(ray[1]) > 0.001 ? (effective[1]! - camPos[1]) / ray[1] : null
+      const tZ = Math.abs(ray[2]) > 0.001 ? (effective[2]! - camPos[2]) / ray[2] : null
+      const t = tY !== null ? tY : tZ
+      if (t !== null && t > 0) {
+        const x = camPos[0] + t * ray[0]
+        result = [x, effective[1]!, effective[2]!]
+      }
+    } else if (xFixed) {
+      // Intersect ray with plane X=x0
+      const t = Math.abs(ray[0]) > 0.001 ? (effective[0]! - camPos[0]) / ray[0] : null
+      if (t !== null && t > 0) {
+        const y = camPos[1] + t * ray[1]
+        const z = camPos[2] + t * ray[2]
+        result = [effective[0]!, y, z]
+      }
+    } else if (yFixed) {
+      // Intersect ray with plane Y=y0
+      const t = Math.abs(ray[1]) > 0.001 ? (effective[1]! - camPos[1]) / ray[1] : null
+      if (t !== null && t > 0) {
+        const x = camPos[0] + t * ray[0]
+        const z = camPos[2] + t * ray[2]
+        result = [x, effective[1]!, z]
+      }
+    } else if (zFixed) {
+      // Intersect ray with plane Z=z0
+      const t = Math.abs(ray[2]) > 0.001 ? (effective[2]! - camPos[2]) / ray[2] : null
+      if (t !== null && t > 0) {
+        const x = camPos[0] + t * ray[0]
+        const y = camPos[1] + t * ray[1]
+        result = [x, y, effective[2]!]
+      }
+    }
+
+    if (result) {
+      return result
+    }
+  }
+
+  return null
+}
+
+/**
+ * Compute the actual 3D position of a point by intersecting camera ray with an axis-aligned line.
+ * For an X-direction line from startXyz, finds where camera ray intersects the line Y=startY, Z=startZ.
+ * Returns the intersection point, or null if can't compute.
+ */
+function computeRayLineIntersection(
+  targetPoint: WorldPoint,
+  startXyz: [number, number, number],
+  axis: 'x' | 'y' | 'z',
+  initializedViewpoints: Set<Viewpoint>
+): [number, number, number] | null {
+  // Find an image point for the target on an initialized camera
+  const imagePoints = Array.from(targetPoint.imagePoints) as ImagePoint[]
+
+  for (const ip of imagePoints) {
+    const vp = ip.viewpoint as Viewpoint
+    if (!initializedViewpoints.has(vp)) continue
+
+    // Check camera has valid position (not at origin)
+    const camPos = vp.position
+    if (camPos[0] === 0 && camPos[1] === 0 && camPos[2] === 0) continue
+
+    // Compute ray direction from camera through image point
+    const ray = computeCameraRay(vp, ip.u, ip.v)
+    if (!ray) continue
+
+    // Intersect ray with the axis-aligned line
+    // Ray: P = camPos + t * ray
+    // For X-axis line: Y = startXyz[1], Z = startXyz[2]
+    // Solve for t where ray intersects this line
+
+    const axisIndex = axis === 'x' ? 0 : axis === 'y' ? 1 : 2
+
+    // For an X-direction line, the line is defined by Y = startY, Z = startZ
+    // We need to find where the ray passes closest to this line
+
+    // Simplified intersection for axis-aligned lines:
+    // For X-line at (*, startY, startZ): solve for t where rayY = startY and rayZ = startZ
+    // But this is overdetermined - we use least squares or find the point on the line closest to ray
+
+    // Alternative: find parameter t where ray is closest to the axis line
+    // The axis line is: L = startXyz + s * axisDir
+
+    let result: [number, number, number] | null = null
+
+    if (axis === 'x') {
+      // Line: (startX + s, startY, startZ)
+      // Ray: camPos + t * ray
+      // Find t and s that minimize distance
+      // Closest point on ray to the line
+
+      // For Y and Z to match, we need:
+      // camY + t * rayY = startY -> t_y = (startY - camY) / rayY
+      // camZ + t * rayZ = startZ -> t_z = (startZ - camZ) / rayZ
+
+      // If rayY and rayZ are small, t goes to infinity (ray parallel to X axis)
+      // Use average of t_y and t_z if both are valid
+      const tValues: number[] = []
+      if (Math.abs(ray[1]) > 0.001) {
+        tValues.push((startXyz[1] - camPos[1]) / ray[1])
+      }
+      if (Math.abs(ray[2]) > 0.001) {
+        tValues.push((startXyz[2] - camPos[2]) / ray[2])
+      }
+
+      if (tValues.length > 0) {
+        const t = tValues.reduce((a, b) => a + b) / tValues.length
+        // Require average t to be positive (point in front of camera)
+        // Also check that t values aren't wildly different (would indicate bad geometry)
+        const minT = Math.min(...tValues)
+        const maxT = Math.max(...tValues)
+        if (t > 0 && (tValues.length === 1 || maxT / Math.abs(minT + 0.001) < 10)) {
+          const x = camPos[0] + t * ray[0]
+          result = [x, startXyz[1], startXyz[2]]
+        }
+      }
+    } else if (axis === 'y') {
+      // Line: (startX, startY + s, startZ)
+      const tValues: number[] = []
+      if (Math.abs(ray[0]) > 0.001) {
+        tValues.push((startXyz[0] - camPos[0]) / ray[0])
+      }
+      if (Math.abs(ray[2]) > 0.001) {
+        tValues.push((startXyz[2] - camPos[2]) / ray[2])
+      }
+
+      if (tValues.length > 0) {
+        const t = tValues.reduce((a, b) => a + b) / tValues.length
+        const minT = Math.min(...tValues)
+        const maxT = Math.max(...tValues)
+        if (t > 0 && (tValues.length === 1 || maxT / Math.abs(minT + 0.001) < 10)) {
+          const y = camPos[1] + t * ray[1]
+          result = [startXyz[0], y, startXyz[2]]
+        }
+      }
+    } else {
+      // Line: (startX, startY, startZ + s)
+      const tValues: number[] = []
+      if (Math.abs(ray[0]) > 0.001) {
+        tValues.push((startXyz[0] - camPos[0]) / ray[0])
+      }
+      if (Math.abs(ray[1]) > 0.001) {
+        tValues.push((startXyz[1] - camPos[1]) / ray[1])
+      }
+
+      if (tValues.length > 0) {
+        const t = tValues.reduce((a, b) => a + b) / tValues.length
+        const minT = Math.min(...tValues)
+        const maxT = Math.max(...tValues)
+        if (t > 0 && (tValues.length === 1 || maxT / Math.abs(minT + 0.001) < 10)) {
+          const z = camPos[2] + t * ray[2]
+          result = [startXyz[0], startXyz[1], z]
+        }
+      }
+    }
+
+    if (result) {
+      return result
+    }
+  }
+
+  return null
 }
 
 /**
@@ -133,7 +359,10 @@ function determineSignFromCameraRay(
     if (!initializedViewpoints.has(vp)) continue
 
     // Check camera has valid position (not at origin)
-    if (vp.position[0] === 0 && vp.position[1] === 0 && vp.position[2] === 0) continue
+    if (vp.position[0] === 0 && vp.position[1] === 0 && vp.position[2] === 0) {
+      log(`[Sign Debug] ${targetPoint.name}: Skipping ${vp.name} - at origin`)
+      continue
+    }
 
     // Compute ray from camera through image point
     const ray = computeCameraRay(vp, ip.u, ip.v)
@@ -158,12 +387,20 @@ function determineSignFromCameraRay(
     const errorPlus = computeReprojectionError(vp, posPlus, ip.u, ip.v)
     const errorMinus = computeReprojectionError(vp, posMinus, ip.u, ip.v)
 
+    log(`[Sign Debug] ${targetPoint.name} axis=${axis}: cam=${vp.name} pos=[${vp.position.map(p => p.toFixed(2)).join(',')}]`)
+    log(`[Sign Debug]   start=[${startXyz.map(p => p.toFixed(2)).join(',')}] dist=${distance.toFixed(2)}`)
+    log(`[Sign Debug]   posPlus=[${posPlus.map(p => p.toFixed(2)).join(',')}] err=${errorPlus.toFixed(2)}`)
+    log(`[Sign Debug]   posMinus=[${posMinus.map(p => p.toFixed(2)).join(',')}] err=${errorMinus.toFixed(2)}`)
+
     // If one is significantly better than the other, use it
     if (errorPlus < errorMinus * 0.8) {
+      log(`[Sign Debug]   -> +1 (errorPlus < errorMinus * 0.8)`)
       return 1
     } else if (errorMinus < errorPlus * 0.8) {
+      log(`[Sign Debug]   -> -1 (errorMinus < errorPlus * 0.8)`)
       return -1
     }
+    log(`[Sign Debug]   -> null (ambiguous)`)
     // If they're similar, try next camera
   }
 
