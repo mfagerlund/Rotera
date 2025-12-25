@@ -1,3 +1,5 @@
+**Last Updated:** 2025-12-25
+
 - Dev server: `npm run dev` (runs on http://localhost:5173)
 - Before we're done with a task, run `bash check.sh`
 - Run `npm run duplication` frequently to check for code duplication (target: <3%)

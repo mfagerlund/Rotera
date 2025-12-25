@@ -27,28 +27,23 @@ export const AppBranding: React.FC<AppBrandingProps> = ({
         height={iconSize}
         className="app-branding__icon"
       >
-        {/* Super 8 Camera body */}
-        <rect x="8" y="8" width="18" height="14" rx="2" fill="#4a9eff"/>
+        {/* 3D Cube with rotation indicator */}
 
-        {/* Film reel housing (top) */}
-        <circle cx="14" cy="8" r="4" fill="#3a8eef"/>
-        <circle cx="14" cy="8" r="2.5" fill="#2a7edf"/>
-        <circle cx="14" cy="8" r="1" fill="#1a6ecf"/>
+        {/* Rotation arc */}
+        <path d="M5 25 A14 14 0 0 1 5 7" fill="none" stroke="#ff8c00" strokeWidth="1.5" strokeLinecap="round" opacity="0.8"/>
+        <polygon points="5,5 3,9 7,9" fill="#ff8c00" opacity="0.8"/>
 
-        {/* Lens */}
-        <circle cx="20" cy="15" r="4" fill="#3a8eef"/>
-        <circle cx="20" cy="15" r="2.8" fill="#e8f4ff"/>
-        <circle cx="20" cy="15" r="1.5" fill="#2a7edf"/>
+        {/* Top face (lightest) */}
+        <polygon points="16,6 26,12 16,18 6,12" fill="#0696d7"/>
 
-        {/* Lens reflection */}
-        <circle cx="18.8" cy="13.8" r="0.8" fill="#fff" opacity="0.8"/>
+        {/* Left face (medium) */}
+        <polygon points="6,12 16,18 16,28 6,22" fill="#0585c5"/>
 
-        {/* Grip/handle */}
-        <rect x="8" y="18" width="4" height="6" rx="1" fill="#3a8eef"/>
+        {/* Right face (darkest) */}
+        <polygon points="26,12 26,22 16,28 16,18" fill="#046aa0"/>
 
-        {/* Origin dot (bottom left) */}
-        <circle cx="4" cy="28" r="3" fill="#ff9500"/>
-        <circle cx="4" cy="28" r="1.5" fill="#ffb347"/>
+        {/* Edge highlights */}
+        <line x1="16" y1="6" x2="16" y2="18" stroke="#08a5e8" strokeWidth="0.5" opacity="0.6"/>
       </svg>
       {showName && (
         <span className="app-branding__name" style={{ fontSize }}>

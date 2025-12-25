@@ -6,20 +6,30 @@
  */
 
 import { random } from '../seeded-random';
+import {
+  normalize as normalizeCommon,
+  matrixToQuaternion as matrixToQuaternionCommon,
+  quaternionToMatrix as quaternionToMatrixCommon,
+  determinant3x3 as determinant3x3Common,
+  invert3x3 as invert3x3Common,
+  matrixMultiply3x3 as matrixMultiply3x3Common,
+  matrixVectorMultiply as matrixVectorMultiplyCommon,
+  transpose3x3 as transpose3x3Common
+} from '../math-utils-common';
+
+// Re-export common utilities
+export const normalize = normalizeCommon;
+export const matrixToQuaternion = matrixToQuaternionCommon;
+export const quaternionToMatrix = quaternionToMatrixCommon;
+export const determinant3x3 = determinant3x3Common;
+export const invert3x3 = invert3x3Common;
+export const transpose3x3 = transpose3x3Common;
 
 /**
  * Compute dot product of two 3D vectors.
  */
 export function dot3D(a: [number, number, number], b: [number, number, number]): number {
   return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-}
-
-/**
- * Normalize a vector.
- */
-export function normalize(v: number[]): number[] {
-  const norm = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
-  return norm > 1e-10 ? [v[0] / norm, v[1] / norm, v[2] / norm] : v;
 }
 
 /**
@@ -33,79 +43,11 @@ export function dotProduct(a: number[], b: number[]): number {
  * Multiply matrix by vector.
  */
 export function matrixVectorMultiply(A: number[][], v: number[]): number[] {
-  return A.map(row => dotProduct(row, v));
+  return matrixVectorMultiplyCommon(A, v);
 }
 
-/**
- * Transpose a 3x3 matrix.
- */
-export function transpose3x3(M: number[][]): number[][] {
-  return [
-    [M[0][0], M[1][0], M[2][0]],
-    [M[0][1], M[1][1], M[2][1]],
-    [M[0][2], M[1][2], M[2][2]]
-  ];
-}
-
-/**
- * Compute determinant of 3x3 matrix.
- */
-export function determinant3x3(M: number[][]): number {
-  return (
-    M[0][0] * (M[1][1] * M[2][2] - M[1][2] * M[2][1]) -
-    M[0][1] * (M[1][0] * M[2][2] - M[1][2] * M[2][0]) +
-    M[0][2] * (M[1][0] * M[2][1] - M[1][1] * M[2][0])
-  );
-}
-
-/**
- * Invert a 3x3 matrix.
- */
-export function invert3x3(A: number[][]): number[][] | null {
-  const det = determinant3x3(A);
-  if (Math.abs(det) < 1e-10) return null;
-
-  const inv: number[][] = [
-    [
-      (A[1][1] * A[2][2] - A[1][2] * A[2][1]) / det,
-      (A[0][2] * A[2][1] - A[0][1] * A[2][2]) / det,
-      (A[0][1] * A[1][2] - A[0][2] * A[1][1]) / det
-    ],
-    [
-      (A[1][2] * A[2][0] - A[1][0] * A[2][2]) / det,
-      (A[0][0] * A[2][2] - A[0][2] * A[2][0]) / det,
-      (A[0][2] * A[1][0] - A[0][0] * A[1][2]) / det
-    ],
-    [
-      (A[1][0] * A[2][1] - A[1][1] * A[2][0]) / det,
-      (A[0][1] * A[2][0] - A[0][0] * A[2][1]) / det,
-      (A[0][0] * A[1][1] - A[0][1] * A[1][0]) / det
-    ]
-  ];
-
-  return inv;
-}
-
-/**
- * Multiply two 3x3 matrices.
- */
-export function matrixMultiply3x3(A: number[][], B: number[][]): number[][] {
-  const result: number[][] = [
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0]
-  ];
-
-  for (let i = 0; i < 3; i++) {
-    for (let j = 0; j < 3; j++) {
-      for (let k = 0; k < 3; k++) {
-        result[i][j] += A[i][k] * B[k][j];
-      }
-    }
-  }
-
-  return result;
-}
+// Re-export matrixMultiply3x3 from common
+export const matrixMultiply3x3 = matrixMultiply3x3Common;
 
 /**
  * Multiply A^T * B for arbitrary sized matrices.
@@ -290,54 +232,4 @@ export function orthogonalizeMatrix(M: number[][]): number[][] {
   return [r0, r1, r2];
 }
 
-/**
- * Convert rotation matrix to unit quaternion.
- * Using Shepperd's method for numerical stability.
- */
-export function matrixToQuaternion(R: number[][]): [number, number, number, number] {
-  const trace = R[0][0] + R[1][1] + R[2][2];
-
-  let w, x, y, z;
-
-  if (trace > 0) {
-    const s = Math.sqrt(trace + 1.0) * 2;
-    w = 0.25 * s;
-    x = (R[2][1] - R[1][2]) / s;
-    y = (R[0][2] - R[2][0]) / s;
-    z = (R[1][0] - R[0][1]) / s;
-  } else if (R[0][0] > R[1][1] && R[0][0] > R[2][2]) {
-    const s = Math.sqrt(1.0 + R[0][0] - R[1][1] - R[2][2]) * 2;
-    w = (R[2][1] - R[1][2]) / s;
-    x = 0.25 * s;
-    y = (R[0][1] + R[1][0]) / s;
-    z = (R[0][2] + R[2][0]) / s;
-  } else if (R[1][1] > R[2][2]) {
-    const s = Math.sqrt(1.0 + R[1][1] - R[0][0] - R[2][2]) * 2;
-    w = (R[0][2] - R[2][0]) / s;
-    x = (R[0][1] + R[1][0]) / s;
-    y = 0.25 * s;
-    z = (R[1][2] + R[2][1]) / s;
-  } else {
-    const s = Math.sqrt(1.0 + R[2][2] - R[0][0] - R[1][1]) * 2;
-    w = (R[1][0] - R[0][1]) / s;
-    x = (R[0][2] + R[2][0]) / s;
-    y = (R[1][2] + R[2][1]) / s;
-    z = 0.25 * s;
-  }
-
-  const norm = Math.sqrt(w * w + x * x + y * y + z * z);
-  return [w / norm, x / norm, y / norm, z / norm];
-}
-
-/**
- * Convert quaternion to rotation matrix.
- */
-export function quaternionToMatrix(q: [number, number, number, number]): number[][] {
-  const [w, x, y, z] = q;
-
-  return [
-    [1 - 2 * y * y - 2 * z * z, 2 * x * y - 2 * z * w, 2 * x * z + 2 * y * w],
-    [2 * x * y + 2 * z * w, 1 - 2 * x * x - 2 * z * z, 2 * y * z - 2 * x * w],
-    [2 * x * z - 2 * y * w, 2 * y * z + 2 * x * w, 1 - 2 * x * x - 2 * y * y]
-  ];
-}
+// matrixToQuaternion and quaternionToMatrix are already re-exported from common at the top of the file

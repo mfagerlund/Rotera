@@ -1,4 +1,5 @@
 import { RenderParams, AXIS_COLORS } from './types'
+import { quaternionToMatrix } from '../../../utils/rotation-utils'
 
 /**
  * Renders a small XYZ axes indicator at the world origin, projected into image space.
@@ -13,12 +14,7 @@ export function renderWorldAxes(params: RenderParams): void {
   } = params
 
   // Build rotation matrix from quaternion
-  const [qw, qx, qy, qz] = viewpoint.rotation
-  const rotationMatrix = [
-    [1 - 2 * (qy * qy + qz * qz), 2 * (qx * qy - qz * qw), 2 * (qx * qz + qy * qw)],
-    [2 * (qx * qy + qz * qw), 1 - 2 * (qx * qx + qz * qz), 2 * (qy * qz - qx * qw)],
-    [2 * (qx * qz - qy * qw), 2 * (qy * qz + qx * qw), 1 - 2 * (qx * qx + qy * qy)]
-  ] as const
+  const rotationMatrix = quaternionToMatrix(viewpoint.rotation)
 
   const fx = viewpoint.focalLength
   const fy = viewpoint.focalLength * viewpoint.aspectRatio

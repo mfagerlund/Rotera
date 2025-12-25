@@ -43,3 +43,4 @@ build_output.txt
 # Test debug output files
 src/optimization/__tests__/*-debug*.txt
 src/optimization/__tests__/*-output*.txtblender-addon/__pycache__/
+/coverage/

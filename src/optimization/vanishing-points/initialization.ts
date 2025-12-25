@@ -70,6 +70,7 @@ import { validateVanishingPoints } from './validation'
 import { estimatePrincipalPoint, estimateFocalLength } from './detection'
 import { computeRotationsFromVPs, flipRotationAxes } from './rotation'
 import { computeCameraPosition, refineTranslation, isPointInFrontOfCamera } from './camera-solve'
+import { quaternionToMatrix } from '../math-utils-common'
 
 // Debug flag - set to true to enable verbose VP sign debug output
 const VP_SIGN_DEBUG = false
@@ -251,11 +252,7 @@ export function initializeCameraWithVanishingPoints(
       continue
     }
 
-    const rotationMatrix = [
-      [1 - 2 * (rotation[2] * rotation[2] + rotation[3] * rotation[3]), 2 * (rotation[1] * rotation[2] - rotation[3] * rotation[0]), 2 * (rotation[1] * rotation[3] + rotation[2] * rotation[0])],
-      [2 * (rotation[1] * rotation[2] + rotation[3] * rotation[0]), 1 - 2 * (rotation[1] * rotation[1] + rotation[3] * rotation[3]), 2 * (rotation[2] * rotation[3] - rotation[1] * rotation[0])],
-      [2 * (rotation[1] * rotation[3] - rotation[2] * rotation[0]), 2 * (rotation[2] * rotation[3] + rotation[1] * rotation[0]), 1 - 2 * (rotation[1] * rotation[1] + rotation[2] * rotation[2])]
-    ]
+    const rotationMatrix = quaternionToMatrix(rotation)
 
     const position = refineTranslation(positionInitial, rotationMatrix, focalLength, principalPoint, effectivePointsData)
 
@@ -440,11 +437,7 @@ export function initializeCameraWithVanishingPoints(
     z: [0, 0, 1] as [number, number, number]
   }
 
-  const rotationMatrix = [
-    [1 - 2 * (rotation[2] * rotation[2] + rotation[3] * rotation[3]), 2 * (rotation[1] * rotation[2] - rotation[3] * rotation[0]), 2 * (rotation[1] * rotation[3] + rotation[2] * rotation[0])],
-    [2 * (rotation[1] * rotation[2] + rotation[3] * rotation[0]), 1 - 2 * (rotation[1] * rotation[1] + rotation[3] * rotation[3]), 2 * (rotation[2] * rotation[3] - rotation[1] * rotation[0])],
-    [2 * (rotation[1] * rotation[3] - rotation[2] * rotation[0]), 2 * (rotation[2] * rotation[3] + rotation[1] * rotation[0]), 1 - 2 * (rotation[1] * rotation[1] + rotation[2] * rotation[2])]
-  ]
+  const rotationMatrix = quaternionToMatrix(rotation)
 
   const cameraVps: Record<string, { u: number; v: number }> = {}
   Object.entries(basis).forEach(([axis, dir]) => {

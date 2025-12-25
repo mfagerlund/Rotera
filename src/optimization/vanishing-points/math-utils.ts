@@ -2,13 +2,15 @@
  * Math utilities for vanishing point calculations
  */
 
-export function normalize(v: number[]): number[] {
-  const norm = Math.sqrt(v.reduce((sum, x) => sum + x * x, 0))
-  if (norm < 1e-10) {
-    return v
-  }
-  return v.map(x => x / norm)
-}
+import {
+  normalize as normalizeCommon,
+  matrixToQuaternion as matrixToQuaternionCommon,
+  solveLinearSystem3x3 as solveLinearSystem3x3Common
+} from '../math-utils-common'
+
+// Re-export common utilities
+export const normalize = normalizeCommon
+export const matrixToQuaternion = matrixToQuaternionCommon
 
 export function cross(a: number[], b: number[]): number[] {
   return [
@@ -16,41 +18,6 @@ export function cross(a: number[], b: number[]): number[] {
     a[2] * b[0] - a[0] * b[2],
     a[0] * b[1] - a[1] * b[0]
   ]
-}
-
-export function matrixToQuaternion(R: number[][]): [number, number, number, number] {
-  const trace = R[0][0] + R[1][1] + R[2][2]
-
-  let w: number, x: number, y: number, z: number
-
-  if (trace > 0) {
-    const s = 0.5 / Math.sqrt(trace + 1.0)
-    w = 0.25 / s
-    x = (R[2][1] - R[1][2]) * s
-    y = (R[0][2] - R[2][0]) * s
-    z = (R[1][0] - R[0][1]) * s
-  } else if (R[0][0] > R[1][1] && R[0][0] > R[2][2]) {
-    const s = 2.0 * Math.sqrt(1.0 + R[0][0] - R[1][1] - R[2][2])
-    w = (R[2][1] - R[1][2]) / s
-    x = 0.25 * s
-    y = (R[0][1] + R[1][0]) / s
-    z = (R[0][2] + R[2][0]) / s
-  } else if (R[1][1] > R[2][2]) {
-    const s = 2.0 * Math.sqrt(1.0 + R[1][1] - R[0][0] - R[2][2])
-    w = (R[0][2] - R[2][0]) / s
-    x = (R[0][1] + R[1][0]) / s
-    y = 0.25 * s
-    z = (R[1][2] + R[2][1]) / s
-  } else {
-    const s = 2.0 * Math.sqrt(1.0 + R[2][2] - R[0][0] - R[1][1])
-    w = (R[1][0] - R[0][1]) / s
-    x = (R[0][2] + R[2][0]) / s
-    y = (R[1][2] + R[2][1]) / s
-    z = 0.25 * s
-  }
-
-  const mag = Math.sqrt(w * w + x * x + y * y + z * z)
-  return [w / mag, x / mag, y / mag, z / mag]
 }
 
 export function quaternionToEulerDegrees(q: [number, number, number, number]): { rollDeg: number; pitchDeg: number; yawDeg: number } {
@@ -165,65 +132,8 @@ function solveLinearSystem(A: number[][], b: number[]): number[] | null {
   return x
 }
 
-export function solveLinearSystem3x3(A: number[][], b: number[]): number[] | null {
-  const det =
-    A[0][0] * (A[1][1] * A[2][2] - A[1][2] * A[2][1]) -
-    A[0][1] * (A[1][0] * A[2][2] - A[1][2] * A[2][0]) +
-    A[0][2] * (A[1][0] * A[2][1] - A[1][1] * A[2][0])
-
-  if (Math.abs(det) < 1e-10) {
-    return null
-  }
-
-  const invA: number[][] = [
-    [
-      (A[1][1] * A[2][2] - A[1][2] * A[2][1]) / det,
-      (A[0][2] * A[2][1] - A[0][1] * A[2][2]) / det,
-      (A[0][1] * A[1][2] - A[0][2] * A[1][1]) / det
-    ],
-    [
-      (A[1][2] * A[2][0] - A[1][0] * A[2][2]) / det,
-      (A[0][0] * A[2][2] - A[0][2] * A[2][0]) / det,
-      (A[0][2] * A[1][0] - A[0][0] * A[1][2]) / det
-    ],
-    [
-      (A[1][0] * A[2][1] - A[1][1] * A[2][0]) / det,
-      (A[0][1] * A[2][0] - A[0][0] * A[2][1]) / det,
-      (A[0][0] * A[1][1] - A[0][1] * A[1][0]) / det
-    ]
-  ]
-
-  const x = [
-    invA[0][0] * b[0] + invA[0][1] * b[1] + invA[0][2] * b[2],
-    invA[1][0] * b[0] + invA[1][1] * b[1] + invA[1][2] * b[2],
-    invA[2][0] * b[0] + invA[2][1] * b[1] + invA[2][2] * b[2]
-  ]
-
-  return x
-}
-
-function powerIteration(A: number[][], maxIter: number): { vector: number[] } | null {
-  const n = A.length
-  let v = Array(n).fill(1 / Math.sqrt(n))
-
-  for (let iter = 0; iter < maxIter; iter++) {
-    const Av = Array(n).fill(0)
-    for (let i = 0; i < n; i++) {
-      for (let j = 0; j < n; j++) {
-        Av[i] += A[i][j] * v[j]
-      }
-    }
-
-    const norm = Math.sqrt(Av.reduce((sum, x) => sum + x * x, 0))
-    if (norm < 1e-10) {
-      return null
-    }
-
-    v = Av.map(x => x / norm)
-  }
-
-  return { vector: v }
-}
+// Re-export solveLinearSystem3x3 from common
+export const solveLinearSystem3x3 = solveLinearSystem3x3Common
 
 /**
  * Compute SVD and return vanishing point from line equations

@@ -1,6 +1,7 @@
 import { VanishingLineAxis } from '../../entities/vanishing-line'
 import { log } from '../optimization-logger'
 import { normalize, cross, matrixToQuaternion } from './math-utils'
+import { quaternionToMatrix } from '../math-utils-common'
 import { VanishingPoint } from './types'
 
 /**
@@ -380,14 +381,8 @@ export function flipRotationAxes(
   flipY: boolean,
   flipZ: boolean
 ): [number, number, number, number] {
-  const [qw, qx, qy, qz] = rotation
-
   // Build rotation matrix
-  const R = [
-    [1 - 2 * (qy * qy + qz * qz), 2 * (qx * qy - qw * qz), 2 * (qx * qz + qw * qy)],
-    [2 * (qx * qy + qw * qz), 1 - 2 * (qx * qx + qz * qz), 2 * (qy * qz - qw * qx)],
-    [2 * (qx * qz - qw * qy), 2 * (qy * qz + qw * qx), 1 - 2 * (qx * qx + qy * qy)]
-  ]
+  const R = quaternionToMatrix(rotation)
 
   // Flip columns (which represent world axes in camera frame)
   if (flipX) {
@@ -401,35 +396,5 @@ export function flipRotationAxes(
   }
 
   // Convert back to quaternion
-  const trace = R[0][0] + R[1][1] + R[2][2]
-  let w: number, x: number, y: number, z: number
-
-  if (trace > 0) {
-    const s = 0.5 / Math.sqrt(trace + 1.0)
-    w = 0.25 / s
-    x = (R[2][1] - R[1][2]) * s
-    y = (R[0][2] - R[2][0]) * s
-    z = (R[1][0] - R[0][1]) * s
-  } else if (R[0][0] > R[1][1] && R[0][0] > R[2][2]) {
-    const s = 2.0 * Math.sqrt(1.0 + R[0][0] - R[1][1] - R[2][2])
-    w = (R[2][1] - R[1][2]) / s
-    x = 0.25 * s
-    y = (R[0][1] + R[1][0]) / s
-    z = (R[0][2] + R[2][0]) / s
-  } else if (R[1][1] > R[2][2]) {
-    const s = 2.0 * Math.sqrt(1.0 + R[1][1] - R[0][0] - R[2][2])
-    w = (R[0][2] - R[2][0]) / s
-    x = (R[0][1] + R[1][0]) / s
-    y = 0.25 * s
-    z = (R[1][2] + R[2][1]) / s
-  } else {
-    const s = 2.0 * Math.sqrt(1.0 + R[2][2] - R[0][0] - R[1][1])
-    w = (R[1][0] - R[0][1]) / s
-    x = (R[0][2] + R[2][0]) / s
-    y = (R[1][2] + R[2][1]) / s
-    z = 0.25 * s
-  }
-
-  const mag = Math.sqrt(w * w + x * x + y * y + z * z)
-  return [w / mag, x / mag, y / mag, z / mag]
+  return matrixToQuaternion(R)
 }

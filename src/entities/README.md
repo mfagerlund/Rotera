@@ -1,5 +1,7 @@
 # Entity Architecture - DO NOT MODIFY
 
+**Last Updated:** 2025-12-25
+
 ## CRITICAL: These entities are STABLE and LOCKED
 
 **DO NOT modify these entity files unless explicitly requested by the user.**

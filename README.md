@@ -1,6 +1,8 @@
 # Rotera
 Poor Man's Photogrammetry
 
+**Last Updated:** 2025-12-25
+
 ## 🚀 Current Status
 
 **ACTIVE DEVELOPMENT** - Standalone browser application with functional UI and ScalarAutograd solver.
@@ -89,13 +91,9 @@ Camera projections are solved from the full constraint graph. IPs cannot exist w
 
 ## Architecture
 
-**Standalone browser application** with three layers running entirely in-browser:
+Standalone browser application with React + TypeScript UI, entity-based domain model, and ScalarAutograd solver. All code runs in-browser with no server required.
 
-* **UI Layer:** React + TypeScript. Fast image switching, point/constraint editing, residual/uncertainty indicators.
-* **Domain Layer:** Entity-based model (WorldPoint, Line, Viewpoint, Constraint classes) with MobX observables for automatic change detection.
-* **Solver Layer:** ScalarAutograd (TypeScript) for automatic differentiation and constraint optimization. Supports intrinsic constraints (embedded in geometric entities like lines) and extrinsic constraints (relationships between entities).
-
-All layers run in the browser. No server required.
+For detailed architecture rules and patterns, see `architectural-rules.md`.
 
 ## Testing strategy
 

@@ -1,4 +1,5 @@
 import { RenderParams, AXIS_COLORS } from './types'
+import { quaternionToMatrix } from '../../../utils/rotation-utils'
 
 type RotationMatrix = readonly [
   readonly [number, number, number],
@@ -7,12 +8,7 @@ type RotationMatrix = readonly [
 ]
 
 function quaternionToRotationMatrix(rotation: readonly [number, number, number, number]): RotationMatrix {
-  const [qw, qx, qy, qz] = rotation
-  return [
-    [1 - 2 * (qy * qy + qz * qz), 2 * (qx * qy - qz * qw), 2 * (qx * qz + qy * qw)],
-    [2 * (qx * qy + qz * qw), 1 - 2 * (qx * qx + qz * qz), 2 * (qy * qz - qx * qw)],
-    [2 * (qx * qz - qy * qw), 2 * (qy * qz + qx * qw), 1 - 2 * (qx * qx + qy * qy)]
-  ] as const
+  return quaternionToMatrix(rotation as [number, number, number, number]) as RotationMatrix
 }
 
 function createProjectionFunction(
