@@ -61,6 +61,8 @@ export class Project {
     imageSortOrder?: ImageSortOrder
     viewSettings: ViewSettings
     optimizationMaxIterations?: number
+    leftSidebarWidth: number
+    imageHeights: Record<string, number>
 
     // Internal database ID (used by ProjectDB service only)
     _dbId?: string
@@ -89,7 +91,9 @@ export class Project {
         visualFeedbackLevel: VisualFeedbackLevel,
         viewSettings: ViewSettings,
         imageSortOrder?: ImageSortOrder,
-        optimizationMaxIterations?: number
+        optimizationMaxIterations?: number,
+        leftSidebarWidth: number = 180,
+        imageHeights: Record<string, number> = {}
     ) {
         this.name = name
         this.worldPoints = worldPoints
@@ -115,6 +119,8 @@ export class Project {
         this.viewSettings = viewSettings
         this.imageSortOrder = imageSortOrder
         this.optimizationMaxIterations = optimizationMaxIterations
+        this.leftSidebarWidth = leftSidebarWidth
+        this.imageHeights = imageHeights
 
         makeAutoObservable(this, {}, { autoBind: true })
     }
@@ -143,7 +149,11 @@ export class Project {
             true,
             true,
             'standard',
-            DEFAULT_VIEW_SETTINGS
+            DEFAULT_VIEW_SETTINGS,
+            undefined,
+            undefined,
+            180,
+            {}
         )
     }
 
@@ -171,7 +181,9 @@ export class Project {
         visualFeedbackLevel: VisualFeedbackLevel,
         viewSettings: ViewSettings,
         imageSortOrder?: ImageSortOrder,
-        optimizationMaxIterations?: number
+        optimizationMaxIterations?: number,
+        leftSidebarWidth: number = 180,
+        imageHeights: Record<string, number> = {}
     ): Project {
         return new Project(
             name,
@@ -197,7 +209,9 @@ export class Project {
             visualFeedbackLevel,
             viewSettings,
             imageSortOrder,
-            optimizationMaxIterations
+            optimizationMaxIterations,
+            leftSidebarWidth,
+            imageHeights
         )
     }
 

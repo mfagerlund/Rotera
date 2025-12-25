@@ -179,7 +179,6 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
     openVPQualityWindow,
     closeVPQualityWindow
   } = useMainLayoutState({
-    projectImageSortOrder: Array.isArray(project?.imageSortOrder) ? project.imageSortOrder : undefined,
     onOpenWorldPointEdit: handleOpenWorldPointEdit
   })
 

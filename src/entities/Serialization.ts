@@ -49,7 +49,9 @@ export class Serialization {
       visualFeedbackLevel: project.visualFeedbackLevel,
       viewSettings: project.viewSettings,
       imageSortOrder: project.imageSortOrder,
-      optimizationMaxIterations: project.optimizationMaxIterations
+      optimizationMaxIterations: project.optimizationMaxIterations,
+      leftSidebarWidth: project.leftSidebarWidth,
+      imageHeights: project.imageHeights
     }
 
     return JSON.stringify(dto, null, 2)
@@ -110,7 +112,9 @@ export class Serialization {
       dto.visualFeedbackLevel,
       dto.viewSettings || DEFAULT_VIEW_SETTINGS,
       dto.imageSortOrder,
-      dto.optimizationMaxIterations
+      dto.optimizationMaxIterations,
+      dto.leftSidebarWidth ?? 180,
+      dto.imageHeights ?? {}
     )
   }
 

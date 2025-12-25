@@ -1,9 +1,10 @@
 // Central state management for MainLayout
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { WorldPoint } from '../entities/world-point'
 import { Line as LineEntity } from '../entities/line'
 import { Viewpoint } from '../entities/viewpoint'
 import { CoplanarPointsConstraint } from '../entities/constraints/coplanar-points-constraint'
+import { getProject } from '../store/project-store'
 
 export type ActiveTool = 'select' | 'point' | 'line' | 'plane' | 'circle' | 'loop' | 'vanishing' | 'orientationPaint'
 
@@ -71,12 +72,11 @@ export interface MainLayoutState {
 }
 
 export interface UseMainLayoutStateOptions {
-  projectImageSortOrder?: string[]
   onOpenWorldPointEdit?: (worldPoint: WorldPoint) => void
 }
 
 export function useMainLayoutState(options: UseMainLayoutStateOptions = {}): MainLayoutState {
-  const { projectImageSortOrder, onOpenWorldPointEdit } = options
+  const { onOpenWorldPointEdit } = options
   // Tool state
   const [activeTool, setActiveTool] = useState<ActiveTool>('select')
 
@@ -98,34 +98,33 @@ export function useMainLayoutState(options: UseMainLayoutStateOptions = {}): Mai
   const [hoveredWorldPoint, setHoveredWorldPoint] = useState<WorldPoint | null>(null)
   const [hoveredCoplanarConstraint, setHoveredCoplanarConstraint] = useState<CoplanarPointsConstraint | null>(null)
 
-  // Sidebar width with persistence
-  const [leftSidebarWidth, setLeftSidebarWidth] = useState(() => {
-    const saved = localStorage.getItem('Rotera-left-sidebar-width')
-    return saved ? parseInt(saved, 10) : 180
-  })
+  // Sidebar width - stored in project
+  const project = getProject()
+  const [leftSidebarWidth, setLeftSidebarWidthState] = useState(() => project.leftSidebarWidth)
 
-  // Image heights with persistence
-  const [imageHeights, setImageHeights] = useState<Record<string, number>>(() => {
-    const saved = localStorage.getItem('Rotera-image-heights')
-    return saved ? JSON.parse(saved) : {}
-  })
+  const setLeftSidebarWidth = useCallback((width: number) => {
+    setLeftSidebarWidthState(width)
+    getProject().leftSidebarWidth = width
+  }, [])
+
+  // Image heights - stored in project
+  const [imageHeights, setImageHeightsState] = useState<Record<string, number>>(() => project.imageHeights)
 
   const handleImageHeightChange = useCallback((viewpoint: Viewpoint, height: number) => {
-    const newHeights = { ...imageHeights, [viewpoint.getName()]: height }
-    setImageHeights(newHeights)
-    localStorage.setItem('Rotera-image-heights', JSON.stringify(newHeights))
-  }, [imageHeights])
+    const proj = getProject()
+    const newHeights = { ...proj.imageHeights, [viewpoint.getName()]: height }
+    setImageHeightsState(newHeights)
+    proj.imageHeights = newHeights
+  }, [])
 
-  // Image sort order with persistence
-  const [imageSortOrder, setImageSortOrder] = useState<string[]>(() => {
-    if (projectImageSortOrder) return projectImageSortOrder
-    const saved = localStorage.getItem('Rotera-image-sort-order')
-    return saved ? JSON.parse(saved) : []
+  // Image sort order - stored in project
+  const [imageSortOrder, setImageSortOrderState] = useState<string[]>(() => {
+    return project.imageSortOrder ?? []
   })
 
   const handleImageReorder = useCallback((newOrder: string[]) => {
-    setImageSortOrder(newOrder)
-    localStorage.setItem('Rotera-image-sort-order', JSON.stringify(newOrder))
+    setImageSortOrderState(newOrder)
+    getProject().imageSortOrder = newOrder
   }, [])
 
   // Edit line state

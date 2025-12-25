@@ -41,4 +41,6 @@ export interface ProjectDto {
   viewSettings?: ViewSettings
   imageSortOrder?: ImageSortOrder
   optimizationMaxIterations?: number
+  leftSidebarWidth?: number
+  imageHeights?: Record<string, number>
 }
