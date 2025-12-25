@@ -217,7 +217,9 @@ export const useProjectBrowser = () => {
   }
 
   const handleExportFolder = async () => {
-    if (projects.length === 0) {
+    // Get all projects including subfolders
+    const allProjects = await ProjectDB.getProjectsRecursive(currentFolderId)
+    if (allProjects.length === 0) {
       alert('No projects in this folder to export')
       return
     }
@@ -225,16 +227,46 @@ export const useProjectBrowser = () => {
     setIsExporting(true)
     try {
       const zip = new JSZip()
-      const folderName = currentFolderId
+      const rootFolderName = currentFolderId
         ? folderPath[folderPath.length - 1]?.name || 'projects'
         : 'root'
 
-      for (const summary of projects) {
+      // Build folder ID to name mapping
+      const folderIdToName = new Map<string, string>()
+      const folderIdToParent = new Map<string, string | null>()
+      for (const folder of allFolders) {
+        folderIdToName.set(folder.id, folder.name)
+        folderIdToParent.set(folder.id, folder.parentId)
+      }
+
+      // Build relative path for a project based on its folder
+      const buildRelativePath = (projectFolderId: string | null): string => {
+        if (projectFolderId === currentFolderId) {
+          return ''  // Project is directly in the current folder
+        }
+
+        const parts: string[] = []
+        let folderId = projectFolderId
+
+        // Walk up the folder tree until we reach currentFolderId
+        while (folderId && folderId !== currentFolderId) {
+          const folderName = folderIdToName.get(folderId)
+          if (folderName) {
+            parts.unshift(folderName.replace(/[<>:"/\\|?*]/g, '_'))
+          }
+          folderId = folderIdToParent.get(folderId) ?? null
+        }
+
+        return parts.length > 0 ? parts.join('/') + '/' : ''
+      }
+
+      for (const summary of allProjects) {
         try {
           const project = await ProjectDB.loadProject(summary.id)
           const json = Serialization.serialize(project, { excludeImages: exportExcludeImages })
           const safeName = summary.name.replace(/[<>:"/\\|?*]/g, '_')
-          zip.file(`${safeName}.json`, json)
+          const relativePath = buildRelativePath(summary.folderId)
+          zip.file(`${relativePath}${safeName}.json`, json)
         } catch (error) {
           console.error(`Failed to export project ${summary.name}:`, error)
         }
@@ -244,7 +276,7 @@ export const useProjectBrowser = () => {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `${folderName}-export.zip`
+      a.download = `${rootFolderName}-export.zip`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)

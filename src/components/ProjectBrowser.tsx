@@ -136,8 +136,8 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
           <button
             className="project-browser__btn"
             onClick={() => setShowExportModal(true)}
-            disabled={projects.length === 0}
-            title="Export all projects in this folder"
+            disabled={totalProjectCount === 0}
+            title="Export all projects in this folder and subfolders"
           >
             <FontAwesomeIcon icon={faFileExport} /> Export Folder
           </button>
@@ -323,7 +323,7 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
 
       <ExportDialog
         isVisible={showExportModal}
-        projectCount={projects.length}
+        projectCount={totalProjectCount}
         excludeImages={exportExcludeImages}
         isExporting={isExporting}
         onExcludeImagesChange={setExportExcludeImages}

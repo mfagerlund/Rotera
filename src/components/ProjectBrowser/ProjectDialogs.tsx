@@ -131,7 +131,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
       <div className="project-browser__modal" onClick={e => e.stopPropagation()}>
         <h3>Export {projectCount} Project{projectCount !== 1 ? 's' : ''}</h3>
         <p style={{ marginBottom: '16px', color: '#888' }}>
-          Export all projects in this folder as a ZIP file.
+          Export all projects in this folder and subfolders as a ZIP file.
         </p>
         <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', cursor: 'pointer' }}>
           <input
