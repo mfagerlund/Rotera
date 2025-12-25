@@ -123,6 +123,41 @@ describe('Regression - Calibration', () => {
     await runChallengingTest('Tower 2 With Roof.json', 2)
   })
 
+  // Single-camera tower project - VP initialization path
+  // Tests: single camera with direction-constrained lines, no VL entities
+  // Verifies that the camera reset and VP initialization work correctly
+  it('Tower 1 - 1 Img.json', async () => {
+    const jsonPath = path.join(FIXTURES_DIR, 'Tower 1 - 1 Img.json')
+    const jsonData = fs.readFileSync(jsonPath, 'utf8')
+    const project = loadProjectFromJson(jsonData)
+
+    const result = await optimizeProject(project, {
+      maxIterations: 500,
+      maxAttempts: 1,
+      verbose: false
+    })
+
+    // Show logs on failure
+    if (!result.medianReprojectionError || result.medianReprojectionError >= 2 || (result.outliers && result.outliers.length > 0)) {
+      console.log('\n=== Optimization Logs ===')
+      for (const log of optimizationLogs) {
+        console.log(log)
+      }
+      console.log('=========================\n')
+    }
+
+    // Single camera should be initialized
+    expect(result.camerasInitialized).toBeDefined()
+    expect(result.camerasInitialized!.length).toBe(1)
+
+    // Should have low reprojection error
+    expect(result.medianReprojectionError).toBeDefined()
+    expect(result.medianReprojectionError!).toBeLessThan(2)
+
+    // Should have no outliers (all 14 image points should project correctly)
+    expect(result.outliers?.length ?? 0).toBe(0)
+  })
+
   // 3 cameras: cameras 3 and 4 can VP-init
   // Camera 2 cannot be initialized: only sees Y-direction lines (can't VP-init),
   // and only 2 triangulated points (WP5, WP6 - collinear, not enough for PnP)

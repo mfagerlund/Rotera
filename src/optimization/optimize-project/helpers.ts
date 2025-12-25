@@ -353,6 +353,23 @@ export function handleOutliersAndRerun(
     excludedCameraNames.push(vp.name);
   }
 
+  // Check if all cameras are now excluded - if so, the solve is meaningless
+  const remainingCameras = Array.from(project.viewpoints).filter(v => !excludedCameras.has(v as Viewpoint));
+  if (remainingCameras.length === 0) {
+    log(`[ERROR] All cameras excluded - cannot compute meaningful solution`);
+    // Return a failure result with high residual to prevent false success
+    return {
+      result: {
+        converged: false,
+        iterations: 0,
+        residual: Infinity,
+        error: 'All cameras excluded - late PnP failed for all cameras',
+      },
+      outliers,
+      medianError,
+    };
+  }
+
   for (const wp of project.worldPoints) {
     if (!(wp as WorldPoint).isFullyConstrained()) {
       (wp as WorldPoint).optimizedXyz = undefined;
