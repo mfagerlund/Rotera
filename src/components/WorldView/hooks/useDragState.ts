@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { DragState } from '../types'
+import type { WorldPoint } from '../../../entities/world-point/WorldPoint'
 
 export function useDragState() {
   const [dragState, setDragState] = useState<DragState>({
@@ -11,7 +12,7 @@ export function useDragState() {
     dragType: 'rotate'
   })
 
-  const startDrag = (x: number, y: number, dragType: 'rotate' | 'pan' | 'point', draggedPoint?: any) => {
+  const startDrag = (x: number, y: number, dragType: 'rotate' | 'pan' | 'point', draggedPoint?: WorldPoint) => {
     setDragState({
       isDragging: true,
       lastX: x,

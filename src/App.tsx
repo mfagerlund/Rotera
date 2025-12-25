@@ -50,10 +50,9 @@ function App() {
 
   const handleOpenProject = useCallback((project: Project) => {
     loadProject(project)
-    // Save session - get the _dbId from project
-    const dbId = (project as any)._dbId
-    if (dbId) {
-      SessionStore.setProjectId(dbId)
+    // Save session
+    if (project._dbId) {
+      SessionStore.setProjectId(project._dbId)
     }
     setView('editor')
   }, [])
@@ -68,9 +67,8 @@ function App() {
     await ProjectDB.saveProject(newProject)
     loadProject(newProject)
     // Save session
-    const dbId = (newProject as any)._dbId
-    if (dbId) {
-      SessionStore.setProjectId(dbId)
+    if (newProject._dbId) {
+      SessionStore.setProjectId(newProject._dbId)
     }
     setShowNameModal(false)
     setView('editor')

@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import type { HoverState } from '../types'
+import type { WorldPoint } from '../../../entities/world-point/WorldPoint'
+import type { Line } from '../../../entities/line/Line'
 
 export function useHoverState() {
   const [hoverState, setHoverState] = useState<HoverState>({
@@ -9,11 +11,11 @@ export function useHoverState() {
     hoveredLine: null
   })
 
-  const setHoveredPoint = (point: any) => {
+  const setHoveredPoint = (point: WorldPoint | null) => {
     setHoverState(prev => ({ ...prev, hoveredPoint: point }))
   }
 
-  const setHoveredLine = (line: any) => {
+  const setHoveredLine = (line: Line | null) => {
     setHoverState(prev => ({ ...prev, hoveredLine: line }))
   }
 

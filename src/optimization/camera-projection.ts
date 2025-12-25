@@ -8,7 +8,7 @@
  * 4. Apply intrinsics → Pixel coordinates
  */
 
-import { V, Value, Vec3 } from 'scalar-autograd';
+import { V, Value, Vec3, Vec4 } from 'scalar-autograd';
 import { Quaternion } from './Quaternion';
 
 /**
@@ -220,7 +220,7 @@ export function cameraToPixelCoordinates(
 export function worldToCameraCoordinatesQuaternion(
   worldPoint: Vec3,
   cameraPosition: Vec3,
-  cameraRotation: any
+  cameraRotation: Vec4
 ): Vec3 {
   // Translate to camera origin
   const translated = worldPoint.sub(cameraPosition);
@@ -250,7 +250,7 @@ export function worldToCameraCoordinatesQuaternion(
 export function projectWorldPointToPixelQuaternion(
   worldPoint: Vec3,
   cameraPosition: Vec3,
-  cameraRotation: any,
+  cameraRotation: Vec4,
   focalLength: Value,
   aspectRatio: Value,
   principalPointX: Value,
