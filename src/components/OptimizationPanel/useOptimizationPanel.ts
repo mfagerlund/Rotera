@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { flushSync } from 'react-dom'
 import { Project } from '../../entities/project'
 import { Viewpoint } from '../../entities/viewpoint'
+import { WorldPoint } from '../../entities/world-point'
 import { useOptimization } from '../../hooks/useOptimization'
 import { defaultOptimizationSettings } from '../../services/optimization'
 import { initializeCameraWithPnP } from '../../optimization/pnp'
@@ -11,6 +12,66 @@ import { ProjectDB } from '../../services/project-db'
 import { checkOptimizationReadiness } from '../../optimization/optimization-readiness'
 import { setLogCallback, getSolveQuality } from '../../optimization/optimize-project'
 import { fineTuneProject, FineTuneResult } from '../../optimization/fine-tune'
+
+/**
+ * Check if the project has stored optimization results (from lastResiduals on entities)
+ * and compute a results object from them.
+ */
+function loadStoredResults(project: Project): any | null {
+  // Check if any world points have lastResiduals populated
+  const worldPointsWithResiduals = Array.from(project.worldPoints.values()).filter(
+    (wp: WorldPoint) => wp.lastResiduals && wp.lastResiduals.length > 0
+  )
+
+  if (worldPointsWithResiduals.length === 0) {
+    return null
+  }
+
+  // Compute total error from all entities' residuals
+  let totalSquaredError = 0
+  let residualCount = 0
+
+  for (const wp of project.worldPoints.values()) {
+    if (wp.lastResiduals && wp.lastResiduals.length > 0) {
+      for (const r of wp.lastResiduals) {
+        totalSquaredError += r * r
+        residualCount++
+      }
+    }
+  }
+
+  for (const vp of project.viewpoints.values()) {
+    if (vp.lastResiduals && vp.lastResiduals.length > 0) {
+      for (const r of vp.lastResiduals) {
+        totalSquaredError += r * r
+        residualCount++
+      }
+    }
+  }
+
+  for (const ip of project.imagePoints.values()) {
+    if (ip.lastResiduals && ip.lastResiduals.length > 0) {
+      for (const r of ip.lastResiduals) {
+        totalSquaredError += r * r
+        residualCount++
+      }
+    }
+  }
+
+  const totalError = residualCount > 0 ? Math.sqrt(totalSquaredError) : 0
+  const quality = getSolveQuality(totalError)
+
+  return {
+    converged: true, // If we have stored results, assume it was a successful run
+    error: null,
+    totalError,
+    pointAccuracy: totalError / Math.max(1, project.worldPoints.size),
+    iterations: 0, // Unknown from stored data
+    outliers: [],
+    medianReprojectionError: undefined,
+    quality
+  }
+}
 
 interface OptimizationSettings {
   maxIterations: number
@@ -100,7 +161,8 @@ export function useOptimizationPanel({
     ...defaultOptimizationSettings,
     maxIterations: project.optimizationMaxIterations ?? defaultOptimizationSettings.maxIterations
   }))
-  const [results, setResults] = useState<any>(null)
+  // Initialize results from stored entity residuals if available
+  const [results, setResults] = useState<any>(() => loadStoredResults(project))
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [pnpResults, setPnpResults] = useState<{camera: string, before: number, after: number, iterations: number}[]>([])
   const [isInitializingCameras, setIsInitializingCameras] = useState(false)

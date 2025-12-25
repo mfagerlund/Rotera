@@ -512,7 +512,8 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
             lockedXyz: [...this.lockedXyz] as [number | null, number | null, number | null],
             inferredXyz: [...this.inferredXyz] as [number | null, number | null, number | null],
             optimizedXyz: this.optimizedXyz ? [...this.optimizedXyz] as [number, number, number] : undefined,
-            color: this.color
+            color: this.color,
+            lastResiduals: this.lastResiduals.length > 0 ? [...this.lastResiduals] : undefined
         }
     }
 
@@ -524,6 +525,10 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
             dto.optimizedXyz,
             dto.inferredXyz
         )
+
+        if (dto.lastResiduals) {
+            point.lastResiduals = [...dto.lastResiduals]
+        }
 
         context.registerEntity(point, dto.id)
         return point

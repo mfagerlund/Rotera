@@ -169,7 +169,8 @@ export class CollinearPointsConstraint extends Constraint {
       type: 'collinear_points',
       name: this.name,
       pointIds,
-      tolerance: this.tolerance
+      tolerance: this.tolerance,
+      lastResiduals: this.lastResiduals.length > 0 ? [...this.lastResiduals] : undefined
     }
   }
 
@@ -189,6 +190,10 @@ export class CollinearPointsConstraint extends Constraint {
       points,
       { tolerance: dto.tolerance }
     )
+
+    if (dto.lastResiduals) {
+      constraint.lastResiduals = [...dto.lastResiduals]
+    }
 
     context.registerEntity(constraint, dto.id)
     return constraint

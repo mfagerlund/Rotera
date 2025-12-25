@@ -198,7 +198,8 @@ export class ProjectionConstraint extends Constraint {
       pointId,
       imagePointId,
       viewpointId,
-      tolerance: this.tolerance
+      tolerance: this.tolerance,
+      lastResiduals: this.lastResiduals.length > 0 ? [...this.lastResiduals] : undefined
     }
   }
 
@@ -221,6 +222,10 @@ export class ProjectionConstraint extends Constraint {
       imagePoint.v,
       { tolerance: dto.tolerance }
     )
+
+    if (dto.lastResiduals) {
+      constraint.lastResiduals = [...dto.lastResiduals]
+    }
 
     context.registerEntity(constraint, dto.id)
     return constraint

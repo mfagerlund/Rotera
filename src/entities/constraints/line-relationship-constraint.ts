@@ -55,6 +55,7 @@ export abstract class LineRelationshipConstraint extends Constraint {
     line1Id: string
     line2Id: string
     tolerance: number
+    lastResiduals?: number[]
   } {
     const id = context.getEntityId(this) || context.registerEntity(this)
 
@@ -73,7 +74,8 @@ export abstract class LineRelationshipConstraint extends Constraint {
       name: this.name,
       line1Id,
       line2Id,
-      tolerance: this.tolerance
+      tolerance: this.tolerance,
+      lastResiduals: this.lastResiduals.length > 0 ? [...this.lastResiduals] : undefined
     }
   }
 
@@ -84,6 +86,7 @@ export abstract class LineRelationshipConstraint extends Constraint {
       line1Id: string
       line2Id: string
       tolerance: number
+      lastResiduals?: number[]
     },
     context: SerializationContext,
     constraintType: string,
@@ -99,6 +102,11 @@ export abstract class LineRelationshipConstraint extends Constraint {
     }
 
     const constraint = createFn(dto.name, line1, line2, dto.tolerance)
+
+    if (dto.lastResiduals) {
+      constraint.lastResiduals = [...dto.lastResiduals]
+    }
+
     context.registerEntity(constraint, dto.id)
     return constraint
   }

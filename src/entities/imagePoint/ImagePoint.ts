@@ -201,7 +201,8 @@ export class ImagePoint implements ISelectable, IImagePoint, IResidualProvider, 
             viewpointId,
             u: this.u,
             v: this.v,
-            confidence: this.confidence
+            confidence: this.confidence,
+            lastResiduals: this.lastResiduals.length > 0 ? [...this.lastResiduals] : undefined
         }
     }
 
@@ -219,6 +220,10 @@ export class ImagePoint implements ISelectable, IImagePoint, IResidualProvider, 
         const imagePoint = ImagePoint.create(worldPoint, viewpoint, dto.u, dto.v, {
             confidence: dto.confidence
         })
+
+        if (dto.lastResiduals) {
+            imagePoint.lastResiduals = [...dto.lastResiduals]
+        }
 
         context.registerEntity(imagePoint, dto.id)
 

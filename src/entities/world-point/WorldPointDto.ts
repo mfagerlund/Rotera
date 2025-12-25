@@ -7,4 +7,5 @@ export interface WorldPointDto extends BaseDto {
   inferredXyz?: [number | null, number | null, number | null]
   optimizedXyz?: [number, number, number]
   color: string
+  lastResiduals?: number[]
 }

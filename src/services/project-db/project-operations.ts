@@ -184,6 +184,45 @@ export async function saveProject(project: Project, folderId?: string | null): P
     }
   }
 
+  // Compute optimization result summary from entity lastResiduals
+  let optimizationResult: OptimizationResultSummary | undefined
+  const hasOptimizationData = Array.from(project.worldPoints.values()).some(
+    wp => wp.lastResiduals && wp.lastResiduals.length > 0
+  )
+
+  if (hasOptimizationData) {
+    // Compute total error from all entities' residuals
+    let totalSquaredError = 0
+    let residualCount = 0
+
+    for (const wp of project.worldPoints.values()) {
+      if (wp.lastResiduals && wp.lastResiduals.length > 0) {
+        for (const r of wp.lastResiduals) {
+          totalSquaredError += r * r
+          residualCount++
+        }
+      }
+    }
+
+    for (const ip of project.imagePoints.values()) {
+      if (ip.lastResiduals && ip.lastResiduals.length > 0) {
+        for (const r of ip.lastResiduals) {
+          totalSquaredError += r * r
+          residualCount++
+        }
+      }
+    }
+
+    const totalError = residualCount > 0 ? Math.sqrt(totalSquaredError) : 0
+
+    optimizationResult = {
+      error: totalError,
+      converged: true,
+      solveTimeMs: 0,
+      optimizedAt: new Date()
+    }
+  }
+
   const storedProject: StoredProject = {
     id,
     name: project.name,
@@ -193,7 +232,8 @@ export async function saveProject(project: Project, folderId?: string | null): P
     data: projectData,
     thumbnailUrl,
     viewpointCount: project.viewpoints.size,
-    worldPointCount: project.worldPoints.size
+    worldPointCount: project.worldPoints.size,
+    optimizationResult
   }
 
   const { tx, projectStore, imageStore } = await createProjectAndImagesTransaction(db, 'readwrite')

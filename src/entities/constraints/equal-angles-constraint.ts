@@ -167,7 +167,8 @@ export class EqualAnglesConstraint extends EqualityConstraintBase<[WorldPoint, W
       angle2PointAId,
       angle2VertexId,
       angle2PointCId,
-      tolerance: this.tolerance
+      tolerance: this.tolerance,
+      lastResiduals: this.lastResiduals.length > 0 ? [...this.lastResiduals] : undefined
     }
   }
 
@@ -194,6 +195,10 @@ export class EqualAnglesConstraint extends EqualityConstraintBase<[WorldPoint, W
       ],
       { tolerance: dto.tolerance }
     )
+
+    if (dto.lastResiduals) {
+      constraint.lastResiduals = [...dto.lastResiduals]
+    }
 
     context.registerEntity(constraint, dto.id)
     return constraint

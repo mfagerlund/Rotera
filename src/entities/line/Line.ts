@@ -542,7 +542,8 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
       thickness: this.thickness,
       direction: this.direction,
       targetLength: this.targetLength,
-      tolerance: this.tolerance
+      tolerance: this.tolerance,
+      lastResiduals: this.lastResiduals.length > 0 ? [...this.lastResiduals] : undefined
     }
   }
 
@@ -563,6 +564,10 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
       targetLength: dto.targetLength,
       tolerance: dto.tolerance
     })
+
+    if (dto.lastResiduals) {
+      line.lastResiduals = [...dto.lastResiduals]
+    }
 
     context.registerEntity(line, dto.id)
     return line

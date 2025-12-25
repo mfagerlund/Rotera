@@ -588,7 +588,8 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IOptimizabl
             opacity: this.opacity,
             color: this.color,
             isPoseLocked: this.isPoseLocked,
-            vanishingLineIds: vanishingLineIds.length > 0 ? vanishingLineIds : undefined
+            vanishingLineIds: vanishingLineIds.length > 0 ? vanishingLineIds : undefined,
+            lastResiduals: this.lastResiduals.length > 0 ? [...this.lastResiduals] : undefined
         }
     }
 
@@ -624,6 +625,10 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IOptimizabl
 
         if (dto.isPoseLocked !== undefined) {
             viewpoint.isPoseLocked = dto.isPoseLocked
+        }
+
+        if (dto.lastResiduals) {
+            viewpoint.lastResiduals = [...dto.lastResiduals]
         }
 
         return viewpoint

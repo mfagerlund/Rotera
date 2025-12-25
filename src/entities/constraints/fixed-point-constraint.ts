@@ -148,7 +148,8 @@ export class FixedPointConstraint extends Constraint {
       name: this.name,
       pointId,
       targetPosition: this.targetXyz,
-      tolerance: this.tolerance
+      tolerance: this.tolerance,
+      lastResiduals: this.lastResiduals.length > 0 ? [...this.lastResiduals] : undefined
     }
   }
 
@@ -167,6 +168,10 @@ export class FixedPointConstraint extends Constraint {
       dto.targetPosition,
       { tolerance: dto.tolerance }
     )
+
+    if (dto.lastResiduals) {
+      constraint.lastResiduals = [...dto.lastResiduals]
+    }
 
     context.registerEntity(constraint, dto.id)
     return constraint

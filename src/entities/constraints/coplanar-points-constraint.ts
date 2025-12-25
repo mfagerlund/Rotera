@@ -233,7 +233,8 @@ export class CoplanarPointsConstraint extends Constraint {
       type: 'coplanar_points',
       name: this.name,
       pointIds,
-      tolerance: this.tolerance
+      tolerance: this.tolerance,
+      lastResiduals: this.lastResiduals.length > 0 ? [...this.lastResiduals] : undefined
     }
   }
 
@@ -253,6 +254,10 @@ export class CoplanarPointsConstraint extends Constraint {
       points,
       { tolerance: dto.tolerance }
     )
+
+    if (dto.lastResiduals) {
+      constraint.lastResiduals = [...dto.lastResiduals]
+    }
 
     context.registerEntity(constraint, dto.id)
     return constraint

@@ -13,4 +13,5 @@ export interface LineDto extends BaseDto {
   direction: LineDirection
   targetLength?: number
   tolerance?: number
+  lastResiduals?: number[]
 }

@@ -114,6 +114,15 @@ describe('Regression - Calibration', () => {
     await runFixtureTest('Balcony House Y Line Fast.json', 2)
   })
 
+  // Tower 2 projects - 4 viewpoints, similar to Tower 2 - O-Y Distance
+  it('Tower 2.json', async () => {
+    await runChallengingTest('Tower 2.json', 2)
+  })
+
+  it('Tower 2 With Roof.json', async () => {
+    await runChallengingTest('Tower 2 With Roof.json', 2)
+  })
+
   // 3 cameras: cameras 3 and 4 can VP-init
   // Camera 2 cannot be initialized: only sees Y-direction lines (can't VP-init),
   // and only 2 triangulated points (WP5, WP6 - collinear, not enough for PnP)

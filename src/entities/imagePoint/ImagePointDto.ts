@@ -7,4 +7,5 @@ export interface ImagePointDto extends BaseDto {
   u: number
   v: number
   confidence: number
+  lastResiduals?: number[]
 }

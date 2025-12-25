@@ -138,7 +138,8 @@ export class DistanceConstraint extends Constraint {
       pointAId,
       pointBId,
       targetDistance: this.targetDistance,
-      tolerance: this.tolerance
+      tolerance: this.tolerance,
+      lastResiduals: this.lastResiduals.length > 0 ? [...this.lastResiduals] : undefined
     }
   }
 
@@ -159,6 +160,10 @@ export class DistanceConstraint extends Constraint {
       dto.targetDistance,
       { tolerance: dto.tolerance }
     )
+
+    if (dto.lastResiduals) {
+      constraint.lastResiduals = [...dto.lastResiduals]
+    }
 
     context.registerEntity(constraint, dto.id)
     return constraint

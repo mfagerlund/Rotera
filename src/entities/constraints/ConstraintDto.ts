@@ -4,6 +4,7 @@ export interface BaseConstraintDto extends BaseDto {
   id: string
   type: string
   name: string
+  lastResiduals?: number[]
 }
 
 export interface DistanceConstraintDto extends BaseConstraintDto {
