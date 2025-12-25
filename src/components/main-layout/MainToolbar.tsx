@@ -14,16 +14,13 @@ import {
   faBolt,
   faFile,
   faChevronDown,
-  faImage,
   faFileLines,
-  faCube,
   faRotate
 } from '@fortawesome/free-solid-svg-icons'
-import { downloadRoteraProject, downloadRoteraWithImages } from '../../services/blender-export'
+import { downloadRoteraProject } from '../../services/blender-export'
 import { WorkspaceSwitcher } from '../WorkspaceManager'
 import { AppBranding } from '../AppBranding'
 import type { Project } from '../../entities/project'
-import type { ProjectDto } from '../../entities/project/ProjectDto'
 import { checkOptimizationReadiness, getOptimizationStatusSummary } from '../../optimization/optimization-readiness'
 
 interface MainToolbarProps {
@@ -35,7 +32,6 @@ interface MainToolbarProps {
 
   // Project
   project: Project | null
-  onExportOptimization: () => ProjectDto | null
   onClearProject: () => void
 
   // Confirm dialog
@@ -58,7 +54,6 @@ export const MainToolbar: React.FC<MainToolbarProps> = observer(({
   imageHasContent,
   worldHasContent,
   project,
-  onExportOptimization,
   onClearProject,
   confirm,
   onReturnToBrowser,
@@ -68,40 +63,6 @@ export const MainToolbar: React.FC<MainToolbarProps> = observer(({
   onOpenOptimization,
   isDirty
 }) => {
-  const handleExport = (includeImages: boolean) => {
-    const exportData = onExportOptimization()
-    if (!exportData) {
-      alert('No project data to export')
-      return
-    }
-
-    let filteredData = exportData
-
-    if (!includeImages && exportData.viewpoints) {
-      filteredData = {
-        ...exportData,
-        viewpoints: exportData.viewpoints.map((vp: any) => ({
-          ...vp,
-          url: ''
-        }))
-      }
-    }
-
-    // Create JSON blob and download
-    const json = JSON.stringify(filteredData, null, 2)
-    const blob = new Blob([json], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    const suffix = includeImages ? 'with-images' : 'data-only'
-    link.download = `${project?.name || 'project'}-${suffix}-${new Date().toISOString().split('T')[0]}.json`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-    setFileMenuOpen(false)
-  }
-
   const handleClearProject = async () => {
     setFileMenuOpen(false)
     const confirmed = await confirm(
@@ -383,43 +344,29 @@ export const MainToolbar: React.FC<MainToolbarProps> = observer(({
             <div className="file-menu-divider" />
             <button
               className="file-menu-item"
-              onClick={() => handleExport(true)}
+              onClick={async () => {
+                if (project) {
+                  await downloadRoteraProject(project, true)
+                  setFileMenuOpen(false)
+                }
+              }}
+              disabled={!project}
             >
-              <FontAwesomeIcon icon={faImage} />
-              <span>Export with Images</span>
+              <FontAwesomeIcon icon={faFileExport} />
+              <span>Export (.rotera)</span>
             </button>
             <button
               className="file-menu-item"
-              onClick={() => handleExport(false)}
+              onClick={async () => {
+                if (project) {
+                  await downloadRoteraProject(project, false)
+                  setFileMenuOpen(false)
+                }
+              }}
+              disabled={!project}
             >
               <FontAwesomeIcon icon={faFileLines} />
-              <span>Export without Images</span>
-            </button>
-            <button
-              className="file-menu-item"
-              onClick={async () => {
-                if (project) {
-                  await downloadRoteraProject(project)
-                  setFileMenuOpen(false)
-                }
-              }}
-              disabled={!project}
-            >
-              <FontAwesomeIcon icon={faCube} />
-              <span>Export for Blender (.rotera)</span>
-            </button>
-            <button
-              className="file-menu-item"
-              onClick={async () => {
-                if (project) {
-                  await downloadRoteraWithImages(project)
-                  setFileMenuOpen(false)
-                }
-              }}
-              disabled={!project}
-            >
-              <FontAwesomeIcon icon={faCube} />
-              <span>Export for Blender (with images)</span>
+              <span>Export without Images (.rotera)</span>
             </button>
             <div className="file-menu-divider" />
             <button

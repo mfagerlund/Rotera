@@ -79,7 +79,6 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
     addConstraint,
     deleteConstraint,
     clearProject,
-    exportOptimizationDto,
     removeDuplicateImagePoints
   } = useDomainOperations(project, setProject)
 
@@ -677,7 +676,6 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
               imageHasContent={imageInfo.totalImages > 0}
               worldHasContent={worldInfo.totalPoints > 0}
               project={project}
-              onExportOptimization={exportOptimizationDto}
               onClearProject={clearProject}
               confirm={confirm}
               onReturnToBrowser={onReturnToBrowser}

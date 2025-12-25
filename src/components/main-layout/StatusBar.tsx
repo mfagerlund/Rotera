@@ -76,23 +76,7 @@ export const StatusBar: React.FC<StatusBarProps> = observer(({
         <span className="status-bar__toggle-label">Component labels</span>
       </button>
 
-      <div style={{
-        marginLeft: '12px',
-        padding: '4px 12px',
-        backgroundColor: __WORKTREE_NAME__ === 'main' ? '#1a4d2e' : '#8b4513',
-        color: '#fff',
-        borderRadius: '4px',
-        fontWeight: 'bold',
-        fontSize: '13px',
-        textTransform: 'uppercase',
-        letterSpacing: '0.5px',
-        border: '2px solid ' + (__WORKTREE_NAME__ === 'main' ? '#2d7a4d' : '#d2691e')
-      }}>
-        {__WORKTREE_NAME__ === 'main' ? __WORKTREE_NAME__ : __WORKTREE_NAME__.replace('Pictorigo-', '')}
-      </div>
-
-      <span style={{ marginLeft: '12px', color: '#888' }}>v0.4-ENHANCED</span>
-
+      
       <VisibilityPanel
         viewSettings={project.viewSettings}
         onVisibilityChange={onVisibilityChange}

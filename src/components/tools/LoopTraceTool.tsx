@@ -61,7 +61,8 @@ export const LoopTraceTool: React.FC<LoopTraceToolProps> = observer(({
   const {
     segments,
     lineCounts,
-    complete
+    complete,
+    validPointCount
   } = useLoopTrace({
     selectedPoints,
     allWorldPoints,
@@ -326,7 +327,7 @@ export const LoopTraceTool: React.FC<LoopTraceToolProps> = observer(({
         {/* Status Summary - Compact */}
         <div className="tool-section compact">
           <span className="status-text">
-            {selectedPoints.length} pts • {lineCounts.newLines} new • {lineCounts.existingLines} exist
+            {validPointCount} pts • {lineCounts.newLines} new • {lineCounts.existingLines} exist
           </span>
         </div>
       </div>
@@ -337,7 +338,7 @@ export const LoopTraceTool: React.FC<LoopTraceToolProps> = observer(({
           <button
             className="btn-primary"
             onClick={handleComplete}
-            disabled={selectedPoints.length < 2}
+            disabled={validPointCount < 2}
           >
             Complete
           </button>

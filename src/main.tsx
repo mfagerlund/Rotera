@@ -14,10 +14,8 @@ configure({
   disableErrorBoundaries: false
 })
 
-// Update document title with worktree identifier
-document.title = __WORKTREE_NAME__ === 'main'
-  ? 'Pictorigo'
-  : __WORKTREE_NAME__
+// Initial title (will be overridden by App when project loads)
+document.title = 'Rotera'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

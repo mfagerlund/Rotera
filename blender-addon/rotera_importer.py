@@ -430,12 +430,30 @@ def menu_func_import(self, context):
 
 
 # =============================================================================
+# File Handler (Blender 4.0+ drag-and-drop support)
+# =============================================================================
+
+# Check if FileHandler is available (Blender 4.0+)
+if hasattr(bpy.types, 'FileHandler'):
+    class ROTERA_FH_import(bpy.types.FileHandler):
+        bl_idname = "ROTERA_FH_import"
+        bl_label = "Rotera Project"
+        bl_import_operator = "import_scene.rotera"
+        bl_file_extensions = ".rotera"
+
+        @classmethod
+        def poll_drop(cls, context):
+            return context.area and context.area.type == 'VIEW_3D'
+
+
+# =============================================================================
 # Registration
 # =============================================================================
 
-classes = (
-    IMPORT_OT_rotera,
-)
+# Build class list based on Blender version
+classes = [IMPORT_OT_rotera]
+if hasattr(bpy.types, 'FileHandler'):
+    classes.append(ROTERA_FH_import)
 
 
 def register():

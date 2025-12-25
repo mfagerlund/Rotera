@@ -4,11 +4,9 @@ import { Line, LineDirection } from '../entities/line'
 import { Viewpoint } from '../entities/viewpoint'
 import { ImagePoint } from '../entities/imagePoint'
 import { Constraint } from '../entities/constraints'
-import type { ProjectDto } from '../entities/project/ProjectDto'
 import { DistanceConstraint } from '../entities/constraints/distance-constraint'
 import { AngleConstraint } from '../entities/constraints/angle-constraint'
 import { CoplanarPointsConstraint } from '../entities/constraints/coplanar-points-constraint'
-import { Serialization } from '../entities/Serialization'
 import { VanishingLine } from '../entities/vanishing-line'
 import { ImageUtils } from '../utils/imageUtils'
 
@@ -73,7 +71,6 @@ export interface DomainOperations {
 
   // Project
   clearProject: () => void
-  exportOptimizationDto: () => ProjectDto | null  // Returns ProjectDto (full serialization)
   removeDuplicateImagePoints: () => number  // Returns number of duplicates removed
 }
 
@@ -154,6 +151,16 @@ export function useDomainOperations(
 
   const createLine = (pointA: WorldPoint, pointB: WorldPoint, options?: LineOptions): Line => {
     if (!project) throw new Error('No project')
+
+    // Validate that both endpoints are in the project
+    if (!project.worldPoints.has(pointA)) {
+      console.error(`Cannot create line: pointA "${pointA.name}" is not in the project`)
+      throw new Error(`Cannot create line: pointA "${pointA.name}" is not in the project`)
+    }
+    if (!project.worldPoints.has(pointB)) {
+      console.error(`Cannot create line: pointB "${pointB.name}" is not in the project`)
+      throw new Error(`Cannot create line: pointB "${pointB.name}" is not in the project`)
+    }
 
     const line = Line.create(
       options?.name ?? '',
@@ -339,15 +346,6 @@ export function useDomainOperations(
     project.clear()
   }
 
-  const exportOptimizationDto = (): ProjectDto | null => {
-    if (!project) return null
-
-    // Use the full project serialization (ProjectDto format)
-    // The caller (MainToolbar) will filter out image blobs if needed
-    const json = Serialization.serialize(project)
-    return JSON.parse(json) as ProjectDto
-  }
-
   const removeDuplicateImagePoints = (): number => {
     if (!project) return 0
 
@@ -399,7 +397,6 @@ export function useDomainOperations(
     addConstraint,
     deleteConstraint,
     clearProject,
-    exportOptimizationDto,
     removeDuplicateImagePoints
   }
 }

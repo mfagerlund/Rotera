@@ -752,9 +752,9 @@ export async function downloadBlenderToFolder(project: Project, options: Blender
  * Export project as .rotera file for import into Blender via the Rotera add-on.
  * Images are embedded as base64 data URLs, so everything is in one file.
  */
-export async function downloadRoteraProject(project: Project): Promise<void> {
+export async function downloadRoteraProject(project: Project, includeImages: boolean = true): Promise<void> {
   const { Serialization } = await import('../entities/Serialization')
-  const json = Serialization.serialize(project, { excludeImages: false })  // Include embedded images
+  const json = Serialization.serialize(project, { excludeImages: !includeImages })
   const blob = new Blob([json], { type: 'application/json' })
   const filename = `${sanitizeFilename(project.name || 'project')}.rotera`
 
@@ -767,87 +767,7 @@ export async function downloadRoteraProject(project: Project): Promise<void> {
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
 
-  showToast(`Rotera project exported: ${filename}`)
+  const suffix = includeImages ? '' : ' (without images)'
+  showToast(`Exported: ${filename}${suffix}`)
 }
 
-/**
- * Export project as .rotera file with images in a folder.
- * Uses File System Access API if available, otherwise falls back to zip.
- */
-export async function downloadRoteraWithImages(project: Project): Promise<void> {
-  const { Serialization } = await import('../entities/Serialization')
-  const projectName = sanitizeFilename(project.name || 'project')
-  const viewpoints = Array.from(project.viewpoints)
-
-  // Try File System Access API first (Chrome/Edge)
-  if ('showDirectoryPicker' in window) {
-    try {
-      const dirHandle = await (window as any).showDirectoryPicker({
-        mode: 'readwrite',
-        startIn: 'downloads'
-      })
-
-      // Create images subdirectory
-      const imagesDir = await dirHandle.getDirectoryHandle('images', { create: true })
-
-      // Write images
-      for (const vp of viewpoints) {
-        if (!vp.url) continue
-        const blob = await fetchImageAsBlob(vp.url)
-        if (blob) {
-          const fileHandle = await imagesDir.getFileHandle(vp.filename, { create: true })
-          const writable = await fileHandle.createWritable()
-          await writable.write(blob)
-          await writable.close()
-        }
-      }
-
-      // Write .rotera file
-      const json = Serialization.serialize(project, { excludeImages: true })
-      const roteraHandle = await dirHandle.getFileHandle(`${projectName}.rotera`, { create: true })
-      const roteraWritable = await roteraHandle.createWritable()
-      await roteraWritable.write(json)
-      await roteraWritable.close()
-
-      const imageCount = viewpoints.filter(vp => vp.url).length
-      showToast(`Rotera project saved to "${dirHandle.name}" (${imageCount} images)`)
-      return
-    } catch (e) {
-      if (e instanceof DOMException && e.name === 'AbortError') {
-        return
-      }
-      console.log('Directory picker failed, falling back to zip:', e)
-    }
-  }
-
-  // Fallback: download as zip
-  const zip = new JSZip()
-  const imagesFolder = zip.folder('images')
-
-  // Add images to zip
-  for (const vp of viewpoints) {
-    if (!vp.url) continue
-    const blob = await fetchImageAsBlob(vp.url)
-    if (blob && imagesFolder) {
-      imagesFolder.file(vp.filename, blob)
-    }
-  }
-
-  // Add .rotera file
-  const json = Serialization.serialize(project, { excludeImages: true })
-  zip.file(`${projectName}.rotera`, json)
-
-  // Download zip
-  const zipBlob = await zip.generateAsync({ type: 'blob' })
-  const url = URL.createObjectURL(zipBlob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `${projectName}_rotera.zip`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
-
-  const imageCount = viewpoints.filter(vp => vp.url).length
-  showToast(`Rotera project downloaded as zip (${imageCount} images)`)
-}

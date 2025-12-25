@@ -38,12 +38,32 @@ export function addConstraint(constraint: Constraint): void {
 }
 
 export function deleteWorldPoint(point: WorldPoint): boolean {
+  // First, clean up all connected lines
+  const linesToRemove = Array.from(point.connectedLines) as Line[]
+  for (const line of linesToRemove) {
+    line.pointA.removeConnectedLine(line)
+    line.pointB.removeConnectedLine(line)
+    project.removeLine(line)
+  }
+
+  // Clean up image points
+  const imagePointsToRemove = Array.from(point.imagePoints)
+  for (const imagePoint of imagePointsToRemove) {
+    imagePoint.viewpoint.removeImagePoint(imagePoint)
+    point.removeImagePoint(imagePoint)
+    project.removeImagePoint(imagePoint)
+  }
+
+  // Now remove the world point
   project.removeWorldPoint(point)
   project.propagateInferences()
   return true
 }
 
 export function deleteLine(line: Line): boolean {
+  // Clean up the line from its endpoints
+  line.pointA.removeConnectedLine(line)
+  line.pointB.removeConnectedLine(line)
   project.removeLine(line)
   project.propagateInferences()
   return true

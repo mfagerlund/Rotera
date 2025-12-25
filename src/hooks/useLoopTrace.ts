@@ -88,6 +88,17 @@ export function useLoopTrace({
   closedLoop = false
 }: UseLoopTraceProps) {
 
+  // Filter out any stale selections (points that are no longer in the project)
+  // This can happen if a point was deleted while still being selected
+  const validSelectedPoints = useMemo(() => {
+    const allPointsSet = new Set(allWorldPoints)
+    const valid = selectedPoints.filter(p => allPointsSet.has(p))
+    if (valid.length !== selectedPoints.length) {
+      console.warn(`Filtered out ${selectedPoints.length - valid.length} stale point(s) from loop trace selection`)
+    }
+    return valid
+  }, [selectedPoints, allWorldPoints])
+
   // Check if a line exists between two points (bidirectional)
   const findExistingLine = useCallback((pointA: WorldPoint, pointB: WorldPoint): Line | undefined => {
     return Array.from(existingLines.values()).find(line =>
@@ -100,9 +111,9 @@ export function useLoopTrace({
   const segments = useMemo((): SegmentStatus[] => {
     const result: SegmentStatus[] = []
 
-    for (let i = 0; i < selectedPoints.length - 1; i++) {
-      const pointA = selectedPoints[i]
-      const pointB = selectedPoints[i + 1]
+    for (let i = 0; i < validSelectedPoints.length - 1; i++) {
+      const pointA = validSelectedPoints[i]
+      const pointB = validSelectedPoints[i + 1]
 
       const existing = findExistingLine(pointA, pointB)
 
@@ -115,9 +126,9 @@ export function useLoopTrace({
     }
 
     // Add closing line if closedLoop is enabled and we have at least 3 points
-    if (closedLoop && selectedPoints.length >= 3) {
-      const pointA = selectedPoints[selectedPoints.length - 1]
-      const pointB = selectedPoints[0]
+    if (closedLoop && validSelectedPoints.length >= 3) {
+      const pointA = validSelectedPoints[validSelectedPoints.length - 1]
+      const pointB = validSelectedPoints[0]
       const existing = findExistingLine(pointA, pointB)
 
       result.push({
@@ -129,7 +140,7 @@ export function useLoopTrace({
     }
 
     return result
-  }, [selectedPoints, findExistingLine, closedLoop])
+  }, [validSelectedPoints, findExistingLine, closedLoop])
 
   // Count of lines to create vs existing
   const lineCounts = useMemo(() => {
@@ -146,13 +157,13 @@ export function useLoopTrace({
     const updated: string[] = []
 
     // Calculate how many segments to process
-    const segmentCount = closedLoop && selectedPoints.length >= 3
-      ? selectedPoints.length
-      : selectedPoints.length - 1
+    const segmentCount = closedLoop && validSelectedPoints.length >= 3
+      ? validSelectedPoints.length
+      : validSelectedPoints.length - 1
 
     for (let i = 0; i < segmentCount; i++) {
-      const pointA = selectedPoints[i]
-      const pointB = selectedPoints[(i + 1) % selectedPoints.length]
+      const pointA = validSelectedPoints[i]
+      const pointB = validSelectedPoints[(i + 1) % validSelectedPoints.length]
 
       // Check if line exists (bidirectional)
       const existingLine = findExistingLine(pointA, pointB)
@@ -188,14 +199,14 @@ export function useLoopTrace({
     }
 
     // Create coplanar constraint if enabled and we have at least 4 points
-    if (coplanarEnabled && selectedPoints.length >= 4 && onCreateConstraint) {
+    if (coplanarEnabled && validSelectedPoints.length >= 4 && onCreateConstraint) {
       const constraintName = namePrefix
         ? `${namePrefix}_coplanar`
         : 'Loop_coplanar'
 
       const coplanarConstraint = CoplanarPointsConstraint.create(
         constraintName,
-        selectedPoints,
+        validSelectedPoints,
         {
           tolerance: 0.001
         }
@@ -205,11 +216,12 @@ export function useLoopTrace({
     }
 
     return { created, skipped, updated }
-  }, [selectedPoints, orientation, findExistingLine, onCreateLine, namePrefix, closedLoop, coplanarEnabled, onCreateConstraint])
+  }, [validSelectedPoints, orientation, findExistingLine, onCreateLine, namePrefix, closedLoop, coplanarEnabled, onCreateConstraint])
 
   return {
     segments,
     lineCounts,
-    complete
+    complete,
+    validPointCount: validSelectedPoints.length
   }
 }

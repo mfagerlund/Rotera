@@ -4,7 +4,7 @@ import { ProjectBrowser } from './components/ProjectBrowser'
 import { ProjectNameModal } from './components/ProjectNameModal'
 import { ProjectDB } from './services/project-db'
 import { Project } from './entities/project'
-import { loadProject, getIsDirty } from './store/project-store'
+import { loadProject, getIsDirty, getProject } from './store/project-store'
 import { SessionStore } from './services/session-store'
 import './styles/pictorigo.css'
 import './styles/enhanced-workspace.css'
@@ -84,6 +84,15 @@ function App() {
     SessionStore.clear()
     setView('browser')
   }, [])
+
+  // Update document title based on view and project
+  useEffect(() => {
+    if (view === 'editor') {
+      document.title = `Rotera: ${getProject().name}`
+    } else {
+      document.title = 'Rotera'
+    }
+  }, [view])
 
   // Task 5: beforeunload warning
   useEffect(() => {
