@@ -82,7 +82,8 @@ export const WorldPointItem: React.FC<WorldPointItemProps> = ({
       className={itemClasses}
       draggable={true}
       onDragStart={(e) => {
-        const action = imagePointCount > 0 ? 'move' : 'place'
+        // Use 'place' when missing from current image, 'move' when already present
+        const action = isMissingFromImage ? 'place' : 'move'
         e.dataTransfer.setData('application/json', JSON.stringify({
           type: 'world-point',
           worldPointKey: getEntityKey(worldPoint),
