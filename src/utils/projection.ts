@@ -35,20 +35,25 @@ export function projectToPixel(
   const dy = worldXyz[1] - camPos[1]
   const dz = worldXyz[2] - camPos[2]
 
-  const camX = rotationMatrix[0][0] * dx + rotationMatrix[0][1] * dy + rotationMatrix[0][2] * dz
-  const camY = rotationMatrix[1][0] * dx + rotationMatrix[1][1] * dy + rotationMatrix[1][2] * dz
-  const camZ = rotationMatrix[2][0] * dx + rotationMatrix[2][1] * dy + rotationMatrix[2][2] * dz
+  const camX_raw = rotationMatrix[0][0] * dx + rotationMatrix[0][1] * dy + rotationMatrix[0][2] * dz
+  const camY_raw = rotationMatrix[1][0] * dx + rotationMatrix[1][1] * dy + rotationMatrix[1][2] * dz
+  const camZ_raw = rotationMatrix[2][0] * dx + rotationMatrix[2][1] * dy + rotationMatrix[2][2] * dz
 
   // Handle z-reflected viewpoints (used after right-handed transformation)
-  const effectiveCamZ = viewpoint.isZReflected ? -camZ : camZ
+  // When isZReflected is true, the quaternion has been adjusted to include a 180° Z rotation
+  // to make the total flip count even. This negates X and Y in camera coords.
+  // We need to undo both the X/Y negation AND the Z sign to get correct projection.
+  const camX = viewpoint.isZReflected ? -camX_raw : camX_raw
+  const camY = viewpoint.isZReflected ? -camY_raw : camY_raw
+  const camZ = viewpoint.isZReflected ? -camZ_raw : camZ_raw
 
   // Check if point is behind camera or too close
-  if (effectiveCamZ < 0.1) {
+  if (camZ < 0.1) {
     return null
   }
 
-  const xNorm = camX / effectiveCamZ
-  const yNorm = camY / effectiveCamZ
+  const xNorm = camX / camZ
+  const yNorm = camY / camZ
 
   const u = cx + fx * xNorm + skew * yNorm
   const v = cy - fy * yNorm
@@ -57,7 +62,7 @@ export function projectToPixel(
     return null
   }
 
-  return { u, v, depth: effectiveCamZ }
+  return { u, v, depth: camZ }
 }
 
 /**
@@ -77,7 +82,11 @@ export function projectWorldPointToPixel(
 
 /**
  * Check if a viewpoint has a valid camera pose that can be used for projection.
+ * A camera has a valid pose if:
+ * 1. It has residuals from optimization (lastResiduals)
+ * 2. OR it's pose-locked (manually set by user)
+ * 3. OR it has image points (meaning it's been set up for calibration and might have a pose)
  */
 export function hasValidCameraPose(viewpoint: Viewpoint): boolean {
-  return viewpoint.lastResiduals.length > 0 || viewpoint.isPoseLocked
+  return viewpoint.lastResiduals.length > 0 || viewpoint.isPoseLocked || viewpoint.imagePoints.size > 0
 }

@@ -26,6 +26,12 @@ function isViewpointInitialized(vp: Viewpoint): boolean {
  * @returns true if triangulation succeeded and optimizedXyz was set
  */
 export function tryTriangulateWorldPoint(worldPoint: WorldPoint): boolean {
+  // Skip if already has an optimizedXyz - don't overwrite existing position
+  // This prevents auto-place from clobbering the world point's known position
+  if (worldPoint.optimizedXyz) {
+    return true
+  }
+
   // Skip if already fully constrained (has locked coordinates)
   if (worldPoint.isFullyConstrained()) {
     const effective = worldPoint.getEffectiveXyz()

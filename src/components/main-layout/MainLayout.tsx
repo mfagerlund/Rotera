@@ -485,7 +485,12 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
     }
   }, [currentImage, moveImagePoint, addImagePointToWorldPoint])
 
-  const handlePlaceWorldPoint = useCallback((worldPoint: WorldPoint, u: number, v: number) => {
+  const handlePlaceWorldPoint = useCallback((worldPoint: WorldPoint, viewpoint: import('../../entities/viewpoint').Viewpoint, u: number, v: number) => {
+    addImagePointToWorldPoint(worldPoint, viewpoint, u, v)
+  }, [addImagePointToWorldPoint])
+
+  // Wrapper for ImageWorkspace that uses currentImage
+  const handlePlaceWorldPointOnCurrentImage = useCallback((worldPoint: WorldPoint, u: number, v: number) => {
     if (currentImage) {
       addImagePointToWorldPoint(worldPoint, currentImage, u, v)
     }
@@ -573,7 +578,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
       selectedVanishingLines={selectedVanishingLineEntities}
       onCreatePoint={handleImageClick}
       onMovePoint={handleMovePoint}
-      onPlaceWorldPoint={handlePlaceWorldPoint}
+      onPlaceWorldPoint={handlePlaceWorldPointOnCurrentImage}
       onPointHover={setHoveredWorldPoint}
       onPointRightClick={openWorldPointEdit}
       visibility={project?.viewSettings.visibility || DEFAULT_VIEW_SETTINGS.visibility}
@@ -597,7 +602,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
     handleEnhancedPointClick,
     handleImageClick,
     handleMovePoint,
-    handlePlaceWorldPoint,
+    handlePlaceWorldPointOnCurrentImage,
     openWorldPointEdit,
     handleEditLineOpen,
     handleEmptySpaceClick,
@@ -848,6 +853,8 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
         showVPQualityWindow={showVPQualityWindow}
         onCloseVPQualityWindow={closeVPQualityWindow}
         currentViewpoint={currentViewpoint}
+        onStartPlacement={startPlacementMode}
+        onAddImagePoint={handlePlaceWorldPoint}
       />
 
       {dialog}

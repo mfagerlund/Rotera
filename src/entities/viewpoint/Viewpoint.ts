@@ -14,6 +14,8 @@ import type { ViewpointMetadata } from './ViewpointMetadata'
 import {makeAutoObservable} from 'mobx'
 
 export class Viewpoint implements ISelectable, IValueMapContributor, IOptimizableCamera, IViewpoint, ISerializable<ViewpointDto> {
+    /** Unique identifier - stable across sessions */
+    readonly id: string
     selected = false
     isPoseLocked = false
     lastResiduals: number[] = []
@@ -65,6 +67,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IOptimizabl
     vanishingLines: Set<VanishingLine> = new Set()
 
     private constructor(
+        id: string,
         name: string,
         filename: string,
         url: string,
@@ -90,6 +93,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IOptimizabl
         opacity: number,
         color: string
     ) {
+        this.id = id
         this.name = name
         this.filename = filename
         this.url = url
@@ -126,6 +130,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IOptimizabl
      * @internal Used only by Serialization class - do not use directly
      */
     static createFromSerialized(
+        id: string,
         name: string,
         filename: string,
         url: string,
@@ -152,6 +157,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IOptimizabl
         color: string
     ): Viewpoint {
         return new Viewpoint(
+            id,
             name,
             filename,
             url,
@@ -220,6 +226,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IOptimizabl
         } = {}
     ): Viewpoint {
         const now = new Date().toISOString()
+        const id = options.id ?? crypto.randomUUID()
 
         // Estimate focal length from image dimensions if not provided
         const defaultFocalLength = Math.max(imageWidth, imageHeight)
@@ -268,6 +275,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IOptimizabl
         }
 
         const viewpoint = new Viewpoint(
+            id,
             dto.name,
             dto.filename,
             dto.url,
@@ -554,7 +562,8 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IOptimizabl
     }
 
     serialize(context: SerializationContext): ViewpointDto {
-        const id = context.getEntityId(this) || context.registerEntity(this)
+        // Use our stable id and register with context
+        context.registerEntity(this, this.id)
 
         const vanishingLineIds = Array.from(this.vanishingLines).map(line => {
             const lineId = context.getEntityId(line) || context.registerEntity(line)
@@ -562,7 +571,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IOptimizabl
         })
 
         return {
-            id,
+            id: this.id,
             name: this.name,
             filename: this.filename,
             url: context.options.excludeImages ? '' : this.url,
@@ -595,6 +604,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IOptimizabl
 
     static deserialize(dto: ViewpointDto, context: SerializationContext): Viewpoint {
         const viewpoint = Viewpoint.createFromSerialized(
+            dto.id,
             dto.name,
             dto.filename,
             dto.url,

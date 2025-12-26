@@ -30,9 +30,16 @@ export function renderWorldAxes(params: RenderParams): void {
     const dy = worldY - camPos[1]
     const dz = worldZ - camPos[2]
 
-    const camX = rotationMatrix[0][0] * dx + rotationMatrix[0][1] * dy + rotationMatrix[0][2] * dz
-    const camY = rotationMatrix[1][0] * dx + rotationMatrix[1][1] * dy + rotationMatrix[1][2] * dz
-    const camZ = rotationMatrix[2][0] * dx + rotationMatrix[2][1] * dy + rotationMatrix[2][2] * dz
+    const camX_raw = rotationMatrix[0][0] * dx + rotationMatrix[0][1] * dy + rotationMatrix[0][2] * dz
+    const camY_raw = rotationMatrix[1][0] * dx + rotationMatrix[1][1] * dy + rotationMatrix[1][2] * dz
+    const camZ_raw = rotationMatrix[2][0] * dx + rotationMatrix[2][1] * dy + rotationMatrix[2][2] * dz
+
+    // Handle z-reflected viewpoints (used after right-handed transformation)
+    // When isZReflected is true, the quaternion has been adjusted to include a 180° Z rotation.
+    // We need to undo all three axes to get correct projection.
+    const camX = viewpoint.isZReflected ? -camX_raw : camX_raw
+    const camY = viewpoint.isZReflected ? -camY_raw : camY_raw
+    const camZ = viewpoint.isZReflected ? -camZ_raw : camZ_raw
 
     // Check if point is too close to camera plane (avoid division issues)
     if (Math.abs(camZ) < 1e-6) {

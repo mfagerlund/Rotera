@@ -92,6 +92,8 @@ interface BottomPanelProps {
   showVPQualityWindow: boolean
   onCloseVPQualityWindow: () => void
   currentViewpoint: Viewpoint | null
+  onStartPlacement?: (worldPoint: WorldPoint) => void
+  onAddImagePoint?: (worldPoint: WorldPoint, viewpoint: Viewpoint, u: number, v: number) => void
 }
 
 export const BottomPanel: React.FC<BottomPanelProps> = observer(({
@@ -150,7 +152,9 @@ export const BottomPanel: React.FC<BottomPanelProps> = observer(({
   selectedWorldPoints = [],
   showVPQualityWindow,
   onCloseVPQualityWindow,
-  currentViewpoint
+  currentViewpoint,
+  onStartPlacement,
+  onAddImagePoint
 }) => {
   return (
     <>
@@ -164,6 +168,9 @@ export const BottomPanel: React.FC<BottomPanelProps> = observer(({
         onDeleteWorldPoint={onDeleteWorldPoint}
         onDeleteAllWorldPoints={onDeleteAllWorldPoints}
         onSelectWorldPoint={onSelectWorldPoint}
+        currentViewpoint={currentViewpoint}
+        onStartPlacement={onStartPlacement}
+        onAddImagePoint={onAddImagePoint}
       />
 
       <LinesManager

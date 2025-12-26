@@ -19,8 +19,8 @@ function getFirstViewpointBySortOrder(project: Project): Viewpoint | null {
 
   // Sort viewpoints using the same logic as ImageNavigationToolbar
   const sorted = viewpoints.slice().sort((a, b) => {
-    const indexA = sortOrder.indexOf(a.getName())
-    const indexB = sortOrder.indexOf(b.getName())
+    const indexA = sortOrder.indexOf(a.id)
+    const indexB = sortOrder.indexOf(b.id)
     // Images in sort order come first (by their index), unsorted images go to end (Infinity)
     const orderA = indexA >= 0 ? indexA : Infinity
     const orderB = indexB >= 0 ? indexB : Infinity

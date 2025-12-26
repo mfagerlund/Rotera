@@ -112,7 +112,7 @@ export function useMainLayoutState(options: UseMainLayoutStateOptions = {}): Mai
 
   const handleImageHeightChange = useCallback((viewpoint: Viewpoint, height: number) => {
     const proj = getProject()
-    const newHeights = { ...proj.imageHeights, [viewpoint.getName()]: height }
+    const newHeights = { ...proj.imageHeights, [viewpoint.id]: height }
     setImageHeightsState(newHeights)
     proj.imageHeights = newHeights
   }, [])

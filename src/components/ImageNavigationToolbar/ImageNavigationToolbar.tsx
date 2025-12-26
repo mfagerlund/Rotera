@@ -88,10 +88,10 @@ export const ImageNavigationToolbar = observer(forwardRef<ImageNavigationToolbar
 
   // Sort images according to sort order, with new images at the end
   const imageList = useMemo(() => {
-    const imageToName = new Map(images.map(img => [img, img.getName()]))
+    const imageToId = new Map(images.map(img => [img, img.id]))
     return images.slice().sort((a, b) => {
-      const indexA = imageSortOrder.indexOf(imageToName.get(a)!)
-      const indexB = imageSortOrder.indexOf(imageToName.get(b)!)
+      const indexA = imageSortOrder.indexOf(imageToId.get(a)!)
+      const indexB = imageSortOrder.indexOf(imageToId.get(b)!)
       // Images in sort order come first (by their index), unsorted images go to end (Infinity)
       const orderA = indexA >= 0 ? indexA : Infinity
       const orderB = indexB >= 0 ? indexB : Infinity
@@ -114,20 +114,20 @@ export const ImageNavigationToolbar = observer(forwardRef<ImageNavigationToolbar
     const newOrder = [...imageSortOrder]
 
     // Ensure both images are in the order array
-    if (!newOrder.includes(draggedImage.getName())) {
-      newOrder.push(draggedImage.getName())
+    if (!newOrder.includes(draggedImage.id)) {
+      newOrder.push(draggedImage.id)
     }
-    if (!newOrder.includes(droppedOnImage.getName())) {
-      newOrder.push(droppedOnImage.getName())
+    if (!newOrder.includes(droppedOnImage.id)) {
+      newOrder.push(droppedOnImage.id)
     }
 
     // Remove dragged item and insert it before the drop target
-    const draggedIndex = newOrder.indexOf(draggedImage.getName())
-    const dropTargetIndex = newOrder.indexOf(droppedOnImage.getName())
+    const draggedIndex = newOrder.indexOf(draggedImage.id)
+    const dropTargetIndex = newOrder.indexOf(droppedOnImage.id)
 
     newOrder.splice(draggedIndex, 1)
     const newDropIndex = draggedIndex < dropTargetIndex ? dropTargetIndex - 1 : dropTargetIndex
-    newOrder.splice(newDropIndex, 0, draggedImage.getName())
+    newOrder.splice(newDropIndex, 0, draggedImage.id)
 
     onImageReorder(newOrder)
     setDraggedImage(null)
@@ -193,7 +193,7 @@ export const ImageNavigationToolbar = observer(forwardRef<ImageNavigationToolbar
                     onImageDelete(image)
                   }
                 }}
-                thumbnailHeight={imageHeights[image.getName()] || 100}
+                thumbnailHeight={imageHeights[image.id] || 100}
                 onThumbnailHeightChange={(height) => onImageHeightChange(image, height)}
                 isDragging={draggedImage === image}
                 isDragOver={dragOverImage === image}
