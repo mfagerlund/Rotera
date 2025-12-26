@@ -1,7 +1,7 @@
 import React from 'react'
 import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faGear, faLocationDot, faTrash } from '@fortawesome/free-solid-svg-icons'
+import { faCrosshairs, faGear, faLocationDot, faTrash } from '@fortawesome/free-solid-svg-icons'
 import type { WorldPoint } from '../../entities/world-point'
 import type { Viewpoint } from '../../entities/viewpoint'
 import type { Constraint } from '../../entities/constraints/base-constraint'
@@ -14,6 +14,7 @@ import { MissingPointsNotice } from './MissingPointsNotice'
 import { EmptyState } from './EmptyState'
 import { WorldPointItem } from './WorldPointItem'
 import { getEntityKey } from '../../utils/entityKeys'
+import { projectWorldPointToPixel, hasValidCameraPose } from '../../utils/projection'
 
 interface WorldPointPanelProps {
   worldPoints: Set<WorldPoint>
@@ -31,6 +32,7 @@ interface WorldPointPanelProps {
   onHoverWorldPoint?: (worldPoint: WorldPoint | null) => void
   onStartPlacement: (worldPoint: WorldPoint) => void
   onCancelPlacement: () => void
+  onAddImagePoint?: (worldPoint: WorldPoint, viewpoint: Viewpoint, u: number, v: number) => void
 }
 
 export const WorldPointPanel: React.FC<WorldPointPanelProps> = observer(({
@@ -48,7 +50,8 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = observer(({
   onHighlightWorldPoint,
   onHoverWorldPoint,
   onStartPlacement,
-  onCancelPlacement
+  onCancelPlacement,
+  onAddImagePoint
 }) => {
   const { confirm, dialog } = useConfirm()
 
@@ -72,6 +75,28 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = observer(({
     constraints,
     currentViewpoint
   })
+
+  // Check if auto-place at reprojection is available for a world point
+  const canAutoPlace = (wp: WorldPoint): boolean => {
+    if (!currentViewpoint) return false
+    if (!isWorldPointMissingFromImage(wp)) return false
+    if (!hasValidCameraPose(currentViewpoint)) return false
+    if (!wp.optimizedXyz) return false
+    const projection = projectWorldPointToPixel(wp, currentViewpoint)
+    if (!projection) return false
+    return projection.u >= 0 && projection.u <= currentViewpoint.imageWidth &&
+           projection.v >= 0 && projection.v <= currentViewpoint.imageHeight
+  }
+
+  // Handle auto-placing a world point at its reprojected position
+  const handleAutoPlace = (wp: WorldPoint) => {
+    if (!currentViewpoint || !onAddImagePoint) return
+    const projection = projectWorldPointToPixel(wp, currentViewpoint)
+    if (!projection) return
+    onAddImagePoint(wp, currentViewpoint, projection.u, projection.v)
+    markAsJustPlaced(wp)
+  }
+
 
   const handleDelete = async (wp: WorldPoint) => {
     const involvedConstraints = getConstraintsForWorldPoint(wp)
@@ -108,6 +133,15 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = observer(({
     }
 
     if (isMissingFromImage) {
+      // Add auto-place option if available
+      if (canAutoPlace(worldPoint)) {
+        items.push({
+          id: 'auto-place',
+          label: 'Auto-place at Reprojection',
+          icon: faCrosshairs,
+          onClick: () => handleAutoPlace(worldPoint)
+        })
+      }
       items.push({
         id: 'place',
         label: 'Place on Image',
@@ -176,6 +210,7 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = observer(({
               const wasRecentlyCreated = recentlyCreated.has(wp)
               const wasJustPlaced = justPlaced.has(wp)
               const isGloballyHovered = hoveredWorldPoint === wp
+              const autoPlaceAvailable = canAutoPlace(wp)
 
               return (
                 <WorldPointItem
@@ -191,11 +226,13 @@ export const WorldPointPanel: React.FC<WorldPointPanelProps> = observer(({
                   wasRecentlyCreated={wasRecentlyCreated}
                   wasJustPlaced={wasJustPlaced}
                   isGloballyHovered={isGloballyHovered}
+                  canAutoPlace={autoPlaceAvailable}
                   onSelect={(ctrlKey, shiftKey) => onSelectWorldPoint(wp, ctrlKey, shiftKey)}
                   onEdit={() => onEditWorldPoint?.(wp)}
                   onHighlight={onHighlightWorldPoint}
                   onHover={onHoverWorldPoint}
                   onStartPlacement={() => handlePlacement(wp)}
+                  onAutoPlace={() => handleAutoPlace(wp)}
                   onContextMenu={(e) => handleContextMenu(e, wp)}
                 />
               )

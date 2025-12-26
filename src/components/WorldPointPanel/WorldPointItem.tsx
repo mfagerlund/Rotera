@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
+  faCrosshairs,
   faArrowsLeftRight,
   faBullseye,
   faCamera,
@@ -32,6 +33,8 @@ interface WorldPointItemProps {
   onHighlight: (worldPoint: WorldPoint | null) => void
   onHover?: (worldPoint: WorldPoint | null) => void
   onStartPlacement: () => void
+  canAutoPlace?: boolean
+  onAutoPlace?: () => void
   onContextMenu: (e: React.MouseEvent) => void
 }
 
@@ -52,6 +55,8 @@ export const WorldPointItem: React.FC<WorldPointItemProps> = ({
   onHighlight,
   onHover,
   onStartPlacement,
+  canAutoPlace,
+  onAutoPlace,
   onContextMenu
 }) => {
   const [showActions, setShowActions] = useState(false)
@@ -143,6 +148,19 @@ export const WorldPointItem: React.FC<WorldPointItemProps> = ({
         <div className="wp-item-actions visible">
           {!placementModeActive && (
             <>
+              {canAutoPlace && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onAutoPlace?.()
+                  }}
+                  className="btn-auto-place"
+                  title="Auto-place at reprojected position"
+                >
+                  <FontAwesomeIcon icon={faCrosshairs} />
+                </button>
+              )}
+
               {isMissingFromImage && (
                 <button
                   onClick={(e) => {

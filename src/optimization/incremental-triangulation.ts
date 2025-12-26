@@ -13,8 +13,10 @@ import { triangulateRayRay } from './triangulation'
  * Check if a viewpoint has been initialized (has valid camera pose)
  */
 function isViewpointInitialized(vp: Viewpoint): boolean {
-  // Camera is initialized if it has non-zero position
-  return vp.position[0] !== 0 || vp.position[1] !== 0 || vp.position[2] !== 0
+  // Camera has a valid pose if:
+  // 1. It's been through optimization (has residuals) - includes reference camera at origin
+  // 2. OR it's pose-locked (manually set by user)
+  return vp.lastResiduals.length > 0 || vp.isPoseLocked
 }
 
 /**
