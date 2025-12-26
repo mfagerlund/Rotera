@@ -44,6 +44,9 @@ export const useProjectBrowser = () => {
   const [justCompletedProjectIds, setJustCompletedProjectIds] = useState<Set<string>>(new Set())
   const [folderProgress, setFolderProgress] = useState<Map<string, { completed: number; total: number }>>(new Map())
   const [justCompletedFolderIds, setJustCompletedFolderIds] = useState<Set<string>>(new Set())
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [isImportingFolder, setIsImportingFolder] = useState(false)
+  const [importProgress, setImportProgress] = useState({ current: 0, total: 0, errors: 0 })
 
   const setCurrentFolderId = useCallback((folderId: string | null) => {
     setCurrentFolderIdState(folderId)
@@ -288,6 +291,115 @@ export const useProjectBrowser = () => {
       alert('Export failed: ' + (error as Error).message)
     } finally {
       setIsExporting(false)
+    }
+  }
+
+  const handleImportFolder = async (file: File) => {
+    setIsImportingFolder(true)
+    setImportProgress({ current: 0, total: 0, errors: 0 })
+
+    try {
+      const zip = await JSZip.loadAsync(file)
+      const jsonFiles = Object.keys(zip.files).filter(name => name.endsWith('.json') && !zip.files[name].dir)
+
+      if (jsonFiles.length === 0) {
+        alert('No project files found in the ZIP archive')
+        return
+      }
+
+      setImportProgress({ current: 0, total: jsonFiles.length, errors: 0 })
+
+      // Build folder structure from ZIP paths
+      const folderCache = new Map<string, string>() // path -> folderId
+      folderCache.set('', currentFolderId ?? '__root__')
+
+      const getOrCreateFolder = async (folderPath: string): Promise<string | null> => {
+        if (!folderPath) return currentFolderId
+
+        const cached = folderCache.get(folderPath)
+        if (cached) return cached === '__root__' ? null : cached
+
+        const parts = folderPath.split('/')
+        let parentId = currentFolderId
+
+        for (let i = 0; i < parts.length; i++) {
+          const partialPath = parts.slice(0, i + 1).join('/')
+          const cachedPartial = folderCache.get(partialPath)
+
+          if (cachedPartial) {
+            parentId = cachedPartial === '__root__' ? null : cachedPartial
+          } else {
+            // Check if folder exists
+            const existingFolders = await ProjectDB.listFolders(parentId)
+            const existing = existingFolders.find(f => f.name === parts[i])
+
+            if (existing) {
+              folderCache.set(partialPath, existing.id)
+              parentId = existing.id
+            } else {
+              // Create the folder
+              const newFolderId = await ProjectDB.createFolder(parts[i], parentId)
+              folderCache.set(partialPath, newFolderId)
+              parentId = newFolderId
+            }
+          }
+        }
+
+        return parentId
+      }
+
+      let successCount = 0
+      let errorCount = 0
+
+      for (let i = 0; i < jsonFiles.length; i++) {
+        const filePath = jsonFiles[i]
+        setImportProgress({ current: i + 1, total: jsonFiles.length, errors: errorCount })
+
+        try {
+          const content = await zip.files[filePath].async('string')
+          const project = Serialization.deserialize(content)
+
+          // Determine folder from path
+          const pathParts = filePath.split('/')
+          const folderPath = pathParts.slice(0, -1).join('/')
+          const targetFolderId = await getOrCreateFolder(folderPath)
+
+          // Save project to database
+          await ProjectDB.saveProject(project, targetFolderId)
+          successCount++
+        } catch (error) {
+          console.error(`Failed to import ${filePath}:`, error)
+          errorCount++
+        }
+
+        // Yield to UI
+        await new Promise(resolve => setTimeout(resolve, 0))
+      }
+
+      setShowImportModal(false)
+      await loadContents()
+
+      if (errorCount > 0) {
+        alert(`Import complete: ${successCount} projects imported, ${errorCount} failed`)
+      }
+    } catch (error) {
+      console.error('Import failed:', error)
+      alert('Import failed: ' + (error as Error).message)
+    } finally {
+      setIsImportingFolder(false)
+      setImportProgress({ current: 0, total: 0, errors: 0 })
+    }
+  }
+
+  const handleImportProject = async (file: File) => {
+    try {
+      const content = await file.text()
+      const project = Serialization.deserialize(content)
+      await ProjectDB.saveProject(project, currentFolderId)
+      await loadContents()
+    } catch (error) {
+      console.error('Failed to import project:', error)
+      alert('Failed to import project: ' + (error as Error).message)
     }
   }
 
@@ -604,6 +716,9 @@ export const useProjectBrowser = () => {
     justCompletedProjectIds,
     folderProgress,
     justCompletedFolderIds,
+    showImportModal,
+    isImportingFolder,
+    importProgress,
 
     // Setters
     setCurrentFolderId,
@@ -615,6 +730,7 @@ export const useProjectBrowser = () => {
     setCopyName,
     setShowExportModal,
     setExportExcludeImages,
+    setShowImportModal,
 
     // Handlers
     handleOpenFolder,
@@ -628,6 +744,8 @@ export const useProjectBrowser = () => {
     handleCopyProject,
     openCopyModal,
     handleExportFolder,
+    handleImportFolder,
+    handleImportProject,
     handleBatchOptimize,
     handleDragStart,
     handleDragEnd,

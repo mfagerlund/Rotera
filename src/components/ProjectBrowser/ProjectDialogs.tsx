@@ -1,9 +1,10 @@
-import React from 'react'
+import React, { useRef } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faFolder,
   faSpinner,
-  faFileExport
+  faFileExport,
+  faUpload
 } from '@fortawesome/free-solid-svg-icons'
 import { ProjectSummary, Folder } from '../../services/project-db'
 
@@ -154,6 +155,85 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
               <>Export</>
             )}
           </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+interface ImportDialogProps {
+  isVisible: boolean
+  isImporting: boolean
+  progress: { current: number; total: number; errors: number }
+  onImport: (file: File) => void
+  onClose: () => void
+}
+
+export const ImportDialog: React.FC<ImportDialogProps> = ({
+  isVisible,
+  isImporting,
+  progress,
+  onImport,
+  onClose
+}) => {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  if (!isVisible) return null
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      onImport(file)
+    }
+  }
+
+  const handleSelectFile = () => {
+    fileInputRef.current?.click()
+  }
+
+  return (
+    <div className="project-browser__modal-overlay" onClick={isImporting ? undefined : onClose}>
+      <div className="project-browser__modal" onClick={e => e.stopPropagation()}>
+        <h3>Import Projects</h3>
+        <p style={{ marginBottom: '16px', color: '#888' }}>
+          Import projects from a ZIP file exported from Rotera.
+          Folder structure will be preserved.
+        </p>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".zip"
+          onChange={handleFileChange}
+          style={{ display: 'none' }}
+        />
+        {isImporting ? (
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+            <FontAwesomeIcon icon={faSpinner} spin size="2x" style={{ marginBottom: '12px' }} />
+            <p>Importing {progress.current} of {progress.total} projects...</p>
+            {progress.errors > 0 && (
+              <p style={{ color: '#e74c3c', marginTop: '8px' }}>
+                {progress.errors} error{progress.errors !== 1 ? 's' : ''}
+              </p>
+            )}
+          </div>
+        ) : (
+          <div
+            style={{
+              border: '2px dashed #555',
+              borderRadius: '8px',
+              padding: '32px',
+              textAlign: 'center',
+              cursor: 'pointer',
+              marginBottom: '16px'
+            }}
+            onClick={handleSelectFile}
+          >
+            <FontAwesomeIcon icon={faUpload} size="2x" style={{ marginBottom: '12px', color: '#888' }} />
+            <p style={{ margin: 0 }}>Click to select a ZIP file</p>
+          </div>
+        )}
+        <div className="project-browser__modal-actions">
+          <button onClick={onClose} disabled={isImporting}>Cancel</button>
         </div>
       </div>
     </div>

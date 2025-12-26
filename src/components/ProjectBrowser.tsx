@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useRef } from 'react'
 import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
@@ -7,6 +7,7 @@ import {
   faPlus,
   faFolderPlus,
   faFileExport,
+  faFileImport,
   faBolt,
   faDownload
 } from '@fortawesome/free-solid-svg-icons'
@@ -17,7 +18,7 @@ import { useProjectBrowser } from './ProjectBrowser/useProjectBrowser'
 import { ProjectDB } from '../services/project-db'
 import { ProjectCard } from './ProjectBrowser/ProjectCard'
 import { FolderCard } from './ProjectBrowser/FolderCard'
-import { MoveDialog, CopyDialog, ExportDialog } from './ProjectBrowser/ProjectDialogs'
+import { MoveDialog, CopyDialog, ExportDialog, ImportDialog } from './ProjectBrowser/ProjectDialogs'
 
 interface ProjectBrowserProps {
   onOpenProject: (project: Project) => void
@@ -31,6 +32,7 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
   const { confirm, dialog } = useConfirm()
   const [isImporting, setIsImporting] = React.useState(false)
   const [hasOldDb, setHasOldDb] = React.useState(false)
+  const importProjectInputRef = useRef<HTMLInputElement>(null)
 
   React.useEffect(() => {
     ProjectDB.hasOldDatabase().then(setHasOldDb)
@@ -66,6 +68,9 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
     justCompletedProjectIds,
     folderProgress,
     justCompletedFolderIds,
+    showImportModal,
+    isImportingFolder,
+    importProgress,
 
     // Setters
     setCurrentFolderId,
@@ -76,6 +81,7 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
     setCopyModalProject,
     setCopyName,
     setShowExportModal,
+    setShowImportModal,
     setExportExcludeImages,
 
     // Handlers
@@ -90,6 +96,8 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
     handleCopyProject,
     openCopyModal,
     handleExportFolder,
+    handleImportFolder,
+    handleImportProject,
     handleBatchOptimize,
     handleDragStart,
     handleDragEnd,
@@ -118,6 +126,19 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
 
   return (
     <div className="project-browser">
+      <input
+        ref={importProjectInputRef}
+        type="file"
+        accept=".rotera,.json"
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          if (file) {
+            handleImportProject(file)
+          }
+          e.target.value = ''
+        }}
+        style={{ display: 'none' }}
+      />
       <div className="top-toolbar">
         <AppBranding size="small" />
         <div className="project-browser__actions">
@@ -140,6 +161,20 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
             title="Export all projects in this folder and subfolders"
           >
             <FontAwesomeIcon icon={faFileExport} /> Export Folder
+          </button>
+          <button
+            className="project-browser__btn"
+            onClick={() => setShowImportModal(true)}
+            title="Import projects from a ZIP file"
+          >
+            <FontAwesomeIcon icon={faFileImport} /> Import Folder
+          </button>
+          <button
+            className="project-browser__btn"
+            onClick={() => importProjectInputRef.current?.click()}
+            title="Import a single project file"
+          >
+            <FontAwesomeIcon icon={faFileImport} /> Import Project
           </button>
           <button
             className="project-browser__btn project-browser__btn--optimize"
@@ -329,6 +364,14 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
         onExcludeImagesChange={setExportExcludeImages}
         onExport={handleExportFolder}
         onClose={() => setShowExportModal(false)}
+      />
+
+      <ImportDialog
+        isVisible={showImportModal}
+        isImporting={isImportingFolder}
+        progress={importProgress}
+        onImport={handleImportFolder}
+        onClose={() => setShowImportModal(false)}
       />
 
       {dialog}
