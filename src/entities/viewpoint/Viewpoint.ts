@@ -23,7 +23,6 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IOptimizabl
      * When true, this viewpoint has been Z-reflected + Rz_180 transformed for right-handed output.
      * After this transformation, cam' = -cam, so points in front have camZ < 0 (not > 0).
      * The rendering code must use camZ < -0.01 as the "in front" check.
-     * This flag is NOT serialized - it's a runtime property set by the solver.
      */
     isZReflected = false
 
@@ -597,6 +596,8 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IOptimizabl
             opacity: this.opacity,
             color: this.color,
             isPoseLocked: this.isPoseLocked,
+            isPossiblyCropped: this.isPossiblyCropped,
+            isZReflected: this.isZReflected || undefined,  // Only serialize if true
             vanishingLineIds: vanishingLineIds.length > 0 ? vanishingLineIds : undefined,
             lastResiduals: this.lastResiduals.length > 0 ? [...this.lastResiduals] : undefined
         }
@@ -639,6 +640,10 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IOptimizabl
 
         if (dto.lastResiduals) {
             viewpoint.lastResiduals = [...dto.lastResiduals]
+        }
+
+        if (dto.isZReflected) {
+            viewpoint.isZReflected = dto.isZReflected
         }
 
         return viewpoint
