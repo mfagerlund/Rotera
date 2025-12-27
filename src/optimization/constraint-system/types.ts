@@ -23,4 +23,14 @@ export interface SolverOptions {
    * Typical values: 0.01-0.1. Default: 0 (no regularization).
    */
   regularizationWeight?: number;
+
+  /**
+   * If true, use camera's isZReflected flag when computing projections.
+   *
+   * - During calibration: false (isZReflected may change mid-optimization)
+   * - During fine-tune: true (isZReflected is already set correctly)
+   *
+   * Default: false
+   */
+  useIsZReflected?: boolean;
 }

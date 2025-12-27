@@ -494,7 +494,8 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IOptimizabl
             principalPointX,
             principalPointY,
             skew,
-            k1, k2, k3, p1, p2
+            k1, k2, k3, p1, p2,
+            isZReflected: this.isZReflected
         }
 
         valueMap.cameras.set(this, cameraValues)
@@ -596,7 +597,6 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IOptimizabl
             opacity: this.opacity,
             color: this.color,
             isPoseLocked: this.isPoseLocked,
-            isPossiblyCropped: this.isPossiblyCropped,
             isZReflected: this.isZReflected || undefined,  // Only serialize if true
             vanishingLineIds: vanishingLineIds.length > 0 ? vanishingLineIds : undefined,
             lastResiduals: this.lastResiduals.length > 0 ? [...this.lastResiduals] : undefined

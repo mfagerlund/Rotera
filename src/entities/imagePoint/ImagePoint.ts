@@ -110,6 +110,11 @@ export class ImagePoint implements ISelectable, IImagePoint, IResidualProvider, 
             return []
         }
 
+        // Use isZReflected only when valueMap.useIsZReflected is true.
+        // - During calibration: false (isZReflected changes mid-optimization)
+        // - During fine-tune: true (isZReflected is already set correctly)
+        const isZReflected = valueMap.useIsZReflected ? cameraValues.isZReflected : false
+
         const projection = projectWorldPointToPixelQuaternion(
             worldPointVec,
             cameraValues.position,
@@ -123,7 +128,8 @@ export class ImagePoint implements ISelectable, IImagePoint, IResidualProvider, 
             cameraValues.k2,
             cameraValues.k3,
             cameraValues.p1,
-            cameraValues.p2
+            cameraValues.p2,
+            isZReflected
         )
 
         if (!projection) {
@@ -146,6 +152,8 @@ export class ImagePoint implements ISelectable, IImagePoint, IResidualProvider, 
         const cameraValues = _valueMap.cameras.get(this.viewpoint)
 
         if (worldPointVec && cameraValues) {
+            const isZReflected = _valueMap.useIsZReflected ? cameraValues.isZReflected : false
+
             const projection = projectWorldPointToPixelQuaternion(
                 worldPointVec,
                 cameraValues.position,
@@ -159,7 +167,8 @@ export class ImagePoint implements ISelectable, IImagePoint, IResidualProvider, 
                 cameraValues.k2,
                 cameraValues.k3,
                 cameraValues.p1,
-                cameraValues.p2
+                cameraValues.p2,
+                isZReflected
             )
 
             if (projection) {

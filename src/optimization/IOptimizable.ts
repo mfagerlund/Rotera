@@ -28,6 +28,7 @@ export interface CameraValues {
   k3: Value;                // Radial distortion k3
   p1: Value;                // Tangential distortion p1
   p2: Value;                // Tangential distortion p2
+  isZReflected: boolean;    // If true, negative Z is "in front" of camera
 }
 
 /**
@@ -38,6 +39,14 @@ export interface CameraValues {
 export interface ValueMap {
   points: Map<WorldPoint, Vec3>;
   cameras: Map<IOptimizableCamera, CameraValues>;
+
+  /**
+   * If true, use camera's isZReflected flag when computing projections.
+   *
+   * - During calibration: false (isZReflected may change mid-optimization)
+   * - During fine-tune: true (isZReflected is already set correctly)
+   */
+  useIsZReflected?: boolean;
 }
 
 /**

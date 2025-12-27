@@ -74,7 +74,8 @@ export const ImageEditor: React.FC<ImageEditorProps> = observer(({
               V.C(viewpoint.radialDistortion[1]),
               V.C(viewpoint.radialDistortion[2]),
               V.C(viewpoint.tangentialDistortion[0]),
-              V.C(viewpoint.tangentialDistortion[1])
+              V.C(viewpoint.tangentialDistortion[1]),
+              viewpoint.isZReflected
             )
 
             if (proj) {

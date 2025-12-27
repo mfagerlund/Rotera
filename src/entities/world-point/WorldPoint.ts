@@ -428,6 +428,9 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
             const cameraValues = valueMap.cameras.get(imagePoint.viewpoint)
             if (!cameraValues) continue
 
+            // Use isZReflected only when valueMap.useIsZReflected is true
+            const isZReflected = valueMap.useIsZReflected ? cameraValues.isZReflected : false
+
             const projection = projectWorldPointToPixelQuaternion(
                 worldPointVec,
                 cameraValues.position,
@@ -441,7 +444,8 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
                 cameraValues.k2,
                 cameraValues.k3,
                 cameraValues.p1,
-                cameraValues.p2
+                cameraValues.p2,
+                isZReflected
             )
 
             if (!projection) {

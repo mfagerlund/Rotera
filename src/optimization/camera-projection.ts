@@ -245,6 +245,7 @@ export function worldToCameraCoordinatesQuaternion(
  * @param k3 - Third radial distortion coefficient
  * @param p1 - First tangential distortion coefficient
  * @param p2 - Second tangential distortion coefficient
+ * @param isZReflected - If true, negate Z to handle reflected coordinate system
  * @returns Pixel coordinates [u, v]
  */
 export function projectWorldPointToPixelQuaternion(
@@ -260,10 +261,18 @@ export function projectWorldPointToPixelQuaternion(
   k2: Value,
   k3: Value,
   p1: Value,
-  p2: Value
+  p2: Value,
+  isZReflected: boolean = false
 ): [Value, Value] | null {
   // Transform to camera coordinates using quaternion
-  const cameraPoint = worldToCameraCoordinatesQuaternion(worldPoint, cameraPosition, cameraRotation);
+  let cameraPoint = worldToCameraCoordinatesQuaternion(worldPoint, cameraPosition, cameraRotation);
+
+  // When isZReflected is true, the quaternion includes a 180° Z rotation (Rz_180)
+  // which negates X and Y. Combined with the Z flip, all three axes are negated.
+  // This matches the UI projection logic in utils/projection.ts.
+  if (isZReflected) {
+    cameraPoint = new Vec3(V.neg(cameraPoint.x), V.neg(cameraPoint.y), V.neg(cameraPoint.z));
+  }
 
   // Project to pixel coordinates using parameter object
   return cameraToPixelCoordinates(cameraPoint, {

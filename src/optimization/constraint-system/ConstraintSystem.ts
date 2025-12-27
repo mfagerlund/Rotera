@@ -28,6 +28,7 @@ export class ConstraintSystem {
   private verbose: boolean;
   private optimizeCameraIntrinsics: boolean | ((camera: IOptimizableCamera) => boolean);
   private regularizationWeight: number;
+  private useIsZReflected: boolean;
 
   // Entities in the system
   private points: Set<WorldPoint> = new Set();
@@ -46,6 +47,7 @@ export class ConstraintSystem {
     this.verbose = options.verbose ?? false;
     this.optimizeCameraIntrinsics = options.optimizeCameraIntrinsics ?? false;
     this.regularizationWeight = options.regularizationWeight ?? 0;
+    this.useIsZReflected = options.useIsZReflected ?? false;
   }
 
   /**
@@ -103,6 +105,7 @@ export class ConstraintSystem {
     const valueMap: ValueMap = {
       points: new Map(),
       cameras: new Map(),
+      useIsZReflected: this.useIsZReflected,
     };
 
     // Capture initial positions for regularization BEFORE adding to ValueMap

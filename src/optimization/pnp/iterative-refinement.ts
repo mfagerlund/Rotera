@@ -404,7 +404,8 @@ function computeReprojectionError(vp: Viewpoint): number {
         V.C(vp.radialDistortion[1] ?? 0),
         V.C(vp.radialDistortion[2] ?? 0),
         V.C(vp.tangentialDistortion[0] ?? 0),
-        V.C(vp.tangentialDistortion[1] ?? 0)
+        V.C(vp.tangentialDistortion[1] ?? 0),
+        vp.isZReflected
       );
 
       if (projected) {
