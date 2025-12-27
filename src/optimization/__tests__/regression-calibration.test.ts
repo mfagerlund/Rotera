@@ -2,6 +2,8 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { loadProjectFromJson } from '../../store/project-serialization'
 import { optimizeProject, OptimizeProjectOptions } from '../optimize-project'
+import { fineTuneProject } from '../fine-tune'
+import { detectOutliers } from '../outlier-detection'
 import { optimizationLogs } from '../optimization-logger'
 
 const FIXTURES_DIR = path.join(__dirname, 'fixtures', 'Calibration')
@@ -46,6 +48,24 @@ async function runTest(filename: string, maxMedianError: number, options: Optimi
 
   expect(result.medianReprojectionError).toBeDefined()
   expect(result.medianReprojectionError!).toBeLessThan(maxMedianError)
+
+  // Fine-tune and verify loss doesn't increase
+  // Use lockCameraPoses to keep cameras fixed, only refine point positions
+  const errorBeforeFineTune = result.medianReprojectionError!
+  fineTuneProject(project, { verbose: false, lockCameraPoses: true })
+  const { medianError: errorAfterFineTune } = detectOutliers(project, 3.0)
+
+  // Allow 0.5px tolerance (matching fine-tune.test.ts expectations)
+  const tolerance = 0.5
+  if (errorAfterFineTune > errorBeforeFineTune + tolerance) {
+    console.log(`\n=== Fine-Tune Regression ===`)
+    console.log(`Before: ${errorBeforeFineTune.toFixed(4)}px`)
+    console.log(`After:  ${errorAfterFineTune.toFixed(4)}px`)
+    console.log(`Delta:  ${(errorAfterFineTune - errorBeforeFineTune).toFixed(4)}px`)
+    console.log('============================\n')
+  }
+
+  expect(errorAfterFineTune).toBeLessThanOrEqual(errorBeforeFineTune + tolerance)
 }
 
 describe('Regression - Calibration', () => {
@@ -156,6 +176,14 @@ describe('Regression - Calibration', () => {
 
     // Should have no outliers (all 14 image points should project correctly)
     expect(result.outliers?.length ?? 0).toBe(0)
+
+    // Fine-tune and verify loss doesn't increase
+    const errorBeforeFineTune = result.medianReprojectionError!
+    fineTuneProject(project, { verbose: false, lockCameraPoses: true })
+    const { medianError: errorAfterFineTune } = detectOutliers(project, 3.0)
+
+    const tolerance = 0.5
+    expect(errorAfterFineTune).toBeLessThanOrEqual(errorBeforeFineTune + tolerance)
   })
 
   // 3 cameras: cameras 3 and 4 can VP-init
@@ -183,5 +211,13 @@ describe('Regression - Calibration', () => {
     // Check median error for initialized cameras
     expect(result.medianReprojectionError).toBeDefined()
     expect(result.medianReprojectionError!).toBeLessThan(2)
+
+    // Fine-tune and verify loss doesn't increase
+    const errorBeforeFineTune = result.medianReprojectionError!
+    fineTuneProject(project, { verbose: false, lockCameraPoses: true })
+    const { medianError: errorAfterFineTune } = detectOutliers(project, 3.0)
+
+    const tolerance = 0.5
+    expect(errorAfterFineTune).toBeLessThanOrEqual(errorBeforeFineTune + tolerance)
   })
 })
