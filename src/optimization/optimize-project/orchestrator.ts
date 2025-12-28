@@ -41,7 +41,6 @@ import {
   runLatePnPInitialization,
   runStage1Optimization,
   handleOutliersAndRerun,
-  runCameraRefinement,
 } from './helpers';
 
 // Version for tracking code updates
@@ -401,27 +400,6 @@ export async function optimizeProject(
   // Log solve result
   const camInfo = viewpointArray.map(v => `${v.name}:f=${v.focalLength.toFixed(0)}`).join(' ');
   log(`[Solve] conv=${result.converged}, iter=${result.iterations}, median=${medianReprojectionError?.toFixed(2) ?? '?'}px | ${camInfo}${result.error ? ` | err=${result.error}` : ''}`);
-
-  // PHASE 6.5: Camera Refinement for VP-initialized cameras with high error
-  // When VP initialization has significant orthogonalization error, the camera pose
-  // may be ~50° off. Run a quick fine-tune-like solve to correct this.
-  if (medianReprojectionError !== undefined && camerasInitializedViaVP.size > 0) {
-    const refinementResult = runCameraRefinement(
-      project,
-      result,
-      medianReprojectionError,
-      outliers,
-      camerasInitializedViaVP,
-      tolerance,
-      maxIterations
-    );
-
-    if (refinementResult) {
-      result = refinementResult.result;
-      medianReprojectionError = refinementResult.medianError;
-      outliers = refinementResult.outliers;
-    }
-  }
 
   // Handle outliers and potential re-run
   if (outliers && outliers.length > 0) {

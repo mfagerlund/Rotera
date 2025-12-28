@@ -9,6 +9,8 @@ import { ConstraintSystem } from './constraint-system'
 import { WorldPoint } from '../entities/world-point'
 import { ImagePoint } from '../entities/imagePoint'
 import { Viewpoint } from '../entities/viewpoint'
+import { Line } from '../entities/line'
+import { Constraint } from '../entities/constraints'
 import { log, logDebug, clearOptimizationLogs, setVerbosity } from './optimization-logger'
 import { triangulateRayRay } from './triangulation'
 import { projectWorldPointToPixelQuaternion } from './camera-projection'
@@ -146,25 +148,9 @@ export function fineTuneProject(project: Project, options: FineTuneOptions = {})
 
     logDebug(`[FineTune] Points: ${pointsAlreadyInitialized} valid, ${pointsFromConstraints} from constraints, ${pointsTriangulated} triangulated, ${pointsFailed} failed`)
 
-    // PHASE 1: Clear inferredXyz for all points that already have optimizedXyz
-    // This prevents stale/wrong inferred values from locking axes to incorrect values.
-    // The optimizer should use optimizedXyz as starting values, not inferredXyz.
-    let clearedInferenceCount = 0
-    for (const wp of project.worldPoints) {
-      const point = wp as WorldPoint
-      // Only clear inference if we have a valid optimizedXyz to use instead
-      if (point.optimizedXyz) {
-        const hasInference = point.inferredXyz.some(v => v !== null)
-        if (hasInference) {
-          // Clear inference - the solver will start from optimizedXyz values
-          point.inferredXyz = [null, null, null]
-          clearedInferenceCount++
-        }
-      }
-    }
-    if (clearedInferenceCount > 0) {
-      logDebug(`[FineTune] Cleared inference for ${clearedInferenceCount} points (using optimizedXyz instead)`)
-    }
+    // NOTE: We intentionally do NOT clear inferredXyz here.
+    // inferredXyz contains axis constraints (e.g., "point is on Y axis" = [0, null, 0])
+    // that must be preserved for the solver to work correctly with line constraints.
 
     if (pointsFailed > 0 && pointsAlreadyInitialized + pointsInitialized === 0) {
       return {
@@ -306,19 +292,17 @@ export function fineTuneProject(project: Project, options: FineTuneOptions = {})
       damping,
       verbose,
       optimizeCameraIntrinsics: false, // Fine-tune should never change intrinsics
-      regularizationWeight: 0,  // Disabled - was potentially fighting convergence
-      useIsZReflected: true  // Respect camera's isZReflected (projection now correctly negates X,Y,Z)
+      regularizationWeight: 0,
+      useIsZReflected: true  // Respect camera's isZReflected
     })
 
-    // Fine-tune focuses on minimizing reprojection error with regularization.
-    // We EXCLUDE geometric constraints because their 100x weight overwhelms
-    // reprojection residuals and can make the solution worse.
-    // Regularization prevents points from moving far from their current positions.
+    // Fine-tune includes ALL constraints - it should never produce solutions
+    // that violate the user's geometric constraints just for lower reprojection error.
     project.worldPoints.forEach(p => system.addPoint(p as WorldPoint))
-    // project.lines.forEach(l => system.addLine(l as Line))  // Excluded: too aggressive
+    project.lines.forEach(l => system.addLine(l as Line))
     project.viewpoints.forEach(v => system.addCamera(v as Viewpoint))
     project.imagePoints.forEach(ip => system.addImagePoint(ip as ImagePoint))
-    // project.constraints.forEach(c => system.addConstraint(c as Constraint))  // Excluded: too aggressive
+    project.constraints.forEach(c => system.addConstraint(c as Constraint))
 
     const result = system.solve()
     const solveTimeMs = performance.now() - startTime
