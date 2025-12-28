@@ -22,16 +22,11 @@ function isViewpointInitialized(vp: Viewpoint): boolean {
 /**
  * Try to triangulate a WorldPoint from its ImagePoint observations.
  * Only works if the point is visible in 2+ initialized cameras.
+ * Always updates optimizedXyz when triangulation is possible.
  *
  * @returns true if triangulation succeeded and optimizedXyz was set
  */
 export function tryTriangulateWorldPoint(worldPoint: WorldPoint): boolean {
-  // Skip if already has an optimizedXyz - don't overwrite existing position
-  // This prevents auto-place from clobbering the world point's known position
-  if (worldPoint.optimizedXyz) {
-    return true
-  }
-
   // Skip if already fully constrained (has locked coordinates)
   if (worldPoint.isFullyConstrained()) {
     const effective = worldPoint.getEffectiveXyz()
