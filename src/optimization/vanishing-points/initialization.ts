@@ -64,7 +64,7 @@
 
 import { Viewpoint } from '../../entities/viewpoint'
 import { WorldPoint } from '../../entities/world-point'
-import { log } from '../optimization-logger'
+import { log, logDebug } from '../optimization-logger'
 import { viewpointInitialVps } from '../optimize-project'
 import { validateVanishingPoints } from './validation'
 import { estimatePrincipalPoint, estimateFocalLength } from './detection'
@@ -82,7 +82,7 @@ export function initializeCameraWithVanishingPoints(
 ): boolean {
   const { allowSinglePoint = false } = options
 
-  log('[initializeCameraWithVanishingPoints] Starting vanishing point initialization...')
+  logDebug('[initializeCameraWithVanishingPoints] Starting vanishing point initialization...')
 
   const validation = validateVanishingPoints(viewpoint)
   if (!validation.isValid || !validation.vanishingPoints) {
@@ -94,10 +94,10 @@ export function initializeCameraWithVanishingPoints(
   const vpArray = Object.values(vps).filter(vp => vp !== undefined)
 
   // Log observed VPs from vanishing lines
-  log('[VP Init] Vanishing points:')
-  if (vps.x) log(`  X: (${vps.x.u.toFixed(3)}, ${vps.x.v.toFixed(3)})`)
-  if (vps.y) log(`  Y: (${vps.y.u.toFixed(3)}, ${vps.y.v.toFixed(3)})`)
-  if (vps.z) log(`  Z: (${vps.z.u.toFixed(3)}, ${vps.z.v.toFixed(3)})`)
+  logDebug('[VP Init] Vanishing points:')
+  if (vps.x) logDebug(`  X: (${vps.x.u.toFixed(3)}, ${vps.x.v.toFixed(3)})`)
+  if (vps.y) logDebug(`  Y: (${vps.y.u.toFixed(3)}, ${vps.y.v.toFixed(3)})`)
+  if (vps.z) logDebug(`  Z: (${vps.z.u.toFixed(3)}, ${vps.z.v.toFixed(3)})`)
 
   if (vpArray.length < 2) {
     log('[initializeCameraWithVanishingPoints] Not enough vanishing points')
@@ -114,9 +114,9 @@ export function initializeCameraWithVanishingPoints(
     principalPoint = estimatedPP
     viewpoint.principalPointX = estimatedPP.u
     viewpoint.principalPointY = estimatedPP.v
-    log(`[initializeCameraWithVanishingPoints] Estimated principal point: (${estimatedPP.u.toFixed(1)}, ${estimatedPP.v.toFixed(1)})`)
+    logDebug(`[initializeCameraWithVanishingPoints] Estimated principal point: (${estimatedPP.u.toFixed(1)}, ${estimatedPP.v.toFixed(1)})`)
   } else {
-    log(`[initializeCameraWithVanishingPoints] Using existing principal point: (${principalPoint.u.toFixed(1)}, ${principalPoint.v.toFixed(1)})`)
+    logDebug(`[initializeCameraWithVanishingPoints] Using existing principal point: (${principalPoint.u.toFixed(1)}, ${principalPoint.v.toFixed(1)})`)
   }
 
   let focalLength = viewpoint.focalLength
@@ -139,7 +139,7 @@ export function initializeCameraWithVanishingPoints(
         if (vp1 && vp2) {
           const f = estimateFocalLength(vp1, vp2, principalPoint)
           if (f !== null && f > 0 && f < 50000) {
-            log('[VP Focal] ' + vpKeys[i].toUpperCase() + '-' + vpKeys[j].toUpperCase() + ' pair: f=' + f.toFixed(1))
+            logDebug('[VP Focal] ' + vpKeys[i].toUpperCase() + '-' + vpKeys[j].toUpperCase() + ' pair: f=' + f.toFixed(1))
             estimates.push(f)
           }
         }
@@ -149,12 +149,12 @@ export function initializeCameraWithVanishingPoints(
     if (estimates.length > 0) {
       estimates.sort((a, b) => a - b)
       const medianF = estimates[Math.floor(estimates.length / 2)]
-      log('[initializeCameraWithVanishingPoints] Estimated focal length from VPs: ' + medianF.toFixed(1) + ' (was ' + focalLength + ')')
+      logDebug('[initializeCameraWithVanishingPoints] Estimated focal length from VPs: ' + medianF.toFixed(1) + ' (was ' + focalLength + ')')
       focalLength = medianF
       viewpoint.focalLength = medianF
     }
   } else {
-    log('[initializeCameraWithVanishingPoints] Using existing focal length: ' + focalLength.toFixed(1))
+    logDebug('[initializeCameraWithVanishingPoints] Using existing focal length: ' + focalLength.toFixed(1))
   }
 
   const baseRotations = computeRotationsFromVPs(vps, focalLength, principalPoint)
@@ -162,7 +162,7 @@ export function initializeCameraWithVanishingPoints(
     log('[initializeCameraWithVanishingPoints] Failed to compute rotation')
     return false
   }
-  log(`[initializeCameraWithVanishingPoints] Trying ${baseRotations.length} base rotation(s)`)
+  logDebug(`[initializeCameraWithVanishingPoints] Trying ${baseRotations.length} base rotation(s)`)
 
   // For POSITION SOLVING: Use fully constrained points (locked OR inferred)
   // Inferred coordinates are as valid as locked coordinates after propagation
@@ -332,7 +332,7 @@ export function initializeCameraWithVanishingPoints(
         const errMinus = testZ(-10)
         optimalZIsPositive = errPlus < errMinus
 
-        log(`[VP RH] Z-axis point ${wp.name}: z=+10 err=${errPlus.toFixed(1)}px, z=-10 err=${errMinus.toFixed(1)}px -> ${optimalZIsPositive ? 'POSITIVE Z' : 'NEGATIVE Z'}`)
+        logDebug(`[VP RH] Z-axis point ${wp.name}: z=+10 err=${errPlus.toFixed(1)}px, z=-10 err=${errMinus.toFixed(1)}px -> ${optimalZIsPositive ? 'POSITIVE Z' : 'NEGATIVE Z'}`)
       }
 
       // Check for X-axis constraint: [null, 0, 0]
@@ -360,7 +360,7 @@ export function initializeCameraWithVanishingPoints(
         const errMinus = testX(-10)
         optimalXIsPositive = errPlus < errMinus
 
-        log(`[VP RH] X-axis point ${wp.name}: x=+10 err=${errPlus.toFixed(1)}px, x=-10 err=${errMinus.toFixed(1)}px -> ${optimalXIsPositive ? 'POSITIVE X' : 'NEGATIVE X'}`)
+        logDebug(`[VP RH] X-axis point ${wp.name}: x=+10 err=${errPlus.toFixed(1)}px, x=-10 err=${errMinus.toFixed(1)}px -> ${optimalXIsPositive ? 'POSITIVE X' : 'NEGATIVE X'}`)
       }
     }
 
@@ -370,7 +370,7 @@ export function initializeCameraWithVanishingPoints(
     const wouldBeRightHanded = (optimalXIsPositive === optimalZIsPositive)
     const rightHandedBonus = wouldBeRightHanded ? 300000 : 0
 
-    log(`[VP RH] optimalX=${optimalXIsPositive ? '+' : '-'}, optimalZ=${optimalZIsPositive ? '+' : '-'} -> ${wouldBeRightHanded ? 'RIGHT-HANDED (+bonus)' : 'LEFT-HANDED (no bonus)'}`)
+    logDebug(`[VP RH] optimalX=${optimalXIsPositive ? '+' : '-'}, optimalZ=${optimalZIsPositive ? '+' : '-'} -> ${wouldBeRightHanded ? 'RIGHT-HANDED (+bonus)' : 'LEFT-HANDED (no bonus)'}`)
 
     // Score: points in front is primary (required), reprojection error is secondary (lower is better)
     // Use negative reproj error so higher score = better
@@ -378,11 +378,11 @@ export function initializeCameraWithVanishingPoints(
     const score = pointsInFront * 1000000 + rightHandedBonus - totalReprojError
     const avgError = totalReprojError / effectivePointsData.length
     if (VP_SIGN_DEBUG) {
-      log(
+      logDebug(
         `[VP Sign Debug] [${baseLabel} ${flipX},${flipY},${flipZ}]` +
         ` pointsInFront=${pointsInFront}/${effectivePointsData.length}, avgError=${avgError.toFixed(1)} px`
       )
-      log(
+      logDebug(
         `[VP Sign Debug]   position=[${position.map(p => p.toFixed(2)).join(', ')}],` +
         ` score=${score.toFixed(1)}`
       )
@@ -394,7 +394,7 @@ export function initializeCameraWithVanishingPoints(
       bestPosition = position
       bestPointsInFront = pointsInFront
       bestReprojError = totalReprojError / effectivePointsData.length
-      log(`[VP Sign Debug] NEW BEST: [${baseLabel} ${flipX},${flipY},${flipZ}] score=${score.toFixed(1)}, avgError=${avgError.toFixed(1)}px`)
+      logDebug(`[VP Sign Debug] NEW BEST: [${baseLabel} ${flipX},${flipY},${flipZ}] score=${score.toFixed(1)}, avgError=${avgError.toFixed(1)}px`)
     }
   }
   } // end of baseRotations loop
@@ -456,9 +456,9 @@ export function initializeCameraWithVanishingPoints(
     cameraVps[axis] = { u, v }
   })
 
-  log('[initializeCameraWithVanishingPoints] Camera predicted vanishing points:')
+  logDebug('[initializeCameraWithVanishingPoints] Camera predicted vanishing points:')
   Object.entries(cameraVps).forEach(([axis, vp]) => {
-    log(`  ${axis.toUpperCase()} axis -> VP at (${vp.u.toFixed(2)}, ${vp.v.toFixed(2)})`)
+    logDebug(`  ${axis.toUpperCase()} axis -> VP at (${vp.u.toFixed(2)}, ${vp.v.toFixed(2)})`)
   })
 
   viewpointInitialVps.set(viewpoint, cameraVps)

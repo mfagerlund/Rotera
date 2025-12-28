@@ -16,6 +16,7 @@ import { initializeSingleCameraPoints } from '../single-camera-initialization';
 import type { IOptimizableCamera } from '../IOptimizable';
 import { log } from '../optimization-logger';
 import { detectOutliers, OutlierInfo } from '../outlier-detection';
+import { fineTuneProject } from '../fine-tune';
 import { worldPointSavedInferredXyz } from '../state-reset';
 import { validateProjectConstraints, hasPointsField } from '../validation';
 import { canInitializeWithVanishingPoints } from '../vanishing-points';
@@ -301,6 +302,104 @@ export function runStage1Optimization(
       { verbose: false }
     );
     log(`[Stage2] Single-cam init: ${initResult.initialized} ok, ${initResult.failed} failed`);
+  }
+}
+
+/**
+ * Run camera refinement when base solve has high reprojection error.
+ * Uses the fine-tune function to allow camera pose adjustment with unlocked cameras.
+ * This is the same mechanism that achieves near-zero error in manual fine-tune.
+ * Returns improved result if refinement helped, null otherwise.
+ */
+export function runCameraRefinement(
+  project: Project,
+  initialResult: SolverResult,
+  initialMedianError: number,
+  initialOutliers: OutlierInfo[] | undefined,
+  camerasInitializedViaVP: Set<Viewpoint>,
+  tolerance: number,
+  maxIterations: number
+): { result: SolverResult; medianError: number; outliers: OutlierInfo[] | undefined } | null {
+  // Only refine if we have VP cameras and high error
+  if (camerasInitializedViaVP.size === 0 || initialMedianError < 3.0) {
+    return null;
+  }
+
+  log(`[Refine] Median error ${initialMedianError.toFixed(2)}px is high - running fine-tune with unlocked cameras`);
+
+  // Save original poses for all cameras and world points
+  const savedCameraPoses = new Map<Viewpoint, { position: [number, number, number]; rotation: [number, number, number, number]; locked: boolean }>();
+  const savedWorldPoints = new Map<WorldPoint, [number, number, number] | undefined>();
+
+  for (const vp of project.viewpoints) {
+    const viewpoint = vp as Viewpoint;
+    savedCameraPoses.set(viewpoint, {
+      position: [...viewpoint.position] as [number, number, number],
+      rotation: [...viewpoint.rotation] as [number, number, number, number],
+      locked: viewpoint.isPoseLocked,
+    });
+  }
+
+  for (const wp of project.worldPoints) {
+    const point = wp as WorldPoint;
+    savedWorldPoints.set(point, point.optimizedXyz ? [...point.optimizedXyz] as [number, number, number] : undefined);
+  }
+
+  try {
+    // Use the actual fine-tune function with cameras unlocked
+    const fineTuneResult = fineTuneProject(project, {
+      tolerance: tolerance,
+      maxIterations: Math.min(maxIterations, 1000),
+      damping: 0.01,
+      lockCameraPoses: false, // Allow camera to move
+      verbose: false,
+    });
+
+    // Check if error improved
+    const { medianError: refinedMedianError, outliers: refinedOutliers } = detectOutliers(project, 3.0);
+
+    if (refinedMedianError < initialMedianError * 0.5) {
+      // Significant improvement (>50% reduction) - keep the refined state
+      log(`[Refine] Success: ${initialMedianError.toFixed(2)}px → ${refinedMedianError.toFixed(2)}px (${((1 - refinedMedianError / initialMedianError) * 100).toFixed(0)}% reduction)`);
+
+      return {
+        result: {
+          converged: fineTuneResult.converged,
+          iterations: fineTuneResult.iterations,
+          residual: fineTuneResult.residual,
+          error: fineTuneResult.error ?? null,
+        },
+        medianError: refinedMedianError,
+        outliers: refinedOutliers.length > 0 ? refinedOutliers : undefined,
+      };
+    } else {
+      // No significant improvement - restore original state
+      log(`[Refine] No improvement: ${initialMedianError.toFixed(2)}px → ${refinedMedianError.toFixed(2)}px - reverting`);
+
+      for (const [viewpoint, saved] of savedCameraPoses) {
+        viewpoint.position = saved.position;
+        viewpoint.rotation = saved.rotation;
+        viewpoint.isPoseLocked = saved.locked;
+      }
+
+      for (const [point, xyz] of savedWorldPoints) {
+        point.optimizedXyz = xyz;
+      }
+
+      return null;
+    }
+  } catch (error) {
+    // On error, restore original state
+    log(`[Refine] Error: ${error instanceof Error ? error.message : 'unknown'}`);
+    for (const [viewpoint, saved] of savedCameraPoses) {
+      viewpoint.position = saved.position;
+      viewpoint.rotation = saved.rotation;
+      viewpoint.isPoseLocked = saved.locked;
+    }
+    for (const [point, xyz] of savedWorldPoints) {
+      point.optimizedXyz = xyz;
+    }
+    return null;
   }
 }
 

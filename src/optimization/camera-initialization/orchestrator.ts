@@ -5,7 +5,7 @@
 import type { Viewpoint } from '../../entities/viewpoint';
 import type { WorldPoint } from '../../entities/world-point';
 import { canInitializeWithVanishingPoints } from '../vanishing-points';
-import { log } from '../optimization-logger';
+import { logDebug } from '../optimization-logger';
 import type { CameraInitializationResult } from '../initialization-types';
 import { createDefaultDiagnostics } from '../initialization-types';
 import { setupLockedPointsForInitialization, getConstrainedPointCount } from './helpers';
@@ -56,7 +56,7 @@ export function initializeCameras(options: InitializeCamerasOptions): CameraInit
   const canAnyUseVP = canAnyUseVPStrict || canAnyUseVPRelaxed;
 
   // Debug logging for initialization path
-  log(`[Init Debug] uninitCameras=${uninitializedCameras.length}, lockedPts=${lockedPoints.length}, canVP=${canAnyUseVP} (strict=${canAnyUseVPStrict}, relaxed=${canAnyUseVPRelaxed})`);
+  logDebug(`[Init Debug] uninitCameras=${uninitializedCameras.length}, lockedPts=${lockedPoints.length}, canVP=${canAnyUseVP} (strict=${canAnyUseVPStrict}, relaxed=${canAnyUseVPRelaxed})`);
 
   // Try first-tier initialization if we have enough constraints.
   // First-tier now has fallback logic - if VP succeeds but PnP fails for remaining
@@ -88,7 +88,7 @@ export function initializeCameras(options: InitializeCamerasOptions): CameraInit
   if (camerasInitialized.length === 0) {
     // STEPPED INITIALIZATION: Try VP init with single point for multi-camera scenes
     if (uninitializedCameras.length >= 2 && canAnyUseVPRelaxed && lockedPoints.length >= 1) {
-      log(`[Init Stepped] Trying VP init with single locked point before Essential Matrix...`);
+      logDebug(`[Init Stepped] Trying VP init with single locked point before Essential Matrix...`);
 
       const steppedResult = runSteppedVPInitialization(uninitializedCameras, worldPoints, lockedPoints);
 
@@ -111,10 +111,10 @@ export function initializeCameras(options: InitializeCamerasOptions): CameraInit
     const singleCameraWithConstrainedPoints = uninitializedCameras.length === 1 &&
       getConstrainedPointCount(uninitializedCameras[0]) > 0;
 
-    log(`[Init Debug] No cameras initialized. uninitCameras=${uninitializedCameras.length}, canUseLatePnP=${singleCameraWithConstrainedPoints}`);
+    logDebug(`[Init Debug] No cameras initialized. uninitCameras=${uninitializedCameras.length}, canUseLatePnP=${singleCameraWithConstrainedPoints}`);
 
     if (uninitializedCameras.length < 2 && !singleCameraWithConstrainedPoints) {
-      log(`[Init Debug] FAILING: Single camera needs constrained points visible`);
+      logDebug(`[Init Debug] FAILING: Single camera needs constrained points visible`);
       throw new Error(
         'Single camera optimization requires the locked point(s) to be visible in the image. ' +
         'Either: (1) add image points for your locked world points, or (2) add a second camera ' +
@@ -124,7 +124,7 @@ export function initializeCameras(options: InitializeCamerasOptions): CameraInit
 
     // Single camera will use late PnP - skip Essential Matrix
     if (singleCameraWithConstrainedPoints) {
-      log(`[Init Debug] Single camera will use late PnP with constrained points`);
+      logDebug(`[Init Debug] Single camera will use late PnP with constrained points`);
       // Skip Essential Matrix - camera will be initialized via late PnP
     } else {
       // Essential Matrix path requires 2+ cameras

@@ -1,5 +1,5 @@
 import { VanishingLineAxis } from '../../entities/vanishing-line'
-import { log } from '../optimization-logger'
+import { logDebug } from '../optimization-logger'
 import { normalize, cross, matrixToQuaternion } from './math-utils'
 import { quaternionToMatrix } from '../math-utils-common'
 import { VanishingPoint } from './types'
@@ -40,7 +40,7 @@ export function computeRotationsFromVPs(
     // Log which way each axis points in camera space
     const camX = dir[0] > 0 ? 'RIGHT' : 'LEFT'
     const camY = dir[1] > 0 ? 'UP' : 'DOWN'
-    log(`[VP Debug] ${axis.toUpperCase()} VP at (${vp.u.toFixed(0)}, ${vp.v.toFixed(0)}) -> direction ${camX}/${camY} in camera [${dir.map(d => d.toFixed(3)).join(', ')}]`)
+    logDebug(`[VP Debug] ${axis.toUpperCase()} VP at (${vp.u.toFixed(0)}, ${vp.v.toFixed(0)}) -> direction ${camX}/${camY} in camera [${dir.map(d => d.toFixed(3)).join(', ')}]`)
   })
 
   let d_x: number[], d_y: number[], d_z: number[]
@@ -54,22 +54,22 @@ export function computeRotationsFromVPs(
     d_z = directions.z
     d_y_alt = [-d_y[0], -d_y[1], -d_y[2]]
 
-    log(`[VP Debug] All 3 VPs observed. Initial directions:`)
-    log(`[VP Debug]   d_x = [${d_x.map(v => v.toFixed(4)).join(', ')}]`)
-    log(`[VP Debug]   d_y = [${d_y.map(v => v.toFixed(4)).join(', ')}]`)
-    log(`[VP Debug]   d_z = [${d_z.map(v => v.toFixed(4)).join(', ')}]`)
+    logDebug(`[VP Debug] All 3 VPs observed. Initial directions:`)
+    logDebug(`[VP Debug]   d_x = [${d_x.map(v => v.toFixed(4)).join(', ')}]`)
+    logDebug(`[VP Debug]   d_y = [${d_y.map(v => v.toFixed(4)).join(', ')}]`)
+    logDebug(`[VP Debug]   d_z = [${d_z.map(v => v.toFixed(4)).join(', ')}]`)
 
     // Check if observed directions form right or left-handed system
     const crossXY = cross(d_x, d_y)
     const crossXY_norm = normalize(crossXY)
     const dot = crossXY_norm[0] * d_z[0] + crossXY_norm[1] * d_z[1] + crossXY_norm[2] * d_z[2]
-    log(`[VP Debug] X × Y = [${crossXY_norm.map(v => v.toFixed(4)).join(', ')}]`)
-    log(`[VP Debug] (X × Y) · Z = ${dot.toFixed(4)} (${dot > 0 ? 'RIGHT-HANDED' : 'LEFT-HANDED'})`)
+    logDebug(`[VP Debug] X × Y = [${crossXY_norm.map(v => v.toFixed(4)).join(', ')}]`)
+    logDebug(`[VP Debug] (X × Y) · Z = ${dot.toFixed(4)} (${dot > 0 ? 'RIGHT-HANDED' : 'LEFT-HANDED'})`)
 
     // CRITICAL: If left-handed, flip Z to make the base right-handed
     // This ensures all 4 even-flip sign combinations are also right-handed
     if (dot < 0) {
-      log(`[VP Debug] Flipping d_z to make base rotation RIGHT-HANDED`)
+      logDebug(`[VP Debug] Flipping d_z to make base rotation RIGHT-HANDED`)
       d_z = [-d_z[0], -d_z[1], -d_z[2]]
     }
   } else if (directions.x && directions.z && !directions.y) {
@@ -105,9 +105,9 @@ export function computeRotationsFromVPs(
     const expected_z_norm = normalize(expected_z)
     const actual_z = directions.z
     const dot = expected_z_norm[0] * actual_z[0] + expected_z_norm[1] * actual_z[1] + expected_z_norm[2] * actual_z[2]
-    log(`[VP Debug] Cross product check: X × Y dot Z = ${dot.toFixed(3)} (should be +1 for right-handed, -1 for left-handed)`)
+    logDebug(`[VP Debug] Cross product check: X × Y dot Z = ${dot.toFixed(3)} (should be +1 for right-handed, -1 for left-handed)`)
     if (dot < 0) {
-      log(`[VP Debug] WARNING: VP configuration appears LEFT-HANDED! The Z VP is on the opposite side of X×Y.`)
+      logDebug(`[VP Debug] WARNING: VP configuration appears LEFT-HANDED! The Z VP is on the opposite side of X×Y.`)
     }
   }
 
@@ -126,7 +126,7 @@ export function computeRotationsFromVPs(
   const dot_xy = d_x[0] * d_y[0] + d_x[1] * d_y[1] + d_x[2] * d_y[2]
   const dot_xz = d_x[0] * d_z[0] + d_x[1] * d_z[1] + d_x[2] * d_z[2]
   const dot_yz = d_y[0] * d_z[0] + d_y[1] * d_z[1] + d_y[2] * d_z[2]
-  log(`[VP Debug] Orthogonality check: X·Y=${dot_xy.toFixed(3)}, X·Z=${dot_xz.toFixed(3)}, Y·Z=${dot_yz.toFixed(3)} (all should be ~0)`)
+  logDebug(`[VP Debug] Orthogonality check: X·Y=${dot_xy.toFixed(3)}, X·Z=${dot_xz.toFixed(3)}, Y·Z=${dot_yz.toFixed(3)} (all should be ~0)`)
 
   // Save original directions for X-fixed strategy
   const d_x_original = [...d_x] as number[]
@@ -153,7 +153,7 @@ export function computeRotationsFromVPs(
 
   if (Math.abs(dot_xz) > orthogonalityThreshold) {
     didOrthogonalize = true
-    log(`[VP Debug] WARNING: VP directions are not orthogonal (X·Z=${dot_xz.toFixed(3)})! Trying orthogonalization strategies...`)
+    logDebug(`[VP Debug] WARNING: VP directions are not orthogonal (X·Z=${dot_xz.toFixed(3)})! Trying orthogonalization strategies...`)
 
     // Strategy 1: Keep Z fixed, orthogonalize X against Z
     const x_proj_z = dot_xz
@@ -164,7 +164,7 @@ export function computeRotationsFromVPs(
     ])
     d_y_orthZ = normalize(cross(d_z_original, d_x_orthZ))
     const angle1 = Math.acos(Math.min(1, Math.abs(d_x_original[0]*d_x_orthZ[0] + d_x_original[1]*d_x_orthZ[1] + d_x_original[2]*d_x_orthZ[2]))) * 180/Math.PI
-    log(`[VP Debug] Strategy 1 (Z fixed): X moved by ${angle1.toFixed(1)}°`)
+    logDebug(`[VP Debug] Strategy 1 (Z fixed): X moved by ${angle1.toFixed(1)}°`)
 
     // Strategy 2: Keep X fixed, orthogonalize Z against X
     const z_proj_x = dot_xz
@@ -175,7 +175,7 @@ export function computeRotationsFromVPs(
     ])
     d_y_orthX = normalize(cross(d_z_orthX, d_x_original))
     const angle2 = Math.acos(Math.min(1, Math.abs(d_z_original[0]*d_z_orthX[0] + d_z_original[1]*d_z_orthX[1] + d_z_original[2]*d_z_orthX[2]))) * 180/Math.PI
-    log(`[VP Debug] Strategy 2 (X fixed): Z moved by ${angle2.toFixed(1)}°`)
+    logDebug(`[VP Debug] Strategy 2 (X fixed): Z moved by ${angle2.toFixed(1)}°`)
 
     // Strategy 3: Procrustes - split the difference equally between X and Z
     // This finds the closest orthogonal pair to the original non-orthogonal pair
@@ -206,7 +206,7 @@ export function computeRotationsFromVPs(
     d_y_procrustes = normalize(cross(d_z_procrustes, d_x_procrustes))
     const angleX = Math.acos(Math.min(1, Math.abs(d_x_original[0]*d_x_procrustes[0] + d_x_original[1]*d_x_procrustes[1] + d_x_original[2]*d_x_procrustes[2]))) * 180/Math.PI
     const angleZ = Math.acos(Math.min(1, Math.abs(d_z_original[0]*d_z_procrustes[0] + d_z_original[1]*d_z_procrustes[1] + d_z_original[2]*d_z_procrustes[2]))) * 180/Math.PI
-    log(`[VP Debug] Strategy 3 (Procrustes): X moved by ${angleX.toFixed(1)}°, Z moved by ${angleZ.toFixed(1)}°`)
+    logDebug(`[VP Debug] Strategy 3 (Procrustes): X moved by ${angleX.toFixed(1)}°, Z moved by ${angleZ.toFixed(1)}°`)
   }
 
   // Use strategy 1 as primary (Z fixed, X adjusted)
@@ -232,9 +232,9 @@ export function computeRotationsFromVPs(
 
   const addAxisSet = (label: string, dx: number[], dy: number[], dz: number[]) => {
     const det = computeDet(dx, dy, dz)
-    log(`[VP Debug] Rotation determinant (${label}): ${det.toFixed(6)} (should be +1 for right-handed)`)
+    logDebug(`[VP Debug] Rotation determinant (${label}): ${det.toFixed(6)} (should be +1 for right-handed)`)
     if (det <= 0) {
-      log(`[VP Debug] ${label} is still left-handed - skipping`)
+      logDebug(`[VP Debug] ${label} is still left-handed - skipping`)
       return
     }
     axisSets.push({ label, d_x: dx, d_y: dy, d_z: dz })
@@ -244,7 +244,7 @@ export function computeRotationsFromVPs(
   if (det > 0) {
     addAxisSet('base', d_x, d_y, d_z)
   } else {
-    log('[VP Debug] WARNING: Left-handed coordinate system detected! Trying axis flips...')
+    logDebug('[VP Debug] WARNING: Left-handed coordinate system detected! Trying axis flips...')
     const flipCandidates: Array<{ label: string; d_x: number[]; d_y: number[]; d_z: number[] }> = [
       { label: 'flipX', d_x: [-d_x[0], -d_x[1], -d_x[2]], d_y, d_z },
       { label: 'flipY', d_x, d_y: [-d_y[0], -d_y[1], -d_y[2]], d_z },
@@ -256,7 +256,7 @@ export function computeRotationsFromVPs(
     }
 
     if (axisSets.length === 0) {
-      log('[VP Debug] All single-axis flips are invalid - forcing Z flip as fallback')
+      logDebug('[VP Debug] All single-axis flips are invalid - forcing Z flip as fallback')
       addAxisSet('forced-flipZ', d_x, d_y, [-d_z[0], -d_z[1], -d_z[2]])
     }
   }
@@ -275,11 +275,11 @@ export function computeRotationsFromVPs(
     ]
     const quaternion = matrixToQuaternion(R_candidate)
 
-    log(`[VP Debug] Computed rotation matrix from vanishing points (${label}):`)
-    log(`[ ${R_candidate[0].map(v => v.toFixed(6)).join(', ')} ]`)
-    log(`[ ${R_candidate[1].map(v => v.toFixed(6)).join(', ')} ]`)
-    log(`[ ${R_candidate[2].map(v => v.toFixed(6)).join(', ')} ]`)
-    log(`[VP Debug] Quaternion (${label}): ${JSON.stringify(quaternion.map(v => Number(v.toFixed(6))))}`)
+    logDebug(`[VP Debug] Computed rotation matrix from vanishing points (${label}):`)
+    logDebug(`[ ${R_candidate[0].map(v => v.toFixed(6)).join(', ')} ]`)
+    logDebug(`[ ${R_candidate[1].map(v => v.toFixed(6)).join(', ')} ]`)
+    logDebug(`[ ${R_candidate[2].map(v => v.toFixed(6)).join(', ')} ]`)
+    logDebug(`[VP Debug] Quaternion (${label}): ${JSON.stringify(quaternion.map(v => Number(v.toFixed(6))))}`)
 
     rotations.push(quaternion)
 
@@ -292,7 +292,7 @@ export function computeRotationsFromVPs(
       ]
       const quaternion_alt = matrixToQuaternion(R_alt)
       rotations.push(quaternion_alt)
-      log(`[VP Debug] Added alternate rotation with flipped Y and X (${label})`)
+      logDebug(`[VP Debug] Added alternate rotation with flipped Y and X (${label})`)
     }
   }
 
@@ -308,11 +308,11 @@ export function computeRotationsFromVPs(
     const det_xfixed = d_x_original[0] * (d_y_orthX[1] * d_z_orthX[2] - d_y_orthX[2] * d_z_orthX[1])
                      - d_x_original[1] * (d_y_orthX[0] * d_z_orthX[2] - d_y_orthX[2] * d_z_orthX[0])
                      + d_x_original[2] * (d_y_orthX[0] * d_z_orthX[1] - d_y_orthX[1] * d_z_orthX[0])
-    log(`[VP Debug] X-fixed strategy det: ${det_xfixed.toFixed(6)}`)
+    logDebug(`[VP Debug] X-fixed strategy det: ${det_xfixed.toFixed(6)}`)
     if (det_xfixed > 0) {
       const q_xfixed = matrixToQuaternion(R_xfixed)
       rotations.push(q_xfixed)
-      log('[VP Debug] Added X-fixed orthogonalization rotation')
+      logDebug('[VP Debug] Added X-fixed orthogonalization rotation')
 
       // Also add flipped Y version
       const d_y_orthX_flipped = [-d_y_orthX[0], -d_y_orthX[1], -d_y_orthX[2]]
@@ -323,7 +323,7 @@ export function computeRotationsFromVPs(
       ]
       const q_xfixed_flipY = matrixToQuaternion(R_xfixed_flipY)
       rotations.push(q_xfixed_flipY)
-      log('[VP Debug] Added X-fixed + flipped Y rotation')
+      logDebug('[VP Debug] Added X-fixed + flipped Y rotation')
     }
 
     // Strategy 3: Procrustes - both X and Z adjusted equally
@@ -335,11 +335,11 @@ export function computeRotationsFromVPs(
     const det_procrustes = d_x_procrustes[0] * (d_y_procrustes[1] * d_z_procrustes[2] - d_y_procrustes[2] * d_z_procrustes[1])
                          - d_x_procrustes[1] * (d_y_procrustes[0] * d_z_procrustes[2] - d_y_procrustes[2] * d_z_procrustes[0])
                          + d_x_procrustes[2] * (d_y_procrustes[0] * d_z_procrustes[1] - d_y_procrustes[1] * d_z_procrustes[0])
-    log(`[VP Debug] Procrustes strategy det: ${det_procrustes.toFixed(6)}`)
+    logDebug(`[VP Debug] Procrustes strategy det: ${det_procrustes.toFixed(6)}`)
     if (det_procrustes > 0) {
       const q_procrustes = matrixToQuaternion(R_procrustes)
       rotations.push(q_procrustes)
-      log('[VP Debug] Added Procrustes orthogonalization rotation')
+      logDebug('[VP Debug] Added Procrustes orthogonalization rotation')
 
       // Also add flipped Y version
       const d_y_procrustes_flipped = [-d_y_procrustes[0], -d_y_procrustes[1], -d_y_procrustes[2]]
@@ -350,11 +350,11 @@ export function computeRotationsFromVPs(
       ]
       const q_procrustes_flipY = matrixToQuaternion(R_procrustes_flipY)
       rotations.push(q_procrustes_flipY)
-      log('[VP Debug] Added Procrustes + flipped Y rotation')
+      logDebug('[VP Debug] Added Procrustes + flipped Y rotation')
     }
   }
 
-  log(`[VP Debug] Returning ${rotations.length} base rotation(s)`)
+  logDebug(`[VP Debug] Returning ${rotations.length} base rotation(s)`)
   return rotations
 }
 

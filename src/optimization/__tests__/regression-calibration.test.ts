@@ -186,6 +186,46 @@ describe('Regression - Calibration', () => {
     expect(errorAfterFineTune).toBeLessThanOrEqual(errorBeforeFineTune + tolerance)
   })
 
+  // Single-camera with 3 boxes scene
+  // Tests: VP init with non-orthogonal VLs (35° off), camera refinement for high error
+  // VLs at 55° angle force significant orthogonalization error in camera rotation.
+  // Without refinement: ~6.4px median error. With auto-refinement: ~0px.
+  it('Three Boxes.json', async () => {
+    const jsonPath = path.join(FIXTURES_DIR, 'Three Boxes.json')
+    const jsonData = fs.readFileSync(jsonPath, 'utf8')
+    const project = loadProjectFromJson(jsonData)
+
+    const result = await optimizeProject(project, {
+      maxIterations: 500,
+      maxAttempts: 1,
+      verbose: false
+    })
+
+    // Show logs on failure
+    if (!result.medianReprojectionError || result.medianReprojectionError >= 2) {
+      console.log('\n=== Optimization Logs ===')
+      for (const log of optimizationLogs) {
+        console.log(log)
+      }
+      console.log('=========================\n')
+    }
+
+    // Single camera should be initialized
+    expect(result.camerasInitialized).toBeDefined()
+    expect(result.camerasInitialized!.length).toBe(1)
+
+    // Verify solve quality - auto-refinement should achieve excellent results
+    expect(result.medianReprojectionError).toBeDefined()
+    expect(result.medianReprojectionError!).toBeLessThan(2)
+
+    // Fine-tune should maintain or improve
+    fineTuneProject(project, { verbose: false, lockCameraPoses: true })
+    const { medianError: errorAfterFineTune } = detectOutliers(project, 3.0)
+
+    const tolerance = 0.5
+    expect(errorAfterFineTune).toBeLessThanOrEqual(result.medianReprojectionError! + tolerance)
+  })
+
   // 3 cameras: cameras 3 and 4 can VP-init
   // Camera 2 cannot be initialized: only sees Y-direction lines (can't VP-init),
   // and only 2 triangulated points (WP5, WP6 - collinear, not enough for PnP)

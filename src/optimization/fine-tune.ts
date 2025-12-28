@@ -9,7 +9,7 @@ import { ConstraintSystem } from './constraint-system'
 import { WorldPoint } from '../entities/world-point'
 import { ImagePoint } from '../entities/imagePoint'
 import { Viewpoint } from '../entities/viewpoint'
-import { log, clearOptimizationLogs } from './optimization-logger'
+import { log, logDebug, clearOptimizationLogs, setVerbosity } from './optimization-logger'
 import { triangulateRayRay } from './triangulation'
 import { projectWorldPointToPixelQuaternion } from './camera-projection'
 import { V, Vec3, Vec4 } from 'scalar-autograd'
@@ -48,9 +48,10 @@ export function fineTuneProject(project: Project, options: FineTuneOptions = {})
   } = options
 
   clearOptimizationLogs()
+  setVerbosity(verbose ? 'verbose' : 'normal')
   log(`[FineTune] v2.1 - Starting fine-tune optimization`)
-  log(`[FineTune] WP:${project.worldPoints.size} L:${project.lines.size} VP:${project.viewpoints.size} IP:${project.imagePoints.size} C:${project.constraints.size}`)
-  log(`[FineTune] Options: tol=${tolerance}, maxIter=${maxIterations}, lockCameras=${lockCameraPoses}`)
+  logDebug(`[FineTune] WP:${project.worldPoints.size} L:${project.lines.size} VP:${project.viewpoints.size} IP:${project.imagePoints.size} C:${project.constraints.size}`)
+  logDebug(`[FineTune] Options: tol=${tolerance}, maxIter=${maxIterations}, lockCameras=${lockCameraPoses}`)
 
   const startTime = performance.now()
 
@@ -76,7 +77,7 @@ export function fineTuneProject(project: Project, options: FineTuneOptions = {})
       vp.position[0] !== 0 || vp.position[1] !== 0 || vp.position[2] !== 0
     )
 
-    log(`[FineTune] Cameras: ${initializedCameras.length}/${viewpointArray.length} initialized`)
+    logDebug(`[FineTune] Cameras: ${initializedCameras.length}/${viewpointArray.length} initialized`)
     if (initializedCameras.length === 0) {
       log(`[FineTune] ERROR: No cameras have valid positions - run full optimization first`)
     }
@@ -98,7 +99,7 @@ export function fineTuneProject(project: Project, options: FineTuneOptions = {})
         // Points at origin are only suspicious if they're NOT supposed to be there
         // (i.e., they're not locked/inferred to be at origin)
         if (isAtOrigin && !point.isFullyConstrained()) {
-          log(`[FineTune] WARN: Point "${point.getName()}" has optimizedXyz at origin but is not constrained - will re-triangulate`)
+          logDebug(`[FineTune] WARN: Point "${point.getName()}" has optimizedXyz at origin but is not constrained - will re-triangulate`)
           // Clear it so we can re-initialize
           point.optimizedXyz = undefined
         } else {
@@ -140,10 +141,10 @@ export function fineTuneProject(project: Project, options: FineTuneOptions = {})
 
       // Failed to initialize - log warning
       pointsFailed++
-      log(`[FineTune] WARN: Point "${point.getName()}" has no valid initial position`)
+      logDebug(`[FineTune] WARN: Point "${point.getName()}" has no valid initial position`)
     }
 
-    log(`[FineTune] Points: ${pointsAlreadyInitialized} valid, ${pointsFromConstraints} from constraints, ${pointsTriangulated} triangulated, ${pointsFailed} failed`)
+    logDebug(`[FineTune] Points: ${pointsAlreadyInitialized} valid, ${pointsFromConstraints} from constraints, ${pointsTriangulated} triangulated, ${pointsFailed} failed`)
 
     // PHASE 1: Clear inferredXyz for all points that already have optimizedXyz
     // This prevents stale/wrong inferred values from locking axes to incorrect values.
@@ -162,7 +163,7 @@ export function fineTuneProject(project: Project, options: FineTuneOptions = {})
       }
     }
     if (clearedInferenceCount > 0) {
-      log(`[FineTune] Cleared inference for ${clearedInferenceCount} points (using optimizedXyz instead)`)
+      logDebug(`[FineTune] Cleared inference for ${clearedInferenceCount} points (using optimizedXyz instead)`)
     }
 
     if (pointsFailed > 0 && pointsAlreadyInitialized + pointsInitialized === 0) {
@@ -183,10 +184,10 @@ export function fineTuneProject(project: Project, options: FineTuneOptions = {})
       const centerPPX = viewpoint.imageWidth / 2
       const centerPPY = viewpoint.imageHeight / 2
       const ppOffset = Math.sqrt((storedPPX - centerPPX) ** 2 + (storedPPY - centerPPY) ** 2)
-      log(`[FineTune] Camera "${viewpoint.name}": isPoseLocked=${viewpoint.isPoseLocked}, isZReflected=${viewpoint.isZReflected}, isPossiblyCropped=${viewpoint.isPossiblyCropped}`)
+      logDebug(`[FineTune] Camera "${viewpoint.name}": isPoseLocked=${viewpoint.isPoseLocked}, isZReflected=${viewpoint.isZReflected}, isPossiblyCropped=${viewpoint.isPossiblyCropped}`)
       if (ppOffset > 1 && !viewpoint.isPossiblyCropped) {
-        log(`[FineTune] WARNING: Camera "${viewpoint.name}" has PP offset ${ppOffset.toFixed(1)}px from center but isPossiblyCropped=false`)
-        log(`[FineTune]          Solver will use center (${centerPPX.toFixed(1)}, ${centerPPY.toFixed(1)}) but UI uses stored (${storedPPX.toFixed(1)}, ${storedPPY.toFixed(1)})`)
+        logDebug(`[FineTune] WARNING: Camera "${viewpoint.name}" has PP offset ${ppOffset.toFixed(1)}px from center but isPossiblyCropped=false`)
+        logDebug(`[FineTune]          Solver will use center (${centerPPX.toFixed(1)}, ${centerPPY.toFixed(1)}) but UI uses stored (${storedPPX.toFixed(1)}, ${storedPPY.toFixed(1)})`)
       }
     }
 
@@ -274,15 +275,15 @@ export function fineTuneProject(project: Project, options: FineTuneOptions = {})
           behindCameraCount++
         }
       } catch (e) {
-        log(`[FineTune] DIAG: IP "${imagePoint.getName()}" projection error: ${e}`)
+        logDebug(`[FineTune] DIAG: IP "${imagePoint.getName()}" projection error: ${e}`)
       }
     }
 
     const uiRmsError = ipCount > 0 ? Math.sqrt(uiTotalSquaredError / ipCount) : 0
     const solverRmsError = ipCount > 0 ? Math.sqrt(solverTotalSquaredError / ipCount) : 0
-    log(`[FineTune] DIAGNOSTIC: Pre-solve RMS (UI method with stored PP) = ${uiRmsError.toFixed(4)} px`)
-    log(`[FineTune] DIAGNOSTIC: Pre-solve RMS (Solver method with effective PP) = ${solverRmsError.toFixed(4)} px`)
-    log(`[FineTune] DIAGNOSTIC: ${ipCount} image points computed, ${behindCameraCount} behind camera`)
+    logDebug(`[FineTune] DIAGNOSTIC: Pre-solve RMS (UI method with stored PP) = ${uiRmsError.toFixed(4)} px`)
+    logDebug(`[FineTune] DIAGNOSTIC: Pre-solve RMS (Solver method with effective PP) = ${solverRmsError.toFixed(4)} px`)
+    logDebug(`[FineTune] DIAGNOSTIC: ${ipCount} image points computed, ${behindCameraCount} behind camera`)
 
     // Log point lock status
     let freeAxesTotal = 0
@@ -294,10 +295,10 @@ export function fineTuneProject(project: Project, options: FineTuneOptions = {})
       const freeAxes = (xLocked ? 0 : 1) + (yLocked ? 0 : 1) + (zLocked ? 0 : 1)
       freeAxesTotal += freeAxes
       if (freeAxes === 0) {
-        log(`[FineTune] Point "${point.getName()}": ALL LOCKED (x=${point.lockedXyz[0]}, y=${point.lockedXyz[1]}, z=${point.lockedXyz[2]})`)
+        logDebug(`[FineTune] Point "${point.getName()}": ALL LOCKED (x=${point.lockedXyz[0]}, y=${point.lockedXyz[1]}, z=${point.lockedXyz[2]})`)
       }
     }
-    log(`[FineTune] Total free point axes: ${freeAxesTotal}`)
+    logDebug(`[FineTune] Total free point axes: ${freeAxesTotal}`)
 
     const system = new ConstraintSystem({
       tolerance,

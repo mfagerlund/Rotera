@@ -16,7 +16,7 @@ import { Project } from '../../entities/project';
 import { WorldPoint } from '../../entities/world-point';
 import { Viewpoint } from '../../entities/viewpoint';
 import { generateAllInferenceBranches, InferenceBranch } from '../inference-branching';
-import { log } from '../optimization-logger';
+import { log, logDebug } from '../optimization-logger';
 import type { OptimizeProjectOptions } from './types';
 
 /**
@@ -268,11 +268,11 @@ export async function testAllCandidates(
     });
 
     const residual = probeResult.residual ?? Infinity;
-    log(`[Candidate] #${i + 1}/${candidates.length}: ${candidate.description} → residual=${residual.toFixed(1)}`);
+    logDebug(`[Candidate] #${i + 1}/${candidates.length}: ${candidate.description} → residual=${residual.toFixed(1)}`);
 
     // If good enough, return immediately
     if (residual < GOOD_ENOUGH_THRESHOLD) {
-      log(`[Candidate] #${i + 1} is good enough (residual=${residual.toFixed(1)} < ${GOOD_ENOUGH_THRESHOLD})`);
+      logDebug(`[Candidate] #${i + 1} is good enough (residual=${residual.toFixed(1)} < ${GOOD_ENOUGH_THRESHOLD})`);
       return probeResult;
     }
 

@@ -1,7 +1,7 @@
 import { VanishingLineAxis } from '../../entities/vanishing-line'
 import { Viewpoint } from '../../entities/viewpoint'
 import { WorldPoint } from '../../entities/world-point'
-import { log } from '../optimization-logger'
+import { logDebug } from '../optimization-logger'
 import { collectDirectionConstrainedLines } from './detection'
 import { computeVanishingPoint, computeAngleBetweenVPs } from './detection'
 import { VPLineData, ValidationResult, LineQualityIssue, VanishingPoint } from './types'
@@ -40,7 +40,7 @@ export function validateVanishingPoints(viewpoint: Viewpoint): ValidationResult 
   })
 
   if (virtualLineCount > 0) {
-    log(`[validateVanishingPoints] Added ${virtualLineCount} virtual VP lines from direction-constrained Lines`)
+    logDebug(`[validateVanishingPoints] Added ${virtualLineCount} virtual VP lines from direction-constrained Lines`)
   }
 
   const axes: VanishingLineAxis[] = ['x', 'y', 'z']
