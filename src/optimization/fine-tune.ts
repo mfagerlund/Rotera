@@ -303,7 +303,7 @@ export function fineTuneProject(project: Project, options: FineTuneOptions = {})
       tolerance,
       maxIterations,
       damping,
-      verbose: true, // Force verbose to see variable count
+      verbose,
       optimizeCameraIntrinsics: false, // Fine-tune should never change intrinsics
       regularizationWeight: 0,  // Disabled - was potentially fighting convergence
       useIsZReflected: true  // Respect camera's isZReflected (projection now correctly negates X,Y,Z)

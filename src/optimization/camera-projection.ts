@@ -173,10 +173,6 @@ export function cameraToPixelCoordinates(
   cameraPoint: Vec3,
   params: CameraParameters
 ): [Value, Value] | null {
-  // Check if point is behind camera (z <= 0)
-  const zThreshold = V.C(0.1);
-  const isBehindCamera = V.sub(cameraPoint.z, zThreshold);
-
   // If z is too small, return null (point behind camera)
   if (cameraPoint.z.data < 0.1) {
     return null;
