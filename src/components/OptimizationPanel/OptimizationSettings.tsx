@@ -1,4 +1,5 @@
 import React from 'react'
+import { Project } from '../../entities/project'
 
 interface OptimizationSettingsType {
   maxIterations: number
@@ -11,12 +12,14 @@ interface OptimizationSettingsProps {
   settings: OptimizationSettingsType
   onSettingChange: (key: string, value: any) => void
   onResetToDefaults: () => void
+  project: Project
 }
 
 export const OptimizationSettings: React.FC<OptimizationSettingsProps> = ({
   settings,
   onSettingChange,
-  onResetToDefaults
+  onResetToDefaults,
+  project
 }) => {
   return (
     <div className="optimization-settings">
@@ -67,6 +70,16 @@ export const OptimizationSettings: React.FC<OptimizationSettingsProps> = ({
             onChange={(e) => onSettingChange('verbose', e.target.checked)}
           />
           <span>Verbose Output</span>
+        </label>
+      </div>
+      <div className="setting-row">
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={project.lockCameraPoses}
+            onChange={(e) => { project.lockCameraPoses = e.target.checked }}
+          />
+          <span>Lock Camera Poses (Fine-Tune)</span>
         </label>
       </div>
       <div className="settings-actions">

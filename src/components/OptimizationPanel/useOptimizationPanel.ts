@@ -168,7 +168,6 @@ export function useOptimizationPanel({
   const [pnpResults, setPnpResults] = useState<{camera: string, before: number, after: number, iterations: number}[]>([])
   const [isInitializingCameras, setIsInitializingCameras] = useState(false)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
-  const [lockCamerasForFineTune, setLockCamerasForFineTune] = useState(false)
 
   const hasAutoStartedRef = useRef(false)
   const prevOptimizeTriggerRef = useRef(optimizeTrigger)
@@ -359,7 +358,7 @@ export function useOptimizationPanel({
         tolerance: settings.tolerance,
         maxIterations: settings.maxIterations,
         damping: settings.damping,
-        lockCameraPoses: lockCamerasForFineTune,
+        lockCameraPoses: project.lockCameraPoses,
         verbose: settings.verbose
       })
 
@@ -402,7 +401,7 @@ export function useOptimizationPanel({
       setIsOptimizing(false)
       setStatusMessage(null)
     }
-  }, [canOptimize, project, settings, lockCamerasForFineTune, onOptimizationComplete, onOptimizationStart])
+  }, [canOptimize, project, settings, onOptimizationComplete, onOptimizationStart])
 
   useEffect(() => {
     if (isOpen && autoStart && !hasAutoStartedRef.current && stats.canOptimize && !isOptimizing) {
@@ -511,8 +510,6 @@ export function useOptimizationPanel({
     isInitializingCameras,
     statusMessage,
     stats,
-    lockCamerasForFineTune,
-    setLockCamerasForFineTune,
     canOptimize,
     handleOptimize,
     handleStop,

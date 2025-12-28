@@ -51,7 +51,8 @@ export class Serialization {
       imageSortOrder: project.imageSortOrder,
       optimizationMaxIterations: project.optimizationMaxIterations,
       leftSidebarWidth: project.leftSidebarWidth,
-      imageHeights: project.imageHeights
+      imageHeights: project.imageHeights,
+      lockCameraPoses: project.lockCameraPoses
     }
 
     return JSON.stringify(dto, null, 2)
@@ -114,7 +115,8 @@ export class Serialization {
       dto.imageSortOrder,
       dto.optimizationMaxIterations,
       dto.leftSidebarWidth ?? 180,
-      dto.imageHeights ?? {}
+      dto.imageHeights ?? {},
+      dto.lockCameraPoses ?? false
     )
   }
 

@@ -4,7 +4,7 @@
 import React, { useMemo } from 'react'
 import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faBolt, faGear, faStop, faClipboard } from '@fortawesome/free-solid-svg-icons'
+import { faBolt, faGear, faStop, faClipboard, faSlidersH } from '@fortawesome/free-solid-svg-icons'
 import { Project } from '../entities/project'
 import FloatingWindow, { HeaderButton } from './FloatingWindow'
 import { WorldPoint } from '../entities/world-point'
@@ -68,8 +68,6 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
     pnpResults,
     statusMessage,
     stats,
-    lockCamerasForFineTune,
-    setLockCamerasForFineTune,
     canOptimize,
     handleOptimize,
     handleStop,
@@ -96,6 +94,14 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
       className: 'btn-optimize'
     },
     {
+      icon: <FontAwesomeIcon icon={faSlidersH} />,
+      label: 'Fine-Tune',
+      onClick: handleFineTune,
+      disabled: !canOptimize() || isOptimizing,
+      title: 'Fine-tune optimization for improved accuracy',
+      className: 'btn-fine-tune'
+    },
+    {
       icon: <FontAwesomeIcon icon={faStop} />,
       onClick: handleStop,
       disabled: !isOptimizing,
@@ -116,7 +122,7 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
       disabled: isOptimizing,
       title: 'Copy optimization logs to clipboard'
     }
-  ], [handleOptimize, canOptimize, isOptimizing, handleStop, toggleAdvanced])
+  ], [handleOptimize, handleFineTune, canOptimize, isOptimizing, handleStop, toggleAdvanced])
 
   return (
     <FloatingWindow
@@ -136,31 +142,12 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
         statusMessage={statusMessage}
       />
 
-      <div className="fine-tune-section" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 0', borderBottom: '1px solid #333' }}>
-        <button
-          onClick={handleFineTune}
-          disabled={isOptimizing || !canOptimize()}
-          className="btn-fine-tune"
-          style={{ padding: '4px 12px' }}
-        >
-          Fine-Tune
-        </button>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#aaa' }}>
-          <input
-            type="checkbox"
-            checked={lockCamerasForFineTune}
-            onChange={(e) => setLockCamerasForFineTune(e.target.checked)}
-            disabled={isOptimizing}
-          />
-          Lock camera poses
-        </label>
-      </div>
-
       {showAdvanced && (
         <OptimizationSettings
           settings={settings}
           onSettingChange={handleSettingChange}
           onResetToDefaults={resetToDefaults}
+          project={project}
         />
       )}
 

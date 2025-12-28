@@ -43,4 +43,5 @@ export interface ProjectDto {
   optimizationMaxIterations?: number
   leftSidebarWidth?: number
   imageHeights?: Record<string, number>
+  lockCameraPoses?: boolean
 }
