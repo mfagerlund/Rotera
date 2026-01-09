@@ -1,111 +1,71 @@
 # Rotera
-Poor Man's Photogrammetry
 
-**Last Updated:** 2025-12-25
+**Constraint-based photogrammetry in your browser**
 
-## 🚀 Current Status
+**Live at [rotera.xyz](https://rotera.xyz)**
 
-**ACTIVE DEVELOPMENT** - Standalone browser application with functional UI and ScalarAutograd solver.
+Rotera is a sparse Structure-from-Motion tool that lets you reconstruct 3D geometry from photos using geometric constraints. Think of it as fSpy, but with multiple linked cameras, shared world points, and exportable geometry.
 
-✅ **UI Layer**: React TypeScript interface with project management and visualization
-✅ **Domain Layer**: Entity-based model (WorldPoint, Line, Viewpoint, Constraint)
-✅ **Solver Layer**: ScalarAutograd (TypeScript) for automatic differentiation and optimization
-✅ **Testing**: Comprehensive test suite
+## What it does
 
-**Quick Start:**
+- Load photos and mark corresponding points across images
+- Add geometric constraints: distances, axis alignments, coplanarity, angles
+- Solve camera poses and 3D point positions automatically
+- Export geometry for use in Blender, CAD, or other tools
+
+## Quick Start
+
+Visit [rotera.xyz](https://rotera.xyz) to use it directly in your browser - no installation required.
+
+### Run locally
+
 ```bash
-# Standalone browser app (Node.js 20+)
 npm install
-npm run dev  # Runs on http://localhost:5173
+npm run dev  # http://localhost:5173
 ```
 
-**Solver:** Uses ScalarAutograd (TypeScript-based) for automatic differentiation and optimization (C:\Dev\ScalarAutograd), runs entirely in browser.
+## Core Concepts
 
-## Goal
+- **World Point (WP):** A 3D point that can be observed in multiple images
+- **Image Point (IP):** A 2D observation linking a world point to a pixel in a photo
+- **Viewpoint:** A camera with intrinsics and pose (position + orientation)
+- **Constraint:** Geometric relationships like distances, angles, or alignments
 
-Constraint-driven sparse Structure-from-Motion (SfM) with CAD-like geometric priors. Like fSpy, but with multiple linked cameras, shared world points, and exportable geometry. Distinct from full photogrammetry—focuses on parametric constraints and precise geometric relationships.
+## Example Workflow
 
-## Core concepts
+1. Load a photo of a room. Mark a corner as the origin (0, 0, 0).
+2. Mark another floor corner; constrain it to be 5m away along the X-axis.
+3. Mark ceiling points; constrain them to be vertical from floor points.
+4. Add a second photo with overlapping points.
+5. Solve - Rotera computes camera poses and refines all 3D positions.
 
-* **World Point (WP):** Unique 3D point with ID; exists independent of any single image.
-* **Image:** A calibrated or to-be-calibrated photo.
-* **Image Point (IP):** Observation tying a WP to a 2D pixel in a specific image.
-* **Constraint:** Any relation over WPs, cameras, or both (e.g., distances, planes).
-* **Camera:** Intrinsics + extrinsics (projection matrix) per image.
+## Constraints
 
-## Constraints (examples, not exhaustive)
+- **Known coordinates:** Fix any subset of {x, y, z} for a point
+- **Distance:** Set exact distance between two points
+- **Axis alignment:** Constrain a line to be parallel to X, Y, or Z axis
+- **Coplanarity:** Force points to lie on a shared plane
+- **Angles:** Set angles between lines
+- **And more...**
 
-* **IP observation:** (image\_id, wp\_id, u, v).
-* **Known coordinates:** Any subset of {x, y, z} fixed for a WP.
-* **Distance:** ‖WP\_i − WP\_j‖ = d (meters).
-* **Axis alignment:** Vector (WP\_i→WP\_j) aligned with world X/Y/Z or another vector.
-* **Horizontal/vertical:** Special cases of axis alignment.
-* **Coplanarity / plane membership:** {WP\_i,…} lie on a plane; or define plane from ≥3 WPs.
-* **Mirror symmetry:** Two WP sets mirrored about a (known/unknown) plane.
-* **Cylindrical/Conical primitives:** ≥2 circular cross-sections forming a cylinder or cone.
-* **Equality (merge):** WP\_a ≡ WP\_b (late dedup).
+## Technical Details
 
-Camera projections are solved from the full constraint graph. IPs cannot exist without their images.
+- Runs entirely in-browser (no server required)
+- Built with React, TypeScript, and MobX
+- Uses [ScalarAutograd](https://github.com/mfagerlund/ScalarAutograd) for automatic differentiation
+- Nonlinear least squares optimization with Levenberg-Marquardt
+- Two-camera initialization via 7-point/8-point algorithms
+- Single-camera initialization via PnP when world points are known
 
-## Solver
+## Development
 
-* Builds a factor/constraint graph over WPs and cameras.
-* Solves by nonlinear least squares with robust losses (Huber/Cauchy).
-* Mandatory gauge fixing: origin, scale, and orientation anchoring.
-* Tracks:
+```bash
+npm run dev        # Start dev server
+npm test           # Run tests
+npm run build      # Production build
+bash check.sh      # Run all checks (types, tests, lint)
+```
 
-  * Per-constraint residuals (to flag weak/inconsistent inputs).
-  * Per-WP uncertainty ellipsoids.
-  * Under-constrained variables (DoF accounting via Jacobian rank).
-  * Degeneracy detection (planar scenes, colinear points, tiny baselines).
-* Over-constraints are allowed and reduce variance.
-* **Two-camera initialization:**
-  * **7-point algorithm** for Essential Matrix estimation (minimum 7 point correspondences)
-  * **8-point algorithm** as fallback for 8+ correspondences
-  * Future: 5-point algorithm (Nistér 2004) could reduce to 5 correspondences but requires solving 10th-degree polynomials
-* **Single-camera initialization:** PnP from 3D-2D correspondences when world points already have coordinates
-* **Global bundle adjustment:** Refines all parameters jointly after initialization
+## License
 
-## Workflow (condensed example)
-
-1. Load an interior photo. Mark a corner as WP₀ = (0,0,0).
-2. Mark another floor corner WP₁; constrain (WP₀→WP₁) ‖ X-axis and distance = 5 m.
-3. Mark a ceiling point WP₂; constrain WP₂ horizontally aligned with WP₀ (same x,y).
-4. Constrain a wall point WP₃ to the plane defined by {WP₀, WP₁, WP₂}.
-5. Solve → recover camera pose and initial sparse WPs.
-6. Add a second photo; place IPs for existing WPs; re-solve → estimate the new camera quickly from prior constraints.
-
-## Geometry & export
-
-* User can tag WP groups as faces/meshes for export or keep them as abstract primitives.
-* Export includes:
-
-  * Sparse WPs, planes/solids (if defined),
-  * Camera poses and intrinsics,
-  * Per-constraint residuals (optional).
-* Plugins: Blender (full camera/geometry support), Fusion 360 (construction geometry and snapping guides only).
-
-## Editing & merge
-
-* Late realization that two WPs are identical → merge (WP\_b takes WP\_a’s references) with automatic graph update.
-
-## Architecture
-
-Standalone browser application with React + TypeScript UI, entity-based domain model, and ScalarAutograd solver. All code runs in-browser with no server required.
-
-For detailed architecture rules and patterns, see `architectural-rules.md`.
-
-## Testing strategy
-
-* No bitmaps required. Synthetic scenes:
-
-  * Create known WPs/planes/distances.
-  * Generate cameras (including axis-aligned cases) and project visible WPs to IPs.
-  * Ensure points are in front of cameras and inside image bounds.
-* Unit/integration tests cover each constraint type, mixed constraints, under/over-constrained cases, and WP merge behavior.
-* Verify solves recover ground-truth within tolerances.
-
-## Notes
-
-* All distances in meters.
-* System continuously reports what's unconstrained, plus largest residuals by constraint and by WP.
+MIT
