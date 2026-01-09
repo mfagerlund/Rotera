@@ -32,7 +32,7 @@
     "mobx-react-lite": "^4.1.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "scalar-autograd": "file:../ScalarAutograd"
+    "scalar-autograd": "^0.1.9"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.28.3",

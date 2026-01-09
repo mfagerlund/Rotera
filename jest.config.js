@@ -33,7 +33,7 @@ export default {
     '\\.(gif|ttf|eot|svg|png|jpg|jpeg)$': '<rootDir>/src/tests/__mocks__/fileMock.js'
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(ml-levenberg-marquardt|ml-array|nanoid)/)'
+    'node_modules/(?!(ml-levenberg-marquardt|ml-array|nanoid|scalar-autograd)/)'
   ],
   collectCoverageFrom: [
     'src/components/**/*.{ts,tsx}',
