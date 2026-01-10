@@ -2,34 +2,56 @@
 
 **Constraint-based photogrammetry in your browser**
 
-**Live at [rotera.xyz](https://rotera.xyz)**
+**[rotera.xyz](https://rotera.xyz)**
 
 Rotera is a sparse Structure-from-Motion tool that lets you reconstruct 3D geometry from photos using geometric constraints. Think of it as fSpy, but with multiple linked cameras, shared world points, and exportable geometry.
 
-## What it does
+## Features
 
-- Load photos and mark corresponding points across images
-- Add geometric constraints: distances, axis alignments, coplanarity, angles
-- Solve camera poses and 3D point positions automatically
-- Export geometry for use in Blender, CAD, or other tools
+- **Multi-camera solving** - Link multiple photos together through shared world points
+- **Constraint-based reconstruction** - Use distances, angles, axis alignments, and coplanarity constraints
+- **No installation required** - Runs entirely in your browser
+- **Blender integration** - Import cameras, geometry, and background images for camera mapping/projection
+- **Export formats** - Download `.rotera` project files for Blender, or raw geometry data
+
+## Blender Integration
+
+Download the Blender addon: **[rotera_importer.py](https://rotera.xyz/rotera_importer.py)**
+
+The addon imports:
+- Calibrated cameras with correct focal length, position, and orientation
+- Camera background images (embedded in `.rotera` files)
+- World points as mesh vertices with edges
+- Point empties for easy manipulation
+
+Perfect for **camera mapping** (projecting photos onto 3D geometry) and set reconstruction.
+
+See [BLENDER.md](BLENDER.md) for detailed instructions.
 
 ## Quick Start
 
-Visit [rotera.xyz](https://rotera.xyz) to use it directly in your browser - no installation required.
-
-### Run locally
-
-```bash
-npm install
-npm run dev  # http://localhost:5173
-```
+1. Visit [rotera.xyz](https://rotera.xyz)
+2. Load a photo and mark key points (corners, edges)
+3. Add constraints (distances, axis alignments)
+4. Solve to compute camera pose and 3D positions
+5. Export to Blender for camera mapping
 
 ## Core Concepts
 
-- **World Point (WP):** A 3D point that can be observed in multiple images
-- **Image Point (IP):** A 2D observation linking a world point to a pixel in a photo
-- **Viewpoint:** A camera with intrinsics and pose (position + orientation)
-- **Constraint:** Geometric relationships like distances, angles, or alignments
+| Concept | Description |
+|---------|-------------|
+| **World Point (WP)** | A 3D point that can be observed in multiple images |
+| **Image Point (IP)** | A 2D observation linking a world point to a pixel |
+| **Viewpoint** | A camera with intrinsics and pose |
+| **Constraint** | Geometric relationships: distances, angles, alignments |
+
+## Constraints
+
+- **Known coordinates** - Fix any subset of {x, y, z} for a point
+- **Distance** - Exact distance between two points
+- **Axis alignment** - Line parallel to X, Y, or Z axis
+- **Coplanarity** - Points on a shared plane
+- **Angles** - Angles between lines
 
 ## Example Workflow
 
@@ -38,24 +60,22 @@ npm run dev  # http://localhost:5173
 3. Mark ceiling points; constrain them to be vertical from floor points.
 4. Add a second photo with overlapping points.
 5. Solve - Rotera computes camera poses and refines all 3D positions.
-
-## Constraints
-
-- **Known coordinates:** Fix any subset of {x, y, z} for a point
-- **Distance:** Set exact distance between two points
-- **Axis alignment:** Constrain a line to be parallel to X, Y, or Z axis
-- **Coplanarity:** Force points to lie on a shared plane
-- **Angles:** Set angles between lines
-- **And more...**
+6. Export to Blender. Set up camera projection for photorealistic renders.
 
 ## Technical Details
 
-- Runs entirely in-browser (no server required)
 - Built with React, TypeScript, and MobX
 - Uses [ScalarAutograd](https://github.com/mfagerlund/ScalarAutograd) for automatic differentiation
 - Nonlinear least squares optimization with Levenberg-Marquardt
 - Two-camera initialization via 7-point/8-point algorithms
 - Single-camera initialization via PnP when world points are known
+
+## Run Locally
+
+```bash
+npm install
+npm run dev  # http://localhost:5173
+```
 
 ## Development
 
