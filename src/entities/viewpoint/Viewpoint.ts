@@ -12,6 +12,7 @@ import type { ViewpointDto } from './ViewpointDto'
 import type { VanishingLine } from '../vanishing-line'
 import type { ViewpointMetadata } from './ViewpointMetadata'
 import {makeAutoObservable} from 'mobx'
+import {generateId} from '../../services/project-db/utils'
 
 export class Viewpoint implements ISelectable, IValueMapContributor, IOptimizableCamera, IViewpoint, ISerializable<ViewpointDto> {
     /** Unique identifier - stable across sessions */
@@ -225,7 +226,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IOptimizabl
         } = {}
     ): Viewpoint {
         const now = new Date().toISOString()
-        const id = options.id ?? crypto.randomUUID()
+        const id = options.id ?? generateId()
 
         // Estimate focal length from image dimensions if not provided
         const defaultFocalLength = Math.max(imageWidth, imageHeight)

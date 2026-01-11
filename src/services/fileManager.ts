@@ -1,6 +1,7 @@
 import { Project } from '../entities/project'
 import { saveProjectToJson, loadProjectFromJson } from '../store/project-serialization'
 import { errorToMessage } from '../types/utils'
+import { generateId } from './project-db/utils'
 
 export interface ProjectFileMetadata {
   name: string
@@ -272,7 +273,7 @@ export class FileManagerService {
 
   private static migrateProjectDto(dto: any, fromVersion: string): any {
     return {
-      id: dto.id || crypto.randomUUID(),
+      id: dto.id || generateId(),
       name: dto.name || 'Migrated Project',
       worldPoints: dto.worldPoints || {},
       lines: dto.lines || {},

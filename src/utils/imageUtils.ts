@@ -1,4 +1,5 @@
 // Image processing utilities for project management
+import { generateId } from '../services/project-db/utils'
 
 export interface ImageLoadResult {
   id: string
@@ -34,7 +35,7 @@ export class ImageUtils {
           ctx.drawImage(img, 0, 0, width, height)
 
           resolve({
-            id: crypto.randomUUID(),
+            id: generateId(),
             name: file.name.replace(/\.[^/.]+$/, ''), // Remove file extension
             url: canvas.toDataURL('image/jpeg', 0.8),
             imageWidth: width,
