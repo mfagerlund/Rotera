@@ -16,7 +16,8 @@ import {
   faChevronDown,
   faFileLines,
   faRotate,
-  faQuestionCircle
+  faQuestionCircle,
+  faTags
 } from '@fortawesome/free-solid-svg-icons'
 import { downloadRoteraProject } from '../../services/blender-export'
 import { WorkspaceSwitcher } from '../WorkspaceManager'
@@ -24,6 +25,7 @@ import { AppBranding } from '../AppBranding'
 import type { Project } from '../../entities/project'
 import { checkOptimizationReadiness, getOptimizationStatusSummary } from '../../optimization/optimization-readiness'
 import { AboutModal } from '../AboutModal'
+import { helpLabelsStore } from '../../store/help-labels-store'
 
 interface MainToolbarProps {
   // Workspace
@@ -379,6 +381,14 @@ export const MainToolbar: React.FC<MainToolbarProps> = observer(({
           </div>
         )}
       </div>
+
+      <button
+        className={`btn-help-labels ${helpLabelsStore.isEnabled ? 'active' : ''}`}
+        onClick={() => helpLabelsStore.toggle()}
+        title="Show Help Labels (F1)"
+      >
+        <FontAwesomeIcon icon={faTags} />
+      </button>
 
       <button
         className="btn-help"

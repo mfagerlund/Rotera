@@ -5922,3 +5922,36 @@ body {
 .no-spinners[type=number] {
   -moz-appearance: textfield;
 }
+
+/* Help Labels Button */
+.btn-help-labels {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.15s ease;
+  margin-left: 8px;
+}
+
+.btn-help-labels:hover {
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  border-color: var(--border-hover);
+}
+
+.btn-help-labels.active {
+  background: rgba(100, 160, 255, 0.15);
+  color: rgb(100, 160, 255);
+  border-color: rgba(100, 160, 255, 0.4);
+}
+
+.btn-help-labels.active:hover {
+  background: rgba(100, 160, 255, 0.25);
+}

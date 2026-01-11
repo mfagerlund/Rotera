@@ -6,11 +6,13 @@ import { ProjectDB } from './services/project-db'
 import { Project } from './entities/project'
 import { loadProject, getIsDirty, getProject } from './store/project-store'
 import { SessionStore } from './services/session-store'
+import { HelpLabelsOverlay } from './components/HelpLabels/HelpLabelsOverlay'
 import './styles/rotera.css'
 import './styles/enhanced-workspace.css'
 import './styles/workspace.css'
 import './styles/project-browser.css'
 import './styles/about-modal.css'
+import './styles/help-labels.css'
 
 type AppView = 'browser' | 'editor'
 
@@ -135,11 +137,17 @@ function App() {
             onCancel={handleNameModalCancel}
           />
         )}
+        <HelpLabelsOverlay />
       </>
     )
   }
 
-  return <MainLayout onReturnToBrowser={handleReturnToBrowser} />
+  return (
+    <>
+      <MainLayout onReturnToBrowser={handleReturnToBrowser} />
+      <HelpLabelsOverlay />
+    </>
+  )
 }
 
 export default App

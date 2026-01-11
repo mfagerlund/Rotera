@@ -1,4 +1,4 @@
-import React, { useRef } from 'react'
+import React, { useRef, useEffect, useCallback } from 'react'
 import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
@@ -13,7 +13,9 @@ import {
   faBookOpen,
   faQuestionCircle,
   faChevronDown,
-  faChevronRight
+  faChevronRight,
+  faCaretDown,
+  faTags
 } from '@fortawesome/free-solid-svg-icons'
 import { Project } from '../entities/project'
 import { useConfirm } from './ConfirmDialog'
@@ -25,6 +27,7 @@ import { FolderCard } from './ProjectBrowser/FolderCard'
 import { MoveDialog, CopyDialog, ExportDialog, ImportDialog } from './ProjectBrowser/ProjectDialogs'
 import { ExamplesModal } from './ProjectBrowser/ExamplesModal'
 import { AboutModal } from './AboutModal'
+import { helpLabelsStore } from '../store/help-labels-store'
 
 interface ProjectBrowserProps {
   onOpenProject: (project: Project) => void
@@ -41,7 +44,25 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
   const [showExamplesModal, setShowExamplesModal] = React.useState(false)
   const [showAboutModal, setShowAboutModal] = React.useState(false)
   const [gettingStartedExpanded, setGettingStartedExpanded] = React.useState<boolean | null>(null)
+  const [openDropdown, setOpenDropdown] = React.useState<'file' | 'help' | null>(null)
   const importProjectInputRef = useRef<HTMLInputElement>(null)
+  const fileDropdownRef = useRef<HTMLDivElement>(null)
+  const helpDropdownRef = useRef<HTMLDivElement>(null)
+
+  // Close dropdown when clicking outside
+  const handleClickOutside = useCallback((e: MouseEvent) => {
+    if (openDropdown === 'file' && fileDropdownRef.current && !fileDropdownRef.current.contains(e.target as Node)) {
+      setOpenDropdown(null)
+    }
+    if (openDropdown === 'help' && helpDropdownRef.current && !helpDropdownRef.current.contains(e.target as Node)) {
+      setOpenDropdown(null)
+    }
+  }, [openDropdown])
+
+  useEffect(() => {
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [handleClickOutside])
 
   React.useEffect(() => {
     ProjectDB.hasOldDatabase().then(setHasOldDb)
@@ -163,42 +184,105 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
           >
             <FontAwesomeIcon icon={faFolderPlus} /> New Folder
           </button>
+
+          {/* Import/Export Dropdown */}
+          <div className="project-browser__dropdown" ref={fileDropdownRef}>
+            <button
+              className={`project-browser__dropdown-trigger ${openDropdown === 'file' ? 'project-browser__dropdown-trigger--open' : ''}`}
+              onClick={() => setOpenDropdown(openDropdown === 'file' ? null : 'file')}
+            >
+              <FontAwesomeIcon icon={faFileImport} /> Import / Export <FontAwesomeIcon icon={faCaretDown} />
+            </button>
+            {openDropdown === 'file' && (
+              <div className="project-browser__dropdown-menu">
+                <button
+                  className="project-browser__dropdown-item"
+                  onClick={() => {
+                    importProjectInputRef.current?.click()
+                    setOpenDropdown(null)
+                  }}
+                >
+                  <FontAwesomeIcon icon={faFileImport} /> Import Project
+                </button>
+                <button
+                  className="project-browser__dropdown-item"
+                  onClick={() => {
+                    setShowImportModal(true)
+                    setOpenDropdown(null)
+                  }}
+                >
+                  <FontAwesomeIcon icon={faFileImport} /> Import Folder (ZIP)
+                </button>
+                <div className="project-browser__dropdown-divider" />
+                <button
+                  className="project-browser__dropdown-item"
+                  onClick={() => {
+                    setShowExportModal(true)
+                    setOpenDropdown(null)
+                  }}
+                  disabled={totalProjectCount === 0}
+                >
+                  <FontAwesomeIcon icon={faFileExport} /> Export Folder (ZIP)
+                </button>
+                {hasOldDb && (
+                  <>
+                    <div className="project-browser__dropdown-divider" />
+                    <button
+                      className="project-browser__dropdown-item"
+                      onClick={() => {
+                        handleImportOldDatabase()
+                        setOpenDropdown(null)
+                      }}
+                      disabled={isImporting}
+                    >
+                      <FontAwesomeIcon icon={faDownload} /> {isImporting ? 'Importing...' : 'Import Old Database'}
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Help Dropdown */}
+          <div className="project-browser__dropdown" ref={helpDropdownRef}>
+            <button
+              className={`project-browser__dropdown-trigger ${openDropdown === 'help' ? 'project-browser__dropdown-trigger--open' : ''}`}
+              onClick={() => setOpenDropdown(openDropdown === 'help' ? null : 'help')}
+            >
+              <FontAwesomeIcon icon={faQuestionCircle} /> Help <FontAwesomeIcon icon={faCaretDown} />
+            </button>
+            {openDropdown === 'help' && (
+              <div className="project-browser__dropdown-menu">
+                <button
+                  className="project-browser__dropdown-item"
+                  onClick={() => {
+                    setShowExamplesModal(true)
+                    setOpenDropdown(null)
+                  }}
+                >
+                  <FontAwesomeIcon icon={faBookOpen} /> Example Projects
+                </button>
+                <button
+                  className="project-browser__dropdown-item"
+                  onClick={() => {
+                    setShowAboutModal(true)
+                    setOpenDropdown(null)
+                  }}
+                >
+                  <FontAwesomeIcon icon={faQuestionCircle} /> About Rotera
+                </button>
+              </div>
+            )}
+          </div>
+
           <button
-            className="project-browser__btn"
-            onClick={() => setShowExportModal(true)}
-            disabled={totalProjectCount === 0}
-            title="Export all projects in this folder and subfolders"
+            className={`btn-help-labels ${helpLabelsStore.isEnabled ? 'active' : ''}`}
+            onClick={() => helpLabelsStore.toggle()}
+            title="Show Help Labels (F1)"
           >
-            <FontAwesomeIcon icon={faFileExport} /> Export Folder
+            <FontAwesomeIcon icon={faTags} />
           </button>
-          <button
-            className="project-browser__btn"
-            onClick={() => setShowImportModal(true)}
-            title="Import projects from a ZIP file"
-          >
-            <FontAwesomeIcon icon={faFileImport} /> Import Folder
-          </button>
-          <button
-            className="project-browser__btn"
-            onClick={() => importProjectInputRef.current?.click()}
-            title="Import a single project file"
-          >
-            <FontAwesomeIcon icon={faFileImport} /> Import Project
-          </button>
-          <button
-            className="project-browser__btn"
-            onClick={() => setShowExamplesModal(true)}
-            title="Load example projects to learn Rotera"
-          >
-            <FontAwesomeIcon icon={faBookOpen} /> Examples
-          </button>
-          <button
-            className="project-browser__btn"
-            onClick={() => setShowAboutModal(true)}
-            title="Learn about Rotera"
-          >
-            <FontAwesomeIcon icon={faQuestionCircle} /> Help
-          </button>
+
           <button
             className="project-browser__btn project-browser__btn--optimize"
             onClick={handleBatchOptimize}
@@ -211,20 +295,6 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
               <><FontAwesomeIcon icon={faBolt} /> Optimize All ({totalProjectCount})</>
             )}
           </button>
-          {hasOldDb && (
-            <button
-              className="project-browser__btn"
-              onClick={handleImportOldDatabase}
-              disabled={isImporting}
-              title="Import projects from old Pictorigo database"
-            >
-              {isImporting ? (
-                <><FontAwesomeIcon icon={faSpinner} spin /> Importing...</>
-              ) : (
-                <><FontAwesomeIcon icon={faDownload} /> Import Old Database</>
-              )}
-            </button>
-          )}
         </div>
       </div>
 
