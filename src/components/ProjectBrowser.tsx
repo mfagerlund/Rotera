@@ -9,7 +9,11 @@ import {
   faFileExport,
   faFileImport,
   faBolt,
-  faDownload
+  faDownload,
+  faBookOpen,
+  faQuestionCircle,
+  faChevronDown,
+  faChevronRight
 } from '@fortawesome/free-solid-svg-icons'
 import { Project } from '../entities/project'
 import { useConfirm } from './ConfirmDialog'
@@ -19,6 +23,8 @@ import { ProjectDB } from '../services/project-db'
 import { ProjectCard } from './ProjectBrowser/ProjectCard'
 import { FolderCard } from './ProjectBrowser/FolderCard'
 import { MoveDialog, CopyDialog, ExportDialog, ImportDialog } from './ProjectBrowser/ProjectDialogs'
+import { ExamplesModal } from './ProjectBrowser/ExamplesModal'
+import { AboutModal } from './AboutModal'
 
 interface ProjectBrowserProps {
   onOpenProject: (project: Project) => void
@@ -32,6 +38,9 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
   const { confirm, dialog } = useConfirm()
   const [isImporting, setIsImporting] = React.useState(false)
   const [hasOldDb, setHasOldDb] = React.useState(false)
+  const [showExamplesModal, setShowExamplesModal] = React.useState(false)
+  const [showAboutModal, setShowAboutModal] = React.useState(false)
+  const [gettingStartedExpanded, setGettingStartedExpanded] = React.useState<boolean | null>(null)
   const importProjectInputRef = useRef<HTMLInputElement>(null)
 
   React.useEffect(() => {
@@ -177,6 +186,20 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
             <FontAwesomeIcon icon={faFileImport} /> Import Project
           </button>
           <button
+            className="project-browser__btn"
+            onClick={() => setShowExamplesModal(true)}
+            title="Load example projects to learn Rotera"
+          >
+            <FontAwesomeIcon icon={faBookOpen} /> Examples
+          </button>
+          <button
+            className="project-browser__btn"
+            onClick={() => setShowAboutModal(true)}
+            title="Learn about Rotera"
+          >
+            <FontAwesomeIcon icon={faQuestionCircle} /> Help
+          </button>
+          <button
             className="project-browser__btn project-browser__btn--optimize"
             onClick={handleBatchOptimize}
             disabled={totalProjectCount === 0 || isBatchOptimizing}
@@ -318,18 +341,76 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
               />
             ))}
 
-            {folders.length === 0 && projects.length === 0 && !currentFolderId && (
-              <div className="project-browser__empty">
-                <h2>No projects yet</h2>
-                <p>Create a new project to get started</p>
-                <button
-                  className="project-browser__btn project-browser__btn--primary project-browser__btn--large"
-                  onClick={onCreateProject}
-                >
-                  <FontAwesomeIcon icon={faPlus} /> Create First Project
-                </button>
-              </div>
-            )}
+            {/* Getting Started section - always shown at root, collapsible when there are projects */}
+            {!currentFolderId && (() => {
+              const hasContent = folders.length > 0 || projects.length > 0
+              const isExpanded = gettingStartedExpanded ?? !hasContent
+
+              return (
+                <div className={`project-browser__getting-started ${hasContent ? 'project-browser__getting-started--collapsible' : ''}`}>
+                  {hasContent ? (
+                    <button
+                      className="project-browser__getting-started-header"
+                      onClick={() => setGettingStartedExpanded(!isExpanded)}
+                    >
+                      <FontAwesomeIcon
+                        icon={isExpanded ? faChevronDown : faChevronRight}
+                        className="project-browser__getting-started-chevron"
+                      />
+                      <span>Getting Started</span>
+                    </button>
+                  ) : (
+                    <div className="project-browser__getting-started-header project-browser__getting-started-header--static">
+                      <h2>No projects yet</h2>
+                      <p>Get started by creating a new project or loading examples</p>
+                    </div>
+                  )}
+                  {isExpanded && (
+                    <div className="project-browser__getting-started-content">
+                      <div className="project-browser__empty-card">
+                        <div className="project-browser__empty-card-icon">
+                          <FontAwesomeIcon icon={faPlus} />
+                        </div>
+                        <h3>New Project</h3>
+                        <p>Start fresh with your own photos</p>
+                        <button
+                          className="project-browser__btn project-browser__btn--primary project-browser__btn--large"
+                          onClick={onCreateProject}
+                        >
+                          Create Project
+                        </button>
+                      </div>
+                      <div className="project-browser__empty-card">
+                        <div className="project-browser__empty-card-icon project-browser__empty-card-icon--examples">
+                          <FontAwesomeIcon icon={faBookOpen} />
+                        </div>
+                        <h3>Example Projects</h3>
+                        <p>Learn with pre-built demos</p>
+                        <button
+                          className="project-browser__btn project-browser__btn--large"
+                          onClick={() => setShowExamplesModal(true)}
+                        >
+                          Import Examples
+                        </button>
+                      </div>
+                      <div className="project-browser__empty-card">
+                        <div className="project-browser__empty-card-icon project-browser__empty-card-icon--help">
+                          <FontAwesomeIcon icon={faQuestionCircle} />
+                        </div>
+                        <h3>What is Rotera?</h3>
+                        <p>Learn how it works</p>
+                        <button
+                          className="project-browser__btn project-browser__btn--large"
+                          onClick={() => setShowAboutModal(true)}
+                        >
+                          Read Guide
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
 
             {folders.length === 0 && projects.length === 0 && currentFolderId && (
               <div className="project-browser__empty">
@@ -372,6 +453,17 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
         progress={importProgress}
         onImport={handleImportFolder}
         onClose={() => setShowImportModal(false)}
+      />
+
+      <ExamplesModal
+        isVisible={showExamplesModal}
+        onClose={() => setShowExamplesModal(false)}
+        onImportComplete={loadContents}
+      />
+
+      <AboutModal
+        isVisible={showAboutModal}
+        onClose={() => setShowAboutModal(false)}
       />
 
       {dialog}

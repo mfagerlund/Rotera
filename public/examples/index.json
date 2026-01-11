@@ -1,0 +1,85 @@
+{
+  "version": "1.0",
+  "examples": [
+    {
+      "id": "corre",
+      "name": "Corre",
+      "description": "Multi-point reconstruction example.",
+      "file": "Corre.json",
+      "difficulty": "intermediate",
+      "concepts": []
+    },
+    {
+      "id": "from-above",
+      "name": "From Above",
+      "description": "Top-down camera perspective.",
+      "file": "From Above.json",
+      "difficulty": "beginner",
+      "concepts": []
+    },
+    {
+      "id": "from-below",
+      "name": "From Below",
+      "description": "Bottom-up camera perspective.",
+      "file": "From Below.json",
+      "difficulty": "beginner",
+      "concepts": []
+    },
+    {
+      "id": "inference-1im",
+      "name": "Inference (1 image)",
+      "description": "Coordinate inference with single image.",
+      "file": "Calibration/Inference, 1 im.json",
+      "difficulty": "beginner",
+      "concepts": ["inference", "single-camera"]
+    },
+    {
+      "id": "inference",
+      "name": "Inference",
+      "description": "Coordinate inference example.",
+      "file": "Calibration/Inference.json",
+      "difficulty": "intermediate",
+      "concepts": ["inference"]
+    },
+    {
+      "id": "three-boxes",
+      "name": "Three Boxes",
+      "description": "Simple box geometry reconstruction.",
+      "file": "Tower2/Three Boxes.json",
+      "difficulty": "beginner",
+      "concepts": []
+    },
+    {
+      "id": "tower-vl-simple",
+      "name": "Tower VL (simple)",
+      "description": "Simplified tower with vanishing lines.",
+      "file": "Tower2/Tower VL (simple).json",
+      "difficulty": "beginner",
+      "concepts": ["vanishing-lines"]
+    },
+    {
+      "id": "tower-vl",
+      "name": "Tower VL",
+      "description": "Tower reconstruction with vanishing lines.",
+      "file": "Tower2/Tower VL.json",
+      "difficulty": "intermediate",
+      "concepts": ["vanishing-lines"]
+    },
+    {
+      "id": "tower-vl-2img",
+      "name": "Tower VL (2 images)",
+      "description": "Two-camera tower reconstruction.",
+      "file": "Tower2/Tower VL, 2 img.json",
+      "difficulty": "intermediate",
+      "concepts": ["vanishing-lines", "multi-camera"]
+    },
+    {
+      "id": "tower-vl-3img",
+      "name": "Tower VL (3 images)",
+      "description": "Three-camera tower reconstruction.",
+      "file": "Tower2/Tower VL, 3 img.json",
+      "difficulty": "advanced",
+      "concepts": ["vanishing-lines", "multi-camera"]
+    }
+  ]
+}

@@ -1,0 +1,369 @@
+{
+  "formatVersion": 1,
+  "name": "From Above",
+  "worldPoints": [
+    {
+      "id": "WorldPoint_0",
+      "name": "O",
+      "lockedXyz": [
+        0,
+        0,
+        0
+      ],
+      "inferredXyz": [
+        0,
+        0,
+        0
+      ],
+      "optimizedXyz": [
+        0,
+        0,
+        0
+      ],
+      "color": "#FF6B6B"
+    },
+    {
+      "id": "WorldPoint_1",
+      "name": "X",
+      "lockedXyz": [
+        null,
+        null,
+        null
+      ],
+      "inferredXyz": [
+        null,
+        0,
+        0
+      ],
+      "optimizedXyz": [
+        -11.01127850749312,
+        0,
+        0
+      ],
+      "color": "#4ECDC4"
+    },
+    {
+      "id": "WorldPoint_2",
+      "name": "Z",
+      "lockedXyz": [
+        null,
+        null,
+        null
+      ],
+      "inferredXyz": [
+        0,
+        0,
+        null
+      ],
+      "optimizedXyz": [
+        0,
+        0,
+        -11.127000178893079
+      ],
+      "color": "#45B7D1"
+    },
+    {
+      "id": "WorldPoint_3",
+      "name": "Y",
+      "lockedXyz": [
+        null,
+        null,
+        null
+      ],
+      "inferredXyz": [
+        0,
+        10,
+        0
+      ],
+      "optimizedXyz": [
+        0,
+        10,
+        0
+      ],
+      "color": "#FFA07A"
+    }
+  ],
+  "viewpoints": [
+    {
+      "id": "Viewpoint_4",
+      "name": "C1",
+      "filename": "C1.png",
+      "url": "",
+      "imageWidth": 1107,
+      "imageHeight": 793,
+      "focalLength": 1107,
+      "principalPointX": 553.5,
+      "principalPointY": 396.5,
+      "skewCoefficient": 0,
+      "aspectRatio": 1,
+      "useSimpleIntrinsics": true,
+      "isPossiblyCropped": false,
+      "radialDistortion": [
+        0,
+        0,
+        0
+      ],
+      "tangentialDistortion": [
+        0,
+        0
+      ],
+      "position": [
+        31.004421187763196,
+        23.95453431031606,
+        35.81283306882394
+      ],
+      "rotation": [
+        0.04118288639451652,
+        0.36568886752212326,
+        0.10931722411448516,
+        0.9234554200669466
+      ],
+      "calibrationAccuracy": 0,
+      "isProcessed": false,
+      "opacity": 1,
+      "color": "#ffff00",
+      "isPoseLocked": false,
+      "vanishingLineIds": [
+        "VanishingLine_4",
+        "VanishingLine_5",
+        "VanishingLine_6",
+        "VanishingLine_7",
+        "VanishingLine_8",
+        "VanishingLine_9",
+        "VanishingLine_10",
+        "VanishingLine_11",
+        "VanishingLine_12"
+      ]
+    }
+  ],
+  "lines": [
+    {
+      "id": "Line_13",
+      "name": "Line",
+      "pointAId": "WorldPoint_3",
+      "pointBId": "WorldPoint_0",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "y",
+      "targetLength": 10,
+      "tolerance": 0.001
+    },
+    {
+      "id": "Line_14",
+      "name": "Line",
+      "pointAId": "WorldPoint_0",
+      "pointBId": "WorldPoint_2",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "z",
+      "tolerance": 0.001
+    },
+    {
+      "id": "Line_15",
+      "name": "Line",
+      "pointAId": "WorldPoint_0",
+      "pointBId": "WorldPoint_1",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "x",
+      "tolerance": 0.001
+    }
+  ],
+  "imagePoints": [
+    {
+      "id": "ImagePoint_16",
+      "worldPointId": "WorldPoint_0",
+      "viewpointId": "Viewpoint_4",
+      "u": 596.2346970864972,
+      "v": 660.6909039154008,
+      "confidence": 1
+    },
+    {
+      "id": "ImagePoint_17",
+      "worldPointId": "WorldPoint_1",
+      "viewpointId": "Viewpoint_4",
+      "u": 440.08868850121996,
+      "v": 595.535241493582,
+      "confidence": 1
+    },
+    {
+      "id": "ImagePoint_18",
+      "worldPointId": "WorldPoint_2",
+      "viewpointId": "Viewpoint_4",
+      "u": 732.2776972790112,
+      "v": 590.0985788464833,
+      "confidence": 1
+    },
+    {
+      "id": "ImagePoint_19",
+      "worldPointId": "WorldPoint_3",
+      "viewpointId": "Viewpoint_4",
+      "u": 597.3726032219349,
+      "v": 454.60345938584607,
+      "confidence": 1
+    }
+  ],
+  "constraints": [],
+  "vanishingLines": [
+    {
+      "id": "VanishingLine_4",
+      "viewpointId": "Viewpoint_4",
+      "axis": "x",
+      "p1": {
+        "u": 596.6982884750086,
+        "v": 660.9859166171818
+      },
+      "p2": {
+        "u": 80.76321773251077,
+        "v": 446.3852484076731
+      }
+    },
+    {
+      "id": "VanishingLine_5",
+      "viewpointId": "Viewpoint_4",
+      "axis": "x",
+      "p1": {
+        "u": 731.7298165471358,
+        "v": 589.3399747561924
+      },
+      "p2": {
+        "u": 267.5062579595986,
+        "v": 420.21340729257054
+      }
+    },
+    {
+      "id": "VanishingLine_6",
+      "viewpointId": "Viewpoint_4",
+      "axis": "x",
+      "p1": {
+        "u": 598.2576413272778,
+        "v": 454.6034593858456
+      },
+      "p2": {
+        "u": 442.70165814556236,
+        "v": 404.07199803800626
+      }
+    },
+    {
+      "id": "VanishingLine_7",
+      "viewpointId": "Viewpoint_4",
+      "axis": "z",
+      "p1": {
+        "u": 595.8553950413484,
+        "v": 661.5759420207453
+      },
+      "p2": {
+        "u": 985.1035827049432,
+        "v": 456.92141632840776
+      }
+    },
+    {
+      "id": "VanishingLine_8",
+      "viewpointId": "Viewpoint_4",
+      "axis": "z",
+      "p1": {
+        "u": 440.2994118596347,
+        "v": 596.251700912194
+      },
+      "p2": {
+        "u": 847.3326509734272,
+        "v": 411.9109069710324
+      }
+    },
+    {
+      "id": "VanishingLine_9",
+      "viewpointId": "Viewpoint_4",
+      "axis": "z",
+      "p1": {
+        "u": 598.1312073122277,
+        "v": 455.15134011772426
+      },
+      "p2": {
+        "u": 737.4614918960126,
+        "v": 396.5281018067612
+      }
+    },
+    {
+      "id": "VanishingLine_10",
+      "viewpointId": "Viewpoint_4",
+      "axis": "y",
+      "p1": {
+        "u": 596.1925524148126,
+        "v": 660.6487592437174
+      },
+      "p2": {
+        "u": 600.069862209643,
+        "v": 176.8700729953
+      }
+    },
+    {
+      "id": "VanishingLine_11",
+      "viewpointId": "Viewpoint_4",
+      "axis": "y",
+      "p1": {
+        "u": 430.3954140141453,
+        "v": 139.8249065859995
+      },
+      "p2": {
+        "u": 440.17297784458543,
+        "v": 596.5045689422909
+      }
+    },
+    {
+      "id": "VanishingLine_12",
+      "viewpointId": "Viewpoint_4",
+      "axis": "y",
+      "p1": {
+        "u": 731.8983952338651,
+        "v": 589.0871067260944
+      },
+      "p2": {
+        "u": 737.9250832845256,
+        "v": 398.17174400239566
+      }
+    }
+  ],
+  "showPointNames": true,
+  "autoSave": true,
+  "theme": "dark",
+  "measurementUnits": "meters",
+  "precisionDigits": 3,
+  "showConstraintGlyphs": true,
+  "showMeasurements": true,
+  "autoOptimize": false,
+  "gridVisible": true,
+  "snapToGrid": false,
+  "defaultWorkspace": "world",
+  "showConstructionGeometry": true,
+  "enableSmartSnapping": true,
+  "constraintPreview": true,
+  "visualFeedbackLevel": "standard",
+  "viewSettings": {
+    "visibility": {
+      "worldPoints": true,
+      "lines": true,
+      "planes": true,
+      "vanishingLines": true,
+      "vanishingPoints": true,
+      "perspectiveGrid": false,
+      "reprojectionErrors": false,
+      "cameraVanishingGeometry": false
+    },
+    "locking": {
+      "worldPoints": false,
+      "lines": false,
+      "planes": false,
+      "vanishingLines": false
+    },
+    "isExpanded": false
+  },
+  "leftSidebarWidth": 180,
+  "imageHeights": {},
+  "lockCameraPoses": false
+}

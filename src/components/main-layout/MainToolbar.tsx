@@ -15,13 +15,15 @@ import {
   faFile,
   faChevronDown,
   faFileLines,
-  faRotate
+  faRotate,
+  faQuestionCircle
 } from '@fortawesome/free-solid-svg-icons'
 import { downloadRoteraProject } from '../../services/blender-export'
 import { WorkspaceSwitcher } from '../WorkspaceManager'
 import { AppBranding } from '../AppBranding'
 import type { Project } from '../../entities/project'
 import { checkOptimizationReadiness, getOptimizationStatusSummary } from '../../optimization/optimization-readiness'
+import { AboutModal } from '../AboutModal'
 
 interface MainToolbarProps {
   // Workspace
@@ -102,6 +104,7 @@ export const MainToolbar: React.FC<MainToolbarProps> = observer(({
   const [isEditingName, setIsEditingName] = React.useState(false)
   const [editedName, setEditedName] = React.useState(project?.name || '')
   const [fileMenuOpen, setFileMenuOpen] = React.useState(false)
+  const [showAboutModal, setShowAboutModal] = React.useState(false)
   const fileMenuRef = useRef<HTMLDivElement>(null)
 
   // Close file menu when clicking outside
@@ -376,6 +379,19 @@ export const MainToolbar: React.FC<MainToolbarProps> = observer(({
           </div>
         )}
       </div>
+
+      <button
+        className="btn-help"
+        onClick={() => setShowAboutModal(true)}
+        title="Help - Learn about Rotera"
+      >
+        <FontAwesomeIcon icon={faQuestionCircle} />
+      </button>
+
+      <AboutModal
+        isVisible={showAboutModal}
+        onClose={() => setShowAboutModal(false)}
+      />
     </div>
   )
 })

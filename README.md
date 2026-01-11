@@ -62,6 +62,21 @@ See [BLENDER.md](BLENDER.md) for detailed instructions.
 5. Solve - Rotera computes camera poses and refines all 3D positions.
 6. Export to Blender. Set up camera projection for photorealistic renders.
 
+## Data Storage
+
+Projects are stored **locally in your browser** (IndexedDB). They do not sync to the cloud.
+
+**To avoid data loss:**
+- **Export Folder**: In the project browser, click "Export Folder" to download all projects as a ZIP
+- **Export Project**: Open a project, then use File menu → Export to save a single `.rotera` file
+- **Import**: Use "Import Folder" (ZIP) or "Import Project" (single file) to restore
+
+Clearing browser data or switching browsers will lose your projects unless exported.
+
+## Example Projects
+
+Example projects are available at [rotera.xyz/examples/](https://rotera.xyz/examples/). These demonstrate various workflows and can be imported directly.
+
 ## Technical Details
 
 - Built with React, TypeScript, and MobX

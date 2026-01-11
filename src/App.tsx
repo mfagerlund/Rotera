@@ -10,6 +10,7 @@ import './styles/rotera.css'
 import './styles/enhanced-workspace.css'
 import './styles/workspace.css'
 import './styles/project-browser.css'
+import './styles/about-modal.css'
 
 type AppView = 'browser' | 'editor'
 
