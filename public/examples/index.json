@@ -2,84 +2,156 @@
   "version": "1.0",
   "examples": [
     {
-      "id": "corre",
-      "name": "Corre",
-      "description": "Multi-point reconstruction example.",
-      "file": "Corre.json",
+      "id": "tower-1-1img",
+      "name": "Tower 1 (1 Image)",
+      "description": "Single-image tower reconstruction.",
+      "file": "Tower 1/Tower 1, 1 Img.rotera",
+      "difficulty": "beginner",
+      "concepts": ["single-camera"]
+    },
+    {
+      "id": "tower-1-2img",
+      "name": "Tower 1 (2 Images)",
+      "description": "Two-image tower reconstruction.",
+      "file": "Tower 1/Tower 1, 2 Img.rotera",
+      "difficulty": "intermediate",
+      "concepts": ["multi-camera"]
+    },
+    {
+      "id": "tower-2",
+      "name": "Tower 2",
+      "description": "Tower reconstruction example.",
+      "file": "Tower 2/Tower 2.rotera",
       "difficulty": "intermediate",
       "concepts": []
     },
     {
-      "id": "from-above",
-      "name": "From Above",
-      "description": "Top-down camera perspective.",
-      "file": "From Above.json",
-      "difficulty": "beginner",
-      "concepts": []
-    },
-    {
-      "id": "from-below",
-      "name": "From Below",
-      "description": "Bottom-up camera perspective.",
-      "file": "From Below.json",
-      "difficulty": "beginner",
-      "concepts": []
-    },
-    {
-      "id": "inference-1im",
-      "name": "Inference (1 image)",
-      "description": "Coordinate inference with single image.",
-      "file": "Calibration/Inference, 1 im.json",
-      "difficulty": "beginner",
-      "concepts": ["inference", "single-camera"]
-    },
-    {
-      "id": "inference",
-      "name": "Inference",
-      "description": "Coordinate inference example.",
-      "file": "Calibration/Inference.json",
+      "id": "tower-2-roof",
+      "name": "Tower 2 With Roof",
+      "description": "Tower reconstruction with roof geometry.",
+      "file": "Tower 2/Tower 2 With Roof.rotera",
       "difficulty": "intermediate",
-      "concepts": ["inference"]
-    },
-    {
-      "id": "three-boxes",
-      "name": "Three Boxes",
-      "description": "Simple box geometry reconstruction.",
-      "file": "Tower2/Three Boxes.json",
-      "difficulty": "beginner",
       "concepts": []
     },
     {
-      "id": "tower-vl-simple",
-      "name": "Tower VL (simple)",
-      "description": "Simplified tower with vanishing lines.",
-      "file": "Tower2/Tower VL (simple).json",
+      "id": "minimal-vl",
+      "name": "Minimal VL",
+      "description": "Minimal vanishing lines example.",
+      "file": "Minimal/Minimal VL.rotera",
       "difficulty": "beginner",
       "concepts": ["vanishing-lines"]
     },
     {
-      "id": "tower-vl",
-      "name": "Tower VL",
-      "description": "Tower reconstruction with vanishing lines.",
-      "file": "Tower2/Tower VL.json",
+      "id": "minimal-2img-1axis",
+      "name": "Minimal 2 Image 1 Axis",
+      "description": "Two images with single axis alignment.",
+      "file": "Minimal/Minimal 2 Image 1 Axis.rotera",
+      "difficulty": "beginner",
+      "concepts": ["multi-camera"]
+    },
+    {
+      "id": "minimal-2img-2axis",
+      "name": "Minimal 2 Image 2 Axis",
+      "description": "Two images with two axis alignment.",
+      "file": "Minimal/Minimal 2 Image 2 Axis.rotera",
+      "difficulty": "beginner",
+      "concepts": ["multi-camera"]
+    },
+    {
+      "id": "minimal-2img-3axis-8pts",
+      "name": "Minimal 2 Image 3 Axis (8 Points)",
+      "description": "Two images with three axis alignment, 8 points.",
+      "file": "Minimal/Minimal 2 Image, 3 Axis,  8 Points.rotera",
+      "difficulty": "intermediate",
+      "concepts": ["multi-camera"]
+    },
+    {
+      "id": "minimal-2img-3axis-9pts",
+      "name": "Minimal 2 Image 3 Axis (9 Points)",
+      "description": "Two images with three axis alignment, 9 points.",
+      "file": "Minimal/Minimal 2 Image, 3 Axis,  9 Points.rotera",
+      "difficulty": "intermediate",
+      "concepts": ["multi-camera"]
+    },
+    {
+      "id": "minimal-2img-3axis-15pts",
+      "name": "Minimal 2 Image 3 Axis (15 Points)",
+      "description": "Two images with three axis alignment, 15 points.",
+      "file": "Minimal/Minimal 2 Image, 3 Axis, 15 Points.rotera",
+      "difficulty": "intermediate",
+      "concepts": ["multi-camera"]
+    },
+    {
+      "id": "vl-and-non-vl",
+      "name": "VL And Non VL",
+      "description": "Combining vanishing lines with free points.",
+      "file": "Minimal/VL And non VL.rotera",
       "difficulty": "intermediate",
       "concepts": ["vanishing-lines"]
     },
     {
-      "id": "tower-vl-2img",
-      "name": "Tower VL (2 images)",
-      "description": "Two-camera tower reconstruction.",
-      "file": "Tower2/Tower VL, 2 img.json",
+      "id": "balcony-house",
+      "name": "Balcony House",
+      "description": "Multi-camera house reconstruction.",
+      "file": "Balcony Houses/Balcony House.rotera",
+      "difficulty": "intermediate",
+      "concepts": ["multi-camera"]
+    },
+    {
+      "id": "balcony-house-lines",
+      "name": "Balcony House Lines",
+      "description": "House with vanishing lines.",
+      "file": "Balcony Houses/Balcony House Lines.rotera",
       "difficulty": "intermediate",
       "concepts": ["vanishing-lines", "multi-camera"]
     },
     {
-      "id": "tower-vl-3img",
-      "name": "Tower VL (3 images)",
-      "description": "Three-camera tower reconstruction.",
-      "file": "Tower2/Tower VL, 3 img.json",
+      "id": "balcony-house-full",
+      "name": "Balcony House Full House",
+      "description": "Complete house reconstruction.",
+      "file": "Balcony Houses/Balcony House Full House.rotera",
       "difficulty": "advanced",
-      "concepts": ["vanishing-lines", "multi-camera"]
+      "concepts": ["multi-camera"]
+    },
+    {
+      "id": "calibration-full-solve",
+      "name": "Full Solve",
+      "description": "Complete calibration example.",
+      "file": "Calibration/Full Solve.rotera",
+      "difficulty": "intermediate",
+      "concepts": []
+    },
+    {
+      "id": "calibration-six-pts-vl",
+      "name": "Six Points and VL",
+      "description": "Calibration with six points and vanishing lines.",
+      "file": "Calibration/Six Points and VL.rotera",
+      "difficulty": "beginner",
+      "concepts": ["vanishing-lines"]
+    },
+    {
+      "id": "calibration-eight-pts-vl",
+      "name": "Eight Points, VL To Free Points",
+      "description": "Connecting vanishing lines to free points.",
+      "file": "Calibration/Eight Points, VL To Free Points.rotera",
+      "difficulty": "intermediate",
+      "concepts": ["vanishing-lines"]
+    },
+    {
+      "id": "calibration-no-vl",
+      "name": "No Vanishing Lines",
+      "description": "Calibration without vanishing lines.",
+      "file": "Calibration/No Vanisining Lines.rotera",
+      "difficulty": "beginner",
+      "concepts": []
+    },
+    {
+      "id": "calibration-fixture-2img",
+      "name": "Fixture With 2 Images",
+      "description": "Two-image fixture calibration.",
+      "file": "Calibration/Fixture With 2 Images.rotera",
+      "difficulty": "intermediate",
+      "concepts": ["multi-camera"]
     }
   ]
 }

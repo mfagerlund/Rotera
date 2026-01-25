@@ -180,22 +180,74 @@ class ExampleProjectService {
 2. `ProjectBrowser.tsx`: Add "Load Examples" button
 3. `useProjectBrowser.ts`: Add example import handlers
 
-## Creating Example Projects
+## Publishing New Example Projects
+
+### Quick Reference
+
+**File locations:**
+- Example files: `public/examples/*.rotera` (can use subfolders)
+- Manifest: `public/examples/index.json`
+- File extension: `.rotera` (NOT `.json`)
+
+### Step-by-Step Publishing Process
+
+1. **Prepare your projects in Rotera**
+   - Create and solve each example project
+   - Use descriptive point/line names ("Floor Corner A" not "Point 1")
+   - Ensure projects are fully optimized
+
+2. **Export from Rotera using "Export Folder"**
+   - Put all example projects in a folder in the Project Browser
+   - Click "Export Folder" on that folder
+   - **IMPORTANT:** Make sure "Exclude images" is UNCHECKED (images must be included!)
+   - This creates a ZIP file with `.rotera` files
+
+3. **Extract and place files**
+   ```bash
+   # Extract the ZIP
+   unzip your-export.zip -d public/examples/
+
+   # Verify files have .rotera extension
+   ls public/examples/
+   ```
+
+4. **Update the manifest** (`public/examples/index.json`)
+   ```json
+   {
+     "version": "1.0",
+     "examples": [
+       {
+         "id": "unique-id",
+         "name": "Display Name",
+         "description": "Brief description of what this example demonstrates.",
+         "file": "Filename.rotera",
+         "difficulty": "beginner",
+         "concepts": ["vanishing-lines", "multi-camera"]
+       }
+     ]
+   }
+   ```
+
+   **Manifest fields:**
+   - `id`: Unique identifier (lowercase, hyphens, e.g., "room-corner")
+   - `name`: Display name shown to users
+   - `description`: What the example demonstrates
+   - `file`: Path relative to `public/examples/` (e.g., "Subfolder/File.rotera")
+   - `difficulty`: "beginner", "intermediate", or "advanced"
+   - `concepts`: Array of tags (optional)
+
+5. **Commit and deploy**
+   ```bash
+   git add public/examples/
+   git commit -m "Update example projects"
+   git push
+   ```
 
 ### Guidelines for Example Authors
-1. **Keep images small** - Resize to ~1920px max dimension
+1. **Keep images small** - Resize to ~1920px max dimension before adding to Rotera
 2. **Use descriptive names** - "Floor Corner A" not "Point 1"
 3. **Include solved state** - Examples should already be optimized
-4. **Document the workflow** - What constraints, in what order
-5. **Test import/export** - Ensure clean round-trip
-
-### Export Process
-1. Create project in Rotera
-2. Solve and verify
-3. File → Export Project (.rotera)
-4. Place in `public/examples/`
-5. Create thumbnail (screenshot of 3D view, 400x300px)
-6. Add entry to `index.json`
+4. **Test the round-trip** - Import your exported examples back into Rotera to verify they work
 
 ## Local Storage Warning
 

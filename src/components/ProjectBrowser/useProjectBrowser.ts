@@ -32,7 +32,7 @@ export const useProjectBrowser = () => {
   const [copyName, setCopyName] = useState('')
   const [allFolders, setAllFolders] = useState<Folder[]>([])
   const [showExportModal, setShowExportModal] = useState(false)
-  const [exportExcludeImages, setExportExcludeImages] = useState(true)
+  const [exportExcludeImages, setExportExcludeImages] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const [batchResults, setBatchResults] = useState<Map<string, BatchOptimizationResult>>(new Map())
   const [isBatchOptimizing, setIsBatchOptimizing] = useState(false)
@@ -269,7 +269,7 @@ export const useProjectBrowser = () => {
           const json = Serialization.serialize(project, { excludeImages: exportExcludeImages })
           const safeName = summary.name.replace(/[<>:"/\\|?*]/g, '_')
           const relativePath = buildRelativePath(summary.folderId)
-          zip.file(`${relativePath}${safeName}.json`, json)
+          zip.file(`${relativePath}${safeName}.rotera`, json)
         } catch (error) {
           console.error(`Failed to export project ${summary.name}:`, error)
         }
@@ -300,7 +300,7 @@ export const useProjectBrowser = () => {
 
     try {
       const zip = await JSZip.loadAsync(file)
-      const jsonFiles = Object.keys(zip.files).filter(name => name.endsWith('.json') && !zip.files[name].dir)
+      const jsonFiles = Object.keys(zip.files).filter(name => (name.endsWith('.rotera') || name.endsWith('.json')) && !zip.files[name].dir)
 
       if (jsonFiles.length === 0) {
         alert('No project files found in the ZIP archive')
