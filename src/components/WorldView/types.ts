@@ -26,6 +26,10 @@ export interface WorldViewRef {
   zoomFit: () => void
   resetView: () => void
   lookFromCamera: (viewpoint: Viewpoint) => void
+  /** Re-applies lookFromCamera with the currently tracked viewpoint (after optimization moves the camera) */
+  refreshCameraView: () => void
+  /** Returns the viewpoint currently being viewed through, or null if in free view mode */
+  getViewedViewpoint: () => Viewpoint | null
 }
 
 export interface ViewMatrix {

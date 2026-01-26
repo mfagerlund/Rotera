@@ -89,9 +89,15 @@ export const useBottomPanelHandlers = ({
 
   const handleOptimizationComplete = useCallback((success: boolean, message?: string) => {
     // Optimization changes entities (optimizedXyz), which triggers MobX dirty marking
-    // Just zoom to fit on success
     if (success && worldViewRef.current) {
-      worldViewRef.current.zoomFit()
+      // If viewing through a camera, refresh that view (camera position may have moved)
+      // Otherwise, zoom to fit
+      const viewedViewpoint = worldViewRef.current.getViewedViewpoint()
+      if (viewedViewpoint) {
+        worldViewRef.current.refreshCameraView()
+      } else {
+        worldViewRef.current.zoomFit()
+      }
     }
   }, [worldViewRef])
 

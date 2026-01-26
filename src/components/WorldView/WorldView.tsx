@@ -56,9 +56,9 @@ export const WorldView = observer(React.forwardRef<WorldViewRef, WorldViewProps>
   const {
     viewMatrix,
     setViewMatrix,
-    resetView,
-    resetRotation,
-    resetPan,
+    resetView: resetViewHook,
+    resetRotation: resetRotationHook,
+    resetPan: resetPanHook,
     zoomFitToProject,
     lookFromCamera: lookFromCameraHook,
     axisAngleQuat,
@@ -68,17 +68,53 @@ export const WorldView = observer(React.forwardRef<WorldViewRef, WorldViewProps>
   const hasInitializedRef = useRef(false)
   const [renderTrigger, setRenderTrigger] = useState(0)
 
+  // Track which viewpoint we're currently viewing through (for refreshing after optimization)
+  const viewedViewpointRef = useRef<import('../../entities/viewpoint').Viewpoint | null>(null)
+
+  // Wrap reset methods to clear the viewed viewpoint ref
+  const resetView = useCallback(() => {
+    viewedViewpointRef.current = null
+    resetViewHook()
+  }, [resetViewHook])
+
+  const resetRotation = useCallback(() => {
+    viewedViewpointRef.current = null
+    resetRotationHook()
+  }, [resetRotationHook])
+
+  const resetPan = useCallback(() => {
+    viewedViewpointRef.current = null
+    resetPanHook()
+  }, [resetPanHook])
+
   const zoomFit = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) return
+    // Clear the viewed viewpoint since we're exiting camera view mode
+    viewedViewpointRef.current = null
     zoomFitToProject(project, canvas.width, canvas.height)
   }, [project, zoomFitToProject])
 
   const lookFromCamera = useCallback((viewpoint: import('../../entities/viewpoint').Viewpoint) => {
     const canvas = canvasRef.current
     if (!canvas) return
+    // Track the viewpoint so we can refresh after optimization
+    viewedViewpointRef.current = viewpoint
     lookFromCameraHook(viewpoint, canvas.width, canvas.height)
   }, [lookFromCameraHook])
+
+  // Re-apply lookFromCamera with the currently tracked viewpoint (after optimization moves the camera)
+  const refreshCameraView = useCallback(() => {
+    const viewpoint = viewedViewpointRef.current
+    if (!viewpoint) return
+    const canvas = canvasRef.current
+    if (!canvas) return
+    lookFromCameraHook(viewpoint, canvas.width, canvas.height)
+  }, [lookFromCameraHook])
+
+  const getViewedViewpoint = useCallback(() => {
+    return viewedViewpointRef.current
+  }, [])
 
   const handleImageLoaded = useCallback(() => {
     setRenderTrigger(prev => prev + 1)
@@ -105,7 +141,7 @@ export const WorldView = observer(React.forwardRef<WorldViewRef, WorldViewProps>
 
     // Render in order: axes, cameras, lines, points
     renderAxes(ctx, project.gridVisible, project3DTo2D)
-    renderCameras(ctx, project, selectedSet, null, project3DTo2D, handleImageLoaded)
+    renderCameras(ctx, project, selectedSet, null, project3DTo2D, handleImageLoaded, viewedViewpointRef.current)
     renderLines(ctx, project, selectedSet, hoverState.hoveredLine, project3DTo2D)
     renderWorldPoints(ctx, project, selectedSet, hoverState.hoveredPoint, project3DTo2D)
   }, [project, selectedSet, hoverState, project3DTo2D, handleImageLoaded, renderTrigger])
@@ -282,7 +318,9 @@ export const WorldView = observer(React.forwardRef<WorldViewRef, WorldViewProps>
   React.useImperativeHandle(ref, () => ({
     zoomFit,
     resetView,
-    lookFromCamera
+    lookFromCamera,
+    refreshCameraView,
+    getViewedViewpoint
   }))
 
   // Re-render when dependencies change

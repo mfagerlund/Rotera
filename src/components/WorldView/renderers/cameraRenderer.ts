@@ -90,7 +90,8 @@ export function renderCameras(
   selectedSet: Set<any>,
   hoveredViewpoint: Viewpoint | null,
   project3DTo2D: (point: [number, number, number]) => ProjectedPoint,
-  onImageLoaded?: () => void
+  onImageLoaded?: () => void,
+  viewedViewpoint?: Viewpoint | null
 ) {
   // Estimate scene size from world points and camera positions to scale frusta
   let sceneSize = 1
@@ -171,12 +172,19 @@ export function renderCameras(
     // Draw image texture inside frustum if available
     const cachedImg = getCachedImage(viewpoint.url)
     if (cachedImg) {
+      // When viewing through a camera, that camera's image is full opacity,
+      // other cameras are dimmed to 30% of normal opacity
+      const baseOpacity = 0.4
+      const isViewedCamera = viewedViewpoint === viewpoint
+      const imageOpacity = viewedViewpoint
+        ? (isViewedCamera ? baseOpacity : baseOpacity * 0.3)
+        : baseOpacity
       drawTexturedQuad(ctx, cachedImg, {
         tl: tlProj,
         tr: trProj,
         br: brProj,
         bl: blProj
-      }, 0.4)
+      }, imageOpacity)
     } else {
       // Start loading the image
       loadImage(viewpoint.url).then((img) => {
