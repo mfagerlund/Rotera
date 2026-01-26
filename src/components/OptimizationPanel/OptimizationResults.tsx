@@ -315,13 +315,13 @@ export const OptimizationResults: React.FC<OptimizationResultsProps> = observer(
                               </tr>
                             </thead>
                             <tbody>
-                              {imagePointErrors.slice(0, 10).map(({ imagePoint, worldPointName, error, residuals }) => (
+                              {imagePointErrors.slice(0, 10).map(({ imagePoint, worldPointName, error, residuals }) => {
+                                const isSelected = isWorldPointSelected?.(imagePoint.worldPoint) ?? false
+                                return (
                                 <tr
                                   key={getEntityKey(imagePoint)}
-                                  style={{
-                                    backgroundColor: error > 5 ? 'rgba(220, 53, 69, 0.1)' : 'transparent',
-                                    cursor: 'pointer'
-                                  }}
+                                  className={`${isSelected ? 'selected' : ''} ${error > 5 ? 'error-highlight' : ''}`}
+                                  style={{ cursor: 'pointer' }}
                                   onClick={() => onSelectWorldPoint?.(imagePoint.worldPoint)}
                                   onMouseEnter={() => onHoverWorldPoint?.(imagePoint.worldPoint)}
                                   onMouseLeave={() => onHoverWorldPoint?.(null)}
@@ -336,7 +336,8 @@ export const OptimizationResults: React.FC<OptimizationResultsProps> = observer(
                                   <td>{formatNumber(residuals[0])}</td>
                                   <td>{formatNumber(residuals[1])}</td>
                                 </tr>
-                              ))}
+                                )
+                              })}
                               {imagePointErrors.length > 10 && (
                                 <tr>
                                   <td colSpan={4} style={{ textAlign: 'center', fontStyle: 'italic', color: '#666' }}>

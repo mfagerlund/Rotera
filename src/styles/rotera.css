@@ -4247,6 +4247,18 @@ body {
   background: var(--primary-hover);
 }
 
+.entity-table tr.error-highlight {
+  background: rgba(220, 53, 69, 0.1);
+}
+
+.entity-table tr.error-highlight:hover {
+  background: rgba(220, 53, 69, 0.2);
+}
+
+.entity-table tr.error-highlight.selected {
+  background: var(--primary);
+}
+
 .entity-table .color-dot {
   display: inline-block;
   width: 10px;
@@ -5294,14 +5306,8 @@ body {
 }
 
 .sidebar-resize-handle::after {
-  content: 'â‹®â‹®';
-  font-size: 14px;
-  color: var(--text-muted);
-  opacity: 0;
-  transition: all 0.3s ease;
-  pointer-events: none;
-  transform: rotate(90deg);
-  letter-spacing: -2px;
+  content: '';
+  display: none;
 }
 
 .sidebar-resize-handle:hover::before {
@@ -5309,33 +5315,27 @@ body {
   box-shadow: 0 0 8px rgba(6, 150, 215, 0.4);
 }
 
-.sidebar-resize-handle:hover::after {
-  opacity: 1;
-  color: var(--accent-blue);
-}
 
 .sidebar-resize-handle:active::before {
   background: var(--accent-orange);
   box-shadow: 0 0 12px rgba(255, 140, 0, 0.6);
 }
 
-.sidebar-resize-handle:active::after {
-  color: var(--accent-orange);
-}
 
 /* Right handle for left sidebar */
 .sidebar-resize-handle-right {
   top: 0;
-  right: -2px;
-  width: 8px;
+  right: -4px;
+  width: 12px;
   height: 100%;
   cursor: ew-resize;
 }
 
 .sidebar-resize-handle-right::before {
-  width: 2px;
+  width: 3px;
   height: 100%;
-  right: 2px;
+  right: 4px;
+  border-radius: 2px;
 }
 
 /* Resize hint panel */

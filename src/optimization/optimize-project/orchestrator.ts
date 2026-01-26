@@ -13,7 +13,7 @@ import { initializeWorldPoints as unifiedInitialize } from '../unified-initializ
 import { canInitializeWithVanishingPoints } from '../vanishing-points';
 import { alignSceneToLineDirections, alignSceneToLockedPoints, AlignmentQualityCallback, AlignmentResult } from '../coordinate-alignment/index';
 import type { IOptimizableCamera } from '../IOptimizable';
-import { log, clearOptimizationLogs, setVerbosity } from '../optimization-logger';
+import { log, logProgress, clearOptimizationLogs, setVerbosity, getBestResidualSoFar } from '../optimization-logger';
 import { initializeCameras } from '../camera-initialization';
 import { checkAxisSigns, checkHandedness, applyAxisFlips } from '../coordinate-transforms';
 import { detectOutliers } from '../outlier-detection';
@@ -111,9 +111,16 @@ export async function optimizeProject(
   // Create arrays once from project collections - reuse throughout
   const worldPointArray = Array.from(project.worldPoints) as WorldPoint[];
   const lineArray = Array.from(project.lines) as Line[];
-  const viewpointArray = Array.from(project.viewpoints) as Viewpoint[];
+  // Filter to only include viewpoints that are enabled in solve
+  const viewpointArray = (Array.from(project.viewpoints) as Viewpoint[]).filter(vp => vp.enabledInSolve);
   const constraintArray = Array.from(project.constraints);
   const worldPointSet = new Set<WorldPoint>(worldPointArray);
+
+  // Log if any viewpoints are disabled
+  const disabledCount = project.viewpoints.size - viewpointArray.length;
+  if (disabledCount > 0) {
+    log(`[Optimize] ${disabledCount} viewpoint(s) disabled, solving with ${viewpointArray.length} viewpoint(s)`);
+  }
 
   const camerasInitialized: string[] = [];
   const camerasInitializedViaLatePnP = new Set<Viewpoint>();
@@ -370,10 +377,14 @@ export async function optimizeProject(
 
   project.worldPoints.forEach(p => system.addPoint(p as WorldPoint));
   project.lines.forEach(l => system.addLine(l));
-  project.viewpoints.forEach(v => system.addCamera(v as Viewpoint));
+  // Only add enabled viewpoints to the solver
+  viewpointArray.forEach(v => system.addCamera(v));
+  // Only add image points from enabled viewpoints
   project.imagePoints.forEach(ip => {
-    if (!excludedCameras.has((ip as ImagePoint).viewpoint as Viewpoint)) {
-      system.addImagePoint(ip as ImagePoint);
+    const ipConcrete = ip as ImagePoint;
+    const vp = ipConcrete.viewpoint as Viewpoint;
+    if (vp.enabledInSolve && !excludedCameras.has(vp)) {
+      system.addImagePoint(ipConcrete);
     }
   });
   project.constraints.forEach(c => system.addConstraint(c));
@@ -383,30 +394,33 @@ export async function optimizeProject(
   // PHASE 7: Outlier Detection
   await yieldToUI?.('Phase 7: Detecting outliers...');
   let outliers: OutlierInfo[] | undefined;
+  let rmsReprojectionError: number | undefined;
   let medianReprojectionError: number | undefined;
 
   if (shouldDetectOutliers && project.imagePoints.size > 0) {
-    for (const vp of project.viewpoints) {
+    // Reset outlier flags only for enabled viewpoints
+    for (const vp of viewpointArray) {
       for (const ip of vp.imagePoints) {
         (ip as ImagePoint).isOutlier = false;
       }
     }
 
-    const detection = detectOutliers(project, outlierThreshold);
+    const detection = detectOutliers(project, outlierThreshold, viewpointArray);
     outliers = detection.outliers;
+    rmsReprojectionError = detection.rmsError;
     medianReprojectionError = detection.medianError;
   }
 
-  // Log solve result
+  // Log solve result with progress tracking
   const camInfo = viewpointArray.map(v => `${v.name}:f=${v.focalLength.toFixed(0)}`).join(' ');
-  log(`[Solve] conv=${result.converged}, iter=${result.iterations}, median=${medianReprojectionError?.toFixed(2) ?? '?'}px | ${camInfo}${result.error ? ` | err=${result.error}` : ''}`);
+  logProgress('Solve', result.residual, `conv=${result.converged} iter=${result.iterations} rms=${rmsReprojectionError?.toFixed(2) ?? '?'}px | ${camInfo}${result.error ? ` | err=${result.error}` : ''}`);
 
   // Handle outliers and potential re-run
   if (outliers && outliers.length > 0) {
     const rerunResult = handleOutliersAndRerun(
       project,
       outliers,
-      medianReprojectionError!,
+      rmsReprojectionError!,
       camerasInitializedViaLatePnP,
       camerasInitializedViaVP,
       excludedCameras,
@@ -422,6 +436,7 @@ export async function optimizeProject(
     if (rerunResult) {
       result = rerunResult.result;
       outliers = rerunResult.outliers;
+      rmsReprojectionError = rerunResult.rmsError;
       medianReprojectionError = rerunResult.medianError;
     }
   }
@@ -452,14 +467,18 @@ export async function optimizeProject(
 
   // Final summary
   const solveTimeMs = performance.now() - startTime;
-  const quality = getSolveQuality(result.residual);
-  log(`[Summary] ${'*'.repeat(quality.stars)} ${quality.label} | error=${result.residual.toFixed(3)} | median=${medianReprojectionError?.toFixed(2) ?? '?'}px | iter=${result.iterations} | conv=${result.converged} | ${solveTimeMs.toFixed(0)}ms`);
+  const quality = getSolveQuality(rmsReprojectionError, result.residual);
+  const bestRes = getBestResidualSoFar();
+  const isBest = Math.abs(result.residual - bestRes) < 0.01;
+  const bestInfo = isBest ? '' : ` (best was ${bestRes.toFixed(1)})`;
+  log(`[Summary] ${'*'.repeat(quality.stars)} ${quality.label} | error=${result.residual.toFixed(3)}${bestInfo} | rms=${rmsReprojectionError?.toFixed(2) ?? '?'}px | iter=${result.iterations} | conv=${result.converged} | ${solveTimeMs.toFixed(0)}ms`);
 
   return {
     ...result,
     camerasInitialized: camerasInitialized.length > 0 ? camerasInitialized : undefined,
     camerasExcluded: excludedCameraNames.length > 0 ? excludedCameraNames : undefined,
     outliers,
+    rmsReprojectionError,
     medianReprojectionError,
     solveTimeMs,
     quality,

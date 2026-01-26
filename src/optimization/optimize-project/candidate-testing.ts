@@ -16,7 +16,7 @@ import { Project } from '../../entities/project';
 import { WorldPoint } from '../../entities/world-point';
 import { Viewpoint } from '../../entities/viewpoint';
 import { generateAllInferenceBranches, InferenceBranch } from '../inference-branching';
-import { log, logDebug } from '../optimization-logger';
+import { log, logDebug, setCandidateProgress } from '../optimization-logger';
 import type { OptimizeProjectOptions } from './types';
 
 /**
@@ -73,7 +73,8 @@ export function generateAllCandidates(
 
   // Determine if we might have alignment ambiguity
   // (We won't know for sure until after camera initialization, but we can pre-generate both options)
-  const viewpointCount = project.viewpoints.size;
+  // Only count enabled viewpoints
+  const viewpointCount = Array.from(project.viewpoints).filter(vp => vp.enabledInSolve).length;
   const mightUseEssentialMatrix = viewpointCount === 2; // Heuristic: EM used for 2-camera case
 
   // For each random seed / attempt
@@ -248,6 +249,9 @@ export async function testAllCandidates(
   for (let i = 0; i < candidates.length; i++) {
     const candidate = candidates[i];
 
+    // Update candidate progress for UI
+    setCandidateProgress(i + 1, candidates.length);
+
     // DON'T restore state between candidates - like old multi-attempt system,
     // let each attempt build on the previous one's camera state
     // (Only restore to original at the very end if returning a result)
@@ -287,8 +291,12 @@ export async function testAllCandidates(
   // Return best probe result
   if (bestResult) {
     log(`[Candidate] Best probe: ${bestCandidate!.description} (residual=${bestResidual.toFixed(1)})`);
+    // Clear candidate progress - done testing
+    setCandidateProgress(0, 0);
     return bestResult;
   }
 
+  // Clear candidate progress - done testing
+  setCandidateProgress(0, 0);
   return null;
 }

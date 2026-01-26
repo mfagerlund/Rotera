@@ -29,6 +29,7 @@ export interface ViewpointDto extends BaseDto {
   isPoseLocked?: boolean
   isPossiblyCropped?: boolean  // If true, principal point can be optimized. Defaults to false (PP locked to center)
   isZReflected?: boolean  // True if camera has odd number of axis flips (affects projection sign)
+  enabledInSolve?: boolean  // If false, this viewpoint is excluded from optimization. Defaults to true
   vanishingLineIds?: string[]
   lastResiduals?: number[]
 }

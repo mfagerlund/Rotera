@@ -63,8 +63,23 @@ export const ImageNavigationItem: React.FC<ImageNavigationItemProps> = observer(
       {/* Top bar with name and controls */}
       <div className="image-top-bar">
         {/* Image name */}
-        <div className="image-name" title={image.getName()}>
-          {image.getName()}
+        <div className="image-name" title={image.getName()} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {!image.enabledInSolve && (
+            <span style={{
+              color: '#e74c3c',
+              fontSize: '9px',
+              fontWeight: 'bold',
+              padding: '1px 4px',
+              backgroundColor: 'rgba(231, 76, 60, 0.15)',
+              borderRadius: '3px',
+              flexShrink: 0
+            }} title="Disabled in solve">
+              OFF
+            </span>
+          )}
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {image.getName()}
+          </span>
         </div>
 
         {/* Right side controls */}
@@ -180,7 +195,7 @@ export const ImageNavigationItem: React.FC<ImageNavigationItemProps> = observer(
 
       <div
         className="image-thumbnail"
-        style={{ height: `${thumbnailHeight}px` }}
+        style={{ height: `${thumbnailHeight}px`, position: 'relative' }}
       >
         <img
           ref={imgRef}
@@ -188,7 +203,33 @@ export const ImageNavigationItem: React.FC<ImageNavigationItemProps> = observer(
           alt={image.getName()}
           draggable={false}
           onContextMenu={(e) => e.preventDefault()}
+          style={{ opacity: image.enabledInSolve ? 1 : 0.4 }}
         />
+        {/* Disabled overlay */}
+        {!image.enabledInSolve && (
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'none',
+          }}>
+            <span style={{
+              color: '#e74c3c',
+              fontSize: '11px',
+              fontWeight: 'bold',
+              backgroundColor: 'rgba(255, 255, 255, 0.85)',
+              padding: '2px 8px',
+              borderRadius: '4px',
+            }}>
+              DISABLED
+            </span>
+          </div>
+        )}
 
         {/* Resize handle */}
         <div

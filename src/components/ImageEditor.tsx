@@ -266,7 +266,22 @@ export const ImageEditor: React.FC<ImageEditorProps> = observer(({
                 </span>
               </div>
             </div>
-            <div style={{ marginTop: '6px' }}>
+            <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '11px' }}>
+                <input
+                  type="checkbox"
+                  checked={viewpoint.enabledInSolve}
+                  onChange={(e) => {
+                    viewpoint.enabledInSolve = e.target.checked
+                    setHasChanges(true)
+                  }}
+                  style={{ width: '14px', height: '14px' }}
+                />
+                <span>Include in solve</span>
+                <span style={{ color: viewpoint.enabledInSolve ? '#27ae60' : '#e74c3c', marginLeft: '8px' }}>
+                  ({viewpoint.enabledInSolve ? 'enabled' : 'disabled'})
+                </span>
+              </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '11px' }}>
                 <input
                   type="checkbox"

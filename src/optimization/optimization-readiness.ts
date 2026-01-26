@@ -49,7 +49,8 @@ export interface OptimizationIssue {
 export function checkOptimizationReadiness(project: Project): OptimizationReadiness {
   const pointArray = Array.from(project.worldPoints.values())
   const lineArray = Array.from(project.lines.values())
-  const viewpointArray = Array.from(project.viewpoints.values())
+  // Only count enabled viewpoints for optimization readiness
+  const viewpointArray = Array.from(project.viewpoints.values()).filter(vp => vp.enabledInSolve)
 
   const unlockedPoints = pointArray.filter(p => !p.isLocked())
   const totalDOF = (unlockedPoints.length * 3) + (viewpointArray.length * 6)
@@ -86,6 +87,25 @@ export function checkOptimizationReadiness(project: Project): OptimizationReadin
 
   // Track issues
   const issues: OptimizationIssue[] = []
+
+  // Check if any viewpoints are disabled
+  const totalViewpoints = project.viewpoints.size
+  const disabledViewpoints = totalViewpoints - viewpointArray.length
+  if (disabledViewpoints > 0 && viewpointArray.length === 0) {
+    issues.push({
+      type: 'error',
+      code: 'ALL_VIEWPOINTS_DISABLED',
+      message: `All ${totalViewpoints} viewpoint(s) are disabled in solve`,
+      shortMessage: 'All viewpoints disabled'
+    })
+  } else if (disabledViewpoints > 0) {
+    issues.push({
+      type: 'info',
+      code: 'VIEWPOINTS_DISABLED',
+      message: `${disabledViewpoints} of ${totalViewpoints} viewpoint(s) disabled`,
+      shortMessage: `${disabledViewpoints} disabled`
+    })
+  }
 
   // Check basic requirements
   const effectiveConstraintCount = project.constraints.size + lineConstraintCount + pnpObservationCount

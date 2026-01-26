@@ -5,12 +5,16 @@ interface OptimizationStatusProps {
   stats: OptimizationReadiness
   isOptimizing: boolean
   statusMessage: string | null
+  bestError: number | null
+  candidateProgress: { current: number; total: number } | null
 }
 
 export const OptimizationStatus: React.FC<OptimizationStatusProps> = ({
   stats,
   isOptimizing,
-  statusMessage
+  statusMessage,
+  bestError,
+  candidateProgress
 }) => {
   return (
     <>
@@ -46,7 +50,7 @@ export const OptimizationStatus: React.FC<OptimizationStatusProps> = ({
             borderRadius: '50%',
             animation: 'spin 1s linear infinite',
           }} />
-          <div>
+          <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 'bold', color: '#1565c0', fontSize: '14px' }}>
               Optimizing...
             </div>
@@ -54,6 +58,21 @@ export const OptimizationStatus: React.FC<OptimizationStatusProps> = ({
               {statusMessage}
             </div>
           </div>
+          {bestError !== null && (
+            <div style={{
+              textAlign: 'right',
+              padding: '4px 12px',
+              backgroundColor: '#bbdefb',
+              borderRadius: '4px',
+            }}>
+              <div style={{ fontSize: '10px', color: '#1565c0', textTransform: 'uppercase' }}>
+                Best Error{candidateProgress && ` (${candidateProgress.current}/${candidateProgress.total})`}
+              </div>
+              <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#0d47a1' }}>
+                {bestError.toFixed(1)}
+              </div>
+            </div>
+          )}
           <style>{`
             @keyframes spin {
               to { transform: rotate(360deg); }
@@ -85,6 +104,23 @@ export const OptimizationStatus: React.FC<OptimizationStatusProps> = ({
           {stats.issues.filter((i: OptimizationIssue) => i.type === 'warning').map((issue: OptimizationIssue) => (
             <div key={issue.code} style={{ color: '#856404' }}>
               <strong>Warning:</strong> {issue.message}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {stats.issues.filter((i: OptimizationIssue) => i.type === 'info').length > 0 && (
+        <div className="optimization-info" style={{
+          padding: '6px 12px',
+          margin: '8px 0',
+          backgroundColor: '#e3f2fd',
+          border: '1px solid #90caf9',
+          borderRadius: '4px',
+          fontSize: '11px'
+        }}>
+          {stats.issues.filter((i: OptimizationIssue) => i.type === 'info').map((issue: OptimizationIssue) => (
+            <div key={issue.code} style={{ color: '#1565c0' }}>
+              <strong>Note:</strong> {issue.message}
             </div>
           ))}
         </div>

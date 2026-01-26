@@ -19,6 +19,11 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IOptimizabl
     readonly id: string
     selected = false
     isPoseLocked = false
+    /**
+     * When true (default), this viewpoint is included in optimization.
+     * Set to false to exclude this viewpoint's image points from the solve.
+     */
+    enabledInSolve = true
     lastResiduals: number[] = []
     /**
      * When true, this viewpoint has been Z-reflected + Rz_180 transformed for right-handed output.
@@ -599,6 +604,7 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IOptimizabl
             color: this.color,
             isPoseLocked: this.isPoseLocked,
             isZReflected: this.isZReflected || undefined,  // Only serialize if true
+            enabledInSolve: this.enabledInSolve === false ? false : undefined,  // Only serialize if false
             vanishingLineIds: vanishingLineIds.length > 0 ? vanishingLineIds : undefined,
             lastResiduals: this.lastResiduals.length > 0 ? [...this.lastResiduals] : undefined
         }
@@ -645,6 +651,10 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IOptimizabl
 
         if (dto.isZReflected) {
             viewpoint.isZReflected = dto.isZReflected
+        }
+
+        if (dto.enabledInSolve === false) {
+            viewpoint.enabledInSolve = false
         }
 
         return viewpoint
