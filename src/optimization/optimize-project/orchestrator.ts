@@ -459,8 +459,23 @@ export async function optimizeProject(
         applyAxisFlips(worldPointArray, viewpointArray, false, false, true);
       } else if (handedness) {
         log('[Handedness] Result is already RIGHT-HANDED');
+        // Explicitly reset isZReflected since we confirmed right-handed without flips
+        for (const vp of viewpointArray) {
+          if (vp.isZReflected) {
+            log(`[Handedness] Resetting isZReflected=false for ${vp.name} (was stale)`);
+            vp.isZReflected = false;
+          }
+        }
       } else {
         log('[Handedness] Cannot determine handedness (no axis points found)');
+        // When handedness cannot be determined, reset isZReflected to safe default
+        // This prevents stale isZReflected=true from previous solves causing issues
+        for (const vp of viewpointArray) {
+          if (vp.isZReflected) {
+            log(`[Handedness] Resetting isZReflected=false for ${vp.name} (was stale, handedness unknown)`);
+            vp.isZReflected = false;
+          }
+        }
       }
     }
   }
