@@ -74,7 +74,7 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = observer(({
     activeSlot,
     lineCheck,
     canCreateLine,
-    collinearPoints,
+    coincidentPoints,
     setPointSlot1,
     setPointSlot2,
     setDirection,
@@ -82,7 +82,7 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = observer(({
     setLineName,
     setLineColor,
     setIsConstruction,
-    setCollinearPoints,
+    setCoincidentPoints,
     clearSlot1,
     clearSlot2,
     handleSlot1Focus,
@@ -160,8 +160,8 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = observer(({
         lengthValue={lengthValue}
         onDirectionChange={setDirection}
         onLengthValueChange={setLengthValue}
-        collinearPoints={collinearPoints}
-        onCollinearPointsChange={setCollinearPoints}
+        coincidentPoints={coincidentPoints}
+        onCoincidentPointsChange={setCoincidentPoints}
         lineCheck={lineCheck}
         editMode={editMode}
         canCreateLine={canCreateLine}

@@ -526,10 +526,10 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
             </div>
           </div>
 
-          {/* Collinear With Lines */}
-          {worldPoint.collinearWithLines.size > 0 && (
+          {/* Coincident With Lines */}
+          {worldPoint.coincidentWithLines.size > 0 && (
             <div className="edit-section">
-              <h4>Collinear With Lines ({worldPoint.collinearWithLines.size})</h4>
+              <h4>Coincident With Lines ({worldPoint.coincidentWithLines.size})</h4>
 
               <div style={{
                 maxHeight: '150px',
@@ -537,7 +537,7 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
                 border: '1px solid var(--border)',
                 borderRadius: 'var(--border-radius)'
               }}>
-                {Array.from(worldPoint.collinearWithLines).map((iLine, idx) => {
+                {Array.from(worldPoint.coincidentWithLines).map((iLine, idx) => {
                   const line = iLine as Line
                   return (
                     <div
@@ -547,7 +547,7 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '6px 8px',
-                        borderBottom: idx < worldPoint.collinearWithLines.size - 1 ? '1px solid #333' : 'none'
+                        borderBottom: idx < worldPoint.coincidentWithLines.size - 1 ? '1px solid #333' : 'none'
                       }}
                     >
                       <span style={{ fontSize: '12px', color: '#ccc' }}>
@@ -563,8 +563,8 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
                       </span>
                       <button
                         onClick={async () => {
-                          if (await confirm(`Remove collinear constraint from "${line.name || 'line'}"?`)) {
-                            line.removeCollinearPoint(worldPoint)
+                          if (await confirm(`Remove coincident constraint from "${line.name || 'line'}"?`)) {
+                            line.removeCoincidentPoint(worldPoint)
                             handleChange()
                           }
                         }}
@@ -578,7 +578,7 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
                         }}
                         onMouseEnter={(e) => { e.currentTarget.style.color = '#f66' }}
                         onMouseLeave={(e) => { e.currentTarget.style.color = '#888' }}
-                        title="Remove collinear constraint"
+                        title="Remove coincident constraint"
                       >
                         <FontAwesomeIcon icon={faTrash} />
                       </button>

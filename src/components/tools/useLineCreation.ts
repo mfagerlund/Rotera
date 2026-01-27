@@ -9,7 +9,7 @@ interface LineConstraints {
   direction?: LineDirection
   targetLength?: number
   tolerance?: number
-  collinearPoints?: WorldPoint[]
+  coincidentPoints?: WorldPoint[]
 }
 
 interface UseLineCreationProps {
@@ -49,7 +49,7 @@ export const useLineCreation = ({
   // Line constraint settings
   const [direction, setDirection] = useState<LineDirection>('free')
   const [lengthValue, setLengthValue] = useState<string>('')
-  const [collinearPoints, setCollinearPoints] = useState<WorldPoint[]>([])
+  const [coincidentPoints, setCoincidentPoints] = useState<WorldPoint[]>([])
 
   // Line properties (for both creation and editing)
   const [lineName, setLineName] = useState<string>('')
@@ -71,7 +71,7 @@ export const useLineCreation = ({
       setLineColor(existingLine.color || '#0696d7')
       setIsConstruction(existingLine.isConstruction || false)
       setDirection(existingLine.direction || 'free')
-      setCollinearPoints(Array.from(existingLine.collinearPoints))
+      setCoincidentPoints(Array.from(existingLine.coincidentPoints))
 
       if (existingLine.targetLength !== undefined) {
         setLengthValue(existingLine.targetLength.toString())
@@ -96,7 +96,7 @@ export const useLineCreation = ({
     if (wasActive && !isNowActive) {
       setPointSlot1(null)
       setPointSlot2(null)
-      setCollinearPoints([])
+      setCoincidentPoints([])
     }
 
     prevIsActiveRef.current = isActive
@@ -218,7 +218,7 @@ export const useLineCreation = ({
           tolerance: 0.001,
           pointA: pointSlot1,
           pointB: pointSlot2,
-          collinearPoints: collinearPoints
+          coincidentPoints: coincidentPoints
         }
 
         onUpdateLine(existingLine, updates)
@@ -239,7 +239,7 @@ export const useLineCreation = ({
         direction: direction,
         targetLength: targetLength,
         tolerance: 0.001,
-        collinearPoints: collinearPoints
+        coincidentPoints: coincidentPoints
       }
 
       if (!pointSlot1 || !pointSlot2) return
@@ -270,7 +270,7 @@ export const useLineCreation = ({
     activeSlot,
     lineCheck,
     canCreateLine,
-    collinearPoints,
+    coincidentPoints,
 
     // Setters
     setPointSlot1,
@@ -280,7 +280,7 @@ export const useLineCreation = ({
     setLineName,
     setLineColor,
     setIsConstruction,
-    setCollinearPoints,
+    setCoincidentPoints,
 
     // Handlers
     clearSlot1,

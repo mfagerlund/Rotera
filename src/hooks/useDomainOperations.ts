@@ -38,7 +38,7 @@ export interface LineUpdates {
   thickness?: number
   pointA?: WorldPoint
   pointB?: WorldPoint
-  collinearPoints?: WorldPoint[]
+  coincidentPoints?: WorldPoint[]
 }
 
 
@@ -197,15 +197,15 @@ export function useDomainOperations(
       line.pointB = updates.pointB
       updates.pointB.addConnectedLine(line)
     }
-    if ('collinearPoints' in updates) {
-      // Remove all existing collinear points
-      for (const point of Array.from(line.collinearPoints)) {
-        line.removeCollinearPoint(point)
+    if ('coincidentPoints' in updates) {
+      // Remove all existing coincident points
+      for (const point of Array.from(line.coincidentPoints)) {
+        line.removeCoincidentPoint(point)
       }
-      // Add new collinear points
-      if (updates.collinearPoints) {
-        for (const point of updates.collinearPoints) {
-          line.addCollinearPoint(point)
+      // Add new coincident points
+      if (updates.coincidentPoints) {
+        for (const point of updates.coincidentPoints) {
+          line.addCoincidentPoint(point)
         }
       }
     }

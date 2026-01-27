@@ -147,9 +147,9 @@ interface LineCreationToolPanelProps {
   onDirectionChange: (direction: LineDirection) => void
   onLengthValueChange: (value: string) => void
 
-  // Collinear points
-  collinearPoints: WorldPoint[]
-  onCollinearPointsChange: (points: WorldPoint[]) => void
+  // Coincident points
+  coincidentPoints: WorldPoint[]
+  onCoincidentPointsChange: (points: WorldPoint[]) => void
 
   // Validation
   lineCheck: { exists: boolean, lineName?: string }
@@ -182,8 +182,8 @@ export const LineCreationToolPanel: React.FC<LineCreationToolPanelProps> = ({
   lengthValue,
   onDirectionChange,
   onLengthValueChange,
-  collinearPoints,
-  onCollinearPointsChange,
+  coincidentPoints,
+  onCoincidentPointsChange,
   lineCheck,
   editMode,
   canCreateLine,
@@ -191,16 +191,16 @@ export const LineCreationToolPanel: React.FC<LineCreationToolPanelProps> = ({
   onCancel,
   onCreateLine
 }) => {
-  // Filter out endpoint points from available collinear points
-  const availableCollinearPoints = allWorldPoints.filter(
+  // Filter out endpoint points from available coincident points
+  const availableCoincidentPoints = allWorldPoints.filter(
     p => p !== pointSlot1 && p !== pointSlot2
   )
 
-  const toggleCollinearPoint = (point: WorldPoint) => {
-    if (collinearPoints.includes(point)) {
-      onCollinearPointsChange(collinearPoints.filter(p => p !== point))
+  const toggleCoincidentPoint = (point: WorldPoint) => {
+    if (coincidentPoints.includes(point)) {
+      onCoincidentPointsChange(coincidentPoints.filter(p => p !== point))
     } else {
-      onCollinearPointsChange([...collinearPoints, point])
+      onCoincidentPointsChange([...coincidentPoints, point])
     }
   }
   return (
@@ -322,11 +322,11 @@ export const LineCreationToolPanel: React.FC<LineCreationToolPanelProps> = ({
           </div>
         </div>
 
-        {/* Collinear Points */}
-        {availableCollinearPoints.length > 0 && (
+        {/* Coincident Points */}
+        {availableCoincidentPoints.length > 0 && (
           <div style={{marginTop: '8px'}}>
             <label style={{fontSize: '12px', fontWeight: '500', display: 'block', marginBottom: '4px'}}>
-              Collinear Points
+              Coincident Points
             </label>
             <div style={{
               maxHeight: '100px',
@@ -335,7 +335,7 @@ export const LineCreationToolPanel: React.FC<LineCreationToolPanelProps> = ({
               borderRadius: '3px',
               padding: '4px'
             }}>
-              {availableCollinearPoints.map(point => (
+              {availableCoincidentPoints.map(point => (
                 <label
                   key={getEntityKey(point)}
                   style={{
@@ -349,8 +349,8 @@ export const LineCreationToolPanel: React.FC<LineCreationToolPanelProps> = ({
                 >
                   <input
                     type="checkbox"
-                    checked={collinearPoints.includes(point)}
-                    onChange={() => toggleCollinearPoint(point)}
+                    checked={coincidentPoints.includes(point)}
+                    onChange={() => toggleCoincidentPoint(point)}
                   />
                   <span style={{
                     width: '8px',

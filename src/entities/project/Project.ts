@@ -272,11 +272,11 @@ export class Project {
             worldPoint.imagePoints.clear()
             worldPoint.connectedLines.clear()
             worldPoint.referencingConstraints.clear()
-            worldPoint.collinearWithLines.clear()
+            worldPoint.coincidentWithLines.clear()
         }
         for (const line of this.lines) {
             line.referencingConstraints.clear()
-            line.collinearPoints.clear()
+            line.coincidentPoints.clear()
         }
         // Then clear top-level collections
         this.worldPoints.clear()

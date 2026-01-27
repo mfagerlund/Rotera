@@ -25,7 +25,7 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
   lastResiduals: number[] = []
   selected = false
   referencingConstraints: Set<IConstraint> = new Set()
-  collinearPoints: Set<WorldPoint> = new Set()
+  coincidentPoints: Set<WorldPoint> = new Set()
 
   name: string
   pointA: WorldPoint
@@ -410,21 +410,21 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
     return null
   }
 
-  addCollinearPoint(point: WorldPoint): void {
+  addCoincidentPoint(point: WorldPoint): void {
     if (point === this.pointA || point === this.pointB) {
       return
     }
-    this.collinearPoints.add(point)
-    point.addCollinearWithLine(this)
+    this.coincidentPoints.add(point)
+    point.addCoincidentWithLine(this)
   }
 
-  removeCollinearPoint(point: WorldPoint): void {
-    this.collinearPoints.delete(point)
-    point.removeCollinearWithLine(this)
+  removeCoincidentPoint(point: WorldPoint): void {
+    this.coincidentPoints.delete(point)
+    point.removeCoincidentWithLine(this)
   }
 
-  hasCollinearPoint(point: WorldPoint): boolean {
-    return this.collinearPoints.has(point)
+  hasCoincidentPoint(point: WorldPoint): boolean {
+    return this.coincidentPoints.has(point)
   }
 
   // ============================================================================
@@ -434,10 +434,10 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
   cleanup(): void {
     this.pointA.removeConnectedLine(this)
     this.pointB.removeConnectedLine(this)
-    for (const point of this.collinearPoints) {
-      point.removeCollinearWithLine(this)
+    for (const point of this.coincidentPoints) {
+      point.removeCoincidentWithLine(this)
     }
-    this.collinearPoints.clear()
+    this.coincidentPoints.clear()
   }
 
   // ============================================================================
@@ -507,8 +507,8 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
       residuals.push(lengthResidual)
     }
 
-    // Collinear point constraints: cross product of AP × AB should be zero
-    for (const point of this.collinearPoints) {
+    // Coincident point constraints: cross product of AP × AB should be zero
+    for (const point of this.coincidentPoints) {
       const vecP = valueMap.points.get(point)
       if (!vecP) continue
 
@@ -567,8 +567,8 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
       )
     }
 
-    const collinearPointIds = this.collinearPoints.size > 0
-      ? Array.from(this.collinearPoints).map(p => context.getEntityId(p)).filter((id): id is string => id !== undefined)
+    const coincidentPointIds = this.coincidentPoints.size > 0
+      ? Array.from(this.coincidentPoints).map(p => context.getEntityId(p)).filter((id): id is string => id !== undefined)
       : undefined
 
     return {
@@ -584,7 +584,7 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
       targetLength: this.targetLength,
       tolerance: this.tolerance,
       lastResiduals: this.lastResiduals.length > 0 ? [...this.lastResiduals] : undefined,
-      collinearPointIds
+      coincidentPointIds
     }
   }
 
@@ -610,11 +610,11 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
       line.lastResiduals = [...dto.lastResiduals]
     }
 
-    if (dto.collinearPointIds) {
-      for (const pointId of dto.collinearPointIds) {
+    if (dto.coincidentPointIds) {
+      for (const pointId of dto.coincidentPointIds) {
         const point = context.getEntity<WorldPoint>(pointId)
         if (point) {
-          line.addCollinearPoint(point)
+          line.addCoincidentPoint(point)
         }
       }
     }
