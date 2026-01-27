@@ -147,6 +147,10 @@ interface LineCreationToolPanelProps {
   onDirectionChange: (direction: LineDirection) => void
   onLengthValueChange: (value: string) => void
 
+  // Collinear points
+  collinearPoints: WorldPoint[]
+  onCollinearPointsChange: (points: WorldPoint[]) => void
+
   // Validation
   lineCheck: { exists: boolean, lineName?: string }
 
@@ -178,6 +182,8 @@ export const LineCreationToolPanel: React.FC<LineCreationToolPanelProps> = ({
   lengthValue,
   onDirectionChange,
   onLengthValueChange,
+  collinearPoints,
+  onCollinearPointsChange,
   lineCheck,
   editMode,
   canCreateLine,
@@ -185,6 +191,18 @@ export const LineCreationToolPanel: React.FC<LineCreationToolPanelProps> = ({
   onCancel,
   onCreateLine
 }) => {
+  // Filter out endpoint points from available collinear points
+  const availableCollinearPoints = allWorldPoints.filter(
+    p => p !== pointSlot1 && p !== pointSlot2
+  )
+
+  const toggleCollinearPoint = (point: WorldPoint) => {
+    if (collinearPoints.includes(point)) {
+      onCollinearPointsChange(collinearPoints.filter(p => p !== point))
+    } else {
+      onCollinearPointsChange([...collinearPoints, point])
+    }
+  }
   return (
     <div style={{padding: '6px'}}>
       {/* Line Properties */}
@@ -303,6 +321,50 @@ export const LineCreationToolPanel: React.FC<LineCreationToolPanelProps> = ({
             )}
           </div>
         </div>
+
+        {/* Collinear Points */}
+        {availableCollinearPoints.length > 0 && (
+          <div style={{marginTop: '8px'}}>
+            <label style={{fontSize: '12px', fontWeight: '500', display: 'block', marginBottom: '4px'}}>
+              Collinear Points
+            </label>
+            <div style={{
+              maxHeight: '100px',
+              overflowY: 'auto',
+              border: '1px solid var(--border, #555)',
+              borderRadius: '3px',
+              padding: '4px'
+            }}>
+              {availableCollinearPoints.map(point => (
+                <label
+                  key={getEntityKey(point)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '2px 4px',
+                    fontSize: '11px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={collinearPoints.includes(point)}
+                    onChange={() => toggleCollinearPoint(point)}
+                  />
+                  <span style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    backgroundColor: point.color,
+                    flexShrink: 0
+                  }} />
+                  {point.getName()}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Duplicate Line Warning */}

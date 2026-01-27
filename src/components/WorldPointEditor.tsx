@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { observer } from 'mobx-react-lite'
 import { WorldPoint } from '../entities/world-point'
 import { Viewpoint } from '../entities/viewpoint'
+import { Line } from '../entities/line'
 import FloatingWindow from './FloatingWindow'
 import { useConfirm } from './ConfirmDialog'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -524,6 +525,69 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
               )}
             </div>
           </div>
+
+          {/* Collinear With Lines */}
+          {worldPoint.collinearWithLines.size > 0 && (
+            <div className="edit-section">
+              <h4>Collinear With Lines ({worldPoint.collinearWithLines.size})</h4>
+
+              <div style={{
+                maxHeight: '150px',
+                overflowY: 'auto',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--border-radius)'
+              }}>
+                {Array.from(worldPoint.collinearWithLines).map((iLine, idx) => {
+                  const line = iLine as Line
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '6px 8px',
+                        borderBottom: idx < worldPoint.collinearWithLines.size - 1 ? '1px solid #333' : 'none'
+                      }}
+                    >
+                      <span style={{ fontSize: '12px', color: '#ccc' }}>
+                        <span style={{
+                          display: 'inline-block',
+                          width: '10px',
+                          height: '2px',
+                          backgroundColor: line.color,
+                          marginRight: '8px',
+                          verticalAlign: 'middle'
+                        }} />
+                        {line.name || `${line.pointA.name} → ${line.pointB.name}`}
+                      </span>
+                      <button
+                        onClick={async () => {
+                          if (await confirm(`Remove collinear constraint from "${line.name || 'line'}"?`)) {
+                            line.removeCollinearPoint(worldPoint)
+                            handleChange()
+                          }
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#888',
+                          cursor: 'pointer',
+                          padding: '2px 4px',
+                          fontSize: '11px'
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = '#f66' }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = '#888' }}
+                        title="Remove collinear constraint"
+                      >
+                        <FontAwesomeIcon icon={faTrash} />
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </FloatingWindow>
     </>

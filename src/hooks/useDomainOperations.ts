@@ -36,6 +36,9 @@ export interface LineUpdates {
   tolerance?: number
   lineStyle?: 'solid' | 'dashed' | 'dotted'
   thickness?: number
+  pointA?: WorldPoint
+  pointB?: WorldPoint
+  collinearPoints?: WorldPoint[]
 }
 
 
@@ -184,6 +187,28 @@ export function useDomainOperations(
     if ('tolerance' in updates) line.tolerance = updates.tolerance
     if ('lineStyle' in updates) line.lineStyle = updates.lineStyle!
     if ('thickness' in updates) line.thickness = updates.thickness!
+    if ('pointA' in updates && updates.pointA && updates.pointA !== line.pointA) {
+      line.pointA.removeConnectedLine(line)
+      line.pointA = updates.pointA
+      updates.pointA.addConnectedLine(line)
+    }
+    if ('pointB' in updates && updates.pointB && updates.pointB !== line.pointB) {
+      line.pointB.removeConnectedLine(line)
+      line.pointB = updates.pointB
+      updates.pointB.addConnectedLine(line)
+    }
+    if ('collinearPoints' in updates) {
+      // Remove all existing collinear points
+      for (const point of Array.from(line.collinearPoints)) {
+        line.removeCollinearPoint(point)
+      }
+      // Add new collinear points
+      if (updates.collinearPoints) {
+        for (const point of updates.collinearPoints) {
+          line.addCollinearPoint(point)
+        }
+      }
+    }
   }
 
   const deleteLine = (line: Line) => {

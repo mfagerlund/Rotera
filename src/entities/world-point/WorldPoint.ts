@@ -14,6 +14,7 @@ import { projectWorldPointToPixelQuaternion } from '../../optimization/camera-pr
 export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributor, IWorldPoint, ISerializable<WorldPointDto> {
     selected = false
     connectedLines: Set<ILine> = new Set()
+    collinearWithLines: Set<ILine> = new Set()
     referencingConstraints: Set<IConstraint> = new Set()
     imagePoints: Set<ImagePoint> = new Set()
     lastResiduals: number[] = []
@@ -149,11 +150,11 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
     }
 
     canDelete(): boolean {
-        return this.connectedLines.size === 0 && this.referencingConstraints.size === 0
+        return this.connectedLines.size === 0 && this.referencingConstraints.size === 0 && this.collinearWithLines.size === 0
     }
 
     getDeleteWarning(): string | null {
-        if (this.connectedLines.size === 0 && this.referencingConstraints.size === 0) {
+        if (this.connectedLines.size === 0 && this.referencingConstraints.size === 0 && this.collinearWithLines.size === 0) {
             return null
         }
 
@@ -163,6 +164,9 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
         }
         if (this.referencingConstraints.size > 0) {
             parts.push(`${this.referencingConstraints.size} constraint${this.referencingConstraints.size === 1 ? '' : 's'}`)
+        }
+        if (this.collinearWithLines.size > 0) {
+            parts.push(`${this.collinearWithLines.size} collinear line${this.collinearWithLines.size === 1 ? '' : 's'}`)
         }
 
         return `Deleting this point will also delete ${parts.join(' and ')}`
@@ -193,6 +197,14 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
 
     removeImagePoint(imagePoint: ImagePoint): void {
         this.imagePoints.delete(imagePoint)
+    }
+
+    addCollinearWithLine(line: ILine): void {
+        this.collinearWithLines.add(line)
+    }
+
+    removeCollinearWithLine(line: ILine): void {
+        this.collinearWithLines.delete(line)
     }
 
     getDegree(): number {

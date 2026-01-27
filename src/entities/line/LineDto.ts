@@ -14,4 +14,5 @@ export interface LineDto extends BaseDto {
   targetLength?: number
   tolerance?: number
   lastResiduals?: number[]
+  collinearPointIds?: string[]
 }

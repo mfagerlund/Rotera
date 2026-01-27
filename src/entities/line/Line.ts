@@ -25,6 +25,7 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
   lastResiduals: number[] = []
   selected = false
   referencingConstraints: Set<IConstraint> = new Set()
+  collinearPoints: Set<WorldPoint> = new Set()
 
   name: string
   pointA: WorldPoint
@@ -409,6 +410,23 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
     return null
   }
 
+  addCollinearPoint(point: WorldPoint): void {
+    if (point === this.pointA || point === this.pointB) {
+      return
+    }
+    this.collinearPoints.add(point)
+    point.addCollinearWithLine(this)
+  }
+
+  removeCollinearPoint(point: WorldPoint): void {
+    this.collinearPoints.delete(point)
+    point.removeCollinearWithLine(this)
+  }
+
+  hasCollinearPoint(point: WorldPoint): boolean {
+    return this.collinearPoints.has(point)
+  }
+
   // ============================================================================
   // Utility methods
   // ============================================================================
@@ -416,6 +434,10 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
   cleanup(): void {
     this.pointA.removeConnectedLine(this)
     this.pointB.removeConnectedLine(this)
+    for (const point of this.collinearPoints) {
+      point.removeCollinearWithLine(this)
+    }
+    this.collinearPoints.clear()
   }
 
   // ============================================================================
@@ -485,6 +507,20 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
       residuals.push(lengthResidual)
     }
 
+    // Collinear point constraints: cross product of AP × AB should be zero
+    for (const point of this.collinearPoints) {
+      const vecP = valueMap.points.get(point)
+      if (!vecP) continue
+
+      const AP = vecP.sub(vecA)
+      const cross = Vec3.cross(AP, direction)
+      residuals.push(
+        V.mul(cross.x, geoScale),
+        V.mul(cross.y, geoScale),
+        V.mul(cross.z, geoScale)
+      )
+    }
+
     return residuals
   }
 
@@ -531,6 +567,10 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
       )
     }
 
+    const collinearPointIds = this.collinearPoints.size > 0
+      ? Array.from(this.collinearPoints).map(p => context.getEntityId(p)).filter((id): id is string => id !== undefined)
+      : undefined
+
     return {
       id,
       name: this.name,
@@ -543,7 +583,8 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
       direction: this.direction,
       targetLength: this.targetLength,
       tolerance: this.tolerance,
-      lastResiduals: this.lastResiduals.length > 0 ? [...this.lastResiduals] : undefined
+      lastResiduals: this.lastResiduals.length > 0 ? [...this.lastResiduals] : undefined,
+      collinearPointIds
     }
   }
 
@@ -567,6 +608,15 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
 
     if (dto.lastResiduals) {
       line.lastResiduals = [...dto.lastResiduals]
+    }
+
+    if (dto.collinearPointIds) {
+      for (const pointId of dto.collinearPointIds) {
+        const point = context.getEntity<WorldPoint>(pointId)
+        if (point) {
+          line.addCollinearPoint(point)
+        }
+      }
     }
 
     context.registerEntity(line, dto.id)

@@ -9,6 +9,7 @@ interface LineConstraints {
   direction?: LineDirection
   targetLength?: number
   tolerance?: number
+  collinearPoints?: WorldPoint[]
 }
 
 interface UseLineCreationProps {
@@ -48,6 +49,7 @@ export const useLineCreation = ({
   // Line constraint settings
   const [direction, setDirection] = useState<LineDirection>('free')
   const [lengthValue, setLengthValue] = useState<string>('')
+  const [collinearPoints, setCollinearPoints] = useState<WorldPoint[]>([])
 
   // Line properties (for both creation and editing)
   const [lineName, setLineName] = useState<string>('')
@@ -69,6 +71,7 @@ export const useLineCreation = ({
       setLineColor(existingLine.color || '#0696d7')
       setIsConstruction(existingLine.isConstruction || false)
       setDirection(existingLine.direction || 'free')
+      setCollinearPoints(Array.from(existingLine.collinearPoints))
 
       if (existingLine.targetLength !== undefined) {
         setLengthValue(existingLine.targetLength.toString())
@@ -93,6 +96,7 @@ export const useLineCreation = ({
     if (wasActive && !isNowActive) {
       setPointSlot1(null)
       setPointSlot2(null)
+      setCollinearPoints([])
     }
 
     prevIsActiveRef.current = isActive
@@ -201,7 +205,7 @@ export const useLineCreation = ({
 
   const handleCreateLine = () => {
     if (editMode) {
-      if (onUpdateLine && existingLine) {
+      if (onUpdateLine && existingLine && pointSlot1 && pointSlot2) {
         const length = parseFloat(lengthValue)
         const targetLength = lengthValue.trim() !== '' && !isNaN(length) && length > 0 ? length : undefined
 
@@ -211,7 +215,10 @@ export const useLineCreation = ({
           isConstruction: isConstruction,
           direction: direction,
           targetLength: targetLength,
-          tolerance: 0.001
+          tolerance: 0.001,
+          pointA: pointSlot1,
+          pointB: pointSlot2,
+          collinearPoints: collinearPoints
         }
 
         onUpdateLine(existingLine, updates)
@@ -231,7 +238,8 @@ export const useLineCreation = ({
         isConstruction: isConstruction,
         direction: direction,
         targetLength: targetLength,
-        tolerance: 0.001
+        tolerance: 0.001,
+        collinearPoints: collinearPoints
       }
 
       if (!pointSlot1 || !pointSlot2) return
@@ -262,6 +270,7 @@ export const useLineCreation = ({
     activeSlot,
     lineCheck,
     canCreateLine,
+    collinearPoints,
 
     // Setters
     setPointSlot1,
@@ -271,6 +280,7 @@ export const useLineCreation = ({
     setLineName,
     setLineColor,
     setIsConstruction,
+    setCollinearPoints,
 
     // Handlers
     clearSlot1,
