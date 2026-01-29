@@ -232,7 +232,9 @@ export async function testAllCandidates(
 
   // Use residual (sum of squared errors) as the quality metric, NOT median
   // A low median can hide catastrophic outliers (e.g., 4 points at 1414px)
-  const GOOD_ENOUGH_THRESHOLD = 10.0; // Residual threshold (sum, not median)
+  // Strict threshold ensures we test all candidates unless one is truly excellent
+  // (For most scenes, this means all candidates are tested and the best is selected)
+  const GOOD_ENOUGH_THRESHOLD = 10.0;
   // Probes are fast exploratory runs - cap at 200 for speed
   // When there are multiple candidates, probe iterations are always capped for speed
   // The user's maxIterations setting applies when there's only one candidate
@@ -241,7 +243,6 @@ export async function testAllCandidates(
   // Save original state
   const originalState = saveProjectState(project);
 
-  let bestResult: any | null = null;
   let bestResidual = Infinity;
   let bestCandidate: OptimizationCandidate | null = null;
 
@@ -274,29 +275,60 @@ export async function testAllCandidates(
     const residual = probeResult.residual ?? Infinity;
     logDebug(`[Candidate] #${i + 1}/${candidates.length}: ${candidate.description} → residual=${residual.toFixed(1)}`);
 
-    // If good enough, return immediately
+    // If good enough, run full optimization with this candidate and return
     if (residual < GOOD_ENOUGH_THRESHOLD) {
       logDebug(`[Candidate] #${i + 1} is good enough (residual=${residual.toFixed(1)} < ${GOOD_ENOUGH_THRESHOLD})`);
-      return probeResult;
+      setCandidateProgress(0, 0);
+
+      // Restore original state and run full optimization
+      restoreProjectState(project, originalState);
+
+      log(`[Candidate] Early winner: ${candidate.description} - running full optimization...`);
+      const fullResult = await optimizeProject(project, {
+        ...options,
+        _skipCandidateTesting: true,
+        _skipBranching: true,
+        _branch: candidate.branch ?? undefined,
+        _seed: candidate.seed,
+        _alignmentSign: candidate.alignmentSign,
+        _perturbCameras: candidate.perturbCameras,
+        _attempt: 1,
+      });
+      return fullResult;
     }
 
-    // Track best result by residual
+    // Track best candidate by residual
     if (residual < bestResidual) {
       bestResidual = residual;
       bestCandidate = candidate;
-      bestResult = probeResult;
     }
-  }
-
-  // Return best probe result
-  if (bestResult) {
-    log(`[Candidate] Best probe: ${bestCandidate!.description} (residual=${bestResidual.toFixed(1)})`);
-    // Clear candidate progress - done testing
-    setCandidateProgress(0, 0);
-    return bestResult;
   }
 
   // Clear candidate progress - done testing
   setCandidateProgress(0, 0);
+
+  // Run FULL optimization with the best candidate's parameters
+  if (bestCandidate) {
+    log(`[Candidate] Best probe: ${bestCandidate.description} (residual=${bestResidual.toFixed(1)})`);
+    log(`[Candidate] Running full optimization with winning candidate...`);
+
+    // Restore original state and run full optimization with winning parameters
+    restoreProjectState(project, originalState);
+
+    const fullResult = await optimizeProject(project, {
+      ...options,
+      // Keep user's maxIterations for full run
+      _skipCandidateTesting: true,
+      _skipBranching: true,
+      _branch: bestCandidate.branch ?? undefined,
+      _seed: bestCandidate.seed,
+      _alignmentSign: bestCandidate.alignmentSign,
+      _perturbCameras: bestCandidate.perturbCameras,
+      _attempt: 1,
+    });
+
+    return fullResult;
+  }
+
   return null;
 }

@@ -52,9 +52,10 @@ export function detectOutliers(
   const meanError = errors.length > 0 ? sumError / errors.length : 0;
   const rmsError = errors.length > 0 ? Math.sqrt(sumSquaredError / errors.length) : 0;
 
-  const outlierThreshold = medianError < 20
-    ? Math.max(threshold * medianError, 50)
-    : Math.min(threshold * medianError, 80);
+  // Clamp outlier threshold to [50, 80] range:
+  // - Floor at 50px: avoid flagging good points when median is low
+  // - Ceiling at 80px: always flag really bad points even when median is high
+  const outlierThreshold = Math.max(50, Math.min(threshold * medianError, 80));
 
   const outliers: OutlierInfo[] = [];
   for (const { imagePoint, error } of imagePointErrors) {

@@ -1,11 +1,12 @@
 /**
  * Distance constraint residual function.
  *
- * Residual: (actual_distance - target_distance)
- * Should be 0 when the distance between points equals the target.
+ * Residual: (actual_distance - target_distance) / target_distance
+ * Uses relative error so constraints of different scales are weighted equally.
+ * A 10% error on a 10m constraint has the same weight as 10% error on a 1m constraint.
  */
 
-import { V, Value, Vec3 } from 'scalar-autograd';
+import { V, Value } from 'scalar-autograd';
 import type { DistanceConstraint } from '../../entities/constraints/distance-constraint';
 import type { ValueMap } from '../IOptimizable';
 
@@ -25,12 +26,18 @@ export function computeDistanceResiduals(
 
   const targetDistance = constraint.targetDistance;
 
+  // Guard against zero target (would cause division by zero)
+  if (targetDistance === 0) {
+    return [];
+  }
+
   // Calculate actual distance using Vec3 API
   const diff = pointBVec.sub(pointAVec);
   const dist = diff.magnitude;
 
-  // Residual = actual - target
-  const residual = V.sub(dist, V.C(targetDistance));
+  // Relative residual = (actual - target) / target
+  // This normalizes errors so 10% error has same weight regardless of scale
+  const residual = V.div(V.sub(dist, V.C(targetDistance)), V.C(targetDistance));
 
   return [residual];
 }
