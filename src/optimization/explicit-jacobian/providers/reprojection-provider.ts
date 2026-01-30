@@ -87,12 +87,12 @@ export function createReprojectionProvider(
       const tz = worldPoint.z - cameraPos.z;
 
       // Apply quaternion rotation to get camera-space z
+      // This MUST match the formula in the gradient functions exactly
       const qcx = q.y * tz - q.z * ty;
       const qcy = q.z * tx - q.x * tz;
-      const dcx = q.y * qcy - q.z * qcx;
-      const dcy = q.z * qcx - q.x * qcy;
+      const qcz = q.x * ty - q.y * tx;
       const dcz = q.x * qcy - q.y * qcx;
-      let camZ = tz + 2 * q.w * (q.x * ty - q.y * tx) + 2 * (q.x * dcx - q.y * dcy);
+      let camZ = tz + 2 * q.w * qcz + 2 * dcz;
 
       // Handle Z-reflection: when isZReflected is true, points with negative camZ
       // are actually in front of the camera
@@ -131,11 +131,15 @@ export function createReprojectionProvider(
         z: variables[quaternionIndices[3]],
       };
 
-      // Check for point behind camera
+      // Check for point behind camera - formula MUST match gradient functions exactly
       const tx = worldPoint.x - cameraPos.x;
       const ty = worldPoint.y - cameraPos.y;
       const tz = worldPoint.z - cameraPos.z;
-      let camZ = tz + 2 * q.w * (q.x * ty - q.y * tx) + 2 * (q.x * (q.z * tx - q.x * tz) - q.y * (q.y * tz - q.z * ty));
+      const qcx = q.y * tz - q.z * ty;
+      const qcy = q.z * tx - q.x * tz;
+      const qcz = q.x * ty - q.y * tx;
+      const dcz = q.x * qcy - q.y * qcx;
+      let camZ = tz + 2 * q.w * qcz + 2 * dcz;
 
       // Handle Z-reflection
       if (config.isZReflected) {
