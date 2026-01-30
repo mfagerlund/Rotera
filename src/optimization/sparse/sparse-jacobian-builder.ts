@@ -46,9 +46,19 @@ export class SparseJacobianBuilder {
           const globalCol = variableIndices[localCol];
           const value = row[localCol];
 
+          // Sanitize: skip NaN/Infinity values, clamp extreme values
+          if (!isFinite(value)) {
+            // Skip NaN and Infinity - these corrupt the solver
+            continue;
+          }
+
+          // Clamp extreme gradients to prevent numerical instability
+          const MAX_GRADIENT = 1e8;
+          const clampedValue = Math.max(-MAX_GRADIENT, Math.min(MAX_GRADIENT, value));
+
           // Only add non-zero entries
-          if (Math.abs(value) > 1e-15) {
-            triplets.push({ row: globalRow, col: globalCol, value });
+          if (Math.abs(clampedValue) > 1e-15) {
+            triplets.push({ row: globalRow, col: globalCol, value: clampedValue });
           }
         }
       }
