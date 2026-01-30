@@ -11,11 +11,77 @@
  */
 
 import type { ResidualWithJacobian, Point3D, Quaternion } from '../types';
-import { reprojection_u_grad } from '../../residuals/gradients/reprojection-u-gradient';
-import { reprojection_v_grad } from '../../residuals/gradients/reprojection-v-gradient';
+import { reprojection_u_grad, reprojection_u } from '../../residuals/gradients/reprojection-u-gradient';
+import { reprojection_v_grad, reprojection_v } from '../../residuals/gradients/reprojection-v-gradient';
+
+/** Epsilon for numerical differentiation */
+const NUMERICAL_EPS = 1e-6;
 
 /** Large penalty for points behind the camera */
 const BEHIND_CAMERA_PENALTY = 1000;
+
+/**
+ * Compute numerical gradient for reprojection using finite differences.
+ * Used as fallback when analytical gradients produce NaN/Inf.
+ */
+function computeNumericalGradient(
+  worldPointIndices: [number, number, number],
+  cameraPosIndices: [number, number, number],
+  quaternionIndices: [number, number, number, number],
+  config: ReprojectionConfig,
+  variables: number[],
+  isU: boolean
+): number[] {
+  const { fx, fy, cx, cy, k1, k2, k3, p1, p2, observedU, observedV } = config;
+  const observed = isU ? observedU : observedV;
+
+  // Helper to compute residual value
+  const computeValue = (vars: number[]): number => {
+    const wp: Point3D = {
+      x: vars[worldPointIndices[0]],
+      y: vars[worldPointIndices[1]],
+      z: vars[worldPointIndices[2]],
+    };
+    const cp: Point3D = {
+      x: vars[cameraPosIndices[0]],
+      y: vars[cameraPosIndices[1]],
+      z: vars[cameraPosIndices[2]],
+    };
+    const q: Quaternion = {
+      w: vars[quaternionIndices[0]],
+      x: vars[quaternionIndices[1]],
+      y: vars[quaternionIndices[2]],
+      z: vars[quaternionIndices[3]],
+    };
+
+    if (isU) {
+      return reprojection_u(wp, cp, q, fx, fy, cx, cy, k1, k2, k3, p1, p2, observed);
+    } else {
+      return reprojection_v(wp, cp, q, fx, fy, cx, cy, k1, k2, k3, p1, p2, observed);
+    }
+  };
+
+  // Central difference for each variable
+  const allIndices = [...worldPointIndices, ...cameraPosIndices, ...quaternionIndices];
+  const gradients: number[] = [];
+
+  const baseValue = computeValue(variables);
+
+  for (const idx of allIndices) {
+    const varsPlus = [...variables];
+    const varsMinus = [...variables];
+    varsPlus[idx] += NUMERICAL_EPS;
+    varsMinus[idx] -= NUMERICAL_EPS;
+
+    const valuePlus = computeValue(varsPlus);
+    const valueMinus = computeValue(varsMinus);
+
+    const grad = (valuePlus - valueMinus) / (2 * NUMERICAL_EPS);
+    gradients.push(isFinite(grad) ? grad : 0);
+  }
+
+  return gradients;
+}
 
 export interface ReprojectionConfig {
   /** Camera intrinsics */
@@ -185,16 +251,21 @@ export function createReprojectionProvider(
         resV.dq.z,
       ];
 
-      // Check for NaN/Infinity in gradients - indicates numerical issues (e.g., camZ very small)
-      // Return zero gradients instead to avoid corrupting the Jacobian
+      // Check for NaN/Infinity in gradients - indicates numerical issues
+      // Fall back to numerical differentiation when analytical gradients fail
       const hasInvalidU = rowU.some(v => !isFinite(v));
       const hasInvalidV = rowV.some(v => !isFinite(v));
 
       if (hasInvalidU || hasInvalidV) {
-        return [
-          hasInvalidU ? [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] : rowU,
-          hasInvalidV ? [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] : rowV,
-        ];
+        // Use numerical differentiation as fallback
+        const numericalU = hasInvalidU
+          ? computeNumericalGradient(worldPointIndices, cameraPosIndices, quaternionIndices, config, variables, true)
+          : rowU;
+        const numericalV = hasInvalidV
+          ? computeNumericalGradient(worldPointIndices, cameraPosIndices, quaternionIndices, config, variables, false)
+          : rowV;
+
+        return [numericalU, numericalV];
       }
 
       return [rowU, rowV];
