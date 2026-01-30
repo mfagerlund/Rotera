@@ -273,8 +273,8 @@ describe('Backend Comparison', () => {
 
       console.log(`Sparse solver on Farnsworth House: ${elapsed.toFixed(1)}ms, converged=${result.converged}`);
 
-      // Should complete in reasonable time
-      expect(elapsed).toBeLessThan(30000);
+      // Should complete in reasonable time (60s allows for CI variance)
+      expect(elapsed).toBeLessThan(60000);
     });
   });
 

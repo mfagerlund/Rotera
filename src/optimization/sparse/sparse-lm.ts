@@ -98,13 +98,31 @@ export function solveSparseLM(
     }
 
     // Check gradient convergence
-    const gradNorm = Math.sqrt(Jtr.reduce((sum, v) => sum + v * v, 0));
+    let gradNorm = Math.sqrt(Jtr.reduce((sum, v) => sum + v * v, 0));
     if (gradNorm < gradientTolerance) {
       if (opts.verbose) {
         console.log(`[Sparse LM] Converged: gradient norm ${gradNorm.toExponential(3)} < ${gradientTolerance}`);
       }
       converged = true;
       break;
+    }
+
+    // Bail out if gradient is astronomically large - indicates numerical instability
+    // that no amount of damping can fix
+    const CATASTROPHIC_GRAD_NORM = 1e12;
+    if (gradNorm > CATASTROPHIC_GRAD_NORM) {
+      console.warn(`[Sparse LM] Gradient norm ${gradNorm.toExponential(3)} is catastrophically large, bailing out`);
+      break;
+    }
+
+    // Scale gradient if too large - prevents numerical instability
+    const MAX_GRAD_NORM = 1e6;
+    if (gradNorm > MAX_GRAD_NORM) {
+      const scale = MAX_GRAD_NORM / gradNorm;
+      for (let i = 0; i < Jtr.length; i++) {
+        Jtr[i] *= scale;
+      }
+      gradNorm = MAX_GRAD_NORM;
     }
 
     // Try to find a step that reduces cost
