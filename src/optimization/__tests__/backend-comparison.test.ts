@@ -12,6 +12,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { loadProjectFromJson } from '../../store/project-serialization';
 import { fineTuneProject } from '../fine-tune';
+import { optimizeProject } from '../optimize-project';
 import { setSolverBackend, getSolverBackend, SolverBackend } from '../solver-config';
 import type { WorldPoint } from '../../entities/world-point';
 import type { Viewpoint } from '../../entities/viewpoint';
@@ -274,6 +275,46 @@ describe('Backend Comparison', () => {
 
       // Should complete in reasonable time
       expect(elapsed).toBeLessThan(30000);
+    });
+  });
+
+  describe('Single Camera Projects', () => {
+    it('sparse solver handles simple single-camera project (regression test)', async () => {
+      // This test verifies the fix for the camZ formula bug that caused
+      // JtJ maxDiag=Infinity on single-camera projects
+      const fixturePath = path.join(FIXTURES_DIR, '1-loose.rotera');
+      if (!fs.existsSync(fixturePath)) {
+        console.log('Skipping: fixture not found');
+        return;
+      }
+
+      const fixtureJson = fs.readFileSync(fixturePath, 'utf-8');
+
+      // Test autodiff first as baseline
+      setSolverBackend('autodiff');
+      const project1 = loadProjectFromJson(fixtureJson);
+      const result1 = await optimizeProject(project1, {
+        maxIterations: 100,
+        verbose: true,
+      });
+      console.log(`autodiff on 1-loose: converged=${result1.converged}, error=${result1.error}, iter=${result1.iterations}`);
+
+      // Test sparse solver
+      setSolverBackend('explicit-sparse');
+      const project2 = loadProjectFromJson(fixtureJson);
+      const result2 = await optimizeProject(project2, {
+        maxIterations: 100,
+        verbose: true,
+      });
+      console.log(`sparse on 1-loose: converged=${result2.converged}, error=${result2.error}, iter=${result2.iterations}`);
+
+      // Both should converge
+      expect(result1.converged).toBe(true);
+
+      // Check sparse result with descriptive failure
+      if (!result2.converged) {
+        throw new Error(`Sparse solver did not converge: ${JSON.stringify(result2)}`);
+      }
     });
   });
 });

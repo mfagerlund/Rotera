@@ -86,22 +86,27 @@ export function createCoplanarProvider(
       const result = coplanar_residual_grad(p0, p1, p2, p3);
 
       // Row: [dp0.x, dp0.y, dp0.z, dp1.x, dp1.y, dp1.z, dp2.x, dp2.y, dp2.z, dp3.x, dp3.y, dp3.z]
-      return [
-        [
-          result.dp0.x,
-          result.dp0.y,
-          result.dp0.z,
-          result.dp1.x,
-          result.dp1.y,
-          result.dp1.z,
-          result.dp2.x,
-          result.dp2.y,
-          result.dp2.z,
-          result.dp3.x,
-          result.dp3.y,
-          result.dp3.z,
-        ],
+      const row = [
+        result.dp0.x,
+        result.dp0.y,
+        result.dp0.z,
+        result.dp1.x,
+        result.dp1.y,
+        result.dp1.z,
+        result.dp2.x,
+        result.dp2.y,
+        result.dp2.z,
+        result.dp3.x,
+        result.dp3.y,
+        result.dp3.z,
       ];
+
+      // Check for NaN/Infinity (can occur if points are coincident causing 0-length vectors)
+      if (row.some(v => !isFinite(v))) {
+        return [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]];
+      }
+
+      return [row];
     },
   };
 }

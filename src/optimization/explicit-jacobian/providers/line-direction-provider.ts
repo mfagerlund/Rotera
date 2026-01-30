@@ -83,10 +83,15 @@ export function createLineDirectionProvider(
 
       return gradFunctions.map(fn => {
         const result = fn(pA, pB, DIRECTION_SCALE);
-        return [
+        const row = [
           result.dpA.x, result.dpA.y, result.dpA.z,
           result.dpB.x, result.dpB.y, result.dpB.z,
         ];
+        // Check for NaN/Infinity
+        if (row.some(v => !isFinite(v))) {
+          return [0, 0, 0, 0, 0, 0];
+        }
+        return row;
       });
     },
   };

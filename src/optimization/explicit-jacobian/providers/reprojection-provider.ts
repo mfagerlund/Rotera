@@ -159,33 +159,45 @@ export function createReprojectionProvider(
       const resU = reprojection_u_grad(worldPoint, cameraPos, q, fx, fy, cx, cy, k1, k2, k3, p1, p2, observedU);
       const resV = reprojection_v_grad(worldPoint, cameraPos, q, fx, fy, cx, cy, k1, k2, k3, p1, p2, observedV);
 
-      // Each row: [dworldPoint.x, dworldPoint.y, dworldPoint.z, dcameraPos.x, dcameraPos.y, dcameraPos.z, dq.w, dq.x, dq.y, dq.z]
-      return [
-        [
-          resU.dworldPoint.x,
-          resU.dworldPoint.y,
-          resU.dworldPoint.z,
-          resU.dcameraPos.x,
-          resU.dcameraPos.y,
-          resU.dcameraPos.z,
-          resU.dq.w,
-          resU.dq.x,
-          resU.dq.y,
-          resU.dq.z,
-        ],
-        [
-          resV.dworldPoint.x,
-          resV.dworldPoint.y,
-          resV.dworldPoint.z,
-          resV.dcameraPos.x,
-          resV.dcameraPos.y,
-          resV.dcameraPos.z,
-          resV.dq.w,
-          resV.dq.x,
-          resV.dq.y,
-          resV.dq.z,
-        ],
+      // Build gradient rows
+      const rowU = [
+        resU.dworldPoint.x,
+        resU.dworldPoint.y,
+        resU.dworldPoint.z,
+        resU.dcameraPos.x,
+        resU.dcameraPos.y,
+        resU.dcameraPos.z,
+        resU.dq.w,
+        resU.dq.x,
+        resU.dq.y,
+        resU.dq.z,
       ];
+      const rowV = [
+        resV.dworldPoint.x,
+        resV.dworldPoint.y,
+        resV.dworldPoint.z,
+        resV.dcameraPos.x,
+        resV.dcameraPos.y,
+        resV.dcameraPos.z,
+        resV.dq.w,
+        resV.dq.x,
+        resV.dq.y,
+        resV.dq.z,
+      ];
+
+      // Check for NaN/Infinity in gradients - indicates numerical issues (e.g., camZ very small)
+      // Return zero gradients instead to avoid corrupting the Jacobian
+      const hasInvalidU = rowU.some(v => !isFinite(v));
+      const hasInvalidV = rowV.some(v => !isFinite(v));
+
+      if (hasInvalidU || hasInvalidV) {
+        return [
+          hasInvalidU ? [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] : rowU,
+          hasInvalidV ? [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] : rowV,
+        ];
+      }
+
+      return [rowU, rowV];
     },
   };
 }
