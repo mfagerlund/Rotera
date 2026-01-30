@@ -10,7 +10,7 @@ import { projectWorldPointToPixelQuaternion } from '../../optimization/camera-pr
 import { V, Vec3, Vec4 } from 'scalar-autograd'
 import { ProjectDB } from '../../services/project-db'
 import { checkOptimizationReadiness } from '../../optimization/optimization-readiness'
-import { setLogCallback, getSolveQuality } from '../../optimization/optimize-project'
+import { setLogCallback, getSolveQuality, getBestResidualSoFar, getCandidateProgress } from '../../optimization/optimize-project'
 import { fineTuneProject, FineTuneResult } from '../../optimization/fine-tune'
 
 /**
@@ -59,7 +59,8 @@ function loadStoredResults(project: Project): any | null {
   }
 
   const totalError = residualCount > 0 ? Math.sqrt(totalSquaredError) : 0
-  const quality = getSolveQuality(totalError)
+  // TODO: Store medianReprojectionError in project for accurate quality on reload
+  const quality = getSolveQuality(undefined, totalError)
 
   return {
     converged: true, // If we have stored results, assume it was a successful run
@@ -168,6 +169,8 @@ export function useOptimizationPanel({
   const [pnpResults, setPnpResults] = useState<{camera: string, before: number, after: number, iterations: number}[]>([])
   const [isInitializingCameras, setIsInitializingCameras] = useState(false)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
+  const [bestError, setBestError] = useState<number | null>(null)
+  const [candidateProgress, setCandidateProgressState] = useState<{ current: number; total: number } | null>(null)
 
   const hasAutoStartedRef = useRef(false)
   const prevOptimizeTriggerRef = useRef(optimizeTrigger)
@@ -195,21 +198,32 @@ export function useOptimizationPanel({
 
     // Track last log message for display
     let lastLogMessage = 'Initializing cameras and world points...'
-    const statusMessageRef = { current: lastLogMessage }
-
-    // Set up log callback to capture messages during optimization
-    setLogCallback((message: string) => {
-      // Filter out verbose debug messages, keep phase/status messages
-      if (!message.startsWith('[VP Debug]')) {
-        statusMessageRef.current = message
-      }
-    })
 
     flushSync(() => {
       setIsOptimizing(true)
       setResults(null)
       setPnpResults([])
       setStatusMessage(lastLogMessage)
+      setBestError(null)
+      setCandidateProgressState(null)
+    })
+
+    // Set up log callback to capture messages during optimization
+    // Use flushSync to force immediate React update so user sees progress
+    setLogCallback((message: string) => {
+      // Filter out verbose debug messages, keep phase/status/progress messages
+      if (!message.startsWith('[VP Debug]')) {
+        flushSync(() => {
+          setStatusMessage(message)
+          // Update best error from the logger's tracking
+          const best = getBestResidualSoFar()
+          if (best < Infinity) {
+            setBestError(best)
+          }
+          // Update candidate progress
+          setCandidateProgressState(getCandidateProgress())
+        })
+      }
     })
 
     // Wait for browser to paint: double RAF + small timeout to ensure paint completes
@@ -370,7 +384,8 @@ export function useOptimizationPanel({
         iterations: fineTuneResult.iterations,
         outliers: [],
         medianReprojectionError: undefined,
-        quality: getSolveQuality(fineTuneResult.residual)
+        // Fine-tune doesn't compute median, fall back to residual (less accurate quality)
+        quality: getSolveQuality(undefined, fineTuneResult.residual)
       }
 
       setResults(result)
@@ -509,6 +524,8 @@ export function useOptimizationPanel({
     pnpResults,
     isInitializingCameras,
     statusMessage,
+    bestError,
+    candidateProgress,
     stats,
     canOptimize,
     handleOptimize,

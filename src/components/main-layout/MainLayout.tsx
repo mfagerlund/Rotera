@@ -45,6 +45,40 @@ import { checkOptimizationReadiness } from '../../optimization/optimization-read
 import '../../styles/enhanced-workspace.css'
 import '../../styles/tools.css'
 
+import type { Viewpoint } from '../../entities/viewpoint'
+
+function snapToCoincidentLine(
+  wp: WorldPoint,
+  u: number,
+  v: number,
+  viewpoint: Viewpoint
+): { u: number; v: number } | null {
+  let best: { u: number; v: number } | null = null
+  let bestDist = Infinity
+
+  for (const lineRef of wp.coincidentWithLines) {
+    const line = lineRef as LineEntity
+    const ipsA = viewpoint.getImagePointsForWorldPoint(line.pointA)
+    const ipsB = viewpoint.getImagePointsForWorldPoint(line.pointB)
+    if (ipsA.length === 0 || ipsB.length === 0) continue
+
+    const au = ipsA[0].u, av = ipsA[0].v
+    const bu = ipsB[0].u, bv = ipsB[0].v
+    const abu = bu - au, abv = bv - av
+    const apu = u - au, apv = v - av
+    const t = (apu * abu + apv * abv) / (abu * abu + abv * abv)
+    const su = au + t * abu, sv = av + t * abv
+    const du = su - u, dv = sv - v
+    const dist = du * du + dv * dv
+    if (dist < bestDist) {
+      bestDist = dist
+      best = { u: su, v: sv }
+    }
+  }
+
+  return best
+}
+
 interface MainLayoutProps {
   onReturnToBrowser?: () => void
 }
@@ -475,12 +509,39 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
 
   const handleMovePoint = useCallback((worldPoint: WorldPoint, u: number, v: number) => {
     if (currentImage) {
+      // Snap coincident points onto their line in image space
+      let snappedU = u, snappedV = v
+      if (worldPoint.coincidentWithLines.size > 0) {
+        const snapped = snapToCoincidentLine(worldPoint, u, v, currentImage)
+        if (snapped) { snappedU = snapped.u; snappedV = snapped.v }
+      }
+
       const imagePoint = currentImage.getImagePointsForWorldPoint(worldPoint)[0]
       if (imagePoint) {
-        moveImagePoint(imagePoint, u, v)
+        moveImagePoint(imagePoint, snappedU, snappedV)
       } else {
-        // No ImagePoint on this image - create one
-        addImagePointToWorldPoint(worldPoint, currentImage, u, v)
+        addImagePointToWorldPoint(worldPoint, currentImage, snappedU, snappedV)
+      }
+
+      // Cascade: if this point is an endpoint of any line, reproject coincident points
+      for (const line of worldPoint.connectedLines) {
+        const lineEntity = line as LineEntity
+        if (lineEntity.coincidentPoints.size === 0) continue
+        const ipsA = currentImage.getImagePointsForWorldPoint(lineEntity.pointA)
+        const ipsB = currentImage.getImagePointsForWorldPoint(lineEntity.pointB)
+        if (ipsA.length === 0 || ipsB.length === 0) continue
+        const au = ipsA[0].u, av = ipsA[0].v
+        const bu = ipsB[0].u, bv = ipsB[0].v
+        const abu = bu - au, abv = bv - av
+        const denom = abu * abu + abv * abv
+        if (denom < 1e-10) continue
+        for (const cp of lineEntity.coincidentPoints) {
+          const cpIps = currentImage.getImagePointsForWorldPoint(cp)
+          if (cpIps.length === 0) continue
+          const cpu = cpIps[0].u, cpv = cpIps[0].v
+          const t = ((cpu - au) * abu + (cpv - av) * abv) / denom
+          cpIps[0].setPosition(au + t * abu, av + t * abv)
+        }
       }
     }
   }, [currentImage, moveImagePoint, addImagePointToWorldPoint])
@@ -750,6 +811,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
                 onCreateCircle={(definition) => {}}
                 onConstructionPreviewChange={setConstructionPreview}
                 onClearSelection={clearSelection}
+                onSelectWorldPoint={(wp: WorldPoint) => handleEntityClick(wp, false, false)}
                 currentViewpoint={currentViewpoint || undefined}
                 editingLine={editingLine}
                 onUpdateLine={handleEditLineSave}

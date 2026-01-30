@@ -71,7 +71,7 @@ export const FolderCard: React.FC<FolderCardProps> = ({
         {stats.avgError !== null && (
           <span style={{
             marginLeft: '8px',
-            color: getSolveQuality(stats.avgError).vividColor
+            color: getSolveQuality(undefined, stats.avgError).vividColor
           }}>
             avg: {stats.avgError.toFixed(2)}
             <span style={{ opacity: 0.7, marginLeft: '4px' }}>

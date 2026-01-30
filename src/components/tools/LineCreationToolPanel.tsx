@@ -1,6 +1,6 @@
 import React from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faTriangleExclamation, faXmark } from '@fortawesome/free-solid-svg-icons'
+import { faTriangleExclamation, faXmark, faPlus } from '@fortawesome/free-solid-svg-icons'
 import { WorldPoint } from '../../entities/world-point'
 import { LineDirection } from '../../entities/line'
 import { getEntityKey } from '../../utils/entityKeys'
@@ -150,6 +150,8 @@ interface LineCreationToolPanelProps {
   // Coincident points
   coincidentPoints: WorldPoint[]
   onCoincidentPointsChange: (points: WorldPoint[]) => void
+  onSelectWorldPoint?: (worldPoint: WorldPoint) => void
+  selectedWorldPoints?: WorldPoint[]
 
   // Validation
   lineCheck: { exists: boolean, lineName?: string }
@@ -184,6 +186,8 @@ export const LineCreationToolPanel: React.FC<LineCreationToolPanelProps> = ({
   onLengthValueChange,
   coincidentPoints,
   onCoincidentPointsChange,
+  onSelectWorldPoint,
+  selectedWorldPoints = [],
   lineCheck,
   editMode,
   canCreateLine,
@@ -191,17 +195,30 @@ export const LineCreationToolPanel: React.FC<LineCreationToolPanelProps> = ({
   onCancel,
   onCreateLine
 }) => {
-  // Filter out endpoint points from available coincident points
-  const availableCoincidentPoints = allWorldPoints.filter(
-    p => p !== pointSlot1 && p !== pointSlot2
+  // Points available to add as coincident (not endpoints, not already coincident)
+  const addablePoints = allWorldPoints.filter(
+    p => p !== pointSlot1 && p !== pointSlot2 && !coincidentPoints.includes(p)
   )
 
-  const toggleCoincidentPoint = (point: WorldPoint) => {
-    if (coincidentPoints.includes(point)) {
-      onCoincidentPointsChange(coincidentPoints.filter(p => p !== point))
-    } else {
-      onCoincidentPointsChange([...coincidentPoints, point])
+  // The selected point (from clicking anywhere) that can be added
+  const selectedAddCandidate = selectedWorldPoints.length === 1
+    ? addablePoints.find(p => p === selectedWorldPoints[0]) ?? null
+    : null
+
+  const handleAddSelectedPoint = () => {
+    if (selectedAddCandidate) {
+      onCoincidentPointsChange([...coincidentPoints, selectedAddCandidate])
     }
+  }
+
+  const handleAddFromDropdown = (index: number) => {
+    if (index >= 0 && index < addablePoints.length) {
+      onCoincidentPointsChange([...coincidentPoints, addablePoints[index]])
+    }
+  }
+
+  const handleRemoveCoincidentPoint = (point: WorldPoint) => {
+    onCoincidentPointsChange(coincidentPoints.filter(p => p !== point))
   }
   return (
     <div style={{padding: '6px'}}>
@@ -323,48 +340,86 @@ export const LineCreationToolPanel: React.FC<LineCreationToolPanelProps> = ({
         </div>
 
         {/* Coincident Points */}
-        {availableCoincidentPoints.length > 0 && (
-          <div style={{marginTop: '8px'}}>
-            <label style={{fontSize: '12px', fontWeight: '500', display: 'block', marginBottom: '4px'}}>
-              Coincident Points
-            </label>
-            <div style={{
-              maxHeight: '100px',
-              overflowY: 'auto',
-              border: '1px solid var(--border, #555)',
-              borderRadius: '3px',
-              padding: '4px'
-            }}>
-              {availableCoincidentPoints.map(point => (
-                <label
-                  key={getEntityKey(point)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '2px 4px',
-                    fontSize: '11px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={coincidentPoints.includes(point)}
-                    onChange={() => toggleCoincidentPoint(point)}
-                  />
-                  <span style={{
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '50%',
-                    backgroundColor: point.color,
-                    flexShrink: 0
-                  }} />
-                  {point.getName()}
-                </label>
-              ))}
+        <div style={{marginTop: '8px'}}>
+          <label style={{fontSize: '12px', fontWeight: '500', display: 'block', marginBottom: '4px'}}>
+            Coincident Points {coincidentPoints.length > 0 && `(${coincidentPoints.length})`}
+          </label>
+
+          {/* List of current coincident points */}
+          {coincidentPoints.length > 0 && (
+            <table className="entity-table" style={{marginBottom: '6px'}}>
+              <tbody>
+                {coincidentPoints.map(point => (
+                  <tr
+                    key={getEntityKey(point)}
+                    className={selectedWorldPoints.includes(point) ? 'selected' : ''}
+                    onClick={() => onSelectWorldPoint?.(point)}
+                    style={{cursor: 'pointer'}}
+                  >
+                    <td>
+                      <span
+                        className="color-dot"
+                        style={{backgroundColor: point.color}}
+                      />
+                      {point.getName()}
+                    </td>
+                    <td style={{width: '24px', textAlign: 'right'}}>
+                      <button
+                        className="btn-icon btn-danger-icon"
+                        title={`Remove ${point.getName()} from coincident points`}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleRemoveCoincidentPoint(point)
+                        }}
+                      >
+                        <FontAwesomeIcon icon={faXmark} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          {/* Add coincident point - shows selected point or dropdown */}
+          {addablePoints.length > 0 && (
+            <div style={{display: 'flex', alignItems: 'center', gap: '4px'}}>
+              <select
+                value={selectedAddCandidate ? addablePoints.indexOf(selectedAddCandidate) : -1}
+                onChange={(e) => {
+                  const idx = parseInt(e.target.value)
+                  if (idx >= 0) handleAddFromDropdown(idx)
+                }}
+                className="form-input"
+                style={{flex: 1, fontSize: '12px', height: '24px'}}
+              >
+                <option value={-1}>
+                  {selectedAddCandidate ? selectedAddCandidate.getName() : 'Click a point or select...'}
+                </option>
+                {addablePoints.filter(p => p !== selectedAddCandidate).map((point) => (
+                  <option key={getEntityKey(point)} value={addablePoints.indexOf(point)}>
+                    {point.getName()}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={handleAddSelectedPoint}
+                disabled={!selectedAddCandidate}
+                className="btn-icon"
+                title={selectedAddCandidate
+                  ? `Add ${selectedAddCandidate.getName()} as coincident`
+                  : 'Click a point to add'}
+                style={{
+                  padding: '2px 6px',
+                  fontSize: '12px',
+                  opacity: selectedAddCandidate ? 1 : 0.4
+                }}
+              >
+                <FontAwesomeIcon icon={faPlus} />
+              </button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Duplicate Line Warning */}

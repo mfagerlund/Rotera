@@ -12,6 +12,15 @@ import { VanishingLine } from './vanishing-line/VanishingLine'
 import { DEFAULT_VIEW_SETTINGS } from '../types/visibility'
 import { migrateProject } from './migrations/migrate'
 
+const MAX_SIGNIFICANT_DIGITS = 8
+
+function roundingReplacer(_key: string, value: unknown): unknown {
+  if (typeof value === 'number' && !Number.isInteger(value) && Number.isFinite(value)) {
+    return parseFloat(value.toPrecision(MAX_SIGNIFICANT_DIGITS))
+  }
+  return value
+}
+
 export class Serialization {
 
   static serialize(project: Project, options: SerializationOptions = {}): string {
@@ -55,7 +64,7 @@ export class Serialization {
       lockCameraPoses: project.lockCameraPoses
     }
 
-    return JSON.stringify(dto, null, 2)
+    return JSON.stringify(dto, roundingReplacer, 2)
   }
 
   static deserialize(json: string): Project {

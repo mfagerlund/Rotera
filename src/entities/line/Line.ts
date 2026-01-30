@@ -1,6 +1,6 @@
 import type { ISelectable, SelectableType } from '../../types/selectable'
 import type { IResidualProvider, ValueMap } from '../../optimization/IOptimizable'
-import { V, Value } from 'scalar-autograd'
+import { V, Value, Vec3 } from 'scalar-autograd'
 import * as vec3 from '../../utils/vec3'
 import type { WorldPoint } from '../world-point'
 import type { IConstraint, ILine, IWorldPoint } from '../interfaces'

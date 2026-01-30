@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faLocationDot, faRuler, faSquare, faPaintBrush, faChevronLeft, faLink, faDraftingCompass } from '@fortawesome/free-solid-svg-icons'
+import { faLocationDot, faRuler, faSquare, faPaintBrush, faChevronLeft, faLink, faDraftingCompass, faThumbTack } from '@fortawesome/free-solid-svg-icons'
 import { faCircle as faCircleRegular } from '@fortawesome/free-regular-svg-icons'
 import LineCreationTool from './LineCreationTool'
 import LoopTraceTool from './LoopTraceTool'
@@ -50,6 +50,8 @@ interface CreationToolsManagerProps {
   onCreateCircle: (definition: { center: WorldPoint; radius: number } | { pointA: WorldPoint; pointB: WorldPoint; pointC: WorldPoint }) => void
   onConstructionPreviewChange?: (preview: ConstructionPreview | null) => void
   onClearSelection?: () => void
+  onSelectWorldPoint?: (worldPoint: WorldPoint) => void
+  selectedWorldPoints?: WorldPoint[]
   currentViewpoint?: Viewpoint
   editingLine?: Line | null
   onUpdateLine?: (lineEntity: Line, updatedLine: Partial<LineConstraints & { name: string; color: string; isConstruction: boolean }>) => void
@@ -81,6 +83,8 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = observe
   onCreateCircle,
   onConstructionPreviewChange,
   onClearSelection,
+  onSelectWorldPoint,
+  selectedWorldPoints = [],
   currentViewpoint,
   editingLine = null,
   onUpdateLine,
@@ -216,6 +220,27 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = observe
     return getPlanePoints().length >= 4
   }
 
+  // Coincident action: exactly 1 line + 1 or more points selected
+  const getCoincidentCandidates = (): WorldPoint[] => {
+    if (selectedLines.length !== 1 || selectedPoints.length === 0) return []
+    const line = selectedLines[0]
+    return selectedPoints.filter(p =>
+      p !== line.pointA && p !== line.pointB && !line.hasCoincidentPoint(p)
+    )
+  }
+
+  const coincidentCandidates = getCoincidentCandidates()
+  const canCreateCoincident = coincidentCandidates.length > 0
+
+  const handleCreateCoincident = useCallback(() => {
+    if (selectedLines.length !== 1) return
+    const line = selectedLines[0]
+    const candidates = selectedPoints.filter(p =>
+      p !== line.pointA && p !== line.pointB && !line.hasCoincidentPoint(p)
+    )
+    candidates.forEach(p => line.addCoincidentPoint(p))
+  }, [selectedLines, selectedPoints])
+
   const getLineButtonTooltip = () => {
     if (selectedPoints.length > 2) {
       return 'Select 0, 1, or 2 points to create line'
@@ -327,6 +352,18 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = observe
         </button>
 
         <button
+          className={`tool-button ${canCreateCoincident ? '' : 'disabled'}`}
+          onClick={() => canCreateCoincident && handleCreateCoincident()}
+          disabled={!canCreateCoincident}
+          title={canCreateCoincident
+            ? `Make ${coincidentCandidates.length} point${coincidentCandidates.length !== 1 ? 's' : ''} coincident with ${selectedLines[0].name || 'line'}`
+            : 'Select 1 line + points to make coincident'}
+        >
+          <span className="tool-icon"><FontAwesomeIcon icon={faThumbTack} /></span>
+          {!isCollapsed && <span className="tool-label">Coincident</span>}
+        </button>
+
+        <button
           className={`tool-button ${activeTool === 'orientationPaint' ? 'active' : ''}`}
           onClick={() => handleToolActivation('orientationPaint')}
           title="Paint line orientations - click lines to apply selected direction (D)"
@@ -372,6 +409,8 @@ export const CreationToolsManager: React.FC<CreationToolsManagerProps> = observe
           existingConstraints={[]}
           onUpdateLine={onUpdateLine}
           onDeleteLine={onDeleteLine}
+          onSelectWorldPoint={onSelectWorldPoint}
+          selectedWorldPoints={selectedWorldPoints}
         />
       </FloatingWindow>
 

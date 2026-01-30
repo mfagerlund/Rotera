@@ -1,5 +1,6 @@
 import { RenderParams } from './types'
 import { imagePointToCanvas } from './renderUtils'
+import { getSnappedCanvasPosition } from './coincidentSnap'
 
 export function renderSelectionOverlay(params: RenderParams): void {
   const {
@@ -19,7 +20,7 @@ export function renderSelectionOverlay(params: RenderParams): void {
       return
     }
 
-    const { x, y } = imagePointToCanvas(imagePoint, scale, offset)
+    const { x, y } = getSnappedCanvasPosition(wp, imagePoint, viewpoint, scale, offset)
 
     const time = Date.now() * 0.003
     const pulseRadius = 12 + Math.sin(time) * 2

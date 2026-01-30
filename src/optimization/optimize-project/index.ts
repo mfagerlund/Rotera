@@ -13,7 +13,7 @@ export type { OptimizeProjectOptions, OptimizeProjectResult, SolveQuality } from
 export { getSolveQuality } from './types';
 
 // Re-export utilities from other modules (backwards compatibility)
-export { log, logDebug, clearOptimizationLogs, optimizationLogs, setLogCallback, setVerbosity } from '../optimization-logger';
+export { log, logDebug, logProgress, clearOptimizationLogs, optimizationLogs, setLogCallback, setVerbosity, getBestResidualSoFar, setCandidateProgress, getCandidateProgress } from '../optimization-logger';
 export type { OutlierInfo } from '../outlier-detection';
 export { viewpointInitialVps } from '../state-reset';
 export { resetOptimizationState } from '../state-reset';

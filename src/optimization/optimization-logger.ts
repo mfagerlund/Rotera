@@ -11,6 +11,14 @@ let lastLoggedMessage: string | null = null;
 // Current verbosity level - 'normal' shows only essential logs, 'verbose' shows all
 let verbosity: 'normal' | 'verbose' = 'normal';
 
+// Progress tracking - best residual seen so far in multi-step solve
+let bestResidualSoFar: number = Infinity;
+let lastResidual: number = Infinity;
+
+// Candidate tracking - which candidate is being tested
+let currentCandidate: number = 0;
+let totalCandidates: number = 0;
+
 // Check if we're running in test environment
 const isTest = typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
 
@@ -76,6 +84,58 @@ export function clearOptimizationLogs() {
   optimizationLogs.length = 0;
   loggedOnceMessages.clear();
   lastLoggedMessage = null;
+  bestResidualSoFar = Infinity;
+  lastResidual = Infinity;
+  currentCandidate = 0;
+  totalCandidates = 0;
+}
+
+/**
+ * Log a solve step with progress tracking.
+ * Shows whether we're improving (↓) or worsening (↑) compared to best so far.
+ */
+export function logProgress(stage: string, residual: number, details: string = '') {
+  const isBest = residual < bestResidualSoFar;
+  const trend = residual < lastResidual ? '↓' : residual > lastResidual ? '↑' : '→';
+
+  if (isBest) {
+    bestResidualSoFar = residual;
+  }
+  lastResidual = residual;
+
+  const bestMarker = isBest ? ' ★' : '';
+  const progressInfo = `res=${residual.toFixed(1)} ${trend} (best=${bestResidualSoFar.toFixed(1)})${bestMarker}`;
+
+  log(`[${stage}] ${progressInfo}${details ? ' | ' + details : ''}`);
+}
+
+/**
+ * Get the best residual seen so far.
+ */
+export function getBestResidualSoFar(): number {
+  return bestResidualSoFar;
+}
+
+/**
+ * Set candidate testing progress (for UI display).
+ */
+export function setCandidateProgress(current: number, total: number): void {
+  currentCandidate = current;
+  totalCandidates = total;
+  // Reset best error for each new candidate
+  bestResidualSoFar = Infinity;
+  lastResidual = Infinity;
+}
+
+/**
+ * Get candidate testing progress.
+ * Returns { current, total } or null if not testing candidates.
+ */
+export function getCandidateProgress(): { current: number; total: number } | null {
+  if (totalCandidates === 0) {
+    return null;
+  }
+  return { current: currentCandidate, total: totalCandidates };
 }
 
 /**

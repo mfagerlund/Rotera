@@ -67,6 +67,8 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
     showAdvanced,
     pnpResults,
     statusMessage,
+    bestError,
+    candidateProgress,
     stats,
     canOptimize,
     handleOptimize,
@@ -140,6 +142,8 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = observer(({
         stats={stats}
         isOptimizing={isOptimizing}
         statusMessage={statusMessage}
+        bestError={bestError}
+        candidateProgress={candidateProgress}
       />
 
       {showAdvanced && (

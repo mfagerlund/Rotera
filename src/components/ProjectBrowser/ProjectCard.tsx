@@ -101,8 +101,8 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     const result = batchResult || storedResult
     if (!result) return null
 
-    // Use canonical getSolveQuality - convert null to undefined for the function
-    const quality = getSolveQuality(result.error ?? undefined)
+    // Use canonical getSolveQuality - stored results don't have median, use error as fallback
+    const quality = getSolveQuality(undefined, result.error ?? undefined)
 
     return (
       <span

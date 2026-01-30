@@ -227,6 +227,73 @@ export function checkOptimizationReadiness(project: Project): OptimizationReadin
     })
   }
 
+  // Check for underconstrained points (too few constraints relative to DOF)
+  // A point has 3 DOF (x,y,z). Each camera observation provides 2 constraints (u,v).
+  // A point visible in only 1 camera with no other geometric constraints is underconstrained.
+  const { isolatedPoints, isolatedSubgraphs } = findUnderconstrainedPoints(project, viewpointArray)
+
+  // Report isolated subgraphs (groups of connected points with no path to shared points)
+  // These will solve but with ambiguous depth - they project correctly but 3D position is arbitrary
+  if (isolatedSubgraphs.length > 0) {
+    const totalIsolated = isolatedSubgraphs.reduce((sum, sg) => sum + sg.length, 0)
+    const allNames = isolatedSubgraphs.flat().slice(0, 5).map(p => `"${p.getName()}"`).join(', ')
+    const suffix = totalIsolated > 5 ? `, +${totalIsolated - 5} more` : ''
+    issues.push({
+      type: 'info',
+      code: 'AMBIGUOUS_DEPTH',
+      message: `${totalIsolated} point(s) have ambiguous depth: ${allNames}${suffix}. Visible in only 1 camera - will solve but 3D distance from camera is underdetermined.`,
+      shortMessage: `${totalIsolated} ambiguous depth`
+    })
+  }
+
+  // Report isolated single points (no lines at all - these are worse)
+  if (isolatedPoints.length > 0) {
+    const pointNames = isolatedPoints.slice(0, 5).map(p => `"${p.getName()}"`).join(', ')
+    const suffix = isolatedPoints.length > 5 ? `, +${isolatedPoints.length - 5} more` : ''
+    issues.push({
+      type: 'warning',
+      code: 'UNDERCONSTRAINED_POINTS',
+      message: `${isolatedPoints.length} point(s) with no constraints: ${pointNames}${suffix}. Visible in only 1 camera with no lines - depth is completely arbitrary.`,
+      shortMessage: `${isolatedPoints.length} unconstrained pt(s)`
+    })
+  }
+
+  // Check for duplicate positions among fully constrained points
+  const DUPLICATE_TOLERANCE = 0.001
+  const constrainedPoints = pointArray.filter(p => p.isFullyConstrained())
+  const duplicatePairs: Array<[WorldPoint, WorldPoint, number]> = []
+
+  for (let i = 0; i < constrainedPoints.length; i++) {
+    const p1 = constrainedPoints[i]
+    const pos1 = p1.getEffectiveXyz()
+
+    for (let j = i + 1; j < constrainedPoints.length; j++) {
+      const p2 = constrainedPoints[j]
+      const pos2 = p2.getEffectiveXyz()
+
+      const dx = (pos1[0] ?? 0) - (pos2[0] ?? 0)
+      const dy = (pos1[1] ?? 0) - (pos2[1] ?? 0)
+      const dz = (pos1[2] ?? 0) - (pos2[2] ?? 0)
+      const dist = Math.sqrt(dx * dx + dy * dy + dz * dz)
+
+      if (dist < DUPLICATE_TOLERANCE) {
+        duplicatePairs.push([p1, p2, dist])
+      }
+    }
+  }
+
+  if (duplicatePairs.length > 0) {
+    const pairNames = duplicatePairs.map(([p1, p2, dist]) =>
+      `"${p1.getName()}" and "${p2.getName()}" (${dist.toFixed(6)})`
+    ).join(', ')
+    issues.push({
+      type: 'warning',
+      code: 'DUPLICATE_POSITIONS',
+      message: `Points with identical/near-identical positions: ${pairNames}. This will cause optimization issues.`,
+      shortMessage: `${duplicatePairs.length} duplicate position(s)`
+    })
+  }
+
   const canOptimize = effectiveConstraintCount > 0 && hasEnoughEntities && canInitialize
 
   return {
@@ -279,4 +346,155 @@ export function getOptimizationStatusSummary(readiness: OptimizationReadiness): 
   }
 
   return { status: 'ready', message: 'Ready to optimize', color: '#27ae60' }
+}
+
+interface UnderconstrainedResult {
+  /** Points with no lines at all (completely isolated) */
+  isolatedPoints: WorldPoint[]
+  /** Groups of points connected to each other but not to any shared/constrained point */
+  isolatedSubgraphs: WorldPoint[][]
+}
+
+/**
+ * Find points that are underconstrained - they have more degrees of freedom
+ * than constraints, making optimization unstable or impossible.
+ *
+ * A point has 3 DOF (x, y, z). Constraints come from:
+ * - Each camera observation: 2 constraints (u, v pixel coords)
+ * - Each locked coordinate: 1 constraint per axis
+ * - Lines connecting to constrained points: provides geometric path
+ * - Coplanar constraints with 3+ constrained points: 1 constraint
+ *
+ * A point is underconstrained if visible in only 1 camera AND has no
+ * geometric path (via lines) to points visible in multiple cameras.
+ */
+function findUnderconstrainedPoints(project: Project, enabledViewpoints: Viewpoint[]): UnderconstrainedResult {
+  const isolatedPoints: WorldPoint[] = []
+  const isolatedSubgraphs: WorldPoint[][] = []
+
+  // Build a map of which cameras see each point
+  const pointToViewpoints = new Map<WorldPoint, Set<Viewpoint>>()
+  for (const vp of enabledViewpoints) {
+    for (const ip of vp.imagePoints) {
+      const wp = ip.worldPoint as WorldPoint
+      if (!pointToViewpoints.has(wp)) {
+        pointToViewpoints.set(wp, new Set())
+      }
+      pointToViewpoints.get(wp)!.add(vp)
+    }
+  }
+
+  // Find points visible in 2+ cameras (these can be triangulated)
+  const sharedPoints = new Set<WorldPoint>()
+  for (const [wp, viewpoints] of pointToViewpoints) {
+    if (viewpoints.size >= 2) {
+      sharedPoints.add(wp)
+    }
+  }
+
+  // Also consider fully constrained points as "anchors"
+  for (const wp of project.worldPoints) {
+    if (wp.isFullyConstrained()) {
+      sharedPoints.add(wp)
+    }
+  }
+
+  // Build connectivity graph via lines
+  const adjacency = new Map<WorldPoint, Set<WorldPoint>>()
+  for (const line of project.lines) {
+    const pA = line.pointA
+    const pB = line.pointB
+    if (!adjacency.has(pA)) adjacency.set(pA, new Set())
+    if (!adjacency.has(pB)) adjacency.set(pB, new Set())
+    adjacency.get(pA)!.add(pB)
+    adjacency.get(pB)!.add(pA)
+  }
+
+  // Find all underconstrained points first
+  const underconstrainedSet = new Set<WorldPoint>()
+  for (const [wp, viewpoints] of pointToViewpoints) {
+    // Skip if visible in multiple cameras (can be triangulated)
+    if (viewpoints.size >= 2) continue
+
+    // Skip if fully constrained by locked coords
+    if (wp.isFullyConstrained()) continue
+
+    // Check if this point has any geometric path to a shared/constrained point
+    if (hasPathToSharedPoint(wp, sharedPoints, adjacency)) continue
+
+    underconstrainedSet.add(wp)
+  }
+
+  // Now categorize: isolated points (no lines) vs isolated subgraphs (connected to each other)
+  const visited = new Set<WorldPoint>()
+  for (const wp of underconstrainedSet) {
+    if (visited.has(wp)) continue
+
+    // Find the connected component within underconstrained points
+    const component: WorldPoint[] = []
+    const queue: WorldPoint[] = [wp]
+    visited.add(wp)
+
+    while (queue.length > 0) {
+      const current = queue.shift()!
+      component.push(current)
+
+      const neighbors = adjacency.get(current)
+      if (neighbors) {
+        for (const neighbor of neighbors) {
+          if (underconstrainedSet.has(neighbor) && !visited.has(neighbor)) {
+            visited.add(neighbor)
+            queue.push(neighbor)
+          }
+        }
+      }
+    }
+
+    if (component.length === 1 && !adjacency.has(wp)) {
+      // Single point with no lines at all
+      isolatedPoints.push(wp)
+    } else if (component.length === 1) {
+      // Single point but has lines (to shared points that didn't help)
+      // This means lines exist but don't lead to triangulatable points
+      isolatedPoints.push(wp)
+    } else {
+      // Multiple connected points forming an isolated subgraph
+      isolatedSubgraphs.push(component)
+    }
+  }
+
+  return { isolatedPoints, isolatedSubgraphs }
+}
+
+/**
+ * BFS to check if a point has any path via lines to a shared/constrained point
+ */
+function hasPathToSharedPoint(
+  start: WorldPoint,
+  sharedPoints: Set<WorldPoint>,
+  adjacency: Map<WorldPoint, Set<WorldPoint>>
+): boolean {
+  if (sharedPoints.has(start)) return true
+
+  const visited = new Set<WorldPoint>()
+  const queue: WorldPoint[] = [start]
+  visited.add(start)
+
+  while (queue.length > 0) {
+    const current = queue.shift()!
+    const neighbors = adjacency.get(current)
+    if (!neighbors) continue
+
+    for (const neighbor of neighbors) {
+      if (sharedPoints.has(neighbor)) {
+        return true
+      }
+      if (!visited.has(neighbor)) {
+        visited.add(neighbor)
+        queue.push(neighbor)
+      }
+    }
+  }
+
+  return false
 }

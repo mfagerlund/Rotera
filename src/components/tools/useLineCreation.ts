@@ -110,20 +110,21 @@ export const useLineCreation = ({
       const point = event.detail.worldPoint
 
       if (point === pointSlot1 || point === pointSlot2) {
+        event.preventDefault()
         return
       }
 
       if (!pointSlot1) {
         setPointSlot1(point)
         setActiveSlot(2)
+        event.preventDefault()
       } else if (!pointSlot2) {
         setPointSlot2(point)
         setActiveSlot(null)
-      } else {
-        setPointSlot1(point)
-        setPointSlot2(null)
-        setActiveSlot(2)
+        event.preventDefault()
       }
+      // When both slots are filled, don't preventDefault — let normal
+      // selection handle it so the point populates the coincident add selector
     }
 
     window.addEventListener('lineToolPointClick', handleGlobalPointClick as EventListener)

@@ -65,6 +65,7 @@ interface RightPanelProps {
   onCreateCircle: (definition: CircleDefinition) => void
   onConstructionPreviewChange: (preview: ConstructionPreview | null) => void
   onClearSelection: () => void
+  onSelectWorldPoint: (worldPoint: WorldPoint) => void
   currentViewpoint?: Viewpoint
   editingLine: LineEntity | null
   onUpdateLine: (lineEntity: LineEntity, updatedLine: LineUpdateParams) => void
@@ -102,6 +103,7 @@ export const RightPanel: React.FC<RightPanelProps> = observer(({
   onCreateCircle,
   onConstructionPreviewChange,
   onClearSelection,
+  onSelectWorldPoint,
   currentViewpoint,
   editingLine,
   onUpdateLine,
@@ -140,6 +142,8 @@ export const RightPanel: React.FC<RightPanelProps> = observer(({
         onCreateCircle={onCreateCircle}
         onConstructionPreviewChange={onConstructionPreviewChange}
         onClearSelection={onClearSelection}
+        onSelectWorldPoint={onSelectWorldPoint}
+        selectedWorldPoints={selectedPoints}
         currentViewpoint={currentViewpoint}
         editingLine={editingLine}
         onUpdateLine={onUpdateLine}

@@ -183,4 +183,32 @@ export interface IOptimizableCamera {
    * Set of vanishing lines associated with this camera.
    */
   vanishingLines: Set<any>;
+
+  // ============================================================================
+  // Camera parameters for explicit Jacobian optimization
+  // ============================================================================
+
+  /** Camera position in world coordinates [x, y, z] */
+  position: [number, number, number];
+
+  /** Camera rotation as quaternion [w, x, y, z] */
+  rotation: [number, number, number, number];
+
+  /** Focal length in pixels */
+  focalLength: number;
+
+  /** Aspect ratio (fy/fx) - typically 1 for square pixels */
+  aspectRatio: number;
+
+  /** Principal point X coordinate */
+  principalPointX: number;
+
+  /** Principal point Y coordinate */
+  principalPointY: number;
+
+  /** Radial distortion coefficients [k1, k2, k3] */
+  radialDistortion: [number, number, number];
+
+  /** Tangential distortion coefficients [p1, p2] */
+  tangentialDistortion: [number, number];
 }

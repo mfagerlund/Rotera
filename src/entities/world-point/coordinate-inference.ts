@@ -138,7 +138,37 @@ function inferFromLine(line: Line): { pointsUpdated: number; conflicts: Inferenc
   // The perpendicular axes ARE safe to infer (shared between endpoints), but
   // the direction axis must be left to float for the optimizer to determine.
 
+  // Propagate to/from coincident points using the same perpendicular axes
+  const sharedAxes = getSharedAxes(direction)
+  if (sharedAxes.length > 0) {
+    const source = `coincident with ${line.name}`
+    for (const cp of line.coincidentPoints) {
+      for (const axis of sharedAxes) {
+        // From endpoints to coincident point
+        const r1 = inferAxisFromOther(cp, pointA, axis, source)
+        const r2 = inferAxisFromOther(cp, pointB, axis, source)
+        // From coincident point back to endpoints
+        const r3 = inferAxisFromOther(pointA, cp, axis, source)
+        const r4 = inferAxisFromOther(pointB, cp, axis, source)
+        pointsUpdated += r1.pointsUpdated + r2.pointsUpdated + r3.pointsUpdated + r4.pointsUpdated
+        conflicts.push(...r1.conflicts, ...r2.conflicts, ...r3.conflicts, ...r4.conflicts)
+      }
+    }
+  }
+
   return { pointsUpdated, conflicts }
+}
+
+function getSharedAxes(direction: string): number[] {
+  switch (direction) {
+    case 'x': return [1, 2]   // Y, Z shared
+    case 'y': return [0, 2]   // X, Z shared
+    case 'z': return [0, 1]   // X, Y shared
+    case 'xy': return [2]     // Z shared
+    case 'xz': return [1]     // Y shared
+    case 'yz': return [0]     // X shared
+    default: return []
+  }
 }
 
 function inferAxisFromOther(

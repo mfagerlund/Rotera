@@ -23,22 +23,31 @@ export interface SolveQuality {
 }
 
 /**
- * Compute solve quality from total residual error.
+ * Compute solve quality from RMS reprojection error (preferred) or total residual error (fallback).
  * CANONICAL function - use this everywhere, never duplicate the thresholds.
  *
- * Thresholds:
- * - Excellent (★★★): error < 2.5
- * - Good (★★): error < 5
- * - Poor (★): error >= 5
+ * RMS (Root Mean Square) reprojection error thresholds (in pixels):
+ * - Excellent (★★★): < 3px (very tight, even outliers are small)
+ * - Good (★★): < 6px (acceptable for most use cases)
+ * - Poor (★): >= 6px (significant outliers or systematic error)
+ *
+ * Note: RMS is more sensitive to outliers than median, which is what we want.
+ * A few bad points will raise RMS significantly, alerting the user to problems.
+ *
+ * @param rmsReprojError - RMS reprojection error in pixels (preferred metric)
+ * @param totalError - Total residual error (legacy fallback, not recommended)
  */
-export function getSolveQuality(totalError: number | undefined): SolveQuality {
-  if (totalError === undefined) {
+export function getSolveQuality(rmsReprojError: number | undefined, totalError?: number): SolveQuality {
+  // Use RMS reprojection error if available (sensitive to outliers)
+  const error = rmsReprojError ?? totalError;
+
+  if (error === undefined) {
     return { label: 'Unknown', stars: 0, starDisplay: '?', color: '#666', bgColor: '#f0f0f0', vividColor: '#999' };
   }
-  if (totalError < 2.5) {
+  if (error < 3) {
     return { label: 'Excellent', stars: 3, starDisplay: '★★★', color: '#155724', bgColor: '#d4edda', vividColor: '#2ecc71' };
   }
-  if (totalError < 5) {
+  if (error < 6) {
     return { label: 'Good', stars: 2, starDisplay: '★★', color: '#856404', bgColor: '#fff3cd', vividColor: '#f1c40f' };
   }
   return { label: 'Poor', stars: 1, starDisplay: '★', color: '#721c24', bgColor: '#f8d7da', vividColor: '#e74c3c' };
@@ -99,6 +108,9 @@ export interface OptimizeProjectResult extends SolverResult {
   camerasInitialized?: string[];
   camerasExcluded?: string[];
   outliers?: OutlierInfo[];
+  /** RMS reprojection error in pixels - used for quality assessment (sensitive to outliers) */
+  rmsReprojectionError?: number;
+  /** Median reprojection error in pixels - useful for display but not used for quality */
   medianReprojectionError?: number;
   solveTimeMs?: number;
   /** Solve quality assessment - computed by optimizer, use this instead of computing locally */

@@ -6,6 +6,7 @@ import { Viewpoint } from '../../../entities/viewpoint'
 import { ImageCoords, CanvasOffset } from '../types'
 import { VisibilitySettings, LockSettings } from '../../../types/visibility'
 import { ToolContext } from '../../../types/tool-context'
+import { getSnappedCanvasPosition } from '../renderers/coincidentSnap'
 
 /**
  * Calculate the perpendicular distance from a point to a line segment.
@@ -104,8 +105,7 @@ export function useSelectionManager({
       const imagePoint = image.getImagePointsForWorldPoint(wp)[0]
       if (!imagePoint) return false
 
-      const pointCanvasX = imagePoint.u * scale + offset.x
-      const pointCanvasY = imagePoint.v * scale + offset.y
+      const { x: pointCanvasX, y: pointCanvasY } = getSnappedCanvasPosition(wp, imagePoint, image, scale, offset)
 
       const distance = Math.sqrt(
         Math.pow(pointCanvasX - canvasX, 2) + Math.pow(pointCanvasY - canvasY, 2)

@@ -1,5 +1,6 @@
 import { RenderParams } from './types'
 import { imagePointToCanvas } from './renderUtils'
+import { getSnappedCanvasPosition } from './coincidentSnap'
 
 export function renderWorldPoints(params: RenderParams): void {
   const {
@@ -27,7 +28,7 @@ export function renderWorldPoints(params: RenderParams): void {
       return
     }
 
-    const { x, y } = imagePointToCanvas(imagePoint, scale, offset)
+    const { x, y } = getSnappedCanvasPosition(wp, imagePoint, viewpoint, scale, offset)
 
     const isSelected = selectedPoints.includes(wp)
     const isConstraintHighlighted = constraintHighlightedPoints.includes(wp)
@@ -116,3 +117,4 @@ export function renderWorldPoints(params: RenderParams): void {
     ctx.fillText(wp.name, x, y - 10)
   })
 }
+

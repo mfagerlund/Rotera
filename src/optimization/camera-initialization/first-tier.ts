@@ -106,34 +106,19 @@ export function runFirstTierInitialization(
             vpCameraPoints.add(ip.worldPoint as WorldPoint);
           }
 
-          // Try VP-init for remaining cameras that can use VP
+          // CRITICAL FIX: Do NOT VP-init remaining cameras independently!
+          // Independent VP-init produces inconsistent world frames because VP determines
+          // rotation but not a consistent position. Instead, let remaining cameras use
+          // late PnP after triangulation from the first VP camera.
+          // See comment at top of function for explanation.
           const stillRemaining: Viewpoint[] = [];
           for (const remainingCamera of remainingCameras) {
             // Skip cameras already reliably initialized via PnP
             if (reliablyInitialized.some(ri => ri.camera === remainingCamera)) {
               continue;
             }
-
-            // Check if this camera can VP-init
-            if (canInitializeWithVanishingPoints(remainingCamera, worldPoints, { allowSinglePoint: true })) {
-              const savedRemaining = saveCameraState(remainingCamera);
-              const vpResult2 = tryVPInitForCamera(remainingCamera, worldPoints, {
-                allowSinglePoint: true,
-                lockedPointCount: lockedPoints.length,
-                totalUninitializedCameras: uninitializedCameras.length,
-              });
-
-              if (vpResult2.success) {
-                camerasInitialized.push(remainingCamera.name);
-                camerasInitializedViaVP.add(remainingCamera);
-                log(`[Init First-tier] ${remainingCamera.name} also VP-init`);
-              } else {
-                restoreCameraState(remainingCamera, savedRemaining);
-                stillRemaining.push(remainingCamera);
-              }
-            } else {
-              stillRemaining.push(remainingCamera);
-            }
+            // All other cameras go to late PnP
+            stillRemaining.push(remainingCamera);
           }
 
           // Add any cameras that were reliably PnP'd earlier

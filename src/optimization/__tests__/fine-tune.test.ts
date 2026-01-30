@@ -4,7 +4,7 @@
  * Tests that fine-tune can refine an already-optimized solution.
  */
 
-import { describe, it, expect } from '@jest/globals'
+import { describe, it, expect, beforeEach, afterEach } from '@jest/globals'
 import * as fs from 'fs'
 import * as path from 'path'
 import { loadProjectFromJson } from '../../store/project-serialization'
@@ -15,6 +15,7 @@ import { Viewpoint } from '../../entities/viewpoint'
 import { ImagePoint } from '../../entities/imagePoint'
 import { projectWorldPointToPixelQuaternion } from '../camera-projection'
 import { V, Vec3, Vec4 } from 'scalar-autograd'
+import { setSolverBackend, getSolverBackend, SolverBackend } from '../solver-config'
 
 const CALIBRATION_FIXTURES_DIR = path.join(__dirname, 'fixtures', 'Calibration')
 
@@ -210,5 +211,163 @@ describe('Fine-tune optimization', () => {
     // Note: With constraints included, may not fully converge but should still work
     expect(finalMaxError).toBeLessThanOrEqual(perturbedMaxError) // Should improve or stay same
     expect(finalMaxError).toBeLessThan(5) // Should be reasonably low
+  })
+})
+
+describe('Fine-tune with explicit Jacobian backend', () => {
+  let originalBackend: SolverBackend
+
+  beforeEach(() => {
+    originalBackend = getSolverBackend()
+  })
+
+  afterEach(() => {
+    setSolverBackend(originalBackend)
+  })
+
+  it('explicit-dense backend produces similar results to autodiff', async () => {
+    // Load fixture and run full optimization first (uses autodiff)
+    const fixturePath = path.join(CALIBRATION_FIXTURES_DIR, 'Fixture With 2 Image 2.json')
+    const fixtureJson = fs.readFileSync(fixturePath, 'utf-8')
+    const project = loadProjectFromJson(fixtureJson)
+
+    await optimizeProject(project, {
+      maxIterations: 500,
+      maxAttempts: 1,
+      verbose: false
+    })
+
+    // Save the optimized positions
+    const worldPoints = Array.from(project.worldPoints) as WorldPoint[]
+    const autodiffPositions = new Map<WorldPoint, [number, number, number]>()
+    for (const wp of worldPoints) {
+      if (wp.optimizedXyz) {
+        autodiffPositions.set(wp, [...wp.optimizedXyz] as [number, number, number])
+      }
+    }
+
+    // Run fine-tune with autodiff to get baseline residual
+    setSolverBackend('autodiff')
+    const autodiffResult = fineTuneProject(project, {
+      tolerance: 1e-6,
+      maxIterations: 100,
+      lockCameraPoses: true,
+      verbose: false
+    })
+    console.log(`Autodiff fine-tune: converged=${autodiffResult.converged}, residual=${autodiffResult.residual.toFixed(6)}`)
+
+    // Restore positions and run with explicit-dense
+    for (const [wp, pos] of autodiffPositions) {
+      wp.optimizedXyz = [...pos] as [number, number, number]
+    }
+
+    setSolverBackend('explicit-dense')
+    const explicitDenseResult = fineTuneProject(project, {
+      tolerance: 1e-6,
+      maxIterations: 100,
+      lockCameraPoses: true,
+      verbose: false
+    })
+    console.log(`Explicit-dense fine-tune: converged=${explicitDenseResult.converged}, residual=${explicitDenseResult.residual.toFixed(6)}`)
+
+    // Results should be similar - the key is that explicit produces reasonable results
+    // Dense may not fully converge within 100 iterations, but should still produce low residual
+    expect(explicitDenseResult.residual).toBeLessThan(autodiffResult.residual * 3 + 5)
+  })
+
+  it('explicit-sparse backend produces similar results to autodiff', async () => {
+    // Load fixture and run full optimization first (uses autodiff)
+    const fixturePath = path.join(CALIBRATION_FIXTURES_DIR, 'Fixture With 2 Image 2.json')
+    const fixtureJson = fs.readFileSync(fixturePath, 'utf-8')
+    const project = loadProjectFromJson(fixtureJson)
+
+    await optimizeProject(project, {
+      maxIterations: 500,
+      maxAttempts: 1,
+      verbose: false
+    })
+
+    // Save the optimized positions
+    const worldPoints = Array.from(project.worldPoints) as WorldPoint[]
+    const autodiffPositions = new Map<WorldPoint, [number, number, number]>()
+    for (const wp of worldPoints) {
+      if (wp.optimizedXyz) {
+        autodiffPositions.set(wp, [...wp.optimizedXyz] as [number, number, number])
+      }
+    }
+
+    // Run fine-tune with autodiff to get baseline
+    setSolverBackend('autodiff')
+    const autodiffResult = fineTuneProject(project, {
+      tolerance: 1e-6,
+      maxIterations: 100,
+      lockCameraPoses: true,
+      verbose: false
+    })
+    console.log(`Autodiff fine-tune: converged=${autodiffResult.converged}, residual=${autodiffResult.residual.toFixed(6)}`)
+
+    // Restore positions and run with explicit-sparse
+    for (const [wp, pos] of autodiffPositions) {
+      wp.optimizedXyz = [...pos] as [number, number, number]
+    }
+
+    setSolverBackend('explicit-sparse')
+    const explicitSparseResult = fineTuneProject(project, {
+      tolerance: 1e-6,
+      maxIterations: 100,
+      lockCameraPoses: true,
+      verbose: false
+    })
+    console.log(`Explicit-sparse fine-tune: converged=${explicitSparseResult.converged}, residual=${explicitSparseResult.residual.toFixed(6)}`)
+
+    // Results should be similar
+    expect(explicitSparseResult.converged).toBe(true)
+    expect(explicitSparseResult.residual).toBeLessThan(autodiffResult.residual * 2 + 1)
+  })
+
+  it('explicit backend can recover from perturbations', async () => {
+    // Load and optimize
+    const fixturePath = path.join(CALIBRATION_FIXTURES_DIR, 'Fixture With 2 Image 2.json')
+    const fixtureJson = fs.readFileSync(fixturePath, 'utf-8')
+    const project = loadProjectFromJson(fixtureJson)
+
+    await optimizeProject(project, {
+      maxIterations: 500,
+      maxAttempts: 1,
+      verbose: false
+    })
+
+    // Save original positions
+    const worldPoints = Array.from(project.worldPoints) as WorldPoint[]
+    const originalPositions = new Map<WorldPoint, [number, number, number]>()
+    for (const wp of worldPoints) {
+      if (wp.optimizedXyz && !wp.isFullyLocked()) {
+        originalPositions.set(wp, [...wp.optimizedXyz] as [number, number, number])
+      }
+    }
+
+    // Perturb the world points
+    for (const [wp, orig] of originalPositions) {
+      wp.optimizedXyz = [
+        orig[0] + (Math.random() - 0.5) * 0.3,
+        orig[1] + (Math.random() - 0.5) * 0.3,
+        orig[2] + (Math.random() - 0.5) * 0.3
+      ]
+    }
+
+    // Run with explicit-sparse backend
+    setSolverBackend('explicit-sparse')
+    const result = fineTuneProject(project, {
+      tolerance: 1e-6,
+      maxIterations: 500,
+      lockCameraPoses: true,
+      verbose: false
+    })
+
+    console.log(`Explicit-sparse recovery: converged=${result.converged}, iterations=${result.iterations}, residual=${result.residual.toFixed(6)}`)
+
+    // Should converge and have low residual
+    expect(result.converged).toBe(true)
+    expect(result.residual).toBeLessThan(10)
   })
 })

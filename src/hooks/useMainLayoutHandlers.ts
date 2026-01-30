@@ -36,9 +36,13 @@ export function useMainLayoutHandlers({
   ) => {
     // If Line tool is active, dispatch event for slot filling
     if (activeTool === 'line') {
-      const event = new CustomEvent('lineToolPointClick', { detail: { worldPoint } })
+      const event = new CustomEvent('lineToolPointClick', {
+        detail: { worldPoint },
+        cancelable: true
+      })
       window.dispatchEvent(event)
-      return
+      if (event.defaultPrevented) return
+      // Slots were full — fall through to normal selection
     }
 
     // If Coplanar tool is active, dispatch event for adding points

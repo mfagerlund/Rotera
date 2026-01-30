@@ -31,6 +31,8 @@ interface LineCreationToolProps {
   existingConstraints?: unknown[]
   onUpdateLine?: (lineEntity: Line, updatedLine: Partial<LineConstraints & { name: string; color: string; isConstruction: boolean }>) => void
   onDeleteLine?: (line: Line) => void
+  onSelectWorldPoint?: (worldPoint: WorldPoint) => void
+  selectedWorldPoints?: WorldPoint[]
 }
 
 import { LineDirection } from '../../entities/line'
@@ -59,7 +61,9 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = observer(({
   existingLine,
   existingConstraints = [],
   onUpdateLine,
-  onDeleteLine
+  onDeleteLine,
+  onSelectWorldPoint,
+  selectedWorldPoints = []
 }) => {
   const { confirm, dialog } = useConfirm()
 
@@ -162,6 +166,8 @@ export const LineCreationTool: React.FC<LineCreationToolProps> = observer(({
         onLengthValueChange={setLengthValue}
         coincidentPoints={coincidentPoints}
         onCoincidentPointsChange={setCoincidentPoints}
+        onSelectWorldPoint={onSelectWorldPoint}
+        selectedWorldPoints={selectedWorldPoints}
         lineCheck={lineCheck}
         editMode={editMode}
         canCreateLine={canCreateLine}
