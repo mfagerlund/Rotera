@@ -20,6 +20,7 @@ interface OptimizationResultData {
   outliers: OutlierInfo[]
   medianReprojectionError?: number
   quality: SolveQuality
+  elapsedMs?: number
 }
 
 interface OptimizationResultsProps {
@@ -199,6 +200,12 @@ export const OptimizationResults: React.FC<OptimizationResultsProps> = observer(
             <span>Accuracy:{formatNumber(results.pointAccuracy)}</span>
             <span style={{ margin: '0 4px', opacity: 0.5 }}>|</span>
             <span>Iterations:{results.iterations}</span>
+            {results.elapsedMs !== undefined && (
+              <>
+                <span style={{ margin: '0 4px', opacity: 0.5 }}>|</span>
+                <span>Time:{Math.round(results.elapsedMs)}ms</span>
+              </>
+            )}
           </div>
 
           {/* Outlier Detection */}

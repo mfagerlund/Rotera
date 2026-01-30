@@ -352,6 +352,7 @@ export class ProviderFactory {
               p2: camera.tangentialDistortion[1],
               observedU: imagePoint.u,
               observedV: imagePoint.v,
+              isZReflected: camera.isZReflected,
             }
           )
         );
@@ -375,6 +376,7 @@ export class ProviderFactory {
               p2: camera.tangentialDistortion[1],
               observedU: imagePoint.u,
               observedV: imagePoint.v,
+              isZReflected: camera.isZReflected,
             }
           )
         );

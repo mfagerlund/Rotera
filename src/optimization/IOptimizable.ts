@@ -211,4 +211,10 @@ export interface IOptimizableCamera {
 
   /** Tangential distortion coefficients [p1, p2] */
   tangentialDistortion: [number, number];
+
+  /**
+   * Whether the camera's Z-axis is reflected.
+   * When true, points with negative camera-space Z are in front of camera.
+   */
+  isZReflected: boolean;
 }

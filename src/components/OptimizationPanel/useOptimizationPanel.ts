@@ -276,7 +276,8 @@ export function useOptimizationPanel({
         iterations: solverResult.iterations,
         outliers: solverResult.outliers || [],
         medianReprojectionError: solverResult.medianReprojectionError,
-        quality: solverResult.quality
+        quality: solverResult.quality,
+        elapsedMs: solverResult.solveTimeMs ?? solveTimeMs
       }
 
       setResults(result)
@@ -385,7 +386,8 @@ export function useOptimizationPanel({
         outliers: [],
         medianReprojectionError: undefined,
         // Fine-tune doesn't compute median, fall back to residual (less accurate quality)
-        quality: getSolveQuality(undefined, fineTuneResult.residual)
+        quality: getSolveQuality(undefined, fineTuneResult.residual),
+        elapsedMs: fineTuneResult.solveTimeMs
       }
 
       setResults(result)

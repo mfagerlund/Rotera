@@ -31,6 +31,8 @@ export interface ReprojectionWithIntrinsicsConfig {
   /** Observed pixel coordinates */
   observedU: number;
   observedV: number;
+  /** Whether the camera's Z-axis is reflected */
+  isZReflected?: boolean;
 }
 
 /**
@@ -97,7 +99,13 @@ export function createReprojectionWithIntrinsicsProvider(
     const dcz = q.x * qcy - q.y * qcx;
     const camX = tx + 2 * q.w * qcx + 2 * dcx;
     const camY = ty + 2 * q.w * qcy + 2 * dcy;
-    const camZ = tz + 2 * q.w * qcz + 2 * dcz;
+    let camZ = tz + 2 * q.w * qcz + 2 * dcz;
+
+    // Handle Z-reflection: when isZReflected is true, points with negative camZ
+    // are actually in front of the camera
+    if (config.isZReflected) {
+      camZ = -camZ;
+    }
 
     // Check for point behind camera
     if (camZ <= 0) {

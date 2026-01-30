@@ -227,12 +227,41 @@ export function solveWithExplicitJacobian(
 
   if (verbose) {
     console.log(`[ExplicitJacobian] Variables: ${layout.variableCount}, Providers: ${providers.length}`);
+    console.log(`[ExplicitJacobian] Points: ${points.length}, Lines: ${lines.length}, Cameras: ${cameras.length}, ImagePoints: ${imagePoints.length}`);
+    console.log(`[ExplicitJacobian] Distance: ${distanceConstraints.length}, Angle: ${angleConstraints.length}, Collinear: ${collinearConstraints.length}, Coplanar: ${coplanarConstraints.length}`);
   }
 
   // Build system
   const system = new ExplicitJacobianSystemImpl([...layout.initialValues]);
   for (const provider of providers) {
     system.addResidualProvider(provider);
+  }
+
+  // Debug: compute initial residuals
+  if (verbose) {
+    // Log provider names/types
+    console.log(`[ExplicitJacobian] Provider breakdown:`);
+    let residualIdx = 0;
+    for (let i = 0; i < providers.length; i++) {
+      const p = providers[i];
+      const residuals = p.computeResiduals(system.variables);
+      const maxR = Math.max(...residuals.map(Math.abs));
+      if (maxR > 10) {
+        console.log(`[ExplicitJacobian]   Provider ${i} (${p.name || p.id}): ${residuals.length} residuals, max=|${maxR.toFixed(2)}| (at idx ${residualIdx})`);
+      }
+      residualIdx += residuals.length;
+    }
+
+    const initialResiduals = system.computeAllResiduals();
+    const totalCost = 0.5 * initialResiduals.reduce((sum, r) => sum + r * r, 0);
+    console.log(`[ExplicitJacobian] Initial residuals: ${initialResiduals.length}, total cost: ${totalCost.toFixed(4)}`);
+
+    // Find large residuals
+    for (let i = 0; i < initialResiduals.length; i++) {
+      if (Math.abs(initialResiduals[i]) > 10) {
+        console.log(`[ExplicitJacobian]   LARGE r[${i}] = ${initialResiduals[i].toFixed(4)}`);
+      }
+    }
   }
 
   // Solve

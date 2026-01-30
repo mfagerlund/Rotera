@@ -32,6 +32,8 @@ export interface ReprojectionConfig {
   /** Observed pixel coordinates */
   observedU: number;
   observedV: number;
+  /** Whether the camera's Z-axis is reflected */
+  isZReflected?: boolean;
 }
 
 /**
@@ -90,7 +92,13 @@ export function createReprojectionProvider(
       const dcx = q.y * qcy - q.z * qcx;
       const dcy = q.z * qcx - q.x * qcy;
       const dcz = q.x * qcy - q.y * qcx;
-      const camZ = tz + 2 * q.w * (q.x * ty - q.y * tx) + 2 * (q.x * dcx - q.y * dcy);
+      let camZ = tz + 2 * q.w * (q.x * ty - q.y * tx) + 2 * (q.x * dcx - q.y * dcy);
+
+      // Handle Z-reflection: when isZReflected is true, points with negative camZ
+      // are actually in front of the camera
+      if (config.isZReflected) {
+        camZ = -camZ;
+      }
 
       // Point is behind camera
       if (camZ <= 0) {
@@ -127,7 +135,12 @@ export function createReprojectionProvider(
       const tx = worldPoint.x - cameraPos.x;
       const ty = worldPoint.y - cameraPos.y;
       const tz = worldPoint.z - cameraPos.z;
-      const camZ = tz + 2 * q.w * (q.x * ty - q.y * tx) + 2 * (q.x * (q.z * tx - q.x * tz) - q.y * (q.y * tz - q.z * ty));
+      let camZ = tz + 2 * q.w * (q.x * ty - q.y * tx) + 2 * (q.x * (q.z * tx - q.x * tz) - q.y * (q.y * tz - q.z * ty));
+
+      // Handle Z-reflection
+      if (config.isZReflected) {
+        camZ = -camZ;
+      }
 
       // Point behind camera - return zero gradients (penalty is constant)
       if (camZ <= 0) {

@@ -20,6 +20,19 @@ import type { VanishingLine, VanishingLineAxis } from '../../entities/vanishing-
 import { computeVanishingPoint } from '../vanishing-points';
 import { rotateDirectionByQuaternion } from './utils';
 import type { SolverResult, SolverOptions } from './types';
+import { getSolverBackend } from '../solver-config';
+import { solveWithExplicitJacobian } from '../explicit-jacobian';
+import {
+  isDistanceConstraint,
+  isAngleConstraint,
+  isCollinearPointsConstraint,
+  isCoplanarPointsConstraint,
+  isFixedPointConstraint,
+  isParallelLinesConstraint,
+  isPerpendicularLinesConstraint,
+  isEqualDistancesConstraint,
+  isEqualAnglesConstraint,
+} from '../../entities/constraints/type-guards';
 
 export class ConstraintSystem {
   private tolerance: number;
@@ -98,8 +111,96 @@ export class ConstraintSystem {
    * 3. Constraints compute their residuals
    * 4. Solver optimizes all variables
    * 5. Points extract optimized values with provenance
+   *
+   * Backend selection:
+   * - 'autodiff': Uses scalar-autograd with automatic differentiation
+   * - 'explicit-dense': Uses hand-coded Jacobians with dense LM solver
+   * - 'explicit-sparse': Uses hand-coded Jacobians with sparse CG solver
    */
   solve(): SolverResult {
+    // Check backend configuration
+    const backend = getSolverBackend();
+    if (backend !== 'autodiff') {
+      return this.solveWithExplicitBackend();
+    }
+
+    return this.solveWithAutodiff();
+  }
+
+  /**
+   * Solve using explicit Jacobian backend (dense or sparse).
+   */
+  private solveWithExplicitBackend(): SolverResult {
+    const points = Array.from(this.points);
+    const lines = Array.from(this.lines);
+    const cameras = Array.from(this.cameras);
+    const allImagePoints = Array.from(this.imagePoints);
+    const constraints = Array.from(this.constraints);
+
+    // Separate constraints by type
+    const distanceConstraints = constraints.filter(isDistanceConstraint);
+    const angleConstraints = constraints.filter(isAngleConstraint);
+    const collinearConstraints = constraints.filter(isCollinearPointsConstraint);
+    const coplanarConstraints = constraints.filter(isCoplanarPointsConstraint);
+    const fixedPointConstraints = constraints.filter(isFixedPointConstraint);
+    const parallelLinesConstraints = constraints.filter(isParallelLinesConstraint);
+    const perpendicularLinesConstraints = constraints.filter(isPerpendicularLinesConstraint);
+    const equalDistancesConstraints = constraints.filter(isEqualDistancesConstraint);
+    const equalAnglesConstraints = constraints.filter(isEqualAnglesConstraint);
+
+    // Determine intrinsics optimization
+    const optimizeIntrinsics = typeof this.optimizeCameraIntrinsics === 'boolean'
+      ? this.optimizeCameraIntrinsics
+      : false; // For function-based, default to false (explicit system doesn't support per-camera)
+
+    try {
+      const result = solveWithExplicitJacobian(
+        points,
+        lines,
+        cameras,
+        allImagePoints,
+        distanceConstraints,
+        angleConstraints,
+        collinearConstraints,
+        coplanarConstraints,
+        fixedPointConstraints,
+        parallelLinesConstraints,
+        perpendicularLinesConstraints,
+        equalDistancesConstraints,
+        equalAnglesConstraints,
+        {
+          maxIterations: this.maxIterations,
+          tolerance: this.tolerance,
+          optimizePose: true, // Individual cameras control via isPoseLocked
+          optimizeIntrinsics,
+          regularizationWeight: this.regularizationWeight,
+          verbose: this.verbose,
+        }
+      );
+
+      return {
+        converged: result.converged,
+        iterations: result.iterations,
+        residual: result.finalCost,
+        error: result.converged ? null : 'Did not converge',
+      };
+    } catch (error) {
+      if (this.verbose) {
+        console.error('[ConstraintSystem] Explicit backend error:', error);
+      }
+      return {
+        converged: false,
+        iterations: 0,
+        residual: Infinity,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Solve using autodiff backend (scalar-autograd).
+   */
+  private solveWithAutodiff(): SolverResult {
     // 1. Build ValueMap by asking each entity to add itself
     const variables: Value[] = [];
     const valueMap: ValueMap = {
