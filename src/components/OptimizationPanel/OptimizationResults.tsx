@@ -21,6 +21,7 @@ interface OptimizationResultData {
   medianReprojectionError?: number
   quality: SolveQuality
   elapsedMs?: number
+  solver?: string
 }
 
 interface OptimizationResultsProps {
@@ -204,6 +205,12 @@ export const OptimizationResults: React.FC<OptimizationResultsProps> = observer(
               <>
                 <span style={{ margin: '0 4px', opacity: 0.5 }}>|</span>
                 <span>Time:{Math.round(results.elapsedMs)}ms</span>
+              </>
+            )}
+            {results.solver && (
+              <>
+                <span style={{ margin: '0 4px', opacity: 0.5 }}>|</span>
+                <span>Solver:{results.solver}</span>
               </>
             )}
           </div>

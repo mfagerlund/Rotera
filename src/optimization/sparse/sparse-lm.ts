@@ -53,7 +53,13 @@ export function solveSparseLM(
   const initialCost = cost;
 
   if (opts.verbose) {
-    console.log(`[Sparse LM] Initial cost: ${cost.toFixed(6)}`);
+    console.log(`[Sparse LM] Initial cost: ${cost.toFixed(6)}, n=${n} variables, ${residuals.length} residuals`);
+  }
+
+  // Always warn if there are issues
+  const hasNaN = residuals.some(r => isNaN(r) || !isFinite(r));
+  if (hasNaN) {
+    console.warn(`[Sparse LM] WARNING: Initial residuals contain NaN or Infinity!`);
   }
 
   let converged = false;
@@ -67,9 +73,26 @@ export function solveSparseLM(
       n
     );
 
+    // Check for empty Jacobian
+    if (J.nonZeroCount === 0) {
+      console.warn(`[Sparse LM] WARNING: Jacobian is completely empty! rows=${J.rows}, cols=${J.cols}`);
+    }
+
     // Compute J^T J and J^T r
     const JtJ = J.computeJtJ();
     const Jtr = J.computeJtr(residuals);
+
+    // Check for issues in the first iteration
+    if (iter === 0 && J.nonZeroCount > 0) {
+      const maxJtr = Math.max(...Jtr.map(Math.abs));
+      const jtjDiag = JtJ.getDiagonal();
+      const maxDiag = Math.max(...jtjDiag.map(Math.abs));
+      const minDiag = Math.min(...jtjDiag.filter(d => d > 0));
+      const condEst = maxDiag / Math.max(minDiag, 1e-15);
+      if (opts.verbose || maxJtr < 1e-6 || condEst > 1e12) {
+        console.log(`[Sparse LM] J: ${J.rows}x${J.cols}, nnz=${J.nonZeroCount}, JtJ maxDiag=${maxDiag.toExponential(3)}, minDiag=${minDiag.toExponential(3)}, condEst=${condEst.toExponential(3)}, maxJtr=${maxJtr.toExponential(3)}`);
+      }
+    }
 
     // Check gradient convergence
     const gradNorm = Math.sqrt(Jtr.reduce((sum, v) => sum + v * v, 0));
@@ -162,6 +185,13 @@ export function solveSparseLM(
         // Increase damping
         lambda = Math.min(maxDamping, lambda * dampingIncrease);
 
+        // Log first rejection in detail to help diagnose
+        if (iter === 0 && attempts === 1) {
+          const hasNaNStep = step.some(s => isNaN(s) || !isFinite(s));
+          const hasNaNNewResid = newResiduals.some(r => isNaN(r) || !isFinite(r));
+          console.warn(`[Sparse LM] First step rejected: oldCost=${cost.toFixed(4)}, newCost=${newCost.toFixed(4)}, stepNorm=${stepNorm.toExponential(3)}, hasNaNStep=${hasNaNStep}, hasNaNResid=${hasNaNNewResid}, CG iters=${cgResult.iterations}, CG converged=${cgResult.converged}`);
+        }
+
         if (opts.verbose && attempts === maxAttempts) {
           console.log(`[Sparse LM] Iter ${iter + 1}: step rejected, λ ${lambda.toExponential(3)}`);
         }
@@ -171,9 +201,8 @@ export function solveSparseLM(
     if (converged) break;
 
     if (!stepAccepted) {
-      if (opts.verbose) {
-        console.log(`[Sparse LM] Failed to find descent step after ${maxAttempts} attempts`);
-      }
+      // Always log when we fail to find a descent step - this is unexpected
+      console.warn(`[Sparse LM] Failed to find descent step at iter ${iter} after ${maxAttempts} attempts, cost=${cost.toFixed(4)}, gradNorm=${gradNorm.toExponential(3)}, lambda=${lambda.toExponential(3)}`);
       break;
     }
   }
