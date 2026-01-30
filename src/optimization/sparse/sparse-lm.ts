@@ -29,6 +29,9 @@ export function solveSparseLM(
   system: ExplicitJacobianSystem,
   options: Partial<LMOptions> = {}
 ): LMResult {
+  // ALWAYS log entry to verify code is reached
+  console.log(`[Sparse LM] ENTRY: ${system.variables.length} vars, ${system.residualProviders.length} providers`);
+
   const opts = { ...DEFAULT_LM_OPTIONS, ...options };
   const {
     maxIterations,
@@ -206,6 +209,9 @@ export function solveSparseLM(
       break;
     }
   }
+
+  // ALWAYS log exit
+  console.log(`[Sparse LM] EXIT: converged=${converged}, iter=${iter}, cost=${cost.toFixed(4)}`);
 
   return {
     converged,
