@@ -26,7 +26,7 @@ import type { Project } from '../../entities/project'
 import { checkOptimizationReadiness, getOptimizationStatusSummary } from '../../optimization/optimization-readiness'
 import { AboutModal } from '../AboutModal'
 import { helpLabelsStore } from '../../store/help-labels-store'
-import { getSolverBackend, setSolverBackend, SolverBackend } from '../../optimization/solver-config'
+import { getSolverBackend, setSolverBackend, SolverBackend, useSparseSolve, setUseSparseSolve } from '../../optimization/solver-config'
 
 interface MainToolbarProps {
   // Workspace
@@ -109,11 +109,14 @@ export const MainToolbar: React.FC<MainToolbarProps> = observer(({
   const [fileMenuOpen, setFileMenuOpen] = React.useState(false)
   const [showAboutModal, setShowAboutModal] = React.useState(false)
   const [solverBackend, setSolverBackendState] = React.useState<SolverBackend>(getSolverBackend())
+  const [sparseSolveEnabled, setSparseSolveEnabled] = React.useState(useSparseSolve())
   const fileMenuRef = useRef<HTMLDivElement>(null)
 
-  const handleSolverToggle = (backend: SolverBackend) => {
+  const handleSolverToggle = (backend: SolverBackend, enableSparseSolve = false) => {
     setSolverBackend(backend)
     setSolverBackendState(backend)
+    setUseSparseSolve(enableSparseSolve)
+    setSparseSolveEnabled(enableSparseSolve)
   }
 
   // Close file menu when clicking outside
@@ -399,14 +402,30 @@ export const MainToolbar: React.FC<MainToolbarProps> = observer(({
 
       <div className="solver-toggle" title="Select optimization solver backend">
         <button
-          className={`solver-toggle__option ${solverBackend === 'autodiff' ? 'solver-toggle__option--active' : ''}`}
-          onClick={() => handleSolverToggle('autodiff')}
+          className={`solver-toggle__option ${solverBackend === 'autodiff' && !sparseSolveEnabled ? 'solver-toggle__option--active' : ''}`}
+          onClick={() => handleSolverToggle('autodiff', false)}
+          title="Autodiff with dense Cholesky solver"
         >
           Autodiff
         </button>
         <button
+          className={`solver-toggle__option ${solverBackend === 'autodiff' && sparseSolveEnabled ? 'solver-toggle__option--active' : ''}`}
+          onClick={() => handleSolverToggle('autodiff', true)}
+          title="Autodiff with sparse CG solver (validated)"
+        >
+          Autodiff-Sparse
+        </button>
+        <button
+          className={`solver-toggle__option ${solverBackend === 'numerical-sparse' ? 'solver-toggle__option--active' : ''}`}
+          onClick={() => handleSolverToggle('numerical-sparse', false)}
+          title="Sparse solver with numerical derivatives (for validation)"
+        >
+          Num-Sparse
+        </button>
+        <button
           className={`solver-toggle__option ${solverBackend === 'explicit-sparse' ? 'solver-toggle__option--active' : ''}`}
-          onClick={() => handleSolverToggle('explicit-sparse')}
+          onClick={() => handleSolverToggle('explicit-sparse', false)}
+          title="Sparse solver with analytical gradients"
         >
           Sparse
         </button>

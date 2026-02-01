@@ -15,7 +15,7 @@ import { Viewpoint } from '../../entities/viewpoint'
 import { ImagePoint } from '../../entities/imagePoint'
 import { projectWorldPointToPixelQuaternion } from '../camera-projection'
 import { V, Vec3, Vec4 } from 'scalar-autograd'
-import { setSolverBackend, getSolverBackend, SolverBackend } from '../solver-config'
+import { setSolverBackend, getSolverBackend, SolverBackend, setUseSparseSolve, useSparseSolve } from '../solver-config'
 
 const CALIBRATION_FIXTURES_DIR = path.join(__dirname, 'fixtures', 'Calibration')
 
@@ -211,6 +211,64 @@ describe('Fine-tune optimization', () => {
     // Note: With constraints included, may not fully converge but should still work
     expect(finalMaxError).toBeLessThanOrEqual(perturbedMaxError) // Should improve or stay same
     expect(finalMaxError).toBeLessThan(5) // Should be reasonably low
+  })
+})
+
+describe('Fine-tune with sparse solve (Step 3)', () => {
+  let originalSparseSolve: boolean
+
+  beforeEach(() => {
+    originalSparseSolve = useSparseSolve()
+  })
+
+  afterEach(() => {
+    setUseSparseSolve(originalSparseSolve)
+  })
+
+  it('should produce identical results with sparse CG vs dense Cholesky', async () => {
+    // Load and optimize with dense Cholesky
+    const fixturePath = path.join(CALIBRATION_FIXTURES_DIR, 'Fixture With 2 Image 2.json')
+    const fixtureJson = fs.readFileSync(fixturePath, 'utf-8')
+
+    // First run with dense (default)
+    setUseSparseSolve(false)
+    const projectDense = loadProjectFromJson(fixtureJson)
+    await optimizeProject(projectDense, {
+      maxIterations: 500,
+      maxAttempts: 1,
+      verbose: false
+    })
+    const denseResult = fineTuneProject(projectDense, {
+      tolerance: 1e-6,
+      maxIterations: 100,
+      lockCameraPoses: true,
+      verbose: false
+    })
+
+    // Then run with sparse CG
+    setUseSparseSolve(true)
+    const projectSparse = loadProjectFromJson(fixtureJson)
+    await optimizeProject(projectSparse, {
+      maxIterations: 500,
+      maxAttempts: 1,
+      verbose: false
+    })
+    const sparseResult = fineTuneProject(projectSparse, {
+      tolerance: 1e-6,
+      maxIterations: 100,
+      lockCameraPoses: true,
+      verbose: false
+    })
+
+    console.log(`Dense Cholesky: converged=${denseResult.converged}, residual=${denseResult.residual.toFixed(4)}`)
+    console.log(`Sparse CG: converged=${sparseResult.converged}, residual=${sparseResult.residual.toFixed(4)}`)
+
+    // Both should converge
+    expect(denseResult.converged).toBe(true)
+    expect(sparseResult.converged).toBe(true)
+
+    // Residuals should be very close
+    expect(sparseResult.residual).toBeCloseTo(denseResult.residual, 2)
   })
 })
 

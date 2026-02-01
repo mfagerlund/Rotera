@@ -10,7 +10,11 @@
  * - Constraints compute their own residuals
  */
 
-import { Value, V, nonlinearLeastSquares } from 'scalar-autograd';
+import { Value, V } from 'scalar-autograd';
+import { transparentLM, type TransparentLMResult } from '../autodiff-dense-lm';
+import { solveSparseLM } from '../sparse/sparse-lm';
+import { SparseMatrix } from '../sparse/SparseMatrix';
+import { conjugateGradientDamped } from '../sparse/cg-solvers';
 import type { ValueMap, IOptimizableCamera } from '../IOptimizable';
 import type { WorldPoint } from '../../entities/world-point/WorldPoint';
 import { Line } from '../../entities/line/Line';
@@ -20,7 +24,7 @@ import type { VanishingLine, VanishingLineAxis } from '../../entities/vanishing-
 import { computeVanishingPoint } from '../vanishing-points';
 import { rotateDirectionByQuaternion } from './utils';
 import type { SolverResult, SolverOptions } from './types';
-import { getSolverBackend } from '../solver-config';
+import { getSolverBackend, useSparseSolve } from '../solver-config';
 import { solveWithExplicitJacobian } from '../explicit-jacobian';
 import {
   isDistanceConstraint,
@@ -461,14 +465,27 @@ export class ConstraintSystem {
       // Use gradientTolerance for early stopping when progress stalls.
       // This helps with weakly-constrained points (e.g., single-view coplanar)
       // where the cost decreases very slowly but the solution is already good.
-      const result = nonlinearLeastSquares(variables, residualFn, {
+      // Use transparent LM solver that exposes Jacobian (for sparse validation)
+      //
+      // When USE_SPARSE_SOLVE is enabled (Step 3 of sparse validation),
+      // uses sparse CG instead of dense Cholesky for the normal equations.
+      const result = transparentLM(variables, residualFn, {
         costTolerance: this.tolerance,
         gradientTolerance: this.tolerance * 10, // Stop when gradient is small
         maxIterations: this.maxIterations,
         initialDamping: this.damping,
         adaptiveDamping: true,
         verbose: this.verbose,
+        useSparseLinearSolve: useSparseSolve(),
       });
+
+      // === SPARSE VALIDATION ===
+      // Run sparse solver in parallel using the same Jacobian from the dense solve.
+      // This validates that the sparse solver produces equivalent results.
+      // If they diverge, it indicates a bug in the sparse solver.
+      if (result.jacobian.length > 0 && result.jacobian[0].length > 0) {
+        this.validateSparseAgainstDense(result, variables);
+      }
 
       // Update points with solved values (using entity-driven approach)
       for (const point of this.points) {
@@ -606,6 +623,202 @@ export class ConstraintSystem {
     }
 
     // All entities have symmetric push/pop residuals
+  }
+
+  /**
+   * Validate sparse solver against dense solver results.
+   *
+   * Takes the Jacobian from the dense solve and validates:
+   * 1. J^T r (gradient) matches between sparse and dense
+   * 2. J^T J (normal equations matrix) matches between sparse and dense
+   * 3. LM step (delta) matches between Cholesky (dense) and CG (sparse)
+   *
+   * This is the key self-validation mechanism: if sparse diverges, we catch it
+   * immediately rather than silently producing wrong results.
+   */
+  private validateSparseAgainstDense(
+    denseResult: TransparentLMResult,
+    _variables: Value[]
+  ): void {
+    const { jacobian, residualValues } = denseResult;
+    const numResiduals = jacobian.length;
+    const numVariables = jacobian[0]?.length ?? 0;
+
+    if (numResiduals === 0 || numVariables === 0) return;
+
+    // Build sparse matrix from dense Jacobian
+    const sparseJ = SparseMatrix.fromDense(jacobian);
+
+    // === STEP 1: Validate J^T r ===
+    const sparseJtr = sparseJ.computeJtr(residualValues);
+
+    const denseJtr = new Array(numVariables).fill(0);
+    for (let j = 0; j < numVariables; j++) {
+      for (let i = 0; i < numResiduals; i++) {
+        denseJtr[j] += jacobian[i][j] * residualValues[i];
+      }
+    }
+
+    let maxJtrDiff = 0;
+    for (let j = 0; j < numVariables; j++) {
+      maxJtrDiff = Math.max(maxJtrDiff, Math.abs(sparseJtr[j] - denseJtr[j]));
+    }
+
+    const jtrMagnitude = Math.sqrt(denseJtr.reduce((s, v) => s + v * v, 0));
+    const jtrTolerance = Math.max(1e-10, jtrMagnitude * 1e-8);
+
+    if (maxJtrDiff > jtrTolerance) {
+      throw new Error(
+        `[SparseValidation] J^T r diverged: maxDiff=${maxJtrDiff.toExponential(2)}, ` +
+        `magnitude=${jtrMagnitude.toFixed(4)}, tolerance=${jtrTolerance.toExponential(2)}`
+      );
+    }
+
+    // === STEP 2: Validate J^T J ===
+    const sparseJtJ = sparseJ.computeJtJ();
+
+    // Compute dense J^T J
+    const denseJtJ: number[][] = new Array(numVariables);
+    for (let i = 0; i < numVariables; i++) {
+      denseJtJ[i] = new Array(numVariables).fill(0);
+      for (let j = 0; j <= i; j++) {
+        let sum = 0;
+        for (let k = 0; k < numResiduals; k++) {
+          sum += jacobian[k][i] * jacobian[k][j];
+        }
+        denseJtJ[i][j] = sum;
+        if (i !== j) denseJtJ[j][i] = sum;
+      }
+    }
+
+    // Compare J^T J values
+    let maxJtJDiff = 0;
+    let jtjMagnitude = 0;
+    for (let i = 0; i < numVariables; i++) {
+      for (let j = 0; j < numVariables; j++) {
+        const sparseVal = sparseJtJ.get(i, j);
+        const denseVal = denseJtJ[i][j];
+        maxJtJDiff = Math.max(maxJtJDiff, Math.abs(sparseVal - denseVal));
+        jtjMagnitude = Math.max(jtjMagnitude, Math.abs(denseVal));
+      }
+    }
+
+    const jtjTolerance = Math.max(1e-10, jtjMagnitude * 1e-8);
+
+    if (maxJtJDiff > jtjTolerance) {
+      throw new Error(
+        `[SparseValidation] J^T J diverged: maxDiff=${maxJtJDiff.toExponential(2)}, ` +
+        `magnitude=${jtjMagnitude.toFixed(4)}, tolerance=${jtjTolerance.toExponential(2)}`
+      );
+    }
+
+    // === STEP 3: Validate LM step (delta) ===
+    // Solve (J^T J + λI) * delta = -J^T r using both methods
+    const lambda = this.damping; // Use same damping as solver
+
+    // Dense solve via Cholesky
+    const denseDelta = this.solveDenseNormalEquations(denseJtJ, denseJtr, lambda, numVariables);
+
+    // Sparse solve via CG
+    // Note: CG solves Ax = b, we have (J^T J + λI) x = -J^T r
+    const negJtr = denseJtr.map(v => -v);
+    const cgResult = conjugateGradientDamped(sparseJtJ, negJtr, lambda, undefined, numVariables * 2, 1e-12);
+    const sparseDelta = cgResult.x;
+
+    // Compare deltas
+    let maxDeltaDiff = 0;
+    let deltaMagnitude = 0;
+    for (let j = 0; j < numVariables; j++) {
+      maxDeltaDiff = Math.max(maxDeltaDiff, Math.abs(denseDelta[j] - sparseDelta[j]));
+      deltaMagnitude = Math.max(deltaMagnitude, Math.abs(denseDelta[j]));
+    }
+
+    const deltaTolerance = Math.max(1e-8, deltaMagnitude * 1e-4);
+
+    if (maxDeltaDiff > deltaTolerance) {
+      throw new Error(
+        `[SparseValidation] LM step diverged: maxDiff=${maxDeltaDiff.toExponential(2)}, ` +
+        `magnitude=${deltaMagnitude.toFixed(4)}, tolerance=${deltaTolerance.toExponential(2)}, ` +
+        `CG converged=${cgResult.converged}, CG iters=${cgResult.iterations}`
+      );
+    }
+
+    // Log success in verbose mode
+    if (this.verbose) {
+      console.log(
+        `[SparseValidation] PASS: J^T r (diff=${maxJtrDiff.toExponential(2)}), ` +
+        `J^T J (diff=${maxJtJDiff.toExponential(2)}), ` +
+        `delta (diff=${maxDeltaDiff.toExponential(2)}), ` +
+        `${numResiduals}x${numVariables} Jacobian`
+      );
+    }
+  }
+
+  /**
+   * Solve (J^T J + λI) * x = -J^T r using dense Cholesky decomposition.
+   * Used for validation comparison with sparse CG solver.
+   */
+  private solveDenseNormalEquations(
+    JtJ: number[][],
+    Jtr: number[],
+    lambda: number,
+    n: number
+  ): number[] {
+    // Copy JtJ and add damping
+    const A: number[][] = new Array(n);
+    for (let i = 0; i < n; i++) {
+      A[i] = [...JtJ[i]];
+      A[i][i] += lambda;
+    }
+
+    // Right-hand side is -J^T r
+    const b = Jtr.map(v => -v);
+
+    // Cholesky decomposition: A = L L^T
+    const L: number[][] = new Array(n);
+    for (let i = 0; i < n; i++) {
+      L[i] = new Array(n).fill(0);
+    }
+
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j <= i; j++) {
+        let sum = A[i][j];
+        for (let k = 0; k < j; k++) {
+          sum -= L[i][k] * L[j][k];
+        }
+        if (i === j) {
+          if (sum <= 0) {
+            // Matrix not positive definite - return zeros
+            return new Array(n).fill(0);
+          }
+          L[i][j] = Math.sqrt(sum);
+        } else {
+          L[i][j] = sum / L[j][j];
+        }
+      }
+    }
+
+    // Forward substitution: L y = b
+    const y = new Array(n);
+    for (let i = 0; i < n; i++) {
+      let sum = b[i];
+      for (let j = 0; j < i; j++) {
+        sum -= L[i][j] * y[j];
+      }
+      y[i] = sum / L[i][i];
+    }
+
+    // Back substitution: L^T x = y
+    const x = new Array(n);
+    for (let i = n - 1; i >= 0; i--) {
+      let sum = y[i];
+      for (let j = i + 1; j < n; j++) {
+        sum -= L[j][i] * x[j];
+      }
+      x[i] = sum / L[i][i];
+    }
+
+    return x;
   }
 
   /**
