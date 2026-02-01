@@ -217,14 +217,24 @@ function solveSparseNormalEquations(
   const negJtr = Jtr.map(v => -v);
 
   // Solve using CG with damping
+  // Use more iterations for better convergence on ill-conditioned systems
+  const maxCgIter = Math.max(numVariables * 10, 1000);
   const cgResult = conjugateGradientDamped(
     sparseJtJ,
     negJtr,
     lambda,
     undefined,        // Initial guess (zero)
-    numVariables * 2, // Max iterations
-    1e-12             // Tolerance
+    maxCgIter,
+    1e-10             // Practical tolerance (1e-10 is more than enough)
   );
+
+  // Only warn if residual is actually large (not just missing tight tolerance)
+  if (!cgResult.converged && cgResult.residualNorm > 1e-8) {
+    console.warn(
+      `[SparseLM] CG did not converge: ${cgResult.iterations}/${maxCgIter} iters, ` +
+      `residual=${cgResult.residualNorm.toExponential(2)}`
+    );
+  }
 
   return cgResult.x;
 }
@@ -314,12 +324,35 @@ export function transparentLM(
     let innerIterations = 0;
 
     while (!accepted && innerIterations < maxInnerIterations) {
-      // Solve for step
       // Solve for step using either sparse CG or dense Cholesky
       const effectiveLambda = adaptiveDamping ? lambda : 0;
+
+      // Always compute dense delta for validation
+      const denseDelta = solveDenseNormalEquations(jacobian, residuals, effectiveLambda, numVariables);
+
+      // Use sparse if enabled, otherwise use dense
       const delta = useSparseLinearSolve
         ? solveSparseNormalEquations(jacobian, residuals, effectiveLambda, numVariables)
-        : solveDenseNormalEquations(jacobian, residuals, effectiveLambda, numVariables);
+        : denseDelta;
+
+      // Validate sparse matches dense on every step (when sparse is enabled)
+      if (useSparseLinearSolve) {
+        let maxDeltaDiff = 0;
+        let deltaMagnitude = 0;
+        for (let j = 0; j < numVariables; j++) {
+          maxDeltaDiff = Math.max(maxDeltaDiff, Math.abs(delta[j] - denseDelta[j]));
+          deltaMagnitude = Math.max(deltaMagnitude, Math.abs(denseDelta[j]));
+        }
+        // Allow 1% relative error or 1e-6 absolute (CG may not achieve machine precision)
+        const deltaTolerance = Math.max(1e-6, deltaMagnitude * 0.01);
+        if (maxDeltaDiff > deltaTolerance) {
+          throw new Error(
+            `[SparseLM] Step diverged at iter ${iter}: maxDiff=${maxDeltaDiff.toExponential(2)}, ` +
+            `magnitude=${deltaMagnitude.toFixed(4)}, tolerance=${deltaTolerance.toExponential(2)}, ` +
+            `lambda=${effectiveLambda.toExponential(2)}`
+          );
+        }
+      }
 
       // Check step size
       const deltaNorm = Math.sqrt(delta.reduce((sum, d) => sum + d * d, 0));
