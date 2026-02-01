@@ -26,6 +26,7 @@ import { ExplicitJacobianSystemImpl } from '../ExplicitJacobianSystem';
 import { solveDenseLM } from '../dense-lm';
 import { solveSparseLM } from '../../sparse/sparse-lm';
 import { getSolverBackend } from '../../solver-config';
+import { wrapAllWithNumericalJacobian } from '../numerical-wrapper';
 
 /** Options for the explicit optimization */
 export interface ExplicitOptimizationOptions {
@@ -225,8 +226,11 @@ export function solveWithExplicitJacobian(
     }
   }
 
+  // Log setup info
+  const totalResiduals = providers.reduce((sum, p) => sum + p.residualCount, 0);
+
   if (verbose) {
-    console.log(`[ExplicitJacobian] Variables: ${layout.variableCount}, Providers: ${providers.length}`);
+    console.log(`[ExplicitJacobian] Variables: ${layout.variableCount}, Providers: ${providers.length}, TotalResiduals: ${totalResiduals}`);
     console.log(`[ExplicitJacobian] Points: ${points.length}, Lines: ${lines.length}, Cameras: ${cameras.length}, ImagePoints: ${imagePoints.length}`);
     console.log(`[ExplicitJacobian] Distance: ${distanceConstraints.length}, Angle: ${angleConstraints.length}, Collinear: ${collinearConstraints.length}, Coplanar: ${coplanarConstraints.length}`);
   }
@@ -269,7 +273,70 @@ export function solveWithExplicitJacobian(
   let result: LMResult;
   let solverUsed: 'dense' | 'sparse';
 
-  if (backend === 'explicit-sparse') {
+  if (backend === 'numerical-sparse') {
+    // Wrap providers with numerical Jacobian computation
+    // This validates the sparse solver with numerically-computed gradients
+    const numericalProviders = wrapAllWithNumericalJacobian(providers);
+    const numericalSystem = new ExplicitJacobianSystemImpl([...layout.initialValues]);
+    for (const provider of numericalProviders) {
+      numericalSystem.addResidualProvider(provider);
+    }
+    result = solveSparseLM(numericalSystem, { maxIterations, tolerance, verbose });
+    solverUsed = 'sparse';
+
+    // Apply results from numerical system
+    const optimizedVars = numericalSystem.variables;
+
+    // Apply to world points
+    for (const point of points) {
+      const indices = layout.getPointIndices(point);
+      if (!indices) continue;
+
+      const xyz = point.getEffectiveXyz();
+      point.optimizedXyz = [
+        indices.x >= 0 ? optimizedVars[indices.x] : xyz[0] ?? 0,
+        indices.y >= 0 ? optimizedVars[indices.y] : xyz[1] ?? 0,
+        indices.z >= 0 ? optimizedVars[indices.z] : xyz[2] ?? 0,
+      ];
+    }
+
+    // Apply to cameras
+    for (const camera of cameras) {
+      const indices = layout.getCameraIndices(camera);
+      if (!indices) continue;
+
+      if (indices.position.x >= 0) {
+        camera.position = [
+          optimizedVars[indices.position.x],
+          optimizedVars[indices.position.y],
+          optimizedVars[indices.position.z],
+        ];
+      }
+
+      if (indices.quaternion.w >= 0) {
+        // Normalize quaternion
+        const w = optimizedVars[indices.quaternion.w];
+        const x = optimizedVars[indices.quaternion.x];
+        const y = optimizedVars[indices.quaternion.y];
+        const z = optimizedVars[indices.quaternion.z];
+        const norm = Math.sqrt(w * w + x * x + y * y + z * z);
+
+        camera.rotation = [w / norm, x / norm, y / norm, z / norm];
+      }
+
+      if (indices.focalLength >= 0) {
+        camera.focalLength = optimizedVars[indices.focalLength];
+      }
+    }
+
+    return {
+      converged: result.converged,
+      iterations: result.iterations,
+      finalCost: result.finalCost,
+      initialCost: result.initialCost,
+      solver: solverUsed,
+    };
+  } else if (backend === 'explicit-sparse') {
     result = solveSparseLM(system, { maxIterations, tolerance, verbose });
     solverUsed = 'sparse';
   } else {

@@ -37,8 +37,8 @@ function reprojection_v(
 
   distortedY = normY * radial + tangY
 
-  // Pixel coordinate (note: may need negation for screen coords)
-  v = fy * distortedY + cy
+  // Pixel coordinate (V uses subtraction: image Y increases downward)
+  v = cy - fy * distortedY
 
   // Residual
   return v - observedV

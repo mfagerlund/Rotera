@@ -26,7 +26,7 @@ import { log, logDebug, clearOptimizationLogs, setVerbosity } from './optimizati
 import { triangulateRayRay } from './triangulation'
 import { projectWorldPointToPixelQuaternion } from './camera-projection'
 import { V, Vec3, Vec4 } from 'scalar-autograd'
-import { getSolverBackend } from './solver-config'
+import { getSolverBackend, isComparisonMode } from './solver-config'
 import { solveWithExplicitJacobian } from './explicit-jacobian'
 
 export interface FineTuneOptions {

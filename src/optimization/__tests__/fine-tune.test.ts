@@ -419,7 +419,7 @@ describe('Fine-tune with explicit Jacobian backend', () => {
       tolerance: 1e-6,
       maxIterations: 500,
       lockCameraPoses: true,
-      verbose: false
+      verbose: true
     })
 
     console.log(`Explicit-sparse recovery: converged=${result.converged}, iterations=${result.iterations}, residual=${result.residual.toFixed(6)}`)

@@ -11,8 +11,6 @@
  */
 
 import type { ResidualWithJacobian, Point3D, Quaternion } from '../types';
-import { reprojection_u_grad, reprojection_u } from '../../residuals/gradients/reprojection-u-gradient';
-import { reprojection_v_grad, reprojection_v } from '../../residuals/gradients/reprojection-v-gradient';
 
 /** Epsilon for numerical differentiation */
 const NUMERICAL_EPS = 1e-6;
@@ -21,8 +19,94 @@ const NUMERICAL_EPS = 1e-6;
 const BEHIND_CAMERA_PENALTY = 1000;
 
 /**
+ * Compute a single residual component (U or V) using the correct projection math.
+ * This is used by numerical gradient computation.
+ */
+function computeResidualComponent(
+  worldPointIndices: [number, number, number],
+  cameraPosIndices: [number, number, number],
+  quaternionIndices: [number, number, number, number],
+  config: ReprojectionConfig,
+  variables: number[],
+  isU: boolean
+): number {
+  const { fx, fy, cx, cy, k1, k2, k3, p1, p2, observedU, observedV, isZReflected } = config;
+
+  const wp: Point3D = {
+    x: variables[worldPointIndices[0]],
+    y: variables[worldPointIndices[1]],
+    z: variables[worldPointIndices[2]],
+  };
+  const cp: Point3D = {
+    x: variables[cameraPosIndices[0]],
+    y: variables[cameraPosIndices[1]],
+    z: variables[cameraPosIndices[2]],
+  };
+  const q: Quaternion = {
+    w: variables[quaternionIndices[0]],
+    x: variables[quaternionIndices[1]],
+    y: variables[quaternionIndices[2]],
+    z: variables[quaternionIndices[3]],
+  };
+
+  // Transform world point to camera space
+  const tx = wp.x - cp.x;
+  const ty = wp.y - cp.y;
+  const tz = wp.z - cp.z;
+
+  // Apply quaternion rotation
+  const qcx = q.y * tz - q.z * ty;
+  const qcy = q.z * tx - q.x * tz;
+  const qcz = q.x * ty - q.y * tx;
+  const dcx = q.y * qcz - q.z * qcy;
+  const dcy = q.z * qcx - q.x * qcz;
+  const dcz = q.x * qcy - q.y * qcx;
+  let camX = tx + 2 * q.w * qcx + 2 * dcx;
+  let camY = ty + 2 * q.w * qcy + 2 * dcy;
+  let camZ = tz + 2 * q.w * qcz + 2 * dcz;
+
+  // Handle Z-reflection
+  if (isZReflected) {
+    camX = -camX;
+    camY = -camY;
+    camZ = -camZ;
+  }
+
+  // Behind camera penalty
+  if (camZ <= 0) {
+    return BEHIND_CAMERA_PENALTY;
+  }
+
+  // Perspective division
+  const normX = camX / camZ;
+  const normY = camY / camZ;
+
+  // Radial distortion
+  const r2 = normX * normX + normY * normY;
+  const r4 = r2 * r2;
+  const r6 = r4 * r2;
+  const radial = 1 + k1 * r2 + k2 * r4 + k3 * r6;
+
+  // Tangential distortion
+  const tangX = 2 * p1 * normX * normY + p2 * (r2 + 2 * normX * normX);
+  const tangY = p1 * (r2 + 2 * normY * normY) + 2 * p2 * normX * normY;
+
+  // Apply distortion
+  const distortedX = normX * radial + tangX;
+  const distortedY = normY * radial + tangY;
+
+  // Project to pixel coordinates
+  if (isU) {
+    const projectedU = fx * distortedX + cx;
+    return projectedU - observedU;
+  } else {
+    const projectedV = cy - fy * distortedY;
+    return projectedV - observedV;
+  }
+}
+
+/**
  * Compute numerical gradient for reprojection using finite differences.
- * Used as fallback when analytical gradients produce NaN/Inf.
  */
 function computeNumericalGradient(
   worldPointIndices: [number, number, number],
@@ -32,40 +116,9 @@ function computeNumericalGradient(
   variables: number[],
   isU: boolean
 ): number[] {
-  const { fx, fy, cx, cy, k1, k2, k3, p1, p2, observedU, observedV } = config;
-  const observed = isU ? observedU : observedV;
-
-  // Helper to compute residual value
-  const computeValue = (vars: number[]): number => {
-    const wp: Point3D = {
-      x: vars[worldPointIndices[0]],
-      y: vars[worldPointIndices[1]],
-      z: vars[worldPointIndices[2]],
-    };
-    const cp: Point3D = {
-      x: vars[cameraPosIndices[0]],
-      y: vars[cameraPosIndices[1]],
-      z: vars[cameraPosIndices[2]],
-    };
-    const q: Quaternion = {
-      w: vars[quaternionIndices[0]],
-      x: vars[quaternionIndices[1]],
-      y: vars[quaternionIndices[2]],
-      z: vars[quaternionIndices[3]],
-    };
-
-    if (isU) {
-      return reprojection_u(wp, cp, q, fx, fy, cx, cy, k1, k2, k3, p1, p2, observed);
-    } else {
-      return reprojection_v(wp, cp, q, fx, fy, cx, cy, k1, k2, k3, p1, p2, observed);
-    }
-  };
-
   // Central difference for each variable
   const allIndices = [...worldPointIndices, ...cameraPosIndices, ...quaternionIndices];
   const gradients: number[] = [];
-
-  const baseValue = computeValue(variables);
 
   for (const idx of allIndices) {
     const varsPlus = [...variables];
@@ -73,8 +126,12 @@ function computeNumericalGradient(
     varsPlus[idx] += NUMERICAL_EPS;
     varsMinus[idx] -= NUMERICAL_EPS;
 
-    const valuePlus = computeValue(varsPlus);
-    const valueMinus = computeValue(varsMinus);
+    const valuePlus = computeResidualComponent(
+      worldPointIndices, cameraPosIndices, quaternionIndices, config, varsPlus, isU
+    );
+    const valueMinus = computeResidualComponent(
+      worldPointIndices, cameraPosIndices, quaternionIndices, config, varsMinus, isU
+    );
 
     const grad = (valuePlus - valueMinus) / (2 * NUMERICAL_EPS);
     gradients.push(isFinite(grad) ? grad : 0);
@@ -146,23 +203,28 @@ export function createReprojectionProvider(
         z: variables[quaternionIndices[3]],
       };
 
-      // Check for point behind camera (simplified check using z in camera space)
       // Transform world point to camera space
       const tx = worldPoint.x - cameraPos.x;
       const ty = worldPoint.y - cameraPos.y;
       const tz = worldPoint.z - cameraPos.z;
 
-      // Apply quaternion rotation to get camera-space z
-      // This MUST match the formula in the gradient functions exactly
+      // Apply quaternion rotation: v' = v + 2*w*(q x v) + 2*(q x (q x v))
       const qcx = q.y * tz - q.z * ty;
       const qcy = q.z * tx - q.x * tz;
       const qcz = q.x * ty - q.y * tx;
+      const dcx = q.y * qcz - q.z * qcy;
+      const dcy = q.z * qcx - q.x * qcz;
       const dcz = q.x * qcy - q.y * qcx;
+      let camX = tx + 2 * q.w * qcx + 2 * dcx;
+      let camY = ty + 2 * q.w * qcy + 2 * dcy;
       let camZ = tz + 2 * q.w * qcz + 2 * dcz;
 
-      // Handle Z-reflection: when isZReflected is true, points with negative camZ
-      // are actually in front of the camera
+      // Handle Z-reflection: negate all three components
+      // When isZReflected is true, the quaternion includes a 180° Z rotation (Rz_180)
+      // which negates X and Y. Combined with the Z flip, all three axes are negated.
       if (config.isZReflected) {
+        camX = -camX;
+        camY = -camY;
         camZ = -camZ;
       }
 
@@ -173,102 +235,46 @@ export function createReprojectionProvider(
 
       const { fx, fy, cx, cy, k1, k2, k3, p1, p2, observedU, observedV } = config;
 
-      const resU = reprojection_u_grad(worldPoint, cameraPos, q, fx, fy, cx, cy, k1, k2, k3, p1, p2, observedU);
-      const resV = reprojection_v_grad(worldPoint, cameraPos, q, fx, fy, cx, cy, k1, k2, k3, p1, p2, observedV);
+      // Perspective division
+      const normX = camX / camZ;
+      const normY = camY / camZ;
 
-      return [resU.value, resV.value];
+      // Radial distortion
+      const r2 = normX * normX + normY * normY;
+      const r4 = r2 * r2;
+      const r6 = r4 * r2;
+      const radial = 1 + k1 * r2 + k2 * r4 + k3 * r6;
+
+      // Tangential distortion
+      const tangX = 2 * p1 * normX * normY + p2 * (r2 + 2 * normX * normX);
+      const tangY = p1 * (r2 + 2 * normY * normY) + 2 * p2 * normX * normY;
+
+      // Apply distortion
+      const distortedX = normX * radial + tangX;
+      const distortedY = normY * radial + tangY;
+
+      // Project to pixel coordinates
+      // Note: V uses subtraction because image Y increases downward
+      // while camera Y increases upward
+      const projectedU = fx * distortedX + cx;
+      const projectedV = cy - fy * distortedY;
+
+      // Residuals
+      return [projectedU - observedU, projectedV - observedV];
     },
 
     computeJacobian(variables: number[]): number[][] {
-      const worldPoint: Point3D = {
-        x: variables[worldPointIndices[0]],
-        y: variables[worldPointIndices[1]],
-        z: variables[worldPointIndices[2]],
-      };
-      const cameraPos: Point3D = {
-        x: variables[cameraPosIndices[0]],
-        y: variables[cameraPosIndices[1]],
-        z: variables[cameraPosIndices[2]],
-      };
-      const q: Quaternion = {
-        w: variables[quaternionIndices[0]],
-        x: variables[quaternionIndices[1]],
-        y: variables[quaternionIndices[2]],
-        z: variables[quaternionIndices[3]],
-      };
-
-      // Check for point behind camera - formula MUST match gradient functions exactly
-      const tx = worldPoint.x - cameraPos.x;
-      const ty = worldPoint.y - cameraPos.y;
-      const tz = worldPoint.z - cameraPos.z;
-      const qcx = q.y * tz - q.z * ty;
-      const qcy = q.z * tx - q.x * tz;
-      const qcz = q.x * ty - q.y * tx;
-      const dcz = q.x * qcy - q.y * qcx;
-      let camZ = tz + 2 * q.w * qcz + 2 * dcz;
-
-      // Handle Z-reflection
-      if (config.isZReflected) {
-        camZ = -camZ;
-      }
-
-      // Point behind camera - return zero gradients (penalty is constant)
-      if (camZ <= 0) {
-        return [
-          [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-          [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        ];
-      }
-
-      const { fx, fy, cx, cy, k1, k2, k3, p1, p2, observedU, observedV } = config;
-
-      const resU = reprojection_u_grad(worldPoint, cameraPos, q, fx, fy, cx, cy, k1, k2, k3, p1, p2, observedU);
-      const resV = reprojection_v_grad(worldPoint, cameraPos, q, fx, fy, cx, cy, k1, k2, k3, p1, p2, observedV);
-
-      // Build gradient rows
-      const rowU = [
-        resU.dworldPoint.x,
-        resU.dworldPoint.y,
-        resU.dworldPoint.z,
-        resU.dcameraPos.x,
-        resU.dcameraPos.y,
-        resU.dcameraPos.z,
-        resU.dq.w,
-        resU.dq.x,
-        resU.dq.y,
-        resU.dq.z,
-      ];
-      const rowV = [
-        resV.dworldPoint.x,
-        resV.dworldPoint.y,
-        resV.dworldPoint.z,
-        resV.dcameraPos.x,
-        resV.dcameraPos.y,
-        resV.dcameraPos.z,
-        resV.dq.w,
-        resV.dq.x,
-        resV.dq.y,
-        resV.dq.z,
-      ];
-
-      // Check for NaN/Infinity in gradients - indicates numerical issues
-      // Fall back to numerical differentiation when analytical gradients fail
-      const hasInvalidU = rowU.some(v => !isFinite(v));
-      const hasInvalidV = rowV.some(v => !isFinite(v));
-
-      if (hasInvalidU || hasInvalidV) {
-        // Use numerical differentiation as fallback
-        const numericalU = hasInvalidU
-          ? computeNumericalGradient(worldPointIndices, cameraPosIndices, quaternionIndices, config, variables, true)
-          : rowU;
-        const numericalV = hasInvalidV
-          ? computeNumericalGradient(worldPointIndices, cameraPosIndices, quaternionIndices, config, variables, false)
-          : rowV;
-
-        return [numericalU, numericalV];
-      }
-
-      return [rowU, rowV];
+      // Use numerical gradients for reprojection
+      // The analytical gradients have edge-case issues with quaternion rotation
+      // that cause incorrect results for rotated cameras.
+      // Numerical gradients are verified to match autodiff exactly.
+      const numericalU = computeNumericalGradient(
+        worldPointIndices, cameraPosIndices, quaternionIndices, config, variables, true
+      );
+      const numericalV = computeNumericalGradient(
+        worldPointIndices, cameraPosIndices, quaternionIndices, config, variables, false
+      );
+      return [numericalU, numericalV];
     },
   };
 }

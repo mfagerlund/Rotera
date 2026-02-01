@@ -54,3 +54,9 @@ export {
   type Point3DIndices,
   type CameraIndices,
 } from './adapter';
+
+// Numerical Jacobian Wrapper
+export {
+  wrapWithNumericalJacobian,
+  wrapAllWithNumericalJacobian,
+} from './numerical-wrapper';

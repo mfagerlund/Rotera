@@ -1,4 +1,19 @@
-**Last Updated:** 2025-12-25
+**Last Updated:** 2026-02-01
+
+## TODO: FIX REPROJECTION ANALYTICAL GRADIENTS
+
+**The reprojection analytical gradients in `src/optimization/residuals/gradients/reprojection-*.ts` have bugs!**
+
+The gradient-script generated code has edge-case issues with quaternion rotation that cause incorrect results for rotated cameras. Currently the `reprojection-provider.ts` uses NUMERICAL gradients as a workaround.
+
+**Once all other gradients are working and the explicit-sparse solver is stable:**
+1. Investigate why the quaternion gradient terms in reprojection-u.gs/reprojection-v.gs fail verification
+2. Regenerate with fixed gradient-script or fix the generated code manually
+3. Switch back to analytical gradients for performance
+
+The gradient tests in `gradient-comparison.test.ts` verify all gradients match numerical - run this to check.
+
+---
 
 - Dev server: `npm run dev` (runs on http://localhost:5173)
 - Before we're done with a task, run `bash check.sh`
