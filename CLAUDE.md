@@ -2,16 +2,25 @@
 
 ## TODO: FIX REPROJECTION ANALYTICAL GRADIENTS
 
-**The reprojection analytical gradients in `src/optimization/residuals/gradients/reprojection-*.ts` have bugs!**
+**Blocked on gradient-script bug fix.**
 
-The gradient-script generated code has edge-case issues with quaternion rotation that cause incorrect results for rotated cameras. Currently the `reprojection-provider.ts` uses NUMERICAL gradients as a workaround.
+There's a sign error in gradient-script when combining radial AND tangential distortion in the pattern:
+```
+distortedY = normY * radial + tangY
+v = cy - fy * distortedY
+```
 
-**Once all other gradients are working and the explicit-sparse solver is stable:**
-1. Investigate why the quaternion gradient terms in reprojection-u.gs/reprojection-v.gs fail verification
-2. Regenerate with fixed gradient-script or fix the generated code manually
-3. Switch back to analytical gradients for performance
+The bug is documented in `C:\Dev\gradient-script\docs\BUG-RADIAL-TANGENTIAL-SIGN.md`.
 
-The gradient tests in `gradient-comparison.test.ts` verify all gradients match numerical - run this to check.
+**Current state:**
+- Decomposed gradient functions exist: `reprojection-u-dcam.gs`, `reprojection-v-dcam.gs`
+- Chain rule infrastructure is in place in `reprojection-provider.ts`
+- Using numerical gradients as workaround
+
+**Once gradient-script is fixed:**
+1. Regenerate the `-gradient.ts` files
+2. Enable `computeAnalyticalGradient()` in `reprojection-provider.ts`
+3. Remove numerical fallback
 
 ---
 
