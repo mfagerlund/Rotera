@@ -91,21 +91,10 @@ describe('Solver Comparison', () => {
     project.addViewpoint(vp);
 
     // Create image points (approximate projections)
-    const ip1 = ImagePoint.create('IP1', vp, origin);
-    ip1.u = 960;
-    ip1.v = 540 - 375;
-
-    const ip2 = ImagePoint.create('IP2', vp, yAxis);
-    ip2.u = 960;
-    ip2.v = 540 + 375;
-
-    const ip3 = ImagePoint.create('IP3', vp, p3);
-    ip3.u = 960 + 150;
-    ip3.v = 540;
-
-    const ip4 = ImagePoint.create('IP4', vp, p4);
-    ip4.u = 960 + 200;
-    ip4.v = 540 - 200;
+    const ip1 = ImagePoint.create(origin, vp, 960, 540 - 375, { id: 'IP1' });
+    const ip2 = ImagePoint.create(yAxis, vp, 960, 540 + 375, { id: 'IP2' });
+    const ip3 = ImagePoint.create(p3, vp, 960 + 150, 540, { id: 'IP3' });
+    const ip4 = ImagePoint.create(p4, vp, 960 + 200, 540 - 200, { id: 'IP4' });
 
     project.addImagePoint(ip1);
     project.addImagePoint(ip2);
