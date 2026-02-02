@@ -23,7 +23,7 @@ import type { VanishingLine, VanishingLineAxis } from '../../entities/vanishing-
 import { computeVanishingPoint } from '../vanishing-points';
 import { rotateDirectionByQuaternion } from './utils';
 import type { SolverResult, SolverOptions } from './types';
-import { useSparseSolve } from '../solver-config';
+import { useSparseSolve, useAnalyticalSolve } from '../solver-config';
 
 // Analytical providers
 import type { AnalyticalResidualProvider, VariableLayout } from '../analytical/types';
@@ -400,8 +400,13 @@ export class ConstraintSystem {
       // where the cost decreases very slowly but the solution is already good.
       // Use transparent LM solver that exposes Jacobian (for sparse validation)
       //
-      // When USE_SPARSE_SOLVE is enabled (Step 3 of sparse validation),
-      // uses sparse CG instead of dense Cholesky for the normal equations.
+      // Solver modes:
+      // - Dense: Cholesky with autodiff
+      // - Sparse: CG with autodiff
+      // - Analytical: CG with analytical gradients (bypasses autodiff)
+      const analyticalEnabled = useAnalyticalSolve();
+      const analyticalProviders = analyticalEnabled ? this.buildAnalyticalProviders().providers : undefined;
+
       const result = transparentLM(variables, residualFn, {
         costTolerance: this.tolerance,
         gradientTolerance: this.tolerance * 10, // Stop when gradient is small
@@ -410,6 +415,8 @@ export class ConstraintSystem {
         adaptiveDamping: true,
         verbose: this.verbose,
         useSparseLinearSolve: useSparseSolve(),
+        analyticalProviders,
+        useAnalyticalSolve: analyticalEnabled,
       });
 
       // === SPARSE VALIDATION ===

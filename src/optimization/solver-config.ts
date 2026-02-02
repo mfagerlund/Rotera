@@ -1,30 +1,63 @@
 /**
  * Solver Configuration
  *
- * Configuration for the autodiff-based Levenberg-Marquardt solver.
+ * Configuration for the Levenberg-Marquardt solver.
  */
 
 /**
- * Sparse solve mode: uses sparse CG instead of dense Cholesky for solving
- * the normal equations (J^T J + λI) x = -J^T r.
- *
- * Benefits:
- * - O(n * nnz) instead of O(n³) for linear solve
- * - Better scaling for large problems with sparse Jacobians
+ * Solver mode options:
+ * - 'dense': Dense Cholesky with autodiff (O(n³) linear solve)
+ * - 'sparse': Sparse CG with autodiff (O(n·nnz) linear solve)
+ * - 'analytical': Sparse CG with analytical gradients (bypasses autodiff entirely)
  */
-export let USE_SPARSE_SOLVE = true;
+export type SolverMode = 'dense' | 'sparse' | 'analytical';
 
 /**
- * Enable or disable sparse solve mode.
- * When enabled, uses CG instead of Cholesky for normal equations.
+ * Current solver mode. Default is 'analytical' (Phase 7 complete).
  */
-export function setUseSparseSolve(enabled: boolean): void {
-  USE_SPARSE_SOLVE = enabled;
+let SOLVER_MODE: SolverMode = 'analytical';
+
+/**
+ * Set the solver mode.
+ */
+export function setSolverMode(mode: SolverMode): void {
+  SOLVER_MODE = mode;
 }
 
 /**
- * Check if sparse solve is enabled.
+ * Get the current solver mode.
+ */
+export function getSolverMode(): SolverMode {
+  return SOLVER_MODE;
+}
+
+/**
+ * Check if sparse linear solve is enabled (true for 'sparse' and 'analytical' modes).
  */
 export function useSparseSolve(): boolean {
-  return USE_SPARSE_SOLVE;
+  return SOLVER_MODE === 'sparse' || SOLVER_MODE === 'analytical';
+}
+
+/**
+ * Check if analytical gradients are enabled (true for 'analytical' mode).
+ */
+export function useAnalyticalSolve(): boolean {
+  return SOLVER_MODE === 'analytical';
+}
+
+/**
+ * Legacy function for backwards compatibility.
+ * @deprecated Use setSolverMode() instead
+ */
+export function setUseSparseSolve(enabled: boolean): void {
+  // Preserve analytical mode if currently set, otherwise toggle between dense/sparse
+  if (SOLVER_MODE === 'analytical') {
+    // If disabling sparse, switch to dense
+    if (!enabled) {
+      SOLVER_MODE = 'dense';
+    }
+    // If enabling sparse, stay on analytical (it's already sparse)
+  } else {
+    SOLVER_MODE = enabled ? 'sparse' : 'dense';
+  }
 }
