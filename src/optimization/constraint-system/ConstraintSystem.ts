@@ -25,6 +25,30 @@ import { rotateDirectionByQuaternion } from './utils';
 import type { SolverResult, SolverOptions } from './types';
 import { useSparseSolve } from '../solver-config';
 
+// Analytical providers
+import type { AnalyticalResidualProvider, VariableLayout } from '../analytical/types';
+import {
+  VariableLayoutBuilder,
+  createPointGetter,
+  createQuaternionGetter,
+} from '../analytical/variable-layout';
+import {
+  createQuatNormProvider,
+  createDistanceProvider,
+  createLineLengthProvider,
+  createLineDirectionProviders,
+  createCollinearProviders,
+  createAngleProvider,
+  createCoplanarProviders,
+  createReprojectionProviders,
+  type CameraIntrinsics,
+} from '../analytical/providers';
+
+// Constraint types for type checking
+import { DistanceConstraint } from '../../entities/constraints/distance-constraint';
+import { AngleConstraint } from '../../entities/constraints/angle-constraint';
+import { CoplanarPointsConstraint } from '../../entities/constraints/coplanar-points-constraint';
+
 export class ConstraintSystem {
   private tolerance: number;
   private maxIterations: number;
@@ -735,6 +759,236 @@ export class ConstraintSystem {
     }
 
     return x;
+  }
+
+  /**
+   * Build analytical residual providers from all entities.
+   *
+   * This creates providers that compute residuals and gradients analytically,
+   * bypassing autodiff. Used for Phase 6+ of the scalar-autograd removal.
+   *
+   * Returns both the providers and the layout (for accessing initial values).
+   */
+  buildAnalyticalProviders(): {
+    providers: AnalyticalResidualProvider[];
+    layout: VariableLayout;
+    layoutBuilder: VariableLayoutBuilder;
+  } {
+    const builder = new VariableLayoutBuilder();
+    const providers: AnalyticalResidualProvider[] = [];
+
+    // 1. Add all points to layout (must be done first to get indices)
+    for (const point of this.points) {
+      builder.addWorldPoint(point);
+    }
+
+    // 2. Add all cameras to layout
+    for (const camera of this.cameras) {
+      const optimizeIntrinsics =
+        typeof this.optimizeCameraIntrinsics === 'function'
+          ? this.optimizeCameraIntrinsics(camera)
+          : this.optimizeCameraIntrinsics;
+      builder.addCamera(camera, {
+        optimizePose: !camera.isPoseLocked,
+        optimizeIntrinsics,
+        optimizeDistortion: false,
+      });
+    }
+
+    // Build the layout (must be done before creating providers)
+    const layout = builder.build();
+
+    // Helper to get point indices and locked values
+    const getPointInfo = (point: WorldPoint): {
+      indices: readonly [number, number, number];
+      locked: readonly [number | null, number | null, number | null];
+    } => {
+      const indices = layout.getWorldPointIndices(point.name);
+      const locked: [number | null, number | null, number | null] = [
+        layout.getLockedWorldPointValue(point.name, 'x') ?? null,
+        layout.getLockedWorldPointValue(point.name, 'y') ?? null,
+        layout.getLockedWorldPointValue(point.name, 'z') ?? null,
+      ];
+      return { indices, locked };
+    };
+
+    // Geometric scale for direction/length residuals (same as Line.computeResiduals)
+    const GEOMETRIC_SCALE = 100.0;
+
+    // 3. Add line direction and length providers
+    for (const line of this.lines) {
+      const pointAInfo = getPointInfo(line.pointA);
+      const pointBInfo = getPointInfo(line.pointB);
+
+      // Direction constraint (if not 'free')
+      if (line.direction !== 'free') {
+        const directionProviders = createLineDirectionProviders(
+          pointAInfo.indices,
+          pointBInfo.indices,
+          line.direction,
+          GEOMETRIC_SCALE,
+          createPointGetter(pointAInfo.indices, pointAInfo.locked),
+          createPointGetter(pointBInfo.indices, pointBInfo.locked)
+        );
+        providers.push(...directionProviders);
+      }
+
+      // Length constraint (if set)
+      if (line.targetLength !== undefined) {
+        providers.push(
+          createLineLengthProvider(
+            pointAInfo.indices,
+            pointBInfo.indices,
+            line.targetLength,
+            GEOMETRIC_SCALE,
+            createPointGetter(pointAInfo.indices, pointAInfo.locked),
+            createPointGetter(pointBInfo.indices, pointBInfo.locked)
+          )
+        );
+      }
+
+      // Coincident point constraints (cross product AP × AB = 0)
+      // Uses collinear constraint: points A, P, B should be on a line
+      if (line.coincidentPoints.size > 0) {
+        for (const coincidentPoint of line.coincidentPoints) {
+          const pointPInfo = getPointInfo(coincidentPoint);
+
+          // Create collinear providers for the 3 points (A, P, B)
+          // Cross product of (P-A) × (B-A) = 0
+          const collinearProviders = createCollinearProviders(
+            pointAInfo.indices,
+            pointPInfo.indices,  // P in the middle
+            pointBInfo.indices,
+            createPointGetter(pointAInfo.indices, pointAInfo.locked),
+            createPointGetter(pointPInfo.indices, pointPInfo.locked),
+            createPointGetter(pointBInfo.indices, pointBInfo.locked)
+          );
+          providers.push(...collinearProviders);
+        }
+      }
+    }
+
+    // 4. Add camera quaternion normalization providers
+    for (const camera of this.cameras) {
+      if (!camera.isPoseLocked) {
+        const quatIndices = layout.getCameraQuatIndices(camera.name);
+        // Only add if camera is being optimized
+        if (quatIndices[0] >= 0) {
+          providers.push(
+            createQuatNormProvider(
+              quatIndices,
+              (vars) => ({
+                w: vars[quatIndices[0]],
+                x: vars[quatIndices[1]],
+                y: vars[quatIndices[2]],
+                z: vars[quatIndices[3]],
+              })
+            )
+          );
+        }
+      }
+    }
+
+    // 5. Add reprojection providers for image points
+    for (const imagePoint of this.imagePoints) {
+      const worldPointInfo = getPointInfo(imagePoint.worldPoint);
+      const camera = imagePoint.viewpoint;
+
+      const posIndices = layout.getCameraPosIndices(camera.name);
+      const quatIndices = layout.getCameraQuatIndices(camera.name);
+
+      // Get camera intrinsics from builder
+      const intrinsics = builder.getCameraIntrinsics(camera.name);
+      if (!intrinsics) continue;
+
+      // CameraIntrinsics uses fx, fy, cx, cy format
+      const cameraIntrinsics: CameraIntrinsics = {
+        fx: intrinsics.focalLength,
+        fy: intrinsics.focalLength * intrinsics.aspectRatio,
+        cx: intrinsics.principalPointX,
+        cy: intrinsics.principalPointY,
+        k1: intrinsics.k1,
+        k2: intrinsics.k2,
+        k3: intrinsics.k3,
+        p1: intrinsics.p1,
+        p2: intrinsics.p2,
+      };
+
+      // Build locked values for camera position
+      const posLocked: [number | null, number | null, number | null] = [
+        layout.getLockedCameraPosValue(camera.name, 'x') ?? null,
+        layout.getLockedCameraPosValue(camera.name, 'y') ?? null,
+        layout.getLockedCameraPosValue(camera.name, 'z') ?? null,
+      ];
+
+      // Quaternion locked values
+      const quatLocked: [number, number, number, number] = [...camera.rotation];
+
+      // createReprojectionProviders takes observation as an object
+      const reprojectionProviders = createReprojectionProviders(
+        worldPointInfo.indices,
+        posIndices,
+        quatIndices,
+        cameraIntrinsics,
+        { observedU: imagePoint.u, observedV: imagePoint.v },
+        createPointGetter(worldPointInfo.indices, worldPointInfo.locked),
+        createPointGetter(posIndices, posLocked),
+        createQuaternionGetter(quatIndices, quatLocked)
+      );
+      providers.push(...reprojectionProviders);
+    }
+
+    // 6. Add explicit constraint providers
+    for (const constraint of this.constraints) {
+      if (constraint instanceof DistanceConstraint) {
+        const pointAInfo = getPointInfo(constraint.pointA);
+        const pointBInfo = getPointInfo(constraint.pointB);
+
+        providers.push(
+          createDistanceProvider(
+            pointAInfo.indices,
+            pointBInfo.indices,
+            constraint.targetDistance,
+            createPointGetter(pointAInfo.indices, pointAInfo.locked),
+            createPointGetter(pointBInfo.indices, pointBInfo.locked)
+          )
+        );
+      } else if (constraint instanceof AngleConstraint) {
+        const pointAInfo = getPointInfo(constraint.pointA);
+        const vertexInfo = getPointInfo(constraint.vertex);
+        const pointCInfo = getPointInfo(constraint.pointC);
+
+        // Convert target angle from degrees to radians
+        const targetAngleRadians = (constraint.targetAngle * Math.PI) / 180;
+
+        providers.push(
+          createAngleProvider(
+            pointAInfo.indices,
+            vertexInfo.indices,
+            pointCInfo.indices,
+            targetAngleRadians,
+            createPointGetter(pointAInfo.indices, pointAInfo.locked),
+            createPointGetter(vertexInfo.indices, vertexInfo.locked),
+            createPointGetter(pointCInfo.indices, pointCInfo.locked)
+          )
+        );
+      } else if (constraint instanceof CoplanarPointsConstraint) {
+        const pointInfos = constraint.points.map(p => getPointInfo(p));
+        const pointIndices = pointInfos.map(info => info.indices);
+
+        const coplanarProviders = createCoplanarProviders(
+          pointIndices,
+          (vars) => pointInfos.map(info =>
+            createPointGetter(info.indices, info.locked)(vars)
+          )
+        );
+        providers.push(...coplanarProviders);
+      }
+      // Note: Other constraint types (ParallelLines, PerpendicularLines, etc.)
+      // can be added here as needed
+    }
+
+    return { providers, layout, layoutBuilder: builder };
   }
 
   /**

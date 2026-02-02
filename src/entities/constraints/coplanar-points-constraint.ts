@@ -86,36 +86,35 @@ export class CoplanarPointsConstraint extends Constraint {
     const coordsList = this.points.map(p => getPointCoordinates(p)).filter((c): c is [number, number, number] => c !== undefined)
 
     if (coordsList.length >= 4 && coordsList.length === this.points.length) {
-      const p1 = coordsList[0]
-      const p2 = coordsList[1]
-      const p3 = coordsList[2]
-
-      const v1 = vec3.subtract(p2, p1)
-      const v2 = vec3.subtract(p3, p1)
-
-      const normal = vec3.cross(v1, v2)
-
-      const normalMagnitude = vec3.magnitude(normal)
-      if (normalMagnitude === 0) {
-        return { value: Infinity, satisfied: false }
-      }
-
-      const unitNormal = vec3.normalize(normal)
-
       let maxDeviation = 0
 
+      // Use rotating base triangles, same as computeResiduals
       for (let i = 3; i < coordsList.length; i++) {
-        const pi = coordsList[i]
+        const pBase0 = coordsList[i - 3]
+        const pBase1 = coordsList[i - 2]
+        const pBase2 = coordsList[i - 1]
+        const pTest = coordsList[i]
 
-        const v = vec3.subtract(pi, p1)
+        const v1 = vec3.subtract(pBase1, pBase0)
+        const v2 = vec3.subtract(pBase2, pBase0)
 
+        const normal = vec3.cross(v1, v2)
+        const normalMagnitude = vec3.magnitude(normal)
+
+        if (normalMagnitude === 0) {
+          // Degenerate triangle - points are collinear
+          continue
+        }
+
+        const unitNormal = vec3.normalize(normal)
+        const v = vec3.subtract(pTest, pBase0)
         const distance = Math.abs(vec3.dot(v, unitNormal))
         maxDeviation = Math.max(maxDeviation, distance)
       }
 
       return {
         value: maxDeviation,
-        satisfied: Math.abs(maxDeviation - 0) <= this.tolerance
+        satisfied: maxDeviation <= this.tolerance
       }
     }
     return { value: 1, satisfied: false }
@@ -157,12 +156,14 @@ export class CoplanarPointsConstraint extends Constraint {
   /**
    * Compute residuals for coplanar points constraint.
    *
-   * For each point beyond the first 3, we compute its signed distance from the
-   * plane defined by the first 3 points. This is done by:
-   * 1. Computing the normal to the plane (cross product of two edge vectors)
-   * 2. Computing the distance = (v · normal) / |normal|
+   * Uses rotating base triangles so all points participate in defining planes:
+   * - Point 3 tested against plane(0,1,2)
+   * - Point 4 tested against plane(1,2,3)
+   * - Point 5 tested against plane(2,3,4)
+   * - Point i tested against plane(i-3, i-2, i-1)
    *
-   * This gives a scale-independent residual representing actual distance from plane.
+   * This distributes the "plane-defining" role across all points, improving
+   * numerical stability and making the constraint more symmetric.
    */
   computeResiduals(valueMap: ValueMap): Value[] {
     if (this.points.length < 4) {
@@ -170,40 +171,38 @@ export class CoplanarPointsConstraint extends Constraint {
       return []
     }
 
-    const p0 = valueMap.points.get(this.points[0])
-    const p1 = valueMap.points.get(this.points[1])
-    const p2 = valueMap.points.get(this.points[2])
-
-    if (!p0 || !p1 || !p2) {
-      console.warn(`Coplanar constraint ${this.getName()}: not enough points found in valueMap`)
-      return []
-    }
-
-    // Calculate edge vectors for the base triangle
-    const edge1 = p1.sub(p0)  // p0 -> p1
-    const edge2 = p2.sub(p0)  // p0 -> p2
-
-    // Normal vector (not normalized) = edge1 × edge2
-    const normal = Vec3.cross(edge1, edge2)
-
-    // |normal| = 2 * area of base triangle
-    const normalLengthSq = Vec3.dot(normal, normal)
-
-    // For numerical stability, add small epsilon to avoid division by zero
-    const epsilon = V.C(1e-10)
-    const normalLength = V.sqrt(V.add(normalLengthSq, epsilon))
-
-    // Compute residual for each point beyond the first 3
     const residuals: Value[] = []
+    const epsilon = V.C(1e-10)
+
+    // For each point i >= 3, test it against the plane defined by (i-3, i-2, i-1)
     for (let i = 3; i < this.points.length; i++) {
-      const pi = valueMap.points.get(this.points[i])
-      if (!pi) {
-        console.warn(`Coplanar constraint ${this.getName()}: point ${i} not found in valueMap`)
+      const baseIdx0 = i - 3
+      const baseIdx1 = i - 2
+      const baseIdx2 = i - 1
+
+      const pBase0 = valueMap.points.get(this.points[baseIdx0])
+      const pBase1 = valueMap.points.get(this.points[baseIdx1])
+      const pBase2 = valueMap.points.get(this.points[baseIdx2])
+      const pTest = valueMap.points.get(this.points[i])
+
+      if (!pBase0 || !pBase1 || !pBase2 || !pTest) {
+        console.warn(`Coplanar constraint ${this.getName()}: missing points for residual ${i}`)
         continue
       }
 
-      // Vector from p0 to pi
-      const v = pi.sub(p0)
+      // Calculate edge vectors for the base triangle
+      const edge1 = pBase1.sub(pBase0)
+      const edge2 = pBase2.sub(pBase0)
+
+      // Normal vector (not normalized) = edge1 × edge2
+      const normal = Vec3.cross(edge1, edge2)
+
+      // |normal| = 2 * area of base triangle
+      const normalLengthSq = Vec3.dot(normal, normal)
+      const normalLength = V.sqrt(V.add(normalLengthSq, epsilon))
+
+      // Vector from base point to test point
+      const v = pTest.sub(pBase0)
 
       // Signed distance from plane = (v · normal) / |normal|
       const dotProduct = Vec3.dot(v, normal)

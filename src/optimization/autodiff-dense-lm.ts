@@ -15,6 +15,8 @@ import { Value, V } from 'scalar-autograd';
 import type { NonlinearLeastSquaresOptions, NonlinearLeastSquaresResult } from 'scalar-autograd';
 import { SparseMatrix } from './sparse/SparseMatrix';
 import { conjugateGradientDamped } from './sparse/cg-solvers';
+import type { AnalyticalResidualProvider } from './analytical/types';
+import { accumulateNormalEquations } from './analytical/accumulate-normal-equations';
 
 /**
  * Extended result that includes the Jacobian matrix (for validation).
@@ -39,6 +41,18 @@ export interface TransparentLMOptions extends NonlinearLeastSquaresOptions {
    * This is STEP 3 of sparse validation: actually use sparse solve.
    */
   useSparseLinearSolve?: boolean;
+
+  /**
+   * When set, also compute normal equations analytically and validate
+   * they match the autodiff computation. Does NOT use analytical for solving.
+   * This is for parallel validation during migration.
+   */
+  analyticalProviders?: AnalyticalResidualProvider[];
+
+  /**
+   * Tolerance for analytical validation. Default 1e-6.
+   */
+  analyticalValidationTolerance?: number;
 }
 
 /**
@@ -197,6 +211,90 @@ function computeJtr(J: number[][], r: number[]): number[] {
 }
 
 /**
+ * Compute J^T J from dense Jacobian for validation.
+ */
+function computeJtJFromDense(J: number[][]): number[][] {
+  const m = J.length;
+  const n = J[0]?.length ?? 0;
+  const JtJ: number[][] = Array.from({ length: n }, () => new Array(n).fill(0));
+
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      let sum = 0;
+      for (let k = 0; k < m; k++) {
+        sum += J[k][i] * J[k][j];
+      }
+      JtJ[i][j] = sum;
+    }
+  }
+
+  return JtJ;
+}
+
+/**
+ * Validate analytical normal equations match autodiff computation.
+ * Throws if any mismatch exceeds tolerance.
+ */
+function validateAnalyticalMatchesAutodiff(
+  autodiffJacobian: number[][],
+  autodiffResiduals: number[],
+  analyticalProviders: AnalyticalResidualProvider[],
+  variables: Float64Array,
+  numVariables: number,
+  tolerance: number,
+  iteration: number
+): void {
+  // Compute autodiff J^T J and -J^T r
+  const autodiffJtJ = computeJtJFromDense(autodiffJacobian);
+  const autodiffJtr = computeJtr(autodiffJacobian, autodiffResiduals);
+  const autodiffNegJtr = autodiffJtr.map((v) => -v);
+
+  // Compute analytical
+  const analytical = accumulateNormalEquations(variables, analyticalProviders, numVariables);
+
+  // Compare costs
+  const autodiffCost = autodiffResiduals.reduce((sum, r) => sum + r * r, 0);
+  if (Math.abs(autodiffCost - analytical.cost) > tolerance) {
+    throw new Error(
+      `[AnalyticalValidation] Cost mismatch at iter ${iteration}: ` +
+        `autodiff=${autodiffCost.toExponential(4)}, analytical=${analytical.cost.toExponential(4)}`
+    );
+  }
+
+  // Compare J^T J entries
+  for (let i = 0; i < numVariables; i++) {
+    for (let j = 0; j < numVariables; j++) {
+      const autodiffVal = autodiffJtJ[i][j];
+      const analyticalVal = analytical.JtJ.get(i, j);
+      const diff = Math.abs(autodiffVal - analyticalVal);
+      const scale = Math.max(Math.abs(autodiffVal), Math.abs(analyticalVal), 1);
+      if (diff > tolerance * scale) {
+        throw new Error(
+          `[AnalyticalValidation] JtJ mismatch at iter ${iteration}, (${i},${j}): ` +
+            `autodiff=${autodiffVal.toExponential(4)}, analytical=${analyticalVal.toExponential(4)}, ` +
+            `diff=${diff.toExponential(4)}`
+        );
+      }
+    }
+  }
+
+  // Compare -J^T r entries
+  for (let i = 0; i < numVariables; i++) {
+    const autodiffVal = autodiffNegJtr[i];
+    const analyticalVal = analytical.negJtr[i];
+    const diff = Math.abs(autodiffVal - analyticalVal);
+    const scale = Math.max(Math.abs(autodiffVal), Math.abs(analyticalVal), 1);
+    if (diff > tolerance * scale) {
+      throw new Error(
+        `[AnalyticalValidation] negJtr mismatch at iter ${iteration}, [${i}]: ` +
+          `autodiff=${autodiffVal.toExponential(4)}, analytical=${analyticalVal.toExponential(4)}, ` +
+          `diff=${diff.toExponential(4)}`
+      );
+    }
+  }
+}
+
+/**
  * Solve (J^T J + lambda * I) * delta = -J^T r using sparse CG.
  *
  * This is the sparse alternative to solveDenseNormalEquations.
@@ -266,6 +364,8 @@ export function transparentLM(
     dampingDecreaseFactor = 10,
     verbose = false,
     useSparseLinearSolve = false,
+    analyticalProviders,
+    analyticalValidationTolerance = 1e-6,
   } = options;
 
   const numVariables = variables.length;
@@ -289,6 +389,20 @@ export function transparentLM(
     jacobian = result.jacobian;
     residuals = result.residuals;
     cost = residuals.reduce((sum, r) => sum + r * r, 0);
+
+    // Validate analytical providers match autodiff (if provided)
+    if (analyticalProviders) {
+      const currentVars = new Float64Array(variables.map((v) => v.data));
+      validateAnalyticalMatchesAutodiff(
+        jacobian,
+        residuals,
+        analyticalProviders,
+        currentVars,
+        numVariables,
+        analyticalValidationTolerance,
+        iter
+      );
+    }
 
     // Compute gradient norm ||J^T r||
     const Jtr = computeJtr(jacobian, residuals);
