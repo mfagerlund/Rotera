@@ -1,5 +1,8 @@
 /**
  * Debug test for sparse divergence issue
+ *
+ * Compares dense Cholesky vs sparse CG solvers to ensure they produce
+ * equivalent results.
  */
 
 import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
@@ -7,25 +10,22 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { loadProjectFromJson } from '../../store/project-serialization';
 import { optimizeProject } from '../optimize-project';
-import { setSolverBackend, getSolverBackend, SolverBackend, setUseSparseSolve, useSparseSolve } from '../solver-config';
+import { setUseSparseSolve, useSparseSolve } from '../solver-config';
 
 const FIXTURES_DIR = path.join(__dirname, 'fixtures');
 
 describe('Sparse divergence debug', () => {
-  let originalBackend: SolverBackend;
   let originalSparseSolve: boolean;
 
   beforeEach(() => {
-    originalBackend = getSolverBackend();
     originalSparseSolve = useSparseSolve();
   });
 
   afterEach(() => {
-    setSolverBackend(originalBackend);
     setUseSparseSolve(originalSparseSolve);
   });
 
-  it('compares autodiff vs autodiff-sparse on Minimal 2 Image 2 Axis', async () => {
+  it('compares dense vs sparse solvers on Minimal 2 Image 2 Axis', async () => {
     const fixturePath = path.join(FIXTURES_DIR, 'Minimal 2 Image 2 Axis.rotera');
     if (!fs.existsSync(fixturePath)) {
       console.log('Skipping: fixture not found at', fixturePath);
@@ -35,8 +35,7 @@ describe('Sparse divergence debug', () => {
     const fixtureJson = fs.readFileSync(fixturePath, 'utf-8');
 
     // Test with dense Cholesky
-    console.log('\n=== AUTODIFF (Dense Cholesky) ===');
-    setSolverBackend('autodiff');
+    console.log('\n=== Dense Cholesky ===');
     setUseSparseSolve(false);
     const projectDense = loadProjectFromJson(fixtureJson);
     const denseResult = await optimizeProject(projectDense, {
@@ -48,8 +47,7 @@ describe('Sparse divergence debug', () => {
     console.log(`Dense result: median=${denseError.toFixed(2)}px`);
 
     // Test with sparse CG
-    console.log('\n=== AUTODIFF-SPARSE (Sparse CG) ===');
-    setSolverBackend('autodiff');
+    console.log('\n=== Sparse CG ===');
     setUseSparseSolve(true);
     const projectSparse = loadProjectFromJson(fixtureJson);
     const sparseResult = await optimizeProject(projectSparse, {

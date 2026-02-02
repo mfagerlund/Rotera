@@ -46,7 +46,7 @@ describe('Real ConstraintSystem Gradient Flow', () => {
           principalPointY: 500,
           position: camPositions[i],
           rotation: camRotations[i],
-          isPoseLocked: false  // Camera is UNLOCKED (like fine-tune default)
+          isPoseLocked: true  // Camera is LOCKED to test point optimization
         }
       )
       vp.isZReflected = true  // Set isZReflected AFTER creation

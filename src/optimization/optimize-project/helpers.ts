@@ -22,6 +22,25 @@ import { canInitializeWithVanishingPoints } from '../vanishing-points';
 import { applyScaleFromAxisLines, translateToAnchorPoint } from '../initialization-phases';
 
 /**
+ * Get all WorldPoints referenced by a constraint.
+ * Handles both `points` array (coplanar, collinear) and individual point properties (distance, angle).
+ */
+function getConstraintPoints(constraint: Constraint): WorldPoint[] {
+  // Check for points array (coplanar, collinear)
+  if (hasPointsField(constraint)) {
+    return constraint.points;
+  }
+  // Check for individual point properties (distance: pointA/pointB, angle: pointA/vertex/pointC)
+  const points: WorldPoint[] = [];
+  const c = constraint as unknown as Record<string, unknown>;
+  if (c.pointA && typeof c.pointA === 'object') points.push(c.pointA as WorldPoint);
+  if (c.pointB && typeof c.pointB === 'object') points.push(c.pointB as WorldPoint);
+  if (c.pointC && typeof c.pointC === 'object') points.push(c.pointC as WorldPoint);
+  if (c.vertex && typeof c.vertex === 'object') points.push(c.vertex as WorldPoint);
+  return points;
+}
+
+/**
  * Apply scale and translation for test solves (e.g., alignment quality callback).
  * Delegates to canonical functions in initialization-phases.ts.
  */
@@ -144,13 +163,21 @@ export function runLatePnPInitialization(
 
     const worldPointArray = Array.from(project.worldPoints) as WorldPoint[];
     const initializedCameraSet = new Set(camerasInitialized);
+    const uninitializedCameraSet = new Set(camerasNeedingLatePnP.map(vp => vp.name));
     const prelimPoints = new Set<WorldPoint>();
-    const minVisibility = camerasInitialized.length === 1 ? 1 : 2;
+
+    // For prelim, only include points that are visible in BOTH:
+    // 1. At least one initialized camera (for triangulation)
+    // 2. At least one uninitialized camera (will be used for late PnP)
+    // This prevents unshared points from pulling shared points into wrong positions.
     for (const wp of worldPointArray) {
-      const visibleInCount = Array.from(wp.imagePoints).filter(ip =>
+      const visibleInInitialized = Array.from(wp.imagePoints).some(ip =>
         initializedCameraSet.has((ip as ImagePoint).viewpoint.name)
-      ).length;
-      if (visibleInCount >= minVisibility) {
+      );
+      const visibleInUninitialized = Array.from(wp.imagePoints).some(ip =>
+        uninitializedCameraSet.has((ip as ImagePoint).viewpoint.name)
+      );
+      if (visibleInInitialized && visibleInUninitialized) {
         prelimSystem.addPoint(wp);
         prelimPoints.add(wp);
       }
@@ -177,8 +204,13 @@ export function runLatePnPInitialization(
       }
     }
 
+    // Only add constraints whose points are all in prelimPoints
     for (const c of project.constraints) {
-      prelimSystem.addConstraint(c);
+      const constraintPoints = getConstraintPoints(c as Constraint);
+      const allPointsInPrelim = constraintPoints.length === 0 || constraintPoints.every(p => prelimPoints.has(p));
+      if (allPointsInPrelim) {
+        prelimSystem.addConstraint(c);
+      }
     }
 
     const prelimResult = prelimSystem.solve();
@@ -204,6 +236,7 @@ export function runLatePnPInitialization(
       });
       if (pnpResult.success && pnpResult.reliable) {
         camerasInitialized.push(vpConcrete.name);
+        initializedCameraSet.add(vpConcrete.name);  // Update set for subsequent PnP calls
         camerasInitializedViaLatePnP.add(vpConcrete);
         log(`[Init] ${vpConcrete.name} via late PnP`);
       } else if (pnpResult.success && !pnpResult.reliable) {
@@ -263,8 +296,8 @@ export function runStage1Optimization(
   });
 
   project.constraints.forEach(c => {
-    const points = hasPointsField(c) ? c.points : [];
-    if (points.length === 0 || points.every(p => multiCameraPoints.has(p))) {
+    const constraintPoints = getConstraintPoints(c as Constraint);
+    if (constraintPoints.length === 0 || constraintPoints.every(p => multiCameraPoints.has(p))) {
       stage1System.addConstraint(c);
     }
   });
@@ -359,6 +392,8 @@ export function handleOutliersAndRerun(
   for (const vp of camerasToExclude) {
     excludedCameras.add(vp);
     excludedCameraNames.push(vp.name);
+    // Mark camera as disabled so fine-tune and other operations don't include it
+    vp.enabledInSolve = false;
   }
 
   // Check if all cameras are now excluded - if so, the solve is meaningless

@@ -8,6 +8,7 @@ import type { ImagePointDto } from './ImagePointDto'
 import type { IResidualProvider, IOptimizationResultReceiver, ValueMap } from '../../optimization/IOptimizable'
 import { V, Value } from 'scalar-autograd'
 import { projectWorldPointToPixelQuaternion } from '../../optimization/camera-projection'
+import { Quaternion } from '../../optimization/Quaternion'
 import {makeAutoObservable} from 'mobx'
 
 export class ImagePoint implements ISelectable, IImagePoint, IResidualProvider, IOptimizationResultReceiver, ISerializable<ImagePointDto> {
@@ -133,7 +134,32 @@ export class ImagePoint implements ISelectable, IImagePoint, IResidualProvider, 
         )
 
         if (!projection) {
-            return [V.C(1000), V.C(1000)]
+            // Point is behind camera (Z < 0.1).
+            // Different handling for calibration vs fine-tune:
+            // - Calibration (useIsZReflected=false): Use differentiable penalty to guide solver
+            // - Fine-tune (useIsZReflected=true): Skip this point (cameras are already correct)
+            if (valueMap.useIsZReflected) {
+                // During fine-tune, points should be in front. If not, it's likely a numerical
+                // artifact - skip this point rather than adding a destabilizing penalty.
+                return []
+            }
+
+            // During calibration, use differentiable penalty based on camera Z to guide the solver.
+            const translated = worldPointVec.sub(cameraValues.position)
+            const rotated = Quaternion.rotateVector(cameraValues.rotation, translated)
+            const camZ = isZReflected ? V.neg(rotated.z) : rotated.z
+
+            // Soft penalty that pushes points towards Z > 0.1
+            // The penalty should be differentiable and guide the solver to move points forward.
+            const NEAR_PLANE = 0.1
+            const SCALE = 500  // Moderate penalty scale
+
+            // Compute penalty: scale * (NEAR_PLANE - z) for z < NEAR_PLANE
+            // The penalty increases as the point goes further behind
+            const deficit = V.sub(V.C(NEAR_PLANE), camZ)  // How far below threshold
+            const penalty = V.mul(deficit, V.C(SCALE))
+
+            return [penalty, penalty]
         }
 
         const [projected_u, projected_v] = projection

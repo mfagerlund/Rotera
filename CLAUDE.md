@@ -1,26 +1,18 @@
 **Last Updated:** 2026-02-01
 
-## TODO: FIX REPROJECTION ANALYTICAL GRADIENTS
+## TODO: SWITCH REPROJECTION TO ANALYTICAL GRADIENTS
 
-**Blocked on gradient-script bug fix.**
-
-There's a sign error in gradient-script when combining radial AND tangential distortion in the pattern:
-```
-distortedY = normY * radial + tangY
-v = cy - fy * distortedY
-```
-
-The bug is documented in `C:\Dev\gradient-script\docs\BUG-RADIAL-TANGENTIAL-SIGN.md`.
+**Gradient-script 0.3.1 fixed the sign bug.** The dcam gradient files have been regenerated and pass verification.
 
 **Current state:**
-- Decomposed gradient functions exist: `reprojection-u-dcam.gs`, `reprojection-v-dcam.gs`
-- Chain rule infrastructure is in place in `reprojection-provider.ts`
-- Using numerical gradients as workaround
+- ✅ `reprojection-u-dcam-gradient.ts` and `reprojection-v-dcam-gradient.ts` regenerated with 0.3.1
+- ✅ All gradient-comparison tests pass (including rotated camera, distortion)
+- ⚠️ `reprojection-provider.ts` still uses numerical gradients (not yet switched)
 
-**Once gradient-script is fixed:**
-1. Regenerate the `-gradient.ts` files
-2. Enable `computeAnalyticalGradient()` in `reprojection-provider.ts`
-3. Remove numerical fallback
+**Next steps:**
+1. Update `reprojection-provider.ts` to use analytical gradients via chain rule
+2. Verify performance improvement
+3. Remove numerical gradient fallback
 
 ---
 

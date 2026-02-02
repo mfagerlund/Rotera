@@ -174,13 +174,12 @@ describe('Single-Camera Behind-Points Regression', () => {
       }
       if (camCoords.z.data < 0.1) {
         observedBehindCount++;
-        behindDetails.push(`${wp.getName()}: Z=${camCoords.z.data.toFixed(2)}`);
+        behindDetails.push(`${wp.getName()}: camZ=${camCoords.z.data}, world=[${wp.optimizedXyz?.join(',')}]`);
       }
     }
 
     if (observedBehindCount > 0) {
-      console.log(`[Behind Camera] ${observedBehindCount} observed points behind camera:`);
-      behindDetails.slice(0, 5).forEach(d => console.log(`  ${d}`));
+      throw new Error(`[Behind Camera] ${observedBehindCount} observed points behind camera (cam at [${vp.position.map(p=>p.toFixed(2)).join(',')}], isZReflected=${useIsZReflected}): ${behindDetails.join('; ')}`);
     }
 
     expect(observedBehindCount).toBe(0);

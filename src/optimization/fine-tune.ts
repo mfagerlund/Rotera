@@ -11,23 +11,10 @@ import { ImagePoint } from '../entities/imagePoint'
 import { Viewpoint } from '../entities/viewpoint'
 import { Line } from '../entities/line'
 import { Constraint } from '../entities/constraints'
-import {
-  isDistanceConstraint,
-  isAngleConstraint,
-  isCollinearPointsConstraint,
-  isCoplanarPointsConstraint,
-  isFixedPointConstraint,
-  isParallelLinesConstraint,
-  isPerpendicularLinesConstraint,
-  isEqualDistancesConstraint,
-  isEqualAnglesConstraint,
-} from '../entities/constraints/type-guards'
 import { log, logDebug, clearOptimizationLogs, setVerbosity } from './optimization-logger'
 import { triangulateRayRay } from './triangulation'
 import { projectWorldPointToPixelQuaternion } from './camera-projection'
 import { V, Vec3, Vec4 } from 'scalar-autograd'
-import { getSolverBackend, isComparisonMode } from './solver-config'
-import { solveWithExplicitJacobian } from './explicit-jacobian'
 
 export interface FineTuneOptions {
   tolerance?: number              // Default: 1e-8 (tight)
@@ -309,104 +296,32 @@ export function fineTuneProject(project: Project, options: FineTuneOptions = {})
     }
     logDebug(`[FineTune] Total free point axes: ${freeAxesTotal}`)
 
-    // Check solver backend
-    const backend = getSolverBackend()
-    logDebug(`[FineTune] Using solver backend: ${backend}`)
+    // Build ConstraintSystem for optimization
+    const system = new ConstraintSystem({
+      tolerance,
+      maxIterations,
+      damping,
+      verbose,
+      optimizeCameraIntrinsics: false, // Fine-tune should never change intrinsics
+      regularizationWeight: 0,
+      useIsZReflected: true  // Respect camera's isZReflected
+    })
 
-    let result: { converged: boolean; iterations: number; residual: number; error?: string | null }
-
-    if (backend === 'autodiff') {
-      // Use scalar-autograd based ConstraintSystem
-      const system = new ConstraintSystem({
-        tolerance,
-        maxIterations,
-        damping,
-        verbose,
-        optimizeCameraIntrinsics: false, // Fine-tune should never change intrinsics
-        regularizationWeight: 0,
-        useIsZReflected: true  // Respect camera's isZReflected
-      })
-
-      // Fine-tune includes ALL constraints - it should never produce solutions
-      // that violate the user's geometric constraints just for lower reprojection error.
-      // Only add enabled viewpoints and their image points.
-      project.worldPoints.forEach(p => system.addPoint(p as WorldPoint))
-      project.lines.forEach(l => system.addLine(l as Line))
-      viewpointArray.forEach(v => system.addCamera(v))
-      project.imagePoints.forEach(ip => {
-        const imagePoint = ip as ImagePoint
-        if (enabledViewpointSet.has(imagePoint.viewpoint as Viewpoint)) {
-          system.addImagePoint(imagePoint)
-        }
-      })
-      project.constraints.forEach(c => system.addConstraint(c as Constraint))
-
-      result = system.solve()
-    } else {
-      // Use explicit Jacobian system (dense or sparse based on backend)
-      const points = Array.from(project.worldPoints) as WorldPoint[]
-      const lines = Array.from(project.lines) as Line[]
-      const cameras = viewpointArray
-      const imagePointsFiltered = Array.from(project.imagePoints)
-        .map(ip => ip as ImagePoint)
-        .filter(ip => enabledViewpointSet.has(ip.viewpoint as Viewpoint))
-
-      // Separate constraints by type
-      const constraints = Array.from(project.constraints) as Constraint[]
-      const distanceConstraints = constraints.filter(isDistanceConstraint)
-      const angleConstraints = constraints.filter(isAngleConstraint)
-      const collinearConstraints = constraints.filter(isCollinearPointsConstraint)
-      const coplanarConstraints = constraints.filter(isCoplanarPointsConstraint)
-      const fixedPointConstraints = constraints.filter(isFixedPointConstraint)
-      const parallelLinesConstraints = constraints.filter(isParallelLinesConstraint)
-      const perpendicularLinesConstraints = constraints.filter(isPerpendicularLinesConstraint)
-      const equalDistancesConstraints = constraints.filter(isEqualDistancesConstraint)
-      const equalAnglesConstraints = constraints.filter(isEqualAnglesConstraint)
-
-      // Log any unsupported constraints
-      const supportedCount = distanceConstraints.length + angleConstraints.length +
-        collinearConstraints.length + coplanarConstraints.length +
-        fixedPointConstraints.length + parallelLinesConstraints.length +
-        perpendicularLinesConstraints.length + equalDistancesConstraints.length +
-        equalAnglesConstraints.length
-      if (supportedCount < constraints.length) {
-        const unsupportedCount = constraints.length - supportedCount
-        log(`[FineTune] Warning: ${unsupportedCount} constraints not yet supported by explicit Jacobian backend`)
+    // Fine-tune includes ALL constraints - it should never produce solutions
+    // that violate the user's geometric constraints just for lower reprojection error.
+    // Only add enabled viewpoints and their image points.
+    project.worldPoints.forEach(p => system.addPoint(p as WorldPoint))
+    project.lines.forEach(l => system.addLine(l as Line))
+    viewpointArray.forEach(v => system.addCamera(v))
+    project.imagePoints.forEach(ip => {
+      const imagePoint = ip as ImagePoint
+      if (enabledViewpointSet.has(imagePoint.viewpoint as Viewpoint)) {
+        system.addImagePoint(imagePoint)
       }
+    })
+    project.constraints.forEach(c => system.addConstraint(c as Constraint))
 
-      const explicitResult = solveWithExplicitJacobian(
-        points,
-        lines,
-        cameras,
-        imagePointsFiltered,
-        distanceConstraints,
-        angleConstraints,
-        collinearConstraints,
-        coplanarConstraints,
-        fixedPointConstraints,
-        parallelLinesConstraints,
-        perpendicularLinesConstraints,
-        equalDistancesConstraints,
-        equalAnglesConstraints,
-        {
-          maxIterations,
-          tolerance,
-          optimizePose: !lockCameraPoses,
-          optimizeIntrinsics: false,
-          regularizationWeight: 0,
-          verbose,
-        }
-      )
-
-      result = {
-        converged: explicitResult.converged,
-        iterations: explicitResult.iterations,
-        residual: explicitResult.finalCost,
-        error: null,
-      }
-
-      logDebug(`[FineTune] Explicit solver: ${explicitResult.solver}, initial=${explicitResult.initialCost.toFixed(4)}, final=${explicitResult.finalCost.toFixed(4)}`)
-    }
+    const result = system.solve()
 
     const solveTimeMs = performance.now() - startTime
 

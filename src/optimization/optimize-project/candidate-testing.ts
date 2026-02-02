@@ -253,9 +253,10 @@ export async function testAllCandidates(
     // Update candidate progress for UI
     setCandidateProgress(i + 1, candidates.length);
 
-    // DON'T restore state between candidates - like old multi-attempt system,
-    // let each attempt build on the previous one's camera state
-    // (Only restore to original at the very end if returning a result)
+    // Restore to original state before each probe to ensure independence
+    // This prevents probes from benefiting from previous probes' partial convergence,
+    // which would make the winning probe non-reproducible in the full run
+    restoreProjectState(project, originalState);
 
     // Run probe with reduced iterations
     const probeResult = await optimizeProject(project, {
@@ -275,44 +276,35 @@ export async function testAllCandidates(
     const residual = probeResult.residual ?? Infinity;
     logDebug(`[Candidate] #${i + 1}/${candidates.length}: ${candidate.description} → residual=${residual.toFixed(1)}`);
 
-    // If good enough, run full optimization with this candidate and return
-    if (residual < GOOD_ENOUGH_THRESHOLD) {
-      logDebug(`[Candidate] #${i + 1} is good enough (residual=${residual.toFixed(1)} < ${GOOD_ENOUGH_THRESHOLD})`);
-      setCandidateProgress(0, 0);
-
-      // Restore original state and run full optimization
-      restoreProjectState(project, originalState);
-
-      log(`[Candidate] Early winner: ${candidate.description} - running full optimization...`);
-      const fullResult = await optimizeProject(project, {
-        ...options,
-        _skipCandidateTesting: true,
-        _skipBranching: true,
-        _branch: candidate.branch ?? undefined,
-        _seed: candidate.seed,
-        _alignmentSign: candidate.alignmentSign,
-        _perturbCameras: candidate.perturbCameras,
-        _attempt: 1,
-      });
-      return fullResult;
-    }
-
     // Track best candidate by residual
     if (residual < bestResidual) {
       bestResidual = residual;
       bestCandidate = candidate;
+    }
+
+    // If good enough, return the probe result directly
+    // The project state is already at the good solution - no need to re-run
+    if (residual < GOOD_ENOUGH_THRESHOLD) {
+      logDebug(`[Candidate] #${i + 1} is good enough (residual=${residual.toFixed(1)} < ${GOOD_ENOUGH_THRESHOLD})`);
+      setCandidateProgress(0, 0);
+
+      log(`[Candidate] Early winner: ${candidate.description} - using probe result directly`);
+      // Return the probe result - project state is already good
+      return probeResult;
     }
   }
 
   // Clear candidate progress - done testing
   setCandidateProgress(0, 0);
 
-  // Run FULL optimization with the best candidate's parameters
+  // Re-run full optimization with best candidate's parameters
+  // This case means no probe was good enough (< 10.0), but we still want to use the best one
   if (bestCandidate) {
     log(`[Candidate] Best probe: ${bestCandidate.description} (residual=${bestResidual.toFixed(1)})`);
-    log(`[Candidate] Running full optimization with winning candidate...`);
+    log(`[Candidate] Re-running full optimization with best candidate...`);
 
-    // Restore original state and run full optimization with winning parameters
+    // Restore to original state (not best probe state) for a clean full run
+    // The best probe might have been partially converged - we want a complete run
     restoreProjectState(project, originalState);
 
     const fullResult = await optimizeProject(project, {

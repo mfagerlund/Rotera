@@ -12,5 +12,3 @@ export {
   conjugateGradientDamped,
   type CGResult,
 } from './cg-solvers';
-export { SparseJacobianBuilder } from './sparse-jacobian-builder';
-export { solveSparseLM } from './sparse-lm';

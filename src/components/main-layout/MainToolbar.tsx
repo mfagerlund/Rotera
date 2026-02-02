@@ -26,7 +26,7 @@ import type { Project } from '../../entities/project'
 import { checkOptimizationReadiness, getOptimizationStatusSummary } from '../../optimization/optimization-readiness'
 import { AboutModal } from '../AboutModal'
 import { helpLabelsStore } from '../../store/help-labels-store'
-import { getSolverBackend, setSolverBackend, SolverBackend, useSparseSolve, setUseSparseSolve } from '../../optimization/solver-config'
+import { useSparseSolve, setUseSparseSolve } from '../../optimization/solver-config'
 
 interface MainToolbarProps {
   // Workspace
@@ -108,13 +108,10 @@ export const MainToolbar: React.FC<MainToolbarProps> = observer(({
   const [editedName, setEditedName] = React.useState(project?.name || '')
   const [fileMenuOpen, setFileMenuOpen] = React.useState(false)
   const [showAboutModal, setShowAboutModal] = React.useState(false)
-  const [solverBackend, setSolverBackendState] = React.useState<SolverBackend>(getSolverBackend())
   const [sparseSolveEnabled, setSparseSolveEnabled] = React.useState(useSparseSolve())
   const fileMenuRef = useRef<HTMLDivElement>(null)
 
-  const handleSolverToggle = (backend: SolverBackend, enableSparseSolve = false) => {
-    setSolverBackend(backend)
-    setSolverBackendState(backend)
+  const handleSparseSolveToggle = (enableSparseSolve: boolean) => {
     setUseSparseSolve(enableSparseSolve)
     setSparseSolveEnabled(enableSparseSolve)
   }
@@ -400,32 +397,18 @@ export const MainToolbar: React.FC<MainToolbarProps> = observer(({
         <FontAwesomeIcon icon={faTags} />
       </button>
 
-      <div className="solver-toggle" title="Select optimization solver backend">
+      <div className="solver-toggle" title="Linear solver for normal equations">
         <button
-          className={`solver-toggle__option ${solverBackend === 'autodiff' && !sparseSolveEnabled ? 'solver-toggle__option--active' : ''}`}
-          onClick={() => handleSolverToggle('autodiff', false)}
-          title="Autodiff with dense Cholesky solver"
+          className={`solver-toggle__option ${!sparseSolveEnabled ? 'solver-toggle__option--active' : ''}`}
+          onClick={() => handleSparseSolveToggle(false)}
+          title="Dense Cholesky solver (O(n³))"
         >
-          Autodiff
+          Dense
         </button>
         <button
-          className={`solver-toggle__option ${solverBackend === 'autodiff' && sparseSolveEnabled ? 'solver-toggle__option--active' : ''}`}
-          onClick={() => handleSolverToggle('autodiff', true)}
-          title="Autodiff with sparse CG solver (validated)"
-        >
-          Autodiff-Sparse
-        </button>
-        <button
-          className={`solver-toggle__option ${solverBackend === 'numerical-sparse' ? 'solver-toggle__option--active' : ''}`}
-          onClick={() => handleSolverToggle('numerical-sparse', false)}
-          title="Sparse solver with numerical derivatives (for validation)"
-        >
-          Num-Sparse
-        </button>
-        <button
-          className={`solver-toggle__option ${solverBackend === 'explicit-sparse' ? 'solver-toggle__option--active' : ''}`}
-          onClick={() => handleSolverToggle('explicit-sparse', false)}
-          title="Sparse solver with analytical gradients"
+          className={`solver-toggle__option ${sparseSolveEnabled ? 'solver-toggle__option--active' : ''}`}
+          onClick={() => handleSparseSolveToggle(true)}
+          title="Sparse CG solver (O(n·nnz), better for large problems)"
         >
           Sparse
         </button>

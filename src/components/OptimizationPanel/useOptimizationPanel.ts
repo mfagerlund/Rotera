@@ -12,7 +12,6 @@ import { ProjectDB } from '../../services/project-db'
 import { checkOptimizationReadiness } from '../../optimization/optimization-readiness'
 import { setLogCallback, getSolveQuality, getBestResidualSoFar, getCandidateProgress } from '../../optimization/optimize-project'
 import { fineTuneProject, FineTuneResult } from '../../optimization/fine-tune'
-import { getSolverBackend } from '../../optimization/solver-config'
 
 /**
  * Check if the project has stored optimization results (from lastResiduals on entities)
@@ -279,7 +278,7 @@ export function useOptimizationPanel({
         medianReprojectionError: solverResult.medianReprojectionError,
         quality: solverResult.quality,
         elapsedMs: solverResult.solveTimeMs ?? solveTimeMs,
-        solver: getSolverBackend()
+        solver: 'autodiff'
       }
 
       setResults(result)
@@ -390,7 +389,7 @@ export function useOptimizationPanel({
         // Fine-tune doesn't compute median, fall back to residual (less accurate quality)
         quality: getSolveQuality(undefined, fineTuneResult.residual),
         elapsedMs: fineTuneResult.solveTimeMs,
-        solver: getSolverBackend()
+        solver: 'autodiff'
       }
 
       setResults(result)

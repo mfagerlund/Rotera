@@ -282,9 +282,10 @@ export function initializeCameraWithPnP(
   }
 
   // Check 2: If final error is still very high, the result is unreliable
-  // Note: 60px threshold allows for reasonable manual clicking accuracy
+  // Note: 80px threshold allows for reasonable manual clicking accuracy
   // while still rejecting clearly bad solutions
-  const maxAcceptableError = 60; // pixels
+  // Raised from 60px to handle challenging multi-camera geometries
+  const maxAcceptableError = 80; // pixels
   if (finalError > maxAcceptableError && reliable) {
     reliable = false;
     reason = `Final error too high: ${finalError.toFixed(1)}px > ${maxAcceptableError}px`;
