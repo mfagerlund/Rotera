@@ -13,9 +13,14 @@
 export type SolverMode = 'dense' | 'sparse' | 'analytical';
 
 /**
- * Current solver mode. Default is 'analytical' (Phase 7 complete).
+ * Current solver mode. Default is 'sparse'.
+ *
+ * NOTE: 'analytical' mode is incomplete - it doesn't include:
+ * - Vanishing point constraints
+ * - Regularization residuals
+ * Use 'analytical' only for testing or when these features aren't needed.
  */
-let SOLVER_MODE: SolverMode = 'analytical';
+let SOLVER_MODE: SolverMode = 'sparse';
 
 /**
  * Set the solver mode.

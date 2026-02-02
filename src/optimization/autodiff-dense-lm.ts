@@ -497,6 +497,21 @@ export function transparentLM(
     throw new Error('useAnalyticalSolve requires analyticalProviders to be set');
   }
 
+  // Validate analytical providers have valid variable indices
+  if (useAnalyticalSolve && analyticalProviders) {
+    for (let i = 0; i < analyticalProviders.length; i++) {
+      const provider = analyticalProviders[i];
+      for (const idx of provider.variableIndices) {
+        if (idx >= variables.length) {
+          throw new Error(
+            `[AnalyticalSolve] Provider ${i} has variableIndex ${idx} but only ${variables.length} variables exist. ` +
+              `This indicates a mismatch between the analytical layout and autodiff variables.`
+          );
+        }
+      }
+    }
+  }
+
   const numVariables = variables.length;
   const startTime = performance.now();
   const maxInnerIterations = 10;

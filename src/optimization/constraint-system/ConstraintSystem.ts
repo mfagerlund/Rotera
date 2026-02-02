@@ -405,7 +405,22 @@ export class ConstraintSystem {
       // - Sparse: CG with autodiff
       // - Analytical: CG with analytical gradients (bypasses autodiff)
       const analyticalEnabled = useAnalyticalSolve();
-      const analyticalProviders = analyticalEnabled ? this.buildAnalyticalProviders().providers : undefined;
+      let analyticalProviders: AnalyticalResidualProvider[] | undefined;
+
+      if (analyticalEnabled) {
+        const { providers, layout } = this.buildAnalyticalProviders();
+        analyticalProviders = providers;
+
+        // Validate that analytical layout has same variable count as autodiff
+        if (layout.numVariables !== variables.length) {
+          console.error(
+            `[ConstraintSystem] Variable count mismatch! ` +
+              `Analytical layout: ${layout.numVariables}, Autodiff: ${variables.length}. ` +
+              `Falling back to autodiff.`
+          );
+          analyticalProviders = undefined;
+        }
+      }
 
       const result = transparentLM(variables, residualFn, {
         costTolerance: this.tolerance,
