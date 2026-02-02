@@ -53,6 +53,15 @@ export interface TransparentLMOptions extends NonlinearLeastSquaresOptions {
    * Tolerance for analytical validation. Default 1e-6.
    */
   analyticalValidationTolerance?: number;
+
+  /**
+   * Use analytical providers for solving (not just validation).
+   * When true, bypasses autodiff entirely for Jacobian computation.
+   * Requires analyticalProviders to be set.
+   *
+   * Phase 7 of scalar-autograd removal: analytical solve replaces autodiff.
+   */
+  useAnalyticalSolve?: boolean;
 }
 
 /**
@@ -232,6 +241,120 @@ function computeJtJFromDense(J: number[][]): number[][] {
 }
 
 /**
+ * Solve (JtJ + lambda * I) * delta = negJtr using dense Cholesky.
+ * Takes pre-computed normal equations (J^T J and -J^T r) directly.
+ *
+ * Used by analytical solve path which computes J^T J directly without
+ * materializing the Jacobian matrix.
+ */
+function solveFromNormalEquations(
+  JtJ: SparseMatrix,
+  negJtr: Float64Array,
+  lambda: number,
+  numVariables: number
+): number[] {
+  // Convert sparse J^T J to dense
+  const JtJDense = JtJ.toDense();
+
+  // Add damping: J^T J + lambda * I
+  for (let i = 0; i < numVariables; i++) {
+    JtJDense[i][i] += lambda;
+  }
+
+  // Cholesky decomposition: L L^T = JtJ + λI
+  const L: number[][] = new Array(numVariables);
+  for (let i = 0; i < numVariables; i++) {
+    L[i] = new Array(numVariables).fill(0);
+  }
+
+  for (let i = 0; i < numVariables; i++) {
+    for (let j = 0; j <= i; j++) {
+      let sum = JtJDense[i][j];
+      for (let k = 0; k < j; k++) {
+        sum -= L[i][k] * L[j][k];
+      }
+      if (i === j) {
+        if (sum <= 0) {
+          // Matrix not positive definite - return zeros
+          return new Array(numVariables).fill(0);
+        }
+        L[i][j] = Math.sqrt(sum);
+      } else {
+        L[i][j] = sum / L[j][j];
+      }
+    }
+  }
+
+  // Forward substitution: L y = negJtr
+  const y: number[] = new Array(numVariables);
+  for (let i = 0; i < numVariables; i++) {
+    let sum = negJtr[i];
+    for (let j = 0; j < i; j++) {
+      sum -= L[i][j] * y[j];
+    }
+    y[i] = sum / L[i][i];
+  }
+
+  // Back substitution: L^T x = y
+  const x: number[] = new Array(numVariables);
+  for (let i = numVariables - 1; i >= 0; i--) {
+    let sum = y[i];
+    for (let j = i + 1; j < numVariables; j++) {
+      sum -= L[j][i] * x[j];
+    }
+    x[i] = sum / L[i][i];
+  }
+
+  return x;
+}
+
+/**
+ * Compute cost (sum of squared residuals) from analytical providers.
+ * Used by analytical solve path to evaluate step quality without full J^T J computation.
+ */
+function computeCostFromProviders(
+  variables: Float64Array,
+  providers: readonly AnalyticalResidualProvider[]
+): number {
+  let cost = 0;
+  for (const provider of providers) {
+    const r = provider.computeResidual(variables);
+    cost += r * r;
+  }
+  return cost;
+}
+
+/**
+ * Solve (JtJ + lambda * I) * delta = negJtr using sparse CG.
+ * Takes pre-computed normal equations directly.
+ */
+function solveSparseFromNormalEquations(
+  JtJ: SparseMatrix,
+  negJtr: Float64Array,
+  lambda: number,
+  numVariables: number
+): number[] {
+  const maxCgIter = Math.max(numVariables * 10, 1000);
+  const cgResult = conjugateGradientDamped(
+    JtJ,
+    Array.from(negJtr),
+    lambda,
+    undefined, // Initial guess (zero)
+    maxCgIter,
+    1e-10      // Tolerance
+  );
+
+  if (!cgResult.converged && cgResult.residualNorm > 1e-8) {
+    console.warn(
+      `[AnalyticalSparseLM] CG did not converge: ${cgResult.iterations}/${maxCgIter} iters, ` +
+        `residual=${cgResult.residualNorm.toExponential(2)}`
+    );
+  }
+
+  return cgResult.x;
+}
+
+/**
  * Validate analytical normal equations match autodiff computation.
  * Throws if any mismatch exceeds tolerance.
  */
@@ -366,7 +489,13 @@ export function transparentLM(
     useSparseLinearSolve = false,
     analyticalProviders,
     analyticalValidationTolerance = 1e-6,
+    useAnalyticalSolve = false,
   } = options;
+
+  // Validate options
+  if (useAnalyticalSolve && !analyticalProviders) {
+    throw new Error('useAnalyticalSolve requires analyticalProviders to be set');
+  }
 
   const numVariables = variables.length;
   const startTime = performance.now();
@@ -381,32 +510,66 @@ export function transparentLM(
   let residuals: number[] = [];
   let cost = 0;
 
+  // For analytical solve, track current variable values in Float64Array
+  let analyticalVars: Float64Array | null = useAnalyticalSolve
+    ? new Float64Array(variables.map((v) => v.data))
+    : null;
+
   for (let iter = 0; iter < maxIterations; iter++) {
     iterations = iter;
 
-    // Compute residuals and Jacobian
-    const result = computeJacobian(variables, residualFn);
-    jacobian = result.jacobian;
-    residuals = result.residuals;
-    cost = residuals.reduce((sum, r) => sum + r * r, 0);
+    // Variables for normal equations (computed differently for autodiff vs analytical)
+    let JtJ: SparseMatrix | null = null;
+    let negJtr: Float64Array | null = null;
+    let gradientNorm: number;
 
-    // Validate analytical providers match autodiff (if provided)
-    if (analyticalProviders) {
-      const currentVars = new Float64Array(variables.map((v) => v.data));
-      validateAnalyticalMatchesAutodiff(
-        jacobian,
-        residuals,
+    if (useAnalyticalSolve && analyticalProviders && analyticalVars) {
+      // ANALYTICAL PATH: Use providers directly, skip autodiff entirely
+      const normalEqs = accumulateNormalEquations(
+        analyticalVars,
         analyticalProviders,
-        currentVars,
-        numVariables,
-        analyticalValidationTolerance,
-        iter
+        numVariables
       );
-    }
+      JtJ = normalEqs.JtJ;
+      negJtr = normalEqs.negJtr;
+      cost = normalEqs.cost;
+      residuals = Array.from(normalEqs.residuals);
 
-    // Compute gradient norm ||J^T r||
-    const Jtr = computeJtr(jacobian, residuals);
-    const gradientNorm = Math.sqrt(Jtr.reduce((sum, g) => sum + g * g, 0));
+      // Gradient norm: ||J^T r|| = ||negJtr|| (since negJtr = -J^T r)
+      gradientNorm = Math.sqrt(negJtr.reduce((sum, g) => sum + g * g, 0));
+
+      // Keep Value[] in sync for compatibility
+      for (let j = 0; j < numVariables; j++) {
+        variables[j].data = analyticalVars[j];
+      }
+
+      // Empty jacobian for result (we don't materialize it)
+      jacobian = [];
+    } else {
+      // AUTODIFF PATH: Original behavior
+      const result = computeJacobian(variables, residualFn);
+      jacobian = result.jacobian;
+      residuals = result.residuals;
+      cost = residuals.reduce((sum, r) => sum + r * r, 0);
+
+      // Validate analytical providers match autodiff (if provided but not solving)
+      if (analyticalProviders) {
+        const currentVars = new Float64Array(variables.map((v) => v.data));
+        validateAnalyticalMatchesAutodiff(
+          jacobian,
+          residuals,
+          analyticalProviders,
+          currentVars,
+          numVariables,
+          analyticalValidationTolerance,
+          iter
+        );
+      }
+
+      // Compute gradient norm ||J^T r||
+      const Jtr = computeJtr(jacobian, residuals);
+      gradientNorm = Math.sqrt(Jtr.reduce((sum, g) => sum + g * g, 0));
+    }
 
     if (verbose && iter % 10 === 0) {
       console.log(`[TransparentLM] iter=${iter}, cost=${cost.toFixed(6)}, ||grad||=${gradientNorm.toExponential(2)}, lambda=${lambda.toExponential(2)}`);
@@ -441,30 +604,40 @@ export function transparentLM(
       // Solve for step using either sparse CG or dense Cholesky
       const effectiveLambda = adaptiveDamping ? lambda : 0;
 
-      // Always compute dense delta for validation
-      const denseDelta = solveDenseNormalEquations(jacobian, residuals, effectiveLambda, numVariables);
+      let delta: number[];
 
-      // Use sparse if enabled, otherwise use dense
-      const delta = useSparseLinearSolve
-        ? solveSparseNormalEquations(jacobian, residuals, effectiveLambda, numVariables)
-        : denseDelta;
+      if (useAnalyticalSolve && JtJ && negJtr) {
+        // ANALYTICAL PATH: Solve from pre-computed normal equations
+        delta = useSparseLinearSolve
+          ? solveSparseFromNormalEquations(JtJ, negJtr, effectiveLambda, numVariables)
+          : solveFromNormalEquations(JtJ, negJtr, effectiveLambda, numVariables);
+      } else {
+        // AUTODIFF PATH: Original behavior
+        // Always compute dense delta for validation
+        const denseDelta = solveDenseNormalEquations(jacobian, residuals, effectiveLambda, numVariables);
 
-      // Validate sparse matches dense on every step (when sparse is enabled)
-      if (useSparseLinearSolve) {
-        let maxDeltaDiff = 0;
-        let deltaMagnitude = 0;
-        for (let j = 0; j < numVariables; j++) {
-          maxDeltaDiff = Math.max(maxDeltaDiff, Math.abs(delta[j] - denseDelta[j]));
-          deltaMagnitude = Math.max(deltaMagnitude, Math.abs(denseDelta[j]));
-        }
-        // Allow 1% relative error or 1e-6 absolute (CG may not achieve machine precision)
-        const deltaTolerance = Math.max(1e-6, deltaMagnitude * 0.01);
-        if (maxDeltaDiff > deltaTolerance) {
-          throw new Error(
-            `[SparseLM] Step diverged at iter ${iter}: maxDiff=${maxDeltaDiff.toExponential(2)}, ` +
-            `magnitude=${deltaMagnitude.toFixed(4)}, tolerance=${deltaTolerance.toExponential(2)}, ` +
-            `lambda=${effectiveLambda.toExponential(2)}`
-          );
+        // Use sparse if enabled, otherwise use dense
+        delta = useSparseLinearSolve
+          ? solveSparseNormalEquations(jacobian, residuals, effectiveLambda, numVariables)
+          : denseDelta;
+
+        // Validate sparse matches dense on every step (when sparse is enabled)
+        if (useSparseLinearSolve) {
+          let maxDeltaDiff = 0;
+          let deltaMagnitude = 0;
+          for (let j = 0; j < numVariables; j++) {
+            maxDeltaDiff = Math.max(maxDeltaDiff, Math.abs(delta[j] - denseDelta[j]));
+            deltaMagnitude = Math.max(deltaMagnitude, Math.abs(denseDelta[j]));
+          }
+          // Allow 1% relative error or 1e-6 absolute (CG may not achieve machine precision)
+          const deltaTolerance = Math.max(1e-6, deltaMagnitude * 0.01);
+          if (maxDeltaDiff > deltaTolerance) {
+            throw new Error(
+              `[SparseLM] Step diverged at iter ${iter}: maxDiff=${maxDeltaDiff.toExponential(2)}, ` +
+                `magnitude=${deltaMagnitude.toFixed(4)}, tolerance=${deltaTolerance.toExponential(2)}, ` +
+                `lambda=${effectiveLambda.toExponential(2)}`
+            );
+          }
         }
       }
 
@@ -477,14 +650,24 @@ export function transparentLM(
       }
 
       // Save old values and apply step
-      const oldValues = variables.map(v => v.data);
+      const oldValues = variables.map((v) => v.data);
       for (let j = 0; j < numVariables; j++) {
         variables[j].data = oldValues[j] + delta[j];
       }
 
       // Compute new cost
-      const newResiduals = residualFn(variables);
-      const newCost = newResiduals.reduce((sum, r) => sum + r.data * r.data, 0);
+      let newCost: number;
+      if (useAnalyticalSolve && analyticalProviders && analyticalVars) {
+        // ANALYTICAL PATH: Update analyticalVars and compute cost from providers
+        for (let j = 0; j < numVariables; j++) {
+          analyticalVars[j] = oldValues[j] + delta[j];
+        }
+        newCost = computeCostFromProviders(analyticalVars, analyticalProviders);
+      } else {
+        // AUTODIFF PATH: Use residualFn
+        const newResiduals = residualFn(variables);
+        newCost = newResiduals.reduce((sum, r) => sum + r.data * r.data, 0);
+      }
 
       if (adaptiveDamping) {
         if (newCost < cost) {
@@ -495,6 +678,12 @@ export function transparentLM(
           // Reject step, restore values and increase damping
           for (let j = 0; j < numVariables; j++) {
             variables[j].data = oldValues[j];
+          }
+          // Also restore analyticalVars if using analytical solve
+          if (analyticalVars) {
+            for (let j = 0; j < numVariables; j++) {
+              analyticalVars[j] = oldValues[j];
+            }
           }
           lambda = Math.min(lambda * dampingIncreaseFactor, 1e10);
           innerIterations++;
