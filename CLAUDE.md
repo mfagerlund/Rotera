@@ -23,6 +23,8 @@
 - NEVER create multiple objects, classes, interfaces, or types that serve the same or similar purposes. Each concept gets ONE representation.
 - gogo means "Start executing and don't stop until finished. Beep when done."
 
+**"Pre-existing failure" is not an excuse. Fix it or create a TODO.**
+
 ## Abbreviations
 
 | Abbr | Full Name | Entity Class |

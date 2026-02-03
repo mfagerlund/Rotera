@@ -37,40 +37,8 @@ export function applyScaleFromAxisLines(
     const posA = line.pointA.optimizedXyz;
     const posB = line.pointB.optimizedXyz;
 
-    // Check if each point's position came ONLY from inference (not locked or triangulated).
-    // LOCKED points are reliable anchors - they SHOULD be used for scale computation.
-    // INFERRED points might have sign ambiguity - skip them for scale.
-    // TRIANGULATED points (from multi-view) are also reliable - use them for scale.
-    const isFromInferenceOnly = (wp: WorldPoint): boolean => {
-      if (!wp.optimizedXyz) return false;
-
-      // If point is fully locked, it's NOT from inference - use it for scale
-      if (wp.isFullyLocked()) {
-        return false;
-      }
-
-      // Check if position matches inferred coordinates (sign might be wrong)
-      const eff = wp.getEffectiveXyz();
-      let hasInferredConstraint = false;
-      for (let i = 0; i < 3; i++) {
-        // Only check inferred coordinates, not locked ones
-        if (wp.inferredXyz?.[i] !== undefined && eff[i] !== null) {
-          hasInferredConstraint = true;
-          // Allow small tolerance for floating point
-          if (Math.abs(wp.optimizedXyz[i] - eff[i]!) > 0.01) {
-            return false; // Position differs from inferred, so it was triangulated
-          }
-        }
-      }
-      return hasInferredConstraint; // Has inferred coords and position matches them
-    };
-
-    const aFromInference = isFromInferenceOnly(line.pointA);
-    const bFromInference = isFromInferenceOnly(line.pointB);
-    if (aFromInference && bFromInference) {
-      log(`[Scale] Line ${line.pointA.name}-${line.pointB.name}: skipped (both endpoints from inference only)`);
-      continue;
-    }
+    // Inference is TRUSTED - sign ambiguity is resolved by branching before we get here.
+    // All points with optimizedXyz (locked, inferred, or triangulated) are valid for scale.
 
     if (posA && posB && line.targetLength) {
       const currentLength = Math.sqrt(

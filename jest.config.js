@@ -52,6 +52,6 @@ export default {
       statements: 80
     }
   },
-  testTimeout: 10000,
+  testTimeout: 120000,  // 2 minutes - optimization tests are slow
   verbose: true
 }

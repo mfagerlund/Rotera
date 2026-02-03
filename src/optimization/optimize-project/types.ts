@@ -7,6 +7,15 @@ import type { OutlierInfo } from '../outlier-detection';
 import type { InferenceBranch } from '../inference-branching';
 
 /**
+ * Production default values for OptimizeProjectOptions.
+ * Tests MUST use these values to match production behavior.
+ */
+export const OPTIMIZE_PROJECT_DEFAULTS = {
+  maxIterations: 500,
+  maxAttempts: 3,  // Generates 12 candidates via branching
+} as const;
+
+/**
  * Solve quality assessment based on total residual error.
  * This is the SINGLE SOURCE OF TRUTH for quality classification.
  */

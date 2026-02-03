@@ -133,18 +133,28 @@ export class VariableLayoutBuilder {
     this.cameraQuatLockedValues.set(camera.name, [...camera.rotation]);
 
     // Intrinsics (for reprojection provider)
-    // Use principalPoint from camera - caller should provide correct values
-    const effectivePPX = camera.principalPointX;
-    const effectivePPY = camera.principalPointY;
+    // Must match Viewpoint.addToValueMap() logic exactly
 
-    // Note: For Phase 6, we don't optimize intrinsics in analytical path yet.
-    // Store fixed values for now; intrinsics optimization can be added later.
+    // When useSimpleIntrinsics=true (default), only optimize f, cx, cy
+    // aspectRatio and skew stay fixed at their current values (typically 1 and 0)
+    const optimizeFullIntrinsics = optimizeIntrinsics && !camera.useSimpleIntrinsics;
+    // Only optimize principal point if the image might be cropped
+    // For uncropped images, PP should be locked to the image center
+    const optimizePrincipalPoint = optimizeIntrinsics && camera.isPossiblyCropped;
+
+    // Effective principal point values (same logic as autodiff)
+    const effectivePPX = camera.isPossiblyCropped ? camera.principalPointX : camera.imageWidth / 2;
+    const effectivePPY = camera.isPossiblyCropped ? camera.principalPointY : camera.imageHeight / 2;
+
     const intrinsicsIndices = {
       focalLength: optimizeIntrinsics ? this.allocate(camera.focalLength) : -1,
-      aspectRatio: -1,
-      principalPointX: -1,
-      principalPointY: -1,
-      skew: -1,
+      // Principal point - only optimize if isPossiblyCropped
+      principalPointX: optimizePrincipalPoint ? this.allocate(effectivePPX) : -1,
+      principalPointY: optimizePrincipalPoint ? this.allocate(effectivePPY) : -1,
+      // Full intrinsics - only if useSimpleIntrinsics=false
+      aspectRatio: optimizeFullIntrinsics ? this.allocate(camera.aspectRatio) : -1,
+      skew: optimizeFullIntrinsics ? this.allocate(0) : -1,  // skewCoefficient not in IOptimizableCamera
+      // Distortion (not supported yet in analytical)
       k1: -1,
       k2: -1,
       k3: -1,
@@ -190,6 +200,8 @@ export class VariableLayoutBuilder {
     const cameraPosIndices = new Map(this.cameraPosIndices);
     const cameraPosLockedValues = new Map(this.cameraPosLockedValues);
     const cameraQuatIndices = new Map(this.cameraQuatIndices);
+    const cameraIntrinsicsIndices = new Map(this.cameraIntrinsicsIndices);
+    const cameraIntrinsicsValues = new Map(this.cameraIntrinsicsValues);
 
     return {
       numVariables,
@@ -231,6 +243,14 @@ export class VariableLayoutBuilder {
         if (!locked) return undefined;
         const idx = axis === 'x' ? 0 : axis === 'y' ? 1 : 2;
         return locked[idx] ?? undefined;
+      },
+
+      getCameraIntrinsicsIndices(cameraId: string) {
+        return cameraIntrinsicsIndices.get(cameraId);
+      },
+
+      getCameraIntrinsicsValues(cameraId: string) {
+        return cameraIntrinsicsValues.get(cameraId);
       },
     };
   }

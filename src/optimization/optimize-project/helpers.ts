@@ -11,13 +11,12 @@ import { ImagePoint } from '../../entities/imagePoint';
 import { Line } from '../../entities/line';
 import { Constraint } from '../../entities/constraints';
 import { initializeCameraWithPnP } from '../pnp';
-import { initializeWorldPoints as unifiedInitialize } from '../unified-initialization/index';
 import { initializeSingleCameraPoints } from '../single-camera-initialization';
 import type { IOptimizableCamera } from '../IOptimizable';
 import { log, logProgress } from '../optimization-logger';
-import { detectOutliers, OutlierInfo } from '../outlier-detection';
+import type { OutlierInfo } from '../outlier-detection';
 import { worldPointSavedInferredXyz } from '../state-reset';
-import { validateProjectConstraints, hasPointsField } from '../validation';
+import { hasPointsField } from '../validation';
 import { canInitializeWithVanishingPoints } from '../vanishing-points';
 import { applyScaleFromAxisLines, translateToAnchorPoint } from '../initialization-phases';
 
@@ -71,12 +70,14 @@ export function runFreeSolve(
     wp.inferredXyz = [null, null, null];
   }
 
+  // Force dense mode for free solve - needs reliability during calibration initialization
   const freeSystem = new ConstraintSystem({
     tolerance,
     maxIterations: 200,
     damping,
     verbose: false,
     optimizeCameraIntrinsics: false,
+    forceSolverMode: 'dense',
   });
 
   pointArray.forEach(p => freeSystem.addPoint(p));
@@ -153,12 +154,14 @@ export function runLatePnPInitialization(
 
   if (camerasInitialized.length > 0 && camerasNeedingLatePnP.length > 0 && !latePnPCamerasCanSelfConstrain) {
     log(`[Prelim] ${camerasInitialized.length} init camera(s), ${camerasNeedingLatePnP.length} need late PnP`);
+    // Force dense mode for preliminary optimization - needs reliability for triangulation
     const prelimSystem = new ConstraintSystem({
       tolerance,
       maxIterations: 500,
       damping,
       verbose: false,
       optimizeCameraIntrinsics: false,
+      forceSolverMode: 'dense',
     });
 
     const worldPointArray = Array.from(project.worldPoints) as WorldPoint[];
@@ -259,6 +262,7 @@ export function runStage1Optimization(
   damping: number,
   verbose: boolean
 ): void {
+  // Force dense mode for stage1 - needs reliability for multi-camera point optimization
   const stage1System = new ConstraintSystem({
     tolerance,
     maxIterations,
@@ -266,6 +270,7 @@ export function runStage1Optimization(
     verbose,
     optimizeCameraIntrinsics: false,
     regularizationWeight: 0.5,
+    forceSolverMode: 'dense',
   });
 
   multiCameraPoints.forEach(p => stage1System.addPoint(p));
@@ -387,105 +392,24 @@ export function handleOutliersAndRerun(
     return null;
   }
 
-  log(`[Rerun] Excluding: ${camerasToExclude.map(c => c.name).join(', ')}`);
+  // CRITICAL: Do NOT automatically disable viewpoints when they fail!
+  // That's cheating - it hides failure by removing the problematic data.
+  // Instead, return a failure result so the solver can try a different approach.
+  //
+  // If late PnP failed, the solve failed. Period.
+  log(`[ERROR] Late PnP cameras failed: ${camerasToExclude.map(c => c.name).join(', ')}`);
+  log(`[ERROR] Solve cannot succeed - returning failure instead of cheating by disabling cameras`);
 
-  for (const vp of camerasToExclude) {
-    excludedCameras.add(vp);
-    excludedCameraNames.push(vp.name);
-    // Mark camera as disabled so fine-tune and other operations don't include it
-    vp.enabledInSolve = false;
-  }
-
-  // Check if all cameras are now excluded - if so, the solve is meaningless
-  // Only count enabled viewpoints
-  const remainingCameras = Array.from(project.viewpoints).filter(v =>
-    (v as Viewpoint).enabledInSolve && !excludedCameras.has(v as Viewpoint)
-  );
-  if (remainingCameras.length === 0) {
-    log(`[ERROR] All cameras excluded - cannot compute meaningful solution`);
-    // Return a failure result with high residual to prevent false success
-    return {
-      result: {
-        converged: false,
-        iterations: 0,
-        residual: Infinity,
-        error: 'All cameras excluded - late PnP failed for all cameras',
-      },
-      outliers,
-      rmsError,
-      medianError: rmsError, // Use rmsError as fallback
-    };
-  }
-
-  for (const wp of project.worldPoints) {
-    if (!(wp as WorldPoint).isFullyConstrained()) {
-      (wp as WorldPoint).optimizedXyz = undefined;
-    }
-  }
-  for (const vp of camerasToExclude) {
-    vp.position = [0, 0, 0];
-    vp.rotation = [1, 0, 0, 0];
-  }
-
-  // Filter to enabled viewpoints that aren't excluded
-  const goodCameras = (Array.from(project.viewpoints) as Viewpoint[]).filter(v =>
-    v.enabledInSolve && !excludedCameras.has(v)
-  );
-  const goodVPCameras = Array.from(camerasInitializedViaVP).filter(vp =>
-    vp.enabledInSolve && !excludedCameras.has(vp)
-  );
-  unifiedInitialize(
-    Array.from(project.worldPoints),
-    Array.from(project.lines),
-    Array.from(project.constraints),
-    {
-      sceneScale: 10.0,
-      verbose: false,
-      initializedViewpoints: new Set<Viewpoint>(goodCameras),
-      vpInitializedViewpoints: new Set<Viewpoint>(goodVPCameras),
-    }
-  );
-
-  const system2 = new ConstraintSystem({
-    tolerance,
-    maxIterations,
-    damping,
-    verbose,
-    optimizeCameraIntrinsics: shouldOptimizeIntrinsics,
-  });
-  project.worldPoints.forEach(p => system2.addPoint(p as WorldPoint));
-  project.lines.forEach(l => system2.addLine(l));
-  // Only add enabled viewpoints that aren't excluded
-  project.viewpoints.forEach(v => {
-    const vpConcrete = v as Viewpoint;
-    if (vpConcrete.enabledInSolve && !excludedCameras.has(vpConcrete)) {
-      system2.addCamera(vpConcrete);
-    }
-  });
-  project.imagePoints.forEach(ip => {
-    const ipConcrete = ip as ImagePoint;
-    if (ipConcrete.viewpoint.enabledInSolve && !excludedCameras.has(ipConcrete.viewpoint as Viewpoint)) {
-      system2.addImagePoint(ipConcrete);
-    }
-  });
-  project.constraints.forEach(c => system2.addConstraint(c));
-
-  const result2 = system2.solve();
-  log(`[Rerun] conv=${result2.converged}, iter=${result2.iterations}, res=${result2.residual.toFixed(3)}`);
-
-  // Only detect outliers in enabled viewpoints
-  const enabledViewpoints = (Array.from(project.viewpoints) as Viewpoint[]).filter(vp =>
-    vp.enabledInSolve && !excludedCameras.has(vp)
-  );
-  const detection2 = detectOutliers(project, outlierThreshold, enabledViewpoints);
-  for (const outlier of detection2.outliers) {
-    outlier.imagePoint.isOutlier = true;
-  }
-
+  // Return failure immediately - do not rerun with cameras excluded
   return {
-    result: result2,
-    outliers: detection2.outliers,
-    rmsError: detection2.rmsError,
-    medianError: detection2.medianError,
+    result: {
+      converged: false,
+      iterations: 0,
+      residual: Infinity,
+      error: `Late PnP failed for cameras: ${camerasToExclude.map(c => c.name).join(', ')}`,
+    },
+    outliers,
+    rmsError,
+    medianError: rmsError,
   };
 }

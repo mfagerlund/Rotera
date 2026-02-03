@@ -86,4 +86,49 @@ export interface VariableLayout {
    * Get the locked value for a camera position coordinate.
    */
   getLockedCameraPosValue(cameraId: string, axis: 'x' | 'y' | 'z'): number | undefined;
+
+  /**
+   * Returns indices for camera intrinsics.
+   * -1 for any non-optimized parameter (uses locked value).
+   */
+  getCameraIntrinsicsIndices(cameraId: string): CameraIntrinsicsIndices | undefined;
+
+  /**
+   * Get the locked/initial value for camera intrinsics.
+   * Used when computing residuals for locked intrinsics parameters.
+   */
+  getCameraIntrinsicsValues(cameraId: string): CameraIntrinsicsValues | undefined;
+}
+
+/**
+ * Camera intrinsics variable indices.
+ * -1 indicates a locked parameter (not optimized).
+ */
+export interface CameraIntrinsicsIndices {
+  focalLength: number;
+  aspectRatio: number;
+  principalPointX: number;
+  principalPointY: number;
+  skew: number;
+  k1: number;
+  k2: number;
+  k3: number;
+  p1: number;
+  p2: number;
+}
+
+/**
+ * Camera intrinsics values (for locked parameters).
+ */
+export interface CameraIntrinsicsValues {
+  focalLength: number;
+  aspectRatio: number;
+  principalPointX: number;
+  principalPointY: number;
+  skew: number;
+  k1: number;
+  k2: number;
+  k3: number;
+  p1: number;
+  p2: number;
 }

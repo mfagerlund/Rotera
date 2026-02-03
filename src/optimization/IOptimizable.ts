@@ -217,4 +217,24 @@ export interface IOptimizableCamera {
    * When true, points with negative camera-space Z are in front of camera.
    */
   isZReflected: boolean;
+
+  /** Image width in pixels */
+  imageWidth: number;
+
+  /** Image height in pixels */
+  imageHeight: number;
+
+  /**
+   * Whether to use simplified intrinsics model.
+   * When true: only f, cx, cy are optimized (aspectRatio and skew stay fixed)
+   * When false: full intrinsics including aspectRatio and skew are optimized
+   */
+  useSimpleIntrinsics: boolean;
+
+  /**
+   * Whether the image might be cropped from a larger image.
+   * When false: principal point is forced to image center (imageWidth/2, imageHeight/2)
+   * When true: principal point can be anywhere and is optimized if optimizeIntrinsics=true
+   */
+  isPossiblyCropped: boolean;
 }

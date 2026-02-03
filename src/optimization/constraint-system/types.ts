@@ -33,4 +33,15 @@ export interface SolverOptions {
    * Default: false
    */
   useIsZReflected?: boolean;
+
+  /**
+   * Force a specific solver mode, overriding the global setting.
+   * Use this for internal subsystems (like PnP refinement) that need a specific mode.
+   *
+   * - 'dense': Dense LM with autodiff (works everywhere but slow)
+   * - 'sparse': Sparse CG with autodiff (fast for large systems)
+   * - 'analytical': Analytical gradients (fastest but may not support all constraints)
+   * - undefined: Use global setting from solver-config
+   */
+  forceSolverMode?: 'dense' | 'sparse' | 'analytical';
 }
