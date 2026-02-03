@@ -42,3 +42,13 @@ export {
   type ReprojectionObservation,
   type ReprojectionFlags,
 } from './reprojection-provider';
+
+export {
+  createRegularizationProvider,
+  createRegularizationProviders,
+} from './regularization-provider';
+
+export {
+  createSignPreservationProvider,
+  createYSignPreservationProviders,
+} from './sign-preservation-provider';

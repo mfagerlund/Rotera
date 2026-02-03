@@ -8,3 +8,4 @@
 export type { AnalyticalResidualProvider, VariableLayout } from './types';
 export { accumulateNormalEquations, type NormalEquations } from './accumulate-normal-equations';
 export * from './providers';
+export { wrapWithNumericalGradient, wrapAllWithNumericalGradients } from './numerical-gradient-wrapper';

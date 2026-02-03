@@ -62,6 +62,17 @@ export interface TransparentLMOptions extends NonlinearLeastSquaresOptions {
    * Phase 7 of scalar-autograd removal: analytical solve replaces autodiff.
    */
   useAnalyticalSolve?: boolean;
+
+  /**
+   * Quaternion variable indices for renormalization after each step.
+   * Each entry is [w, x, y, z] indices into the variables array.
+   * -1 indicates a locked component (skip renormalization for that quaternion).
+   *
+   * Quaternion renormalization prevents numerical drift from causing
+   * the quaternion magnitude to diverge from 1, which can lead to
+   * convergence to reflected local minima.
+   */
+  quaternionIndices?: ReadonlyArray<readonly [number, number, number, number]>;
 }
 
 /**
@@ -490,7 +501,49 @@ export function transparentLM(
     analyticalProviders,
     analyticalValidationTolerance = 1e-6,
     useAnalyticalSolve = false,
+    quaternionIndices,
   } = options;
+
+  /**
+   * Renormalize quaternions to unit length.
+   * Prevents numerical drift from accumulating over iterations.
+   */
+  const renormalizeQuaternions = (
+    vars: Value[],
+    analyticalVars: Float64Array | null
+  ): void => {
+    if (!quaternionIndices) return;
+
+    for (const [wIdx, xIdx, yIdx, zIdx] of quaternionIndices) {
+      // Skip if any component is locked (-1)
+      if (wIdx < 0 || xIdx < 0 || yIdx < 0 || zIdx < 0) continue;
+
+      // Get current quaternion values
+      const w = vars[wIdx].data;
+      const x = vars[xIdx].data;
+      const y = vars[yIdx].data;
+      const z = vars[zIdx].data;
+
+      // Compute magnitude
+      const mag = Math.sqrt(w * w + x * x + y * y + z * z);
+      if (mag < 1e-10) continue; // Avoid division by zero
+
+      // Normalize
+      const invMag = 1.0 / mag;
+      vars[wIdx].data = w * invMag;
+      vars[xIdx].data = x * invMag;
+      vars[yIdx].data = y * invMag;
+      vars[zIdx].data = z * invMag;
+
+      // Also update analyticalVars if present
+      if (analyticalVars) {
+        analyticalVars[wIdx] = w * invMag;
+        analyticalVars[xIdx] = x * invMag;
+        analyticalVars[yIdx] = y * invMag;
+        analyticalVars[zIdx] = z * invMag;
+      }
+    }
+  };
 
   // Validate options
   if (useAnalyticalSolve && !analyticalProviders) {
@@ -715,12 +768,29 @@ export function transparentLM(
       break;
     }
 
+    // Renormalize quaternions after accepted step to prevent numerical drift
+    renormalizeQuaternions(variables, analyticalVars);
+
     prevCost = cost;
   }
 
   // Final cost computation
-  const finalResiduals = residualFn(variables);
-  const finalCost = finalResiduals.reduce((sum, r) => sum + r.data * r.data, 0);
+  // When using analytical solve, use the cost from the last iteration
+  // (residualFn may return [] when analytical providers handle all residuals)
+  let finalCost: number;
+  if (useAnalyticalSolve && analyticalProviders && analyticalVars) {
+    // Recompute from providers to get the most accurate final cost
+    const finalNormalEqs = accumulateNormalEquations(
+      analyticalVars,
+      analyticalProviders,
+      numVariables
+    );
+    finalCost = finalNormalEqs.cost;
+    residuals = Array.from(finalNormalEqs.residuals);
+  } else {
+    const finalResiduals = residualFn(variables);
+    finalCost = finalResiduals.reduce((sum, r) => sum + r.data * r.data, 0);
+  }
 
   const computationTime = performance.now() - startTime;
 

@@ -42,6 +42,8 @@ import {
   createCoplanarProviders,
   createReprojectionProviders,
   createVanishingLineProvider,
+  createRegularizationProviders,
+  createFixedPointProviders,
   type CameraIntrinsics,
   type CameraIntrinsicsIndices,
   type ReprojectionFlags,
@@ -51,6 +53,7 @@ import {
 import { DistanceConstraint } from '../../entities/constraints/distance-constraint';
 import { AngleConstraint } from '../../entities/constraints/angle-constraint';
 import { CoplanarPointsConstraint } from '../../entities/constraints/coplanar-points-constraint';
+import { FixedPointConstraint } from '../../entities/constraints/fixed-point-constraint';
 
 export class ConstraintSystem {
   private tolerance: number;
@@ -416,12 +419,26 @@ export class ConstraintSystem {
         : useAnalyticalSolve();
       let analyticalProviders: AnalyticalResidualProvider[] | undefined;
 
+      // Collect quaternion indices for all cameras with optimizable poses
+      // This is used for quaternion renormalization even without analytical mode
+      const quaternionIndices: Array<readonly [number, number, number, number]> = [];
+      let layout: ReturnType<VariableLayoutBuilder['build']> | undefined;
+
       if (analyticalEnabled) {
-        const { providers, layout, layoutBuilder } = this.buildAnalyticalProviders();
+        const { providers, layout: builtLayout, layoutBuilder } = this.buildAnalyticalProviders();
         analyticalProviders = providers;
+        layout = builtLayout;
+
+        // Collect quaternion indices from all cameras
+        for (const camera of this.cameras) {
+          if (!camera.isPoseLocked) {
+            const quatIndices = layout.getCameraQuatIndices(camera.name);
+            quaternionIndices.push(quatIndices);
+          }
+        }
 
         // Variable count mismatch is a CRITICAL BUG - do NOT silently fall back
-        if (layout.numVariables !== variables.length) {
+        if (builtLayout.numVariables !== variables.length) {
           // Gather debug information
           const pointCount = this.points.size;
           const cameraCount = this.cameras.size;
@@ -432,9 +449,9 @@ export class ConstraintSystem {
           const debugInfo = [
             ``,
             `=== ANALYTICAL VARIABLE COUNT MISMATCH ===`,
-            `Analytical layout: ${layout.numVariables} variables`,
+            `Analytical layout: ${builtLayout.numVariables} variables`,
             `Autodiff system: ${variables.length} variables`,
-            `Difference: ${Math.abs(layout.numVariables - variables.length)} variables`,
+            `Difference: ${Math.abs(builtLayout.numVariables - variables.length)} variables`,
             ``,
             `=== SYSTEM CONTENTS ===`,
             `Points: ${pointCount}`,
@@ -470,7 +487,7 @@ export class ConstraintSystem {
 
           throw new Error(
             `ANALYTICAL VARIABLE COUNT MISMATCH: ` +
-            `analytical=${layout.numVariables}, autodiff=${variables.length}` +
+            `analytical=${builtLayout.numVariables}, autodiff=${variables.length}` +
             debugInfo
           );
         }
@@ -491,6 +508,10 @@ export class ConstraintSystem {
         useSparseLinearSolve: sparseEnabled,
         analyticalProviders,
         useAnalyticalSolve: analyticalEnabled,
+        // Pass quaternion indices for explicit renormalization after each step.
+        // This prevents numerical drift from causing quaternion magnitude to diverge
+        // from 1.0, which can lead to convergence to reflected local minima.
+        quaternionIndices: quaternionIndices.length > 0 ? quaternionIndices : undefined,
       });
 
       // === SPARSE VALIDATION ===
@@ -1132,10 +1153,39 @@ export class ConstraintSystem {
           )
         );
         providers.push(...coplanarProviders);
+      } else if (constraint instanceof FixedPointConstraint) {
+        const pointInfo = getPointInfo(constraint.point);
+
+        const fixedPointProviders = createFixedPointProviders(
+          pointInfo.indices,
+          constraint.targetXyz,
+          createPointGetter(pointInfo.indices, pointInfo.locked)
+        );
+        providers.push(...fixedPointProviders);
       }
       // Note: Other constraint types (ParallelLines, PerpendicularLines, etc.)
       // can be added here as needed
     }
+
+    // 7. Add regularization providers (if enabled)
+    // This penalizes points moving far from their initial positions
+    if (this.regularizationWeight > 0 && this.initialPositions.size > 0) {
+      for (const [point, initPos] of this.initialPositions) {
+        const pointInfo = getPointInfo(point);
+        const regProviders = createRegularizationProviders(
+          pointInfo.indices,
+          initPos,
+          this.regularizationWeight,
+          createPointGetter(pointInfo.indices, pointInfo.locked)
+        );
+        providers.push(...regProviders);
+      }
+    }
+
+    // 8. Sign preservation is DISABLED - was causing test failures
+    // The issue is that most Y coordinates are locked, not free, so sign preservation
+    // can't prevent reflection to the wrong local minimum.
+    // TODO: Investigate why analytical mode converges to reflected solutions.
 
     return { providers, layout, layoutBuilder: builder };
   }

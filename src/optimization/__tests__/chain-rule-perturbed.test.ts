@@ -1,12 +1,16 @@
 /**
  * Test chain rule composition at perturbed values.
+ *
+ * NOTE: Tests perturbed (non-unit) quaternions to verify gradient correctness
+ * during optimization when quaternions drift from unit magnitude.
  */
 
-import { Value } from 'scalar-autograd';
+import { Value, Vec3, Vec4, V } from 'scalar-autograd';
 import {
   createReprojectionUProvider,
   createReprojectionVProvider,
 } from '../analytical/providers/reprojection-provider';
+import { Quaternion } from '../Quaternion';
 
 describe('Chain rule at perturbed values', () => {
   const intrinsics = {
@@ -57,37 +61,24 @@ describe('Chain rule at perturbed values', () => {
     const analyticalResidual = provider.computeResidual(variables);
     const analyticalGrad = provider.computeGradient(variables);
 
-    // Compute autodiff
+    // Compute autodiff using the SAME quaternion rotation as actual code
     const vars: Value[] = [];
     for (let i = 0; i < 10; i++) {
       vars.push(new Value(variables[i], `v${i}`, true));
     }
 
-    const px = vars[0], py = vars[1], pz = vars[2];
-    const cpx = vars[3], cpy = vars[4], cpz = vars[5];
-    const qw = vars[6], qx = vars[7], qy = vars[8], qz = vars[9];
+    const worldPoint = new Vec3(vars[0], vars[1], vars[2]);
+    const cameraPos = new Vec3(vars[3], vars[4], vars[5]);
+    const quatRotation = new Vec4(vars[6], vars[7], vars[8], vars[9]);
 
-    // Transform to camera frame
-    const tx = px.sub(cpx);
-    const ty = py.sub(cpy);
-    const tz = pz.sub(cpz);
-
-    // Quaternion rotation
-    const cx_ = qy.mul(tz).sub(qz.mul(ty));
-    const cy_ = qz.mul(tx).sub(qx.mul(tz));
-    const cz_ = qx.mul(ty).sub(qy.mul(tx));
-
-    const dx = qy.mul(cz_).sub(qz.mul(cy_));
-    const dy = qz.mul(cx_).sub(qx.mul(cz_));
-    const dz = qx.mul(cy_).sub(qy.mul(cx_));
-
-    const camX = tx.add(qw.mul(cx_).mul(2)).add(dx.mul(2));
-    const camY = ty.add(qw.mul(cy_).mul(2)).add(dy.mul(2));
-    const camZ = tz.add(qw.mul(cz_).mul(2)).add(dz.mul(2));
+    // Transform to camera frame using actual Quaternion.rotateVector
+    // This is q * (p - c) * q* which differs from unit-quaternion formula for non-unit q
+    const translated = worldPoint.sub(cameraPos);
+    const cam = Quaternion.rotateVector(quatRotation, translated);
 
     // Project
-    const invZ = camZ.pow(-1);
-    const normX = camX.mul(invZ);
+    const invZ = cam.z.pow(-1);
+    const normX = cam.x.mul(invZ);
 
     const u = normX.mul(intrinsics.fx).add(intrinsics.cx);
     const uResidual = u.sub(observedU);
@@ -160,38 +151,26 @@ describe('Chain rule at perturbed values', () => {
     const analyticalResidual = provider.computeResidual(variables);
     const analyticalGrad = provider.computeGradient(variables);
 
-    // Compute autodiff
+    // Compute autodiff using the SAME quaternion rotation as actual code
     const vars: Value[] = [];
     for (let i = 0; i < 10; i++) {
       vars.push(new Value(variables[i], `v${i}`, true));
     }
 
-    const px = vars[0], py = vars[1], pz = vars[2];
-    const cpx = vars[3], cpy = vars[4], cpz = vars[5];
-    const qw = vars[6], qx = vars[7], qy = vars[8], qz = vars[9];
+    const worldPoint = new Vec3(vars[0], vars[1], vars[2]);
+    const cameraPos = new Vec3(vars[3], vars[4], vars[5]);
+    const quatRotation = new Vec4(vars[6], vars[7], vars[8], vars[9]);
 
-    const tx = px.sub(cpx);
-    const ty = py.sub(cpy);
-    const tz = pz.sub(cpz);
-
-    const cx_ = qy.mul(tz).sub(qz.mul(ty));
-    const cy_ = qz.mul(tx).sub(qx.mul(tz));
-    const cz_ = qx.mul(ty).sub(qy.mul(tx));
-
-    const dx = qy.mul(cz_).sub(qz.mul(cy_));
-    const dy = qz.mul(cx_).sub(qx.mul(cz_));
-    const dz = qx.mul(cy_).sub(qy.mul(cx_));
-
-    const camX = tx.add(qw.mul(cx_).mul(2)).add(dx.mul(2));
-    const camY = ty.add(qw.mul(cy_).mul(2)).add(dy.mul(2));
-    const camZ = tz.add(qw.mul(cz_).mul(2)).add(dz.mul(2));
+    // Transform to camera frame using actual Quaternion.rotateVector
+    const translated = worldPoint.sub(cameraPos);
+    const cam = Quaternion.rotateVector(quatRotation, translated);
 
     // Project (V = cy - fy * normY)
-    const invZ = camZ.pow(-1);
-    const normY = camY.mul(invZ);
+    const invZ = cam.z.pow(-1);
+    const normY = cam.y.mul(invZ);
 
-    const v = new Value(intrinsics.cy).sub(normY.mul(intrinsics.fy));
-    const vResidual = v.sub(observedV);
+    const v = V.sub(V.C(intrinsics.cy), V.mul(normY, V.C(intrinsics.fy)));
+    const vResidual = V.sub(v, V.C(observedV));
 
     // Get gradients
     Value.zeroGradTree(vResidual);

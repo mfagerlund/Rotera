@@ -1,7 +1,17 @@
 # Coincident Points: Visual Snapping & Coordinate Inference
 
-**Status:** Requirements / Plan
+**Status:** Partially Implemented
 **Date:** 2025-01-27
+**Updated:** 2026-02-03
+
+## Implementation Status
+
+| Feature | Status | Location |
+|---------|--------|----------|
+| 1. Visual Snapping | ✅ Implemented | `coincidentSnap.ts` |
+| 2a. Drag coincident point (constrained to line) | ❌ Not implemented | - |
+| 2b. Drag endpoint cascades to coincident points | ❌ Not implemented | - |
+| 3. Coordinate Inference | ✅ Implemented | `coordinate-inference.ts` |
 
 ## Overview
 

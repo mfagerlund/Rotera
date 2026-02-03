@@ -4,28 +4,29 @@
 
 **Goal:** Make analytical mode the default, eliminating autodiff overhead.
 
-**Current state:**
+**Current state (sparse mode is default):**
 - ✅ Analytical gradients pass numerical verification at initial state
 - ✅ Gradient-script 0.3.1 fixed sign bugs in dcam gradients
 - ✅ `isZReflected` handling added to reprojection providers
-- ✅ Sparse mode: 19/22 regression tests pass
-- ⚠️ Analytical mode: 18/22 pass (same 2 pre-existing + "3 Loose" regression)
+- ✅ Regularization providers added to analytical mode
+- ✅ FixedPointConstraint handled in analytical mode
+- ✅ Quaternion renormalization infrastructure added
+- ✅ chain-rule-perturbed tests pass (fixed incorrect unit-quaternion formula)
+- ⚠️ Analytical mode still converges to worse local minima (39px vs 13px for "3 Loose")
 
-**Known issue: "3 Loose" fails only with analytical mode**
-- Sparse: 13.04px, converges in 58 iterations
-- Analytical: 33.61px, hits max iterations (499), doesn't converge
-- Gradients verify correct at initial state via finite difference
-- Issue manifests during iteration, not at initialization
-- Dense analytical fails with "Damping adjustment failed"
-- Root cause: Unknown - needs investigation
+**Known issue: Analytical mode convergence**
+- Analytical mode converges to reflected solutions (Y-axis flips from +25 to -25)
+- Sign preservation can't help since most Y coordinates are locked, not free
+- The general quaternion formula (q*v*q*) matches autodiff for non-unit quaternions
+- Issue likely in how the accumulated gradients guide optimization
 
 **Pre-existing failures (both modes):**
 - "No Vanishing Lines" (29.22px) - initialization issue
 - "Tower 1 - 1 Img" (118px) - single-camera initialization
 
 **Next steps:**
-1. Investigate "3 Loose" analytical convergence failure
-2. Add regularization providers to analytical mode
+1. Investigate gradient accumulation differences between modes
+2. Consider using stronger regularization or different damping for analytical
 3. Fix pre-existing test failures
 
 ---
