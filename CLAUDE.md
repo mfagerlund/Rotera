@@ -1,18 +1,32 @@
-**Last Updated:** 2026-02-01
+**Last Updated:** 2026-02-03
 
-## TODO: SWITCH REPROJECTION TO ANALYTICAL GRADIENTS
+## TODO: ANALYTICAL SOLVER MODE
 
-**Gradient-script 0.3.1 fixed the sign bug.** The dcam gradient files have been regenerated and pass verification.
+**Goal:** Make analytical mode the default, eliminating autodiff overhead.
 
 **Current state:**
-- ✅ `reprojection-u-dcam-gradient.ts` and `reprojection-v-dcam-gradient.ts` regenerated with 0.3.1
-- ✅ All gradient-comparison tests pass (including rotated camera, distortion)
-- ⚠️ `reprojection-provider.ts` still uses numerical gradients (not yet switched)
+- ✅ Analytical gradients pass numerical verification at initial state
+- ✅ Gradient-script 0.3.1 fixed sign bugs in dcam gradients
+- ✅ `isZReflected` handling added to reprojection providers
+- ✅ Sparse mode: 19/22 regression tests pass
+- ⚠️ Analytical mode: 18/22 pass (same 2 pre-existing + "3 Loose" regression)
+
+**Known issue: "3 Loose" fails only with analytical mode**
+- Sparse: 13.04px, converges in 58 iterations
+- Analytical: 33.61px, hits max iterations (499), doesn't converge
+- Gradients verify correct at initial state via finite difference
+- Issue manifests during iteration, not at initialization
+- Dense analytical fails with "Damping adjustment failed"
+- Root cause: Unknown - needs investigation
+
+**Pre-existing failures (both modes):**
+- "No Vanishing Lines" (29.22px) - initialization issue
+- "Tower 1 - 1 Img" (118px) - single-camera initialization
 
 **Next steps:**
-1. Update `reprojection-provider.ts` to use analytical gradients via chain rule
-2. Verify performance improvement
-3. Remove numerical gradient fallback
+1. Investigate "3 Loose" analytical convergence failure
+2. Add regularization providers to analytical mode
+3. Fix pre-existing test failures
 
 ---
 
