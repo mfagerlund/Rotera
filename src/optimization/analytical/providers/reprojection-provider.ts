@@ -9,7 +9,13 @@
  * 2. Use dcam gradient for projection: dResidual/dcam
  * 3. Chain rule: dResidual/dX = dResidual/dcam * dcam/dX
  *
- * Variables affected: world point (3), camera position (3), quaternion (4) = 10 total
+ * Supports both fixed and optimized intrinsics:
+ * - Fixed intrinsics (index = -1): uses locked values
+ * - Variable intrinsics (index >= 0): reads from variable array, computes numerical gradients
+ *
+ * Variables affected:
+ * - world point (3), camera position (3), quaternion (4) = 10 base variables
+ * - focalLength, cx, cy when optimizing intrinsics = up to 3 more
  */
 
 import { AnalyticalResidualProvider } from '../types';
@@ -19,6 +25,9 @@ import { reprojection_v_dcam_grad } from '../../residuals/gradients/reprojection
 type Point3D = { x: number; y: number; z: number };
 type Quaternion = { w: number; x: number; y: number; z: number };
 
+/**
+ * Camera intrinsics VALUES (for computing residuals)
+ */
 export interface CameraIntrinsics {
   fx: number;
   fy: number;
@@ -31,47 +40,105 @@ export interface CameraIntrinsics {
   p2: number;
 }
 
+/**
+ * Camera intrinsics INDICES for optimization
+ * -1 means locked (use value from CameraIntrinsics)
+ * >= 0 means variable index in optimization array
+ */
+export interface CameraIntrinsicsIndices {
+  focalLength: number; // affects both fx and fy
+  cx: number;
+  cy: number;
+  // aspectRatio, k1, k2, k3, p1, p2 - not optimized for now
+}
+
 export interface ReprojectionObservation {
   observedU: number;
   observedV: number;
 }
 
+export interface ReprojectionFlags {
+  /**
+   * When true, negate all camera-frame coordinates before projection.
+   * This handles the Z-reflected coordinate system from handedness correction.
+   * Must match the autodiff behavior in camera-projection.ts.
+   */
+  isZReflected?: boolean;
+}
+
 /**
- * Rotate a vector by a quaternion: v' = q * v * q^(-1)
- * Using the formula: v' = v + 2*w*(q_xyz × v) + 2*(q_xyz × (q_xyz × v))
+ * Rotate a vector by a quaternion: v' = q * v * q*
+ *
+ * This uses the GENERAL formula (works for non-unit quaternions):
+ * v' = 2*(q_vec · v)*q_vec + (w² - |q_vec|²)*v + 2*w*(q_vec × v)
+ *
+ * The previous formula v' = v + 2*w*(q×v) + 2*(q×(q×v)) ONLY works for unit quaternions.
+ * When the quaternion is not normalized (as happens during optimization),
+ * the general formula must be used to match the autodiff's q * v * q* computation.
  */
 function quatRotate(q: Quaternion, v: Point3D): Point3D {
-  // Cross product: c = q_xyz × v
-  const cx = q.y * v.z - q.z * v.y;
-  const cy = q.z * v.x - q.x * v.z;
-  const cz = q.x * v.y - q.y * v.x;
+  const { w, x: qx, y: qy, z: qz } = q;
 
-  // Cross product: d = q_xyz × c
-  const dx = q.y * cz - q.z * cy;
-  const dy = q.z * cx - q.x * cz;
-  const dz = q.x * cy - q.y * cx;
+  // q_vec · v (dot product)
+  const dot = qx * v.x + qy * v.y + qz * v.z;
 
-  // Result: v + 2*w*c + 2*d
+  // |q_vec|² (squared magnitude of vector part)
+  const qVecSq = qx * qx + qy * qy + qz * qz;
+
+  // w² - |q_vec|²
+  const wSqMinusQVecSq = w * w - qVecSq;
+
+  // q_vec × v (cross product)
+  const cx = qy * v.z - qz * v.y;
+  const cy = qz * v.x - qx * v.z;
+  const cz = qx * v.y - qy * v.x;
+
+  // v' = 2*(q_vec · v)*q_vec + (w² - |q_vec|²)*v + 2*w*(q_vec × v)
   return {
-    x: v.x + 2 * q.w * cx + 2 * dx,
-    y: v.y + 2 * q.w * cy + 2 * dy,
-    z: v.z + 2 * q.w * cz + 2 * dz,
+    x: 2 * dot * qx + wSqMinusQVecSq * v.x + 2 * w * cx,
+    y: 2 * dot * qy + wSqMinusQVecSq * v.y + 2 * w * cy,
+    z: 2 * dot * qz + wSqMinusQVecSq * v.z + 2 * w * cz,
   };
 }
 
 /**
  * Compute dcam/dt where cam = quatRotate(q, t) and t = worldPoint - cameraPos
- * This is the rotation matrix corresponding to quaternion q
+ *
+ * For the general quaternion formula:
+ * cam = 2*(q_vec · t)*q_vec + (w² - |q_vec|²)*t + 2*w*(q_vec × t)
+ *
+ * The derivative with respect to t is:
+ * dcam/dt = 2*q_vec*q_vec^T + (w² - |q_vec|²)*I + 2*w*[q_vec×]
+ *
+ * where [q_vec×] is the skew-symmetric cross-product matrix.
  */
-function quatRotationMatrix(q: Quaternion): number[][] {
-  const w = q.w, x = q.x, y = q.y, z = q.z;
-  const w2 = w * w, x2 = x * x, y2 = y * y, z2 = z * z;
+function quatRotateDerivative_dt(q: Quaternion): number[][] {
+  const { w, x: qx, y: qy, z: qz } = q;
 
-  // Rotation matrix from quaternion
+  // w² - |q_vec|²
+  const wSqMinusQVecSq = w * w - (qx * qx + qy * qy + qz * qz);
+
+  // dcam/dt = 2*q_vec*q_vec^T + (w² - |q_vec|²)*I + 2*w*[q_vec×]
+  //
+  // 2*q_vec*q_vec^T is the outer product:
+  // [2*qx*qx  2*qx*qy  2*qx*qz]
+  // [2*qy*qx  2*qy*qy  2*qy*qz]
+  // [2*qz*qx  2*qz*qy  2*qz*qz]
+  //
+  // (w² - |q_vec|²)*I:
+  // [wSqMinusQVecSq  0               0              ]
+  // [0               wSqMinusQVecSq  0              ]
+  // [0               0               wSqMinusQVecSq ]
+  //
+  // 2*w*[q_vec×]:
+  // [0         -2*w*qz    2*w*qy ]
+  // [2*w*qz    0         -2*w*qx ]
+  // [-2*w*qy   2*w*qx    0       ]
+
   return [
-    [w2 + x2 - y2 - z2, 2 * (x * y - w * z), 2 * (x * z + w * y)],
-    [2 * (x * y + w * z), w2 - x2 + y2 - z2, 2 * (y * z - w * x)],
-    [2 * (x * z - w * y), 2 * (y * z + w * x), w2 - x2 - y2 + z2],
+    [2 * qx * qx + wSqMinusQVecSq,     2 * qx * qy - 2 * w * qz,      2 * qx * qz + 2 * w * qy],
+    [2 * qy * qx + 2 * w * qz,         2 * qy * qy + wSqMinusQVecSq,  2 * qy * qz - 2 * w * qx],
+    [2 * qz * qx - 2 * w * qy,         2 * qz * qy + 2 * w * qx,      2 * qz * qz + wSqMinusQVecSq],
   ];
 }
 
@@ -79,77 +146,57 @@ function quatRotationMatrix(q: Quaternion): number[][] {
  * Compute dcam/dq where cam = quatRotate(q, t)
  * Returns [dcam/dw, dcam/dx, dcam/dy, dcam/dz] each as Point3D
  *
- * cam = t + 2*w*c + 2*d where:
- *   c = q_xyz × t
- *   d = q_xyz × c
+ * For the general formula:
+ * cam = 2*(q_vec · t)*q_vec + (w² - |q_vec|²)*t + 2*w*(q_vec × t)
+ *
+ * Derivatives computed analytically for each component.
  */
 function quatRotateGradient(q: Quaternion, t: Point3D): { dw: Point3D; dx: Point3D; dy: Point3D; dz: Point3D } {
-  const { w, x, y, z } = q;
+  const { w, x: qx, y: qy, z: qz } = q;
 
-  // c = q_xyz × t
-  const cx = y * t.z - z * t.y;
-  const cy = z * t.x - x * t.z;
-  const cz = x * t.y - y * t.x;
+  // dot = q_vec · t
+  const dot = qx * t.x + qy * t.y + qz * t.z;
 
-  // d/dw(cam) = 2 * c
+  // c = q_vec × t (cross product)
+  const cx = qy * t.z - qz * t.y;
+  const cy = qz * t.x - qx * t.z;
+  const cz = qx * t.y - qy * t.x;
+
+  // d(cam)/dw = 2*w*t + 2*(q_vec × t)
   const dw: Point3D = {
-    x: 2 * cx,
-    y: 2 * cy,
-    z: 2 * cz,
+    x: 2 * w * t.x + 2 * cx,
+    y: 2 * w * t.y + 2 * cy,
+    z: 2 * w * t.z + 2 * cz,
   };
 
-  // d(cam)/d(q.x) = 2*w*(d(c)/d(q.x)) + 2*(d(d)/d(q.x))
-  // d(cx)/d(q.x) = 0
-  // d(cy)/d(q.x) = -t.z
-  // d(cz)/d(q.x) = t.y
-  //
-  // d(dx)/d(q.x) = y*(d(cz)/d(q.x)) - z*(d(cy)/d(q.x)) = y*t.y + z*t.z
-  // d(dy)/d(q.x) = z*(d(cx)/d(q.x)) - cz - x*(d(cz)/d(q.x)) = -cz - x*t.y
-  // d(dz)/d(q.x) = cy + x*(d(cy)/d(q.x)) - y*(d(cx)/d(q.x)) = cy - x*t.z
-  //
-  // d(cam.x)/d(q.x) = 2*w*0 + 2*(y*t.y + z*t.z)
-  // d(cam.y)/d(q.x) = 2*w*(-t.z) + 2*(-cz - x*t.y)
-  // d(cam.z)/d(q.x) = 2*w*t.y + 2*(cy - x*t.z)
+  // d(cam)/dqx:
+  // cam.x: 2*dot
+  // cam.y: 2*t.x*qy - 2*qx*t.y - 2*w*t.z
+  // cam.z: 2*t.x*qz - 2*qx*t.z + 2*w*t.y
   const dx: Point3D = {
-    x: 2 * (y * t.y + z * t.z),
-    y: 2 * (w * (-t.z) + (-cz - x * t.y)),
-    z: 2 * (w * t.y + (cy - x * t.z)),
+    x: 2 * dot,
+    y: 2 * t.x * qy - 2 * qx * t.y - 2 * w * t.z,
+    z: 2 * t.x * qz - 2 * qx * t.z + 2 * w * t.y,
   };
 
-  // d(cam)/d(q.y) = 2*w*(d(c)/d(q.y)) + 2*(d(d)/d(q.y))
-  // d(cx)/d(q.y) = t.z
-  // d(cy)/d(q.y) = 0
-  // d(cz)/d(q.y) = -t.x
-  //
-  // d(dx)/d(q.y) = cz + y*(d(cz)/d(q.y)) - z*(d(cy)/d(q.y)) = cz - y*t.x
-  // d(dy)/d(q.y) = z*(d(cx)/d(q.y)) - x*(d(cz)/d(q.y)) = z*t.z + x*t.x
-  // d(dz)/d(q.y) = x*(d(cy)/d(q.y)) - cx - y*(d(cx)/d(q.y)) = -cx - y*t.z
-  //
-  // d(cam.x)/d(q.y) = 2*w*t.z + 2*(cz - y*t.x)
-  // d(cam.y)/d(q.y) = 2*w*0 + 2*(z*t.z + x*t.x)
-  // d(cam.z)/d(q.y) = 2*w*(-t.x) + 2*(-cx - y*t.z)
+  // d(cam)/dqy:
+  // cam.x: 2*t.y*qx - 2*qy*t.x + 2*w*t.z
+  // cam.y: 2*dot
+  // cam.z: 2*t.y*qz - 2*qy*t.z - 2*w*t.x
   const dy: Point3D = {
-    x: 2 * (w * t.z + (cz - y * t.x)),
-    y: 2 * (z * t.z + x * t.x),
-    z: 2 * (w * (-t.x) + (-cx - y * t.z)),
+    x: 2 * t.y * qx - 2 * qy * t.x + 2 * w * t.z,
+    y: 2 * dot,
+    z: 2 * t.y * qz - 2 * qy * t.z - 2 * w * t.x,
   };
 
-  // d(cam)/d(q.z) = 2*w*(d(c)/d(q.z)) + 2*(d(d)/d(q.z))
-  // d(cx)/d(q.z) = -t.y
-  // d(cy)/d(q.z) = t.x
-  // d(cz)/d(q.z) = 0
-  //
-  // d(dx)/d(q.z) = y*(d(cz)/d(q.z)) - cy - z*(d(cy)/d(q.z)) = -cy - z*t.x
-  // d(dy)/d(q.z) = cx + z*(d(cx)/d(q.z)) - x*(d(cz)/d(q.z)) = cx - z*t.y
-  // d(dz)/d(q.z) = x*(d(cy)/d(q.z)) - y*(d(cx)/d(q.z)) = x*t.x + y*t.y
-  //
-  // d(cam.x)/d(q.z) = 2*w*(-t.y) + 2*(-cy - z*t.x)
-  // d(cam.y)/d(q.z) = 2*w*t.x + 2*(cx - z*t.y)
-  // d(cam.z)/d(q.z) = 2*w*0 + 2*(x*t.x + y*t.y)
+  // d(cam)/dqz:
+  // cam.x: 2*t.z*qx - 2*qz*t.x - 2*w*t.y
+  // cam.y: 2*t.z*qy - 2*qz*t.y + 2*w*t.x
+  // cam.z: 2*dot
   const dz: Point3D = {
-    x: 2 * (w * (-t.y) + (-cy - z * t.x)),
-    y: 2 * (w * t.x + (cx - z * t.y)),
-    z: 2 * (x * t.x + y * t.y),
+    x: 2 * t.z * qx - 2 * qz * t.x - 2 * w * t.y,
+    y: 2 * t.z * qy - 2 * qz * t.y + 2 * w * t.x,
+    z: 2 * dot,
   };
 
   return { dw, dx, dy, dz };
@@ -169,26 +216,37 @@ type DcamGradFn = (
   observed: number
 ) => { value: number; dcamX: number; dcamY: number; dcamZ: number };
 
+// Numerical differentiation epsilon
+const NUM_GRAD_EPS = 1e-7;
+
+// Behind-camera penalty constants (must match autodiff in ImagePoint.ts)
+const NEAR_PLANE = 0.1;
+const PENALTY_SCALE = 500;
+
 /**
  * Creates a single reprojection residual provider (U or V component) using chain rule.
+ *
+ * When intrinsicsIndices are provided and valid (>= 0), the provider:
+ * - Reads intrinsics values from the variable array
+ * - Computes numerical gradients for intrinsics parameters
+ *
+ * @param isUComponent - true for U residual, false for V
  */
 function createReprojectionComponentProvider(
   worldPointIndices: readonly [number, number, number],
   cameraPosIndices: readonly [number, number, number],
   quatIndices: readonly [number, number, number, number],
-  fx: number,
-  cx: number,
-  k1: number,
-  k2: number,
-  k3: number,
-  p1: number,
-  p2: number,
+  intrinsics: CameraIntrinsics,
+  intrinsicsIndices: CameraIntrinsicsIndices | undefined,
   observed: number,
   getWorldPoint: (variables: Float64Array) => Point3D,
   getCameraPos: (variables: Float64Array) => Point3D,
   getQuat: (variables: Float64Array) => Quaternion,
-  dcamGradFn: DcamGradFn
+  dcamGradFn: DcamGradFn,
+  isUComponent: boolean,
+  flags?: ReprojectionFlags
 ): AnalyticalResidualProvider {
+  const isZReflected = flags?.isZReflected ?? false;
   // Build active indices and mapping
   const activeIndices: number[] = [];
   const wpMap: [number, number, number] = [-1, -1, -1];
@@ -219,6 +277,146 @@ function createReprojectionComponentProvider(
     }
   }
 
+  // Intrinsics indices (for numerical gradients)
+  // Only add if we're optimizing them
+  let focalLengthMap = -1;
+  let cxMap = -1;
+  let cyMap = -1;
+
+  if (intrinsicsIndices) {
+    if (intrinsicsIndices.focalLength >= 0) {
+      focalLengthMap = activeIndices.length;
+      activeIndices.push(intrinsicsIndices.focalLength);
+    }
+    // cx affects U only, cy affects V only
+    if (isUComponent && intrinsicsIndices.cx >= 0) {
+      cxMap = activeIndices.length;
+      activeIndices.push(intrinsicsIndices.cx);
+    }
+    if (!isUComponent && intrinsicsIndices.cy >= 0) {
+      cyMap = activeIndices.length;
+      activeIndices.push(intrinsicsIndices.cy);
+    }
+  }
+
+  /**
+   * Get intrinsics values, reading from variables array when optimizing
+   */
+  function getIntrinsicsValues(variables: Float64Array): CameraIntrinsics {
+    let fx = intrinsics.fx;
+    let fy = intrinsics.fy;
+    const cx = (intrinsicsIndices && intrinsicsIndices.cx >= 0)
+      ? variables[intrinsicsIndices.cx]
+      : intrinsics.cx;
+    const cy = (intrinsicsIndices && intrinsicsIndices.cy >= 0)
+      ? variables[intrinsicsIndices.cy]
+      : intrinsics.cy;
+
+    // When optimizing focal length, read it and recompute fx, fy
+    if (intrinsicsIndices && intrinsicsIndices.focalLength >= 0) {
+      const focalLength = variables[intrinsicsIndices.focalLength];
+      // fx = focalLength, fy = focalLength * aspectRatio
+      // aspectRatio = fy / fx originally
+      const aspectRatio = intrinsics.fy / intrinsics.fx;
+      fx = focalLength;
+      fy = focalLength * aspectRatio;
+    }
+
+    return {
+      fx,
+      fy,
+      cx,
+      cy,
+      k1: intrinsics.k1,
+      k2: intrinsics.k2,
+      k3: intrinsics.k3,
+      p1: intrinsics.p1,
+      p2: intrinsics.p2,
+    };
+  }
+
+  /**
+   * Compute the residual value
+   */
+  function computeResidualWithIntrinsics(
+    variables: Float64Array,
+    currentIntrinsics: CameraIntrinsics
+  ): number {
+    const wp = getWorldPoint(variables);
+    const cp = getCameraPos(variables);
+    const q = getQuat(variables);
+
+    // Transform to camera frame
+    const t = { x: wp.x - cp.x, y: wp.y - cp.y, z: wp.z - cp.z };
+    let cam = quatRotate(q, t);
+
+    // When isZReflected, negate all camera-frame coordinates
+    if (isZReflected) {
+      cam = { x: -cam.x, y: -cam.y, z: -cam.z };
+    }
+
+    const fParam = isUComponent ? currentIntrinsics.fx : currentIntrinsics.fy;
+    const cParam = isUComponent ? currentIntrinsics.cx : currentIntrinsics.cy;
+
+    const { value } = dcamGradFn(
+      cam.x,
+      cam.y,
+      cam.z,
+      fParam,
+      cParam,
+      currentIntrinsics.k1,
+      currentIntrinsics.k2,
+      currentIntrinsics.k3,
+      currentIntrinsics.p1,
+      currentIntrinsics.p2,
+      observed
+    );
+    return value;
+  }
+
+  /**
+   * Compute the behind-camera penalty gradient using chain rule.
+   * penalty = (NEAR_PLANE - camZ) * PENALTY_SCALE
+   * d(penalty)/dX = -PENALTY_SCALE * dcamZ/dX
+   */
+  function computePenaltyGradient(
+    q: Quaternion,
+    t: Point3D
+  ): Float64Array {
+    const grad = new Float64Array(activeIndices.length);
+
+    // Derivative of quatRotate with respect to t
+    const R = quatRotateDerivative_dt(q);
+
+    // dcam/dq
+    const quatGrad = quatRotateGradient(q, t);
+
+    // d(penalty)/dcamZ = -PENALTY_SCALE
+    // d(penalty)/dX = -PENALTY_SCALE * dcamZ/dX
+    const dPenalty_dcamZ = -PENALTY_SCALE;
+
+    // World point gradient: dcamZ/dwp = R[2][0..2]
+    if (wpMap[0] >= 0) grad[wpMap[0]] = dPenalty_dcamZ * R[2][0];
+    if (wpMap[1] >= 0) grad[wpMap[1]] = dPenalty_dcamZ * R[2][1];
+    if (wpMap[2] >= 0) grad[wpMap[2]] = dPenalty_dcamZ * R[2][2];
+
+    // Camera position gradient: dcamZ/dcp = -R[2][0..2]
+    if (cpMap[0] >= 0) grad[cpMap[0]] = dPenalty_dcamZ * (-R[2][0]);
+    if (cpMap[1] >= 0) grad[cpMap[1]] = dPenalty_dcamZ * (-R[2][1]);
+    if (cpMap[2] >= 0) grad[cpMap[2]] = dPenalty_dcamZ * (-R[2][2]);
+
+    // Quaternion gradient: dcamZ/dq
+    if (qMap[0] >= 0) grad[qMap[0]] = dPenalty_dcamZ * quatGrad.dw.z;
+    if (qMap[1] >= 0) grad[qMap[1]] = dPenalty_dcamZ * quatGrad.dx.z;
+    if (qMap[2] >= 0) grad[qMap[2]] = dPenalty_dcamZ * quatGrad.dy.z;
+    if (qMap[3] >= 0) grad[qMap[3]] = dPenalty_dcamZ * quatGrad.dz.z;
+
+    // Intrinsics don't affect penalty (penalty doesn't use projection)
+    // focalLengthMap, cxMap, cyMap gradients are 0
+
+    return grad;
+  }
+
   return {
     variableIndices: activeIndices,
 
@@ -229,10 +427,23 @@ function createReprojectionComponentProvider(
 
       // Transform to camera frame
       const t = { x: wp.x - cp.x, y: wp.y - cp.y, z: wp.z - cp.z };
-      const cam = quatRotate(q, t);
+      let cam = quatRotate(q, t);
 
-      const { value } = dcamGradFn(cam.x, cam.y, cam.z, fx, cx, k1, k2, k3, p1, p2, observed);
-      return value;
+      // When isZReflected, negate all camera-frame coordinates
+      // This matches autodiff behavior in camera-projection.ts:269-271
+      if (isZReflected) {
+        cam = { x: -cam.x, y: -cam.y, z: -cam.z };
+      }
+
+      // Behind-camera check - must match autodiff behavior in ImagePoint.ts
+      if (cam.z < NEAR_PLANE) {
+        // Return penalty instead of projection residual
+        const penalty = (NEAR_PLANE - cam.z) * PENALTY_SCALE;
+        return penalty;
+      }
+
+      const currentIntrinsics = getIntrinsicsValues(variables);
+      return computeResidualWithIntrinsics(variables, currentIntrinsics);
     },
 
     computeGradient(variables: Float64Array): Float64Array {
@@ -242,55 +453,130 @@ function createReprojectionComponentProvider(
 
       // Transform to camera frame
       const t = { x: wp.x - cp.x, y: wp.y - cp.y, z: wp.z - cp.z };
-      const cam = quatRotate(q, t);
+      let cam = quatRotate(q, t);
 
-      // Get dcam gradient
-      const { dcamX, dcamY, dcamZ } = dcamGradFn(cam.x, cam.y, cam.z, fx, cx, k1, k2, k3, p1, p2, observed);
+      // When isZReflected, negate all camera-frame coordinates
+      // This matches autodiff behavior in camera-projection.ts:269-271
+      if (isZReflected) {
+        cam = { x: -cam.x, y: -cam.y, z: -cam.z };
+      }
 
-      // Rotation matrix: dcam/dt
-      const R = quatRotationMatrix(q);
+      // Behind-camera check - use penalty gradient
+      // NOTE: When isZReflected, penalty gradient also needs sign flip
+      if (cam.z < NEAR_PLANE) {
+        const penaltyGrad = computePenaltyGradient(q, t);
+        // When isZReflected, cam = -quatRotate(q, t), so dcam/dX flips sign
+        // d(penalty)/d(camZ) = -PENALTY_SCALE is still the same
+        // But dcamZ/dX = -d(quatRotate).z/dX, so the whole gradient flips
+        if (isZReflected) {
+          for (let i = 0; i < penaltyGrad.length; i++) {
+            penaltyGrad[i] = -penaltyGrad[i];
+          }
+        }
+        return penaltyGrad;
+      }
 
-      // dcam/dq
+      const currentIntrinsics = getIntrinsicsValues(variables);
+
+      const fParam = isUComponent ? currentIntrinsics.fx : currentIntrinsics.fy;
+      const cParam = isUComponent ? currentIntrinsics.cx : currentIntrinsics.cy;
+
+      // Get dcam gradient - evaluated at the (possibly negated) camera point
+      const { dcamX, dcamY, dcamZ } = dcamGradFn(
+        cam.x,
+        cam.y,
+        cam.z,
+        fParam,
+        cParam,
+        currentIntrinsics.k1,
+        currentIntrinsics.k2,
+        currentIntrinsics.k3,
+        currentIntrinsics.p1,
+        currentIntrinsics.p2,
+        observed
+      );
+
+      // Derivative of quatRotate with respect to t
+      const R = quatRotateDerivative_dt(q);
+
+      // dcam/dq (computed from the original transformation, without negation)
       const quatGrad = quatRotateGradient(q, t);
 
       const grad = new Float64Array(activeIndices.length);
 
-      // World point gradient: dR/dwp = R (since cam = R * (wp - cp))
-      // dResidual/dwp = [dcamX, dcamY, dcamZ] * R
+      // Sign multiplier for isZReflected
+      // When isZReflected: cam = -quatRotate(q, t)
+      // So dcam/dwp = -R, dcam/dcp = R, dcam/dq = -quatGrad
+      const signFlip = isZReflected ? -1 : 1;
+
+      // World point gradient: cam = signFlip * R * (wp - cp)
+      // dcam/dwp = signFlip * R
+      // dResidual/dwp = [dcamX, dcamY, dcamZ] * (signFlip * R)
       if (wpMap[0] >= 0 || wpMap[1] >= 0 || wpMap[2] >= 0) {
-        const dwpX = dcamX * R[0][0] + dcamY * R[1][0] + dcamZ * R[2][0];
-        const dwpY = dcamX * R[0][1] + dcamY * R[1][1] + dcamZ * R[2][1];
-        const dwpZ = dcamX * R[0][2] + dcamY * R[1][2] + dcamZ * R[2][2];
+        const dwpX = signFlip * (dcamX * R[0][0] + dcamY * R[1][0] + dcamZ * R[2][0]);
+        const dwpY = signFlip * (dcamX * R[0][1] + dcamY * R[1][1] + dcamZ * R[2][1]);
+        const dwpZ = signFlip * (dcamX * R[0][2] + dcamY * R[1][2] + dcamZ * R[2][2]);
 
         if (wpMap[0] >= 0) grad[wpMap[0]] = dwpX;
         if (wpMap[1] >= 0) grad[wpMap[1]] = dwpY;
         if (wpMap[2] >= 0) grad[wpMap[2]] = dwpZ;
       }
 
-      // Camera position gradient: dcam/dcp = -R
-      // dResidual/dcp = [dcamX, dcamY, dcamZ] * (-R)
+      // Camera position gradient: dcam/dcp = -signFlip * R
+      // dResidual/dcp = [dcamX, dcamY, dcamZ] * (-signFlip * R)
       if (cpMap[0] >= 0 || cpMap[1] >= 0 || cpMap[2] >= 0) {
-        const dcpX = -(dcamX * R[0][0] + dcamY * R[1][0] + dcamZ * R[2][0]);
-        const dcpY = -(dcamX * R[0][1] + dcamY * R[1][1] + dcamZ * R[2][1]);
-        const dcpZ = -(dcamX * R[0][2] + dcamY * R[1][2] + dcamZ * R[2][2]);
+        const dcpX = -signFlip * (dcamX * R[0][0] + dcamY * R[1][0] + dcamZ * R[2][0]);
+        const dcpY = -signFlip * (dcamX * R[0][1] + dcamY * R[1][1] + dcamZ * R[2][1]);
+        const dcpZ = -signFlip * (dcamX * R[0][2] + dcamY * R[1][2] + dcamZ * R[2][2]);
 
         if (cpMap[0] >= 0) grad[cpMap[0]] = dcpX;
         if (cpMap[1] >= 0) grad[cpMap[1]] = dcpY;
         if (cpMap[2] >= 0) grad[cpMap[2]] = dcpZ;
       }
 
-      // Quaternion gradient: dResidual/dq = [dcamX, dcamY, dcamZ] · dcam/dq
+      // Quaternion gradient: dcam/dq = signFlip * quatGrad
+      // dResidual/dq = [dcamX, dcamY, dcamZ] · (signFlip * dcam/dq)
       if (qMap[0] >= 0) {
-        grad[qMap[0]] = dcamX * quatGrad.dw.x + dcamY * quatGrad.dw.y + dcamZ * quatGrad.dw.z;
+        grad[qMap[0]] = signFlip * (dcamX * quatGrad.dw.x + dcamY * quatGrad.dw.y + dcamZ * quatGrad.dw.z);
       }
       if (qMap[1] >= 0) {
-        grad[qMap[1]] = dcamX * quatGrad.dx.x + dcamY * quatGrad.dx.y + dcamZ * quatGrad.dx.z;
+        grad[qMap[1]] = signFlip * (dcamX * quatGrad.dx.x + dcamY * quatGrad.dx.y + dcamZ * quatGrad.dx.z);
       }
       if (qMap[2] >= 0) {
-        grad[qMap[2]] = dcamX * quatGrad.dy.x + dcamY * quatGrad.dy.y + dcamZ * quatGrad.dy.z;
+        grad[qMap[2]] = signFlip * (dcamX * quatGrad.dy.x + dcamY * quatGrad.dy.y + dcamZ * quatGrad.dy.z);
       }
       if (qMap[3] >= 0) {
-        grad[qMap[3]] = dcamX * quatGrad.dz.x + dcamY * quatGrad.dz.y + dcamZ * quatGrad.dz.z;
+        grad[qMap[3]] = signFlip * (dcamX * quatGrad.dz.x + dcamY * quatGrad.dz.y + dcamZ * quatGrad.dz.z);
+      }
+
+      // Intrinsics gradients (numerical differentiation)
+      // Only compute for parameters we're actually optimizing
+      const baseResidual = computeResidualWithIntrinsics(variables, currentIntrinsics);
+
+      if (focalLengthMap >= 0 && intrinsicsIndices!.focalLength >= 0) {
+        // Perturb focalLength
+        const perturbedIntrinsics = { ...currentIntrinsics };
+        const aspectRatio = currentIntrinsics.fy / currentIntrinsics.fx;
+        perturbedIntrinsics.fx = currentIntrinsics.fx + NUM_GRAD_EPS;
+        perturbedIntrinsics.fy = perturbedIntrinsics.fx * aspectRatio;
+        const perturbedResidual = computeResidualWithIntrinsics(variables, perturbedIntrinsics);
+        grad[focalLengthMap] = (perturbedResidual - baseResidual) / NUM_GRAD_EPS;
+      }
+
+      if (cxMap >= 0 && intrinsicsIndices!.cx >= 0) {
+        // Perturb cx
+        const perturbedIntrinsics = { ...currentIntrinsics };
+        perturbedIntrinsics.cx = currentIntrinsics.cx + NUM_GRAD_EPS;
+        const perturbedResidual = computeResidualWithIntrinsics(variables, perturbedIntrinsics);
+        grad[cxMap] = (perturbedResidual - baseResidual) / NUM_GRAD_EPS;
+      }
+
+      if (cyMap >= 0 && intrinsicsIndices!.cy >= 0) {
+        // Perturb cy
+        const perturbedIntrinsics = { ...currentIntrinsics };
+        perturbedIntrinsics.cy = currentIntrinsics.cy + NUM_GRAD_EPS;
+        const perturbedResidual = computeResidualWithIntrinsics(variables, perturbedIntrinsics);
+        grad[cyMap] = (perturbedResidual - baseResidual) / NUM_GRAD_EPS;
       }
 
       return grad;
@@ -309,25 +595,23 @@ export function createReprojectionUProvider(
   observedU: number,
   getWorldPoint: (variables: Float64Array) => Point3D,
   getCameraPos: (variables: Float64Array) => Point3D,
-  getQuat: (variables: Float64Array) => Quaternion
+  getQuat: (variables: Float64Array) => Quaternion,
+  intrinsicsIndices?: CameraIntrinsicsIndices,
+  flags?: ReprojectionFlags
 ): AnalyticalResidualProvider {
-  const { fx, cx, k1, k2, k3, p1, p2 } = intrinsics;
   return createReprojectionComponentProvider(
     worldPointIndices,
     cameraPosIndices,
     quatIndices,
-    fx,
-    cx,
-    k1,
-    k2,
-    k3,
-    p1,
-    p2,
+    intrinsics,
+    intrinsicsIndices,
     observedU,
     getWorldPoint,
     getCameraPos,
     getQuat,
-    reprojection_u_dcam_grad
+    reprojection_u_dcam_grad,
+    true, // isUComponent
+    flags
   );
 }
 
@@ -342,25 +626,23 @@ export function createReprojectionVProvider(
   observedV: number,
   getWorldPoint: (variables: Float64Array) => Point3D,
   getCameraPos: (variables: Float64Array) => Point3D,
-  getQuat: (variables: Float64Array) => Quaternion
+  getQuat: (variables: Float64Array) => Quaternion,
+  intrinsicsIndices?: CameraIntrinsicsIndices,
+  flags?: ReprojectionFlags
 ): AnalyticalResidualProvider {
-  const { fy, cy, k1, k2, k3, p1, p2 } = intrinsics;
   return createReprojectionComponentProvider(
     worldPointIndices,
     cameraPosIndices,
     quatIndices,
-    fy,
-    cy,
-    k1,
-    k2,
-    k3,
-    p1,
-    p2,
+    intrinsics,
+    intrinsicsIndices,
     observedV,
     getWorldPoint,
     getCameraPos,
     getQuat,
-    reprojection_v_dcam_grad
+    reprojection_v_dcam_grad,
+    false, // isUComponent
+    flags
   );
 }
 
@@ -375,7 +657,9 @@ export function createReprojectionProviders(
   observation: ReprojectionObservation,
   getWorldPoint: (variables: Float64Array) => Point3D,
   getCameraPos: (variables: Float64Array) => Point3D,
-  getQuat: (variables: Float64Array) => Quaternion
+  getQuat: (variables: Float64Array) => Quaternion,
+  intrinsicsIndices?: CameraIntrinsicsIndices,
+  flags?: ReprojectionFlags
 ): [AnalyticalResidualProvider, AnalyticalResidualProvider] {
   return [
     createReprojectionUProvider(
@@ -386,7 +670,9 @@ export function createReprojectionProviders(
       observation.observedU,
       getWorldPoint,
       getCameraPos,
-      getQuat
+      getQuat,
+      intrinsicsIndices,
+      flags
     ),
     createReprojectionVProvider(
       worldPointIndices,
@@ -396,7 +682,9 @@ export function createReprojectionProviders(
       observation.observedV,
       getWorldPoint,
       getCameraPos,
-      getQuat
+      getQuat,
+      intrinsicsIndices,
+      flags
     ),
   ];
 }

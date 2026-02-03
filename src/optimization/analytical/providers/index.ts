@@ -38,5 +38,7 @@ export {
   createReprojectionVProvider,
   createReprojectionProviders,
   type CameraIntrinsics,
+  type CameraIntrinsicsIndices,
   type ReprojectionObservation,
+  type ReprojectionFlags,
 } from './reprojection-provider';

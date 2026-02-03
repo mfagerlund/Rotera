@@ -17,7 +17,7 @@ import { WorldPoint } from '../../entities/world-point';
 import { Viewpoint } from '../../entities/viewpoint';
 import { generateAllInferenceBranches, InferenceBranch } from '../inference-branching';
 import { log, logDebug, setCandidateProgress } from '../optimization-logger';
-import type { OptimizeProjectOptions } from './types';
+import { OPTIMIZE_PROJECT_DEFAULTS, type OptimizeProjectOptions } from './types';
 
 /**
  * A candidate represents a specific combination of:
@@ -50,7 +50,7 @@ export function generateAllCandidates(
   project: Project,
   options: OptimizeProjectOptions
 ): OptimizationCandidate[] {
-  const { maxAttempts = 3, autoInitializeCameras = true, autoInitializeWorldPoints = true } = options;
+  const { maxAttempts = OPTIMIZE_PROJECT_DEFAULTS.maxAttempts, autoInitializeCameras = true, autoInitializeWorldPoints = true } = options;
 
   // Check if we should skip candidate generation
   // 1. Recursive call (already testing a candidate)
@@ -153,15 +153,33 @@ function makeDescription(
 }
 
 /**
+ * Complete camera state for save/restore.
+ * Includes ALL fields that could be modified during optimization.
+ */
+interface SavedViewpointState {
+  position: [number, number, number];
+  rotation: [number, number, number, number];
+  focalLength: number;
+  principalPointX: number;
+  principalPointY: number;
+  aspectRatio: number;
+  skewCoefficient: number;
+  radialDistortion: [number, number, number];
+  tangentialDistortion: [number, number];
+  enabledInSolve: boolean;
+  isZReflected: boolean;
+}
+
+/**
  * Save current project state for restoration
  */
 export function saveProjectState(project: Project): {
   worldPoints: Map<WorldPoint, [number, number, number] | undefined>;
-  viewpoints: Map<Viewpoint, { position: [number, number, number]; rotation: [number, number, number, number]; focalLength: number }>;
+  viewpoints: Map<Viewpoint, SavedViewpointState>;
   inferredXyz: Map<WorldPoint, [number | null, number | null, number | null]>;
 } {
   const worldPoints = new Map<WorldPoint, [number, number, number] | undefined>();
-  const viewpoints = new Map<Viewpoint, { position: [number, number, number]; rotation: [number, number, number, number]; focalLength: number }>();
+  const viewpoints = new Map<Viewpoint, SavedViewpointState>();
   const inferredXyz = new Map<WorldPoint, [number | null, number | null, number | null]>();
 
   for (const wp of project.worldPoints) {
@@ -176,6 +194,14 @@ export function saveProjectState(project: Project): {
       position: [...viewpoint.position] as [number, number, number],
       rotation: [...viewpoint.rotation] as [number, number, number, number],
       focalLength: viewpoint.focalLength,
+      principalPointX: viewpoint.principalPointX,
+      principalPointY: viewpoint.principalPointY,
+      aspectRatio: viewpoint.aspectRatio,
+      skewCoefficient: viewpoint.skewCoefficient,
+      radialDistortion: [...viewpoint.radialDistortion] as [number, number, number],
+      tangentialDistortion: [...viewpoint.tangentialDistortion] as [number, number],
+      enabledInSolve: viewpoint.enabledInSolve,
+      isZReflected: viewpoint.isZReflected,
     });
   }
 
@@ -189,7 +215,7 @@ export function restoreProjectState(
   project: Project,
   state: {
     worldPoints: Map<WorldPoint, [number, number, number] | undefined>;
-    viewpoints: Map<Viewpoint, { position: [number, number, number]; rotation: [number, number, number, number]; focalLength: number }>;
+    viewpoints: Map<Viewpoint, SavedViewpointState>;
     inferredXyz: Map<WorldPoint, [number | null, number | null, number | null]>;
   }
 ): void {
@@ -201,6 +227,14 @@ export function restoreProjectState(
     vp.position = vpState.position;
     vp.rotation = vpState.rotation;
     vp.focalLength = vpState.focalLength;
+    vp.principalPointX = vpState.principalPointX;
+    vp.principalPointY = vpState.principalPointY;
+    vp.aspectRatio = vpState.aspectRatio;
+    vp.skewCoefficient = vpState.skewCoefficient;
+    vp.radialDistortion = vpState.radialDistortion;
+    vp.tangentialDistortion = vpState.tangentialDistortion;
+    vp.enabledInSolve = vpState.enabledInSolve;
+    vp.isZReflected = vpState.isZReflected;
   }
 
   for (const [wp, inferred] of state.inferredXyz) {
@@ -240,7 +274,7 @@ export async function testAllCandidates(
   // The user's maxIterations setting applies when there's only one candidate
   const PROBE_ITERATIONS = Math.min(options.maxIterations ?? 200, 200);
 
-  // Save original state
+  // Save original state - isZReflected already reset by orchestrator at top-level entry
   const originalState = saveProjectState(project);
 
   let bestResidual = Infinity;

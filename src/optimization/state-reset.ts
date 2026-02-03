@@ -31,6 +31,7 @@ export function resetOptimizationState(project: Project): void {
   // Reset viewpoints (cameras)
   // NOTE: Do NOT clear position/rotation here - tests and callers may provide initial values.
   // The auto-initialization pipeline will overwrite if autoInitializeCameras is true.
+  // NOTE: isZReflected is reset in orchestrator.ts at the top-level entry point ONLY.
   for (const vp of project.viewpoints) {
     const viewpoint = vp as Viewpoint;
     viewpoint.lastResiduals = [];

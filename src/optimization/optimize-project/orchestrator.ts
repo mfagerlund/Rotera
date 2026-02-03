@@ -67,12 +67,23 @@ export async function optimizeProject(
     );
   }
 
-  // Log version FIRST and ONLY at top-level (not during recursive calls)
-  if (!options._skipCandidateTesting && !options._skipBranching && options._attempt === undefined) {
+  // TOP-LEVEL ENTRY POINT: Reset ALL stale state from previous solves
+  // This is the SINGLE place where state is reset. Tests and UI both go through here.
+  // Recursive calls (probes, re-runs) skip this because they manage their own state.
+  const isTopLevel = !options._skipCandidateTesting && !options._skipBranching && options._attempt === undefined;
+
+  if (isTopLevel) {
     clearOptimizationLogs();
     setVerbosity(options.verbose ? 'verbose' : 'normal');
     log(`[Optimize] v${OPTIMIZER_VERSION}`);
     log(`[Optimize] WP:${project.worldPoints.size} L:${project.lines.size} VP:${project.viewpoints.size} IP:${project.imagePoints.size} C:${project.constraints.size}`);
+
+    // CRITICAL: Reset ALL camera state that could be stale from previous solves
+    // This ensures both test (fresh from JSON) and UI (reused project) start identically
+    for (const vp of project.viewpoints) {
+      const viewpoint = vp as Viewpoint;
+      viewpoint.isZReflected = false;  // Set by handedness correction at END of solve
+    }
   }
 
   // UNIFIED CANDIDATE TESTING: Replaces multi-attempt, branch-testing, and alignment-retry
@@ -224,10 +235,12 @@ export async function optimizeProject(
             // Apply scale and translation before testing
             applyScaleAndTranslateForTest(axisConstrainedLines, worldPointArray, viewpointArray, lockedPointsForCheck);
 
+            // Force dense mode for quality testing - needs reliability
             const testSystem = new ConstraintSystem({
               maxIterations: maxIter,
               tolerance: 1e-4,
               verbose: false,
+              forceSolverMode: 'dense',
             });
             worldPointArray.forEach(p => testSystem.addPoint(p));
             lineArray.forEach(l => testSystem.addLine(l));

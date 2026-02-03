@@ -41,7 +41,10 @@ import {
   createAngleProvider,
   createCoplanarProviders,
   createReprojectionProviders,
+  createVanishingLineProvider,
   type CameraIntrinsics,
+  type CameraIntrinsicsIndices,
+  type ReprojectionFlags,
 } from '../analytical/providers';
 
 // Constraint types for type checking
@@ -57,6 +60,7 @@ export class ConstraintSystem {
   private optimizeCameraIntrinsics: boolean | ((camera: IOptimizableCamera) => boolean);
   private regularizationWeight: number;
   private useIsZReflected: boolean;
+  private forceSolverMode?: 'dense' | 'sparse' | 'analytical';
 
   // Entities in the system
   private points: Set<WorldPoint> = new Set();
@@ -76,6 +80,7 @@ export class ConstraintSystem {
     this.optimizeCameraIntrinsics = options.optimizeCameraIntrinsics ?? false;
     this.regularizationWeight = options.regularizationWeight ?? 0;
     this.useIsZReflected = options.useIsZReflected ?? false;
+    this.forceSolverMode = options.forceSolverMode;
   }
 
   /**
@@ -404,23 +409,77 @@ export class ConstraintSystem {
       // - Dense: Cholesky with autodiff
       // - Sparse: CG with autodiff
       // - Analytical: CG with analytical gradients (bypasses autodiff)
-      const analyticalEnabled = useAnalyticalSolve();
+      //
+      // forceSolverMode overrides global settings for internal subsystems
+      const analyticalEnabled = this.forceSolverMode
+        ? this.forceSolverMode === 'analytical'
+        : useAnalyticalSolve();
       let analyticalProviders: AnalyticalResidualProvider[] | undefined;
 
       if (analyticalEnabled) {
-        const { providers, layout } = this.buildAnalyticalProviders();
+        const { providers, layout, layoutBuilder } = this.buildAnalyticalProviders();
         analyticalProviders = providers;
 
-        // Validate that analytical layout has same variable count as autodiff
+        // Variable count mismatch is a CRITICAL BUG - do NOT silently fall back
         if (layout.numVariables !== variables.length) {
-          console.error(
-            `[ConstraintSystem] Variable count mismatch! ` +
-              `Analytical layout: ${layout.numVariables}, Autodiff: ${variables.length}. ` +
-              `Falling back to autodiff.`
+          // Gather debug information
+          const pointCount = this.points.size;
+          const cameraCount = this.cameras.size;
+          const imagePointCount = this.imagePoints.size;
+          const constraintCount = this.constraints.size;
+          const lineCount = this.lines.size;
+
+          const debugInfo = [
+            ``,
+            `=== ANALYTICAL VARIABLE COUNT MISMATCH ===`,
+            `Analytical layout: ${layout.numVariables} variables`,
+            `Autodiff system: ${variables.length} variables`,
+            `Difference: ${Math.abs(layout.numVariables - variables.length)} variables`,
+            ``,
+            `=== SYSTEM CONTENTS ===`,
+            `Points: ${pointCount}`,
+            `Cameras: ${cameraCount}`,
+            `Image Points: ${imagePointCount}`,
+            `Lines: ${lineCount}`,
+            `Constraints: ${constraintCount}`,
+            ``,
+            `=== CAMERA DETAILS ===`,
+            ...Array.from(this.cameras).map(c => {
+              const posLocked = c.isPoseLocked;
+              const intrinsicsOptimized = typeof this.optimizeCameraIntrinsics === 'function'
+                ? this.optimizeCameraIntrinsics(c)
+                : this.optimizeCameraIntrinsics;
+              return `  ${c.name}: poseLocked=${posLocked}, optimizeIntrinsics=${intrinsicsOptimized}`;
+            }),
+            ``,
+            `=== POINT DETAILS ===`,
+            ...Array.from(this.points).map(p => {
+              const eff = p.getEffectiveXyz();
+              const lockedAxes = [
+                eff[0] !== null ? 'X' : '',
+                eff[1] !== null ? 'Y' : '',
+                eff[2] !== null ? 'Z' : ''
+              ].filter(Boolean).join('') || 'none';
+              return `  ${p.name}: locked=[${lockedAxes}]`;
+            }),
+            ``,
+            `This is a BUG in the analytical provider system.`,
+            `The variable layouts MUST match for analytical gradients to work.`,
+            `==========================================`,
+          ].join('\n');
+
+          throw new Error(
+            `ANALYTICAL VARIABLE COUNT MISMATCH: ` +
+            `analytical=${layout.numVariables}, autodiff=${variables.length}` +
+            debugInfo
           );
-          analyticalProviders = undefined;
         }
       }
+
+      // Determine sparse mode: forced mode overrides global setting
+      const sparseEnabled = this.forceSolverMode
+        ? this.forceSolverMode !== 'dense'  // sparse and analytical both use sparse linear solve
+        : useSparseSolve();
 
       const result = transparentLM(variables, residualFn, {
         costTolerance: this.tolerance,
@@ -429,7 +488,7 @@ export class ConstraintSystem {
         initialDamping: this.damping,
         adaptiveDamping: true,
         verbose: this.verbose,
-        useSparseLinearSolve: useSparseSolve(),
+        useSparseLinearSolve: sparseEnabled,
         analyticalProviders,
         useAnalyticalSolve: analyticalEnabled,
       });
@@ -919,7 +978,7 @@ export class ConstraintSystem {
       const posIndices = layout.getCameraPosIndices(camera.name);
       const quatIndices = layout.getCameraQuatIndices(camera.name);
 
-      // Get camera intrinsics from builder
+      // Get camera intrinsics values from builder
       const intrinsics = builder.getCameraIntrinsics(camera.name);
       if (!intrinsics) continue;
 
@@ -936,6 +995,16 @@ export class ConstraintSystem {
         p2: intrinsics.p2,
       };
 
+      // Get intrinsics indices from layout (for optimizing intrinsics)
+      const layoutIntrinsicsIndices = layout.getCameraIntrinsicsIndices(camera.name);
+      const intrinsicsIndices: CameraIntrinsicsIndices | undefined = layoutIntrinsicsIndices
+        ? {
+            focalLength: layoutIntrinsicsIndices.focalLength,
+            cx: layoutIntrinsicsIndices.principalPointX,
+            cy: layoutIntrinsicsIndices.principalPointY,
+          }
+        : undefined;
+
       // Build locked values for camera position
       const posLocked: [number | null, number | null, number | null] = [
         layout.getLockedCameraPosValue(camera.name, 'x') ?? null,
@@ -946,6 +1015,12 @@ export class ConstraintSystem {
       // Quaternion locked values
       const quatLocked: [number, number, number, number] = [...camera.rotation];
 
+      // Build reprojection flags
+      // When useIsZReflected is true and camera.isZReflected is true, negate camera coordinates
+      const reprojectionFlags: ReprojectionFlags = {
+        isZReflected: this.useIsZReflected && camera.isZReflected,
+      };
+
       // createReprojectionProviders takes observation as an object
       const reprojectionProviders = createReprojectionProviders(
         worldPointInfo.indices,
@@ -955,9 +1030,61 @@ export class ConstraintSystem {
         { observedU: imagePoint.u, observedV: imagePoint.v },
         createPointGetter(worldPointInfo.indices, worldPointInfo.locked),
         createPointGetter(posIndices, posLocked),
-        createQuaternionGetter(quatIndices, quatLocked)
+        createQuaternionGetter(quatIndices, quatLocked),
+        intrinsicsIndices,
+        reprojectionFlags
       );
       providers.push(...reprojectionProviders);
+    }
+
+    // 5b. Add vanishing line providers for cameras with vanishing lines
+    for (const camera of this.cameras) {
+      if (!camera.vanishingLines || camera.vanishingLines.size === 0) continue;
+
+      const quatIndices = layout.getCameraQuatIndices(camera.name);
+      const quatLocked: [number, number, number, number] = [...camera.rotation];
+      const getQuat = createQuaternionGetter(quatIndices, quatLocked);
+
+      // Get camera intrinsics for VP-to-normalized conversion
+      const intrinsics = builder.getCameraIntrinsics(camera.name);
+      if (!intrinsics) continue;
+
+      const axisDirs: Record<VanishingLineAxis, { x: number; y: number; z: number }> = {
+        x: { x: 1, y: 0, z: 0 },
+        y: { x: 0, y: 1, z: 0 },
+        z: { x: 0, y: 0, z: 1 },
+      };
+
+      // Process each axis
+      (['x', 'y', 'z'] as VanishingLineAxis[]).forEach(axis => {
+        const linesForAxis = Array.from(camera.vanishingLines as Set<VanishingLine>).filter(
+          (l: VanishingLine) => l.axis === axis
+        );
+        if (linesForAxis.length < 2) return;
+
+        const observedVP = computeVanishingPoint(linesForAxis);
+        if (!observedVP) return;
+
+        // Convert to normalized image coordinates
+        const fx = intrinsics.focalLength;
+        const fy = intrinsics.focalLength * intrinsics.aspectRatio;
+        const obsU = (observedVP.u - intrinsics.principalPointX) / fx;
+        const obsV = (intrinsics.principalPointY - observedVP.v) / fy;
+
+        // Very low weight - just a gentle nudge, same as autodiff version
+        const vpWeight = 0.02;
+
+        providers.push(
+          createVanishingLineProvider(
+            quatIndices,
+            axisDirs[axis],
+            obsU,
+            obsV,
+            vpWeight,
+            getQuat
+          )
+        );
+      });
     }
 
     // 6. Add explicit constraint providers
