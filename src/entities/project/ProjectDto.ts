@@ -44,4 +44,5 @@ export interface ProjectDto {
   leftSidebarWidth?: number
   imageHeights?: Record<string, number>
   lockCameraPoses?: boolean
+  lastMedianReprojectionError?: number
 }

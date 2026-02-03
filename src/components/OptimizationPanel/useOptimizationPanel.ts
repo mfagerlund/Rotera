@@ -59,8 +59,8 @@ function loadStoredResults(project: Project): any | null {
   }
 
   const totalError = residualCount > 0 ? Math.sqrt(totalSquaredError) : 0
-  // TODO: Store medianReprojectionError in project for accurate quality on reload
-  const quality = getSolveQuality(undefined, totalError)
+  const medianReprojectionError = project.lastMedianReprojectionError
+  const quality = getSolveQuality(medianReprojectionError, totalError)
 
   return {
     converged: true, // If we have stored results, assume it was a successful run
@@ -69,7 +69,7 @@ function loadStoredResults(project: Project): any | null {
     pointAccuracy: totalError / Math.max(1, project.worldPoints.size),
     iterations: 0, // Unknown from stored data
     outliers: [],
-    medianReprojectionError: undefined,
+    medianReprojectionError,
     quality
   }
 }
@@ -283,6 +283,9 @@ export function useOptimizationPanel({
 
       setResults(result)
       setStatusMessage(null)
+
+      // Store median reprojection error in project for accurate quality on reload
+      project.lastMedianReprojectionError = solverResult.medianReprojectionError
 
       if (project._dbId) {
         try {

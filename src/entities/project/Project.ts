@@ -64,6 +64,7 @@ export class Project {
     leftSidebarWidth: number
     imageHeights: Record<string, number>
     lockCameraPoses: boolean
+    lastMedianReprojectionError?: number
 
     // Internal database ID (used by ProjectDB service only)
     _dbId?: string
@@ -95,7 +96,8 @@ export class Project {
         optimizationMaxIterations?: number,
         leftSidebarWidth: number = 180,
         imageHeights: Record<string, number> = {},
-        lockCameraPoses: boolean = false
+        lockCameraPoses: boolean = false,
+        lastMedianReprojectionError?: number
     ) {
         this.name = name
         this.worldPoints = worldPoints
@@ -124,6 +126,7 @@ export class Project {
         this.leftSidebarWidth = leftSidebarWidth
         this.imageHeights = imageHeights
         this.lockCameraPoses = lockCameraPoses
+        this.lastMedianReprojectionError = lastMedianReprojectionError
 
         makeAutoObservable(this, {}, { autoBind: true })
     }
@@ -188,7 +191,8 @@ export class Project {
         optimizationMaxIterations?: number,
         leftSidebarWidth: number = 180,
         imageHeights: Record<string, number> = {},
-        lockCameraPoses: boolean = false
+        lockCameraPoses: boolean = false,
+        lastMedianReprojectionError?: number
     ): Project {
         return new Project(
             name,
@@ -217,7 +221,8 @@ export class Project {
             optimizationMaxIterations,
             leftSidebarWidth,
             imageHeights,
-            lockCameraPoses
+            lockCameraPoses,
+            lastMedianReprojectionError
         )
     }
 

@@ -95,20 +95,6 @@ function App() {
     }
   }, [view])
 
-  // Task 5: beforeunload warning - DISABLED for now
-  // TODO: Re-enable when user requests
-  // useEffect(() => {
-  //   const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-  //     if (getIsDirty()) {
-  //       e.preventDefault()
-  //       e.returnValue = ''
-  //     }
-  //   }
-  //
-  //   window.addEventListener('beforeunload', handleBeforeUnload)
-  //   return () => window.removeEventListener('beforeunload', handleBeforeUnload)
-  // }, [])
-
   if (isInitializing) {
     return (
       <div style={{
