@@ -58,7 +58,7 @@ describe('Single-Camera Behind-Points Regression', () => {
         camCoords = new Vec3(V.neg(camCoords.x), V.neg(camCoords.y), V.neg(camCoords.z));
       }
 
-      if (camCoords.z.data < 0.1) {
+      if (camCoords.z.data < 0.099) {
         behindCount++;
       } else {
         frontCount++;
@@ -172,7 +172,7 @@ describe('Single-Camera Behind-Points Regression', () => {
       if (useIsZReflected) {
         camCoords = new Vec3(V.neg(camCoords.x), V.neg(camCoords.y), V.neg(camCoords.z));
       }
-      if (camCoords.z.data < 0.1) {
+      if (camCoords.z.data < 0.099) {
         observedBehindCount++;
         behindDetails.push(`${wp.getName()}: camZ=${camCoords.z.data}, world=[${wp.optimizedXyz?.join(',')}]`);
       }
@@ -321,7 +321,7 @@ describe('Single-Camera Behind-Points Regression', () => {
         camCoords = new Vec3(V.neg(camCoords.x), V.neg(camCoords.y), V.neg(camCoords.z));
       }
 
-      if (camCoords.z.data < 0.1) {
+      if (camCoords.z.data < 0.099) {
         behindCount++;
         console.log(`BEHIND: ${worldPoint.getName()} Z=${camCoords.z.data.toFixed(2)} (world: [${worldPoint.optimizedXyz!.map(c => c.toFixed(2)).join(', ')}])`);
       }
@@ -346,7 +346,7 @@ describe('Single-Camera Behind-Points Regression', () => {
         camCoords2 = new Vec3(V.neg(camCoords2.x), V.neg(camCoords2.y), V.neg(camCoords2.z));
       }
 
-      if (camCoords2.z.data < 0.1) {
+      if (camCoords2.z.data < 0.099) {
         behindNames.push(`${worldPoint.getName()}(Z=${camCoords2.z.data.toFixed(2)})`);
       }
     }

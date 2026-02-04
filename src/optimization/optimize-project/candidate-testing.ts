@@ -119,11 +119,7 @@ export function generateAllCandidates(
     }
   }
 
-  // If only one candidate, don't log as "testing candidates"
-  if (candidates.length === 1) {
-    return candidates;
-  }
-
+  // Always log candidate count for debugging
   log(`[Candidates] Generated ${candidates.length} candidates (attempts=${attempts.length}, branches=${branchesToTest.length}, alignments=${mightUseEssentialMatrix ? 2 : 1})`);
 
   return candidates;
@@ -261,6 +257,7 @@ export async function testAllCandidates(
 
   // If only one candidate, skip testing (normal single solve)
   if (candidates.length === 1) {
+    log(`[Candidates] Only 1 candidate - skipping candidate testing, running single solve`);
     return null;
   }
 
@@ -316,15 +313,12 @@ export async function testAllCandidates(
       bestCandidate = candidate;
     }
 
-    // If good enough, return the probe result directly
-    // The project state is already at the good solution - no need to re-run
+    // If good enough, stop testing remaining candidates and proceed to full solve
+    // We still run full solve to honor the user's maxIterations setting
     if (residual < GOOD_ENOUGH_THRESHOLD) {
       logDebug(`[Candidate] #${i + 1} is good enough (residual=${residual.toFixed(1)} < ${GOOD_ENOUGH_THRESHOLD})`);
-      setCandidateProgress(0, 0);
-
-      log(`[Candidate] Early winner: ${candidate.description} - using probe result directly`);
-      // Return the probe result - project state is already good
-      return probeResult;
+      log(`[Candidate] Early winner: ${candidate.description} - skipping remaining candidates`);
+      break; // Exit loop early, but still run full solve below
     }
   }
 
@@ -332,10 +326,10 @@ export async function testAllCandidates(
   setCandidateProgress(0, 0);
 
   // Re-run full optimization with best candidate's parameters
-  // This case means no probe was good enough (< 10.0), but we still want to use the best one
+  // Always run full solve to honor user's maxIterations setting
   if (bestCandidate) {
-    log(`[Candidate] Best probe: ${bestCandidate.description} (residual=${bestResidual.toFixed(1)})`);
-    log(`[Candidate] Re-running full optimization with best candidate...`);
+    log(`[Candidate] Winner: ${bestCandidate.description} (probe residual=${bestResidual.toFixed(1)})`);
+    log(`[Candidate] Running full optimization with user's maxIterations...`);
 
     // Restore to original state (not best probe state) for a clean full run
     // The best probe might have been partially converged - we want a complete run

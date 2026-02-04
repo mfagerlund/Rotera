@@ -49,6 +49,16 @@ export {
 } from './regularization-provider';
 
 export {
+  createFocalLengthBelowMinProvider,
+  createFocalLengthAboveMaxProvider,
+  createFocalLengthRegularizationProviders,
+} from './focal-length-regularization-provider';
+
+export {
   createSignPreservationProvider,
   createYSignPreservationProviders,
 } from './sign-preservation-provider';
+
+export { createEqualDistancesProviders } from './equal-distances-provider';
+
+export { createEqualAnglesProviders } from './equal-angles-provider';

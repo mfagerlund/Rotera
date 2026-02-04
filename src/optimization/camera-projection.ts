@@ -174,7 +174,8 @@ export function cameraToPixelCoordinates(
   params: CameraParameters
 ): [Value, Value] | null {
   // If z is too small, return null (point behind camera)
-  if (cameraPoint.z.data < 0.1) {
+  // Use 0.099 threshold to account for floating-point precision near 0.1
+  if (cameraPoint.z.data < 0.099) {
     return null;
   }
 

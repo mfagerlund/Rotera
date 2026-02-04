@@ -1,10 +1,10 @@
-**Last Updated:** 2026-02-03
+**Last Updated:** 2026-02-04
 
-## TODO: ANALYTICAL SOLVER MODE
+## ANALYTICAL SOLVER MODE (NOW DEFAULT)
 
-**Goal:** Make analytical mode the default, eliminating autodiff overhead.
+**Goal:** Analytical mode is now the default. Focus on fixing remaining issues.
 
-**Current state (sparse mode is default):**
+**Current state (analytical mode IS default):**
 - ✅ Analytical gradients pass numerical verification at initial state
 - ✅ Gradient-script 0.3.1 fixed sign bugs in dcam gradients
 - ✅ `isZReflected` handling added to reprojection providers
@@ -12,22 +12,31 @@
 - ✅ FixedPointConstraint handled in analytical mode
 - ✅ Quaternion renormalization infrastructure added
 - ✅ chain-rule-perturbed tests pass (fixed incorrect unit-quaternion formula)
-- ⚠️ Analytical mode still converges to worse local minima (39px vs 13px for "3 Loose")
+- ✅ Focal length regularization providers added (was the root cause of divergence)
+- ✅ JtJ/negJtr comparison test passes (no >1% relative differences at iteration 1)
+- ✅ **Analytical mode is now the DEFAULT** in solver-config.ts
+- ✅ CollinearPointsConstraint handled in analytical mode
+- ✅ EqualDistancesConstraint handled in analytical mode
+- ✅ EqualAnglesConstraint handled in analytical mode
+- ✅ **All 301 tests pass** with analytical mode as default
 
-**Known issue: Analytical mode convergence**
-- Analytical mode converges to reflected solutions (Y-axis flips from +25 to -25)
-- Sign preservation can't help since most Y coordinates are locked, not free
-- The general quaternion formula (q*v*q*) matches autodiff for non-unit quaternions
-- Issue likely in how the accumulated gradients guide optimization
+**2026-02-04: Focal length regularization fix**
+Root cause of analytical mode divergence was **missing focal length regularization residuals**.
+The autodiff path in `Viewpoint.computeResiduals` had 3 residuals per camera:
+1. Quaternion normalization
+2. `belowMin = max(0, minF - f)` - penalizes f < 30% of max dimension
+3. `aboveMax = max(0, f - maxF)` - penalizes f > 500% of max dimension
+
+Analytical mode only had the quat norm, causing focal length to drift to extreme values.
+Fixed by adding `createFocalLengthRegularizationProviders` to `buildAnalyticalProviders`.
 
 **Pre-existing failures (both modes):**
 - "No Vanishing Lines" (29.22px) - initialization issue
 - "Tower 1 - 1 Img" (118px) - single-camera initialization
 
 **Next steps:**
-1. Investigate gradient accumulation differences between modes
-2. Consider using stronger regularization or different damping for analytical
-3. Fix pre-existing test failures
+1. Verify UI matches test results now that analytical mode is default
+2. Fix pre-existing test failures if still relevant
 
 ---
 
@@ -39,6 +48,21 @@
 - gogo means "Start executing and don't stop until finished. Beep when done."
 
 **"Pre-existing failure" is not an excuse. Fix it or create a TODO.**
+
+## CRITICAL: Test Fixtures MUST Match UI Behavior
+
+**Regression test fixtures MUST produce the EXACT same results as the UI.**
+
+- If the UI shows 56px error, the fixture test MUST show 56px error
+- If the UI succeeds with 0.03px, the fixture test MUST succeed with 0.03px
+- NO pre-optimized values that put the solver in a different starting position
+- NO different code paths between tests and UI
+- Tests that don't match UI behavior are USELESS and MUST be fixed
+
+When creating fixtures:
+1. Save the project state BEFORE clicking Solve in UI
+2. Run the test - it MUST produce the same result as UI
+3. If results differ, the test setup is WRONG - fix it
 
 ## Abbreviations
 

@@ -13,17 +13,12 @@
 export type SolverMode = 'dense' | 'sparse' | 'analytical';
 
 /**
- * Current solver mode. Default is 'sparse'.
+ * Current solver mode. Default is 'analytical'.
  *
- * NOTE: 'analytical' mode is the target - it bypasses autodiff entirely.
- * However, analytical mode currently produces worse results than sparse:
- * - "3 Loose" fixture: 39px (analytical) vs 13px (sparse)
- * - Analytical converges to reflected local minima (Y-axis flips from +25 to -25)
- *
- * TODO: Fix analytical solver to match sparse quality before switching default.
- * The issue may be related to the quaternion rotation formula or gradient computation.
+ * Analytical mode bypasses autodiff entirely, computing gradients directly.
+ * This is faster and is the target mode for production.
  */
-let SOLVER_MODE: SolverMode = 'sparse';
+let SOLVER_MODE: SolverMode = 'analytical';
 
 /**
  * Set the solver mode.

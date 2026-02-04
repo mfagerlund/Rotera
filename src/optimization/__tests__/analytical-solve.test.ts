@@ -47,6 +47,9 @@ describe('Analytical Solve (Phase 7)', () => {
         useAnalyticalSolve: true,
         maxIterations: 100,
         verbose: false,
+        costTolerance: 1e-10,
+        paramTolerance: 1e-10,
+        gradientTolerance: 1e-10,
       });
 
       expect(result.success).toBe(true);
@@ -229,6 +232,9 @@ describe('Analytical Solve (Phase 7)', () => {
         useAnalyticalSolve: true,
         useSparseLinearSolve: true, // Use sparse CG
         maxIterations: 100,
+        costTolerance: 1e-10,
+        paramTolerance: 1e-10,
+        gradientTolerance: 1e-10,
       });
 
       expect(result.success).toBe(true);

@@ -44,6 +44,9 @@ import {
   createVanishingLineProvider,
   createRegularizationProviders,
   createFixedPointProviders,
+  createFocalLengthRegularizationProviders,
+  createEqualDistancesProviders,
+  createEqualAnglesProviders,
   type CameraIntrinsics,
   type CameraIntrinsicsIndices,
   type ReprojectionFlags,
@@ -54,6 +57,9 @@ import { DistanceConstraint } from '../../entities/constraints/distance-constrai
 import { AngleConstraint } from '../../entities/constraints/angle-constraint';
 import { CoplanarPointsConstraint } from '../../entities/constraints/coplanar-points-constraint';
 import { FixedPointConstraint } from '../../entities/constraints/fixed-point-constraint';
+import { EqualDistancesConstraint } from '../../entities/constraints/equal-distances-constraint';
+import { EqualAnglesConstraint } from '../../entities/constraints/equal-angles-constraint';
+import { CollinearPointsConstraint } from '../../entities/constraints/collinear-points-constraint';
 
 export class ConstraintSystem {
   private tolerance: number;
@@ -419,6 +425,9 @@ export class ConstraintSystem {
         : useAnalyticalSolve();
       let analyticalProviders: AnalyticalResidualProvider[] | undefined;
 
+      // DEBUG: Log solver mode
+      console.log(`[ConstraintSystem] analyticalEnabled=${analyticalEnabled}, forceSolverMode=${this.forceSolverMode}, useAnalyticalSolve()=${useAnalyticalSolve()}`);
+
       // Collect quaternion indices for all cameras with optimizable poses
       // This is used for quaternion renormalization even without analytical mode
       const quaternionIndices: Array<readonly [number, number, number, number]> = [];
@@ -428,6 +437,7 @@ export class ConstraintSystem {
         const { providers, layout: builtLayout, layoutBuilder } = this.buildAnalyticalProviders();
         analyticalProviders = providers;
         layout = builtLayout;
+        console.log(`[ConstraintSystem] Built ${providers.length} analytical providers, ${builtLayout.numVariables} variables`);
 
         // Collect quaternion indices from all cameras
         for (const camera of this.cameras) {
@@ -970,7 +980,7 @@ export class ConstraintSystem {
       }
     }
 
-    // 4. Add camera quaternion normalization providers
+    // 4. Add camera quaternion normalization and focal length regularization providers
     for (const camera of this.cameras) {
       if (!camera.isPoseLocked) {
         const quatIndices = layout.getCameraQuatIndices(camera.name);
@@ -988,6 +998,17 @@ export class ConstraintSystem {
             )
           );
         }
+      }
+
+      // 4b. Add focal length regularization providers (matches Viewpoint.computeResiduals)
+      const intrinsicsIndices = layout.getCameraIntrinsicsIndices(camera.name);
+      if (intrinsicsIndices && intrinsicsIndices.focalLength >= 0) {
+        const focalLengthProviders = createFocalLengthRegularizationProviders(
+          intrinsicsIndices.focalLength,
+          camera.imageWidth,
+          camera.imageHeight
+        );
+        providers.push(...focalLengthProviders);
       }
     }
 
@@ -1162,6 +1183,54 @@ export class ConstraintSystem {
           createPointGetter(pointInfo.indices, pointInfo.locked)
         );
         providers.push(...fixedPointProviders);
+      } else if (constraint instanceof EqualDistancesConstraint) {
+        // Build point pair info for each pair
+        const pairs = constraint.distancePairs.map(([p1, p2]) => ({
+          p1Indices: getPointInfo(p1).indices,
+          p2Indices: getPointInfo(p2).indices,
+          getP1: createPointGetter(getPointInfo(p1).indices, getPointInfo(p1).locked),
+          getP2: createPointGetter(getPointInfo(p2).indices, getPointInfo(p2).locked),
+        }));
+
+        const equalDistProviders = createEqualDistancesProviders(pairs);
+        providers.push(...equalDistProviders);
+      } else if (constraint instanceof EqualAnglesConstraint) {
+        // Build triplet info for each angle triplet
+        const triplets = constraint.angleTriplets.map(([pointA, vertex, pointC]) => ({
+          pointAIndices: getPointInfo(pointA).indices,
+          vertexIndices: getPointInfo(vertex).indices,
+          pointCIndices: getPointInfo(pointC).indices,
+          getPointA: createPointGetter(getPointInfo(pointA).indices, getPointInfo(pointA).locked),
+          getVertex: createPointGetter(getPointInfo(vertex).indices, getPointInfo(vertex).locked),
+          getPointC: createPointGetter(getPointInfo(pointC).indices, getPointInfo(pointC).locked),
+        }));
+
+        const equalAnglesProviders = createEqualAnglesProviders(triplets);
+        providers.push(...equalAnglesProviders);
+      } else if (constraint instanceof CollinearPointsConstraint) {
+        // CollinearPointsConstraint uses cross product residuals
+        // For 3 or more points, the first point is the anchor
+        const points = constraint.points;
+        if (points.length >= 3) {
+          const p0Info = getPointInfo(points[0]);
+          const p1Info = getPointInfo(points[1]);
+
+          // For each additional point (beyond the first two), add collinear residuals
+          for (let i = 2; i < points.length; i++) {
+            const pInfo = getPointInfo(points[i]);
+
+            // Create collinear providers: (p0, p1, p[i]) should be collinear
+            const collinearProviders = createCollinearProviders(
+              p0Info.indices,
+              p1Info.indices,
+              pInfo.indices,
+              createPointGetter(p0Info.indices, p0Info.locked),
+              createPointGetter(p1Info.indices, p1Info.locked),
+              createPointGetter(pInfo.indices, pInfo.locked)
+            );
+            providers.push(...collinearProviders);
+          }
+        }
       }
       // Note: Other constraint types (ParallelLines, PerpendicularLines, etc.)
       // can be added here as needed

@@ -169,6 +169,15 @@ export function initializeCameraWithPnP(
     }
 
     const result = system.solve();
+
+    // Renormalize quaternion to prevent drift during optimization
+    const [w, x, y, z] = vpConcrete.rotation;
+    const mag = Math.sqrt(w * w + x * x + y * y + z * z);
+    if (mag > 1e-6) {
+      const invMag = 1.0 / mag;
+      vpConcrete.rotation = [w * invMag, x * invMag, y * invMag, z * invMag];
+    }
+
     const error = computeReprojectionError(vpConcrete);
 
     return {
@@ -257,9 +266,27 @@ export function initializeCameraWithPnP(
   // 1. Camera drifted far from initial estimate (placed very far away)
   // 2. Final error that's still too high to be useful
   // 3. Points behind the camera
+  // 4. Degenerate quaternion (magnitude far from 1)
 
   let reliable = true;
   let reason: string | undefined;
+
+  // Check 0: Verify quaternion is well-normalized (detect degenerate solutions)
+  // A degenerate quaternion has |q| far from 1, which produces invalid rotations
+  const [qw, qx, qy, qz] = vpConcrete.rotation;
+  const quatMag = Math.sqrt(qw * qw + qx * qx + qy * qy + qz * qz);
+  if (quatMag < 0.5 || quatMag > 2.0) {
+    log(`  WARNING: Degenerate quaternion with magnitude ${quatMag.toFixed(4)}`);
+    reliable = false;
+    reason = `Degenerate quaternion (magnitude ${quatMag.toFixed(3)} instead of 1)`;
+    // Reset to identity rotation
+    vpConcrete.rotation = [1, 0, 0, 0];
+  } else if (Math.abs(quatMag - 1.0) > 0.01) {
+    // Renormalize if slightly off
+    const invMag = 1.0 / quatMag;
+    vpConcrete.rotation = [qw * invMag, qx * invMag, qy * invMag, qz * invMag];
+    log(`  Renormalized quaternion (was ${quatMag.toFixed(4)})`);
+  }
 
   // Check 1: Verify camera didn't drift too far from initial position estimate
   // A degenerate solution often places the camera very far away where all points

@@ -77,6 +77,8 @@ export async function optimizeProject(
     setVerbosity(options.verbose ? 'verbose' : 'normal');
     log(`[Optimize] v${OPTIMIZER_VERSION}`);
     log(`[Optimize] WP:${project.worldPoints.size} L:${project.lines.size} VP:${project.viewpoints.size} IP:${project.imagePoints.size} C:${project.constraints.size}`);
+    // Log options for debugging test/UI discrepancies
+    log(`[Optimize] Options: maxIter=${options.maxIterations ?? 500} maxAttempts=${options.maxAttempts ?? 3} autoInitCam=${options.autoInitializeCameras ?? true} autoInitWP=${options.autoInitializeWorldPoints ?? true}`);
 
     // CRITICAL: Reset ALL camera state that could be stale from previous solves
     // This ensures both test (fresh from JSON) and UI (reused project) start identically

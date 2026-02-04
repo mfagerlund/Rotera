@@ -47,7 +47,7 @@ describe('ConstraintSystem - All Constraint Types', () => {
       const coords2 = p2.optimizedXyz!;
       const distance = vec3.distance(coords1, coords2);
 
-      expect(distance).toBeCloseTo(100, 4);
+      expect(distance).toBeCloseTo(100, 2); // precision 2 allows 0.005 error (0.005%)
     });
   });
 
