@@ -61,6 +61,19 @@ export function validateVanishingPoints(viewpoint: Viewpoint): ValidationResult 
       return
     }
 
+    // Check if VP is too far from origin (indicates nearly parallel lines - unreliable)
+    // VPs at extreme distances produce unstable focal length and camera pose estimates
+    const vpDistance = Math.sqrt(vp.u * vp.u + vp.v * vp.v)
+    const MAX_RELIABLE_VP_DISTANCE = 50000 // pixels - beyond this, VP-based init is unreliable
+    if (vpDistance > MAX_RELIABLE_VP_DISTANCE) {
+      warnings.push(
+        `${axis.toUpperCase()}-axis VP very distant (${vpDistance.toFixed(0)}px from origin) - ` +
+        `vanishing lines nearly parallel, camera pose may be unreliable`
+      )
+      // Don't add this VP - it will fail the 2 VP requirement if no other valid VPs exist
+      return
+    }
+
     vanishingPoints[axis] = { u: vp.u, v: vp.v, axis }
   })
 
