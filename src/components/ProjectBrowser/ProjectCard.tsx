@@ -14,7 +14,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { ProjectSummary } from '../../services/project-db'
 import { InlineRenameInput } from './InlineRenameInput'
-import { getSolveQuality } from '../../optimization/optimize-project'
+import { getSolveQuality, formatRmsError } from '../../optimization/optimize-project'
 
 interface ProjectCardProps {
   project: ProjectSummary
@@ -27,6 +27,7 @@ interface ProjectCardProps {
   batchResult: {
     projectId: string
     error: number | null
+    rmsReprojectionError?: number
     converged: boolean
     solveTimeMs: number
     errorMessage?: string
@@ -101,16 +102,17 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     const result = batchResult || storedResult
     if (!result) return null
 
-    // Use canonical getSolveQuality - stored results don't have median, use error as fallback
-    const quality = getSolveQuality(undefined, result.error ?? undefined)
+    // Use RMS reprojection error for quality (the normalized, project-size-independent metric)
+    const quality = getSolveQuality(result.rmsReprojectionError)
+    const rmsDisplay = formatRmsError(result.rmsReprojectionError)
 
     return (
       <span
         className="project-browser__item-optimization"
-        title={result.errorMessage || `${quality.label}: ${result.error?.toFixed(3)}, Time: ${result.solveTimeMs.toFixed(0)}ms${result.converged ? '' : ' (not converged)'}`}
+        title={result.errorMessage || `${quality.label}: ${rmsDisplay}, Time: ${result.solveTimeMs.toFixed(0)}ms${result.converged ? '' : ' (not converged)'}`}
       >
         <span style={{ color: quality.vividColor }}>{quality.starDisplay}</span>
-        <span style={{ color: quality.vividColor }}>{result.error?.toFixed(2) ?? 'Error'}</span>
+        <span style={{ color: quality.vividColor }}>{rmsDisplay}</span>
         <span className="project-browser__item-time">{result.solveTimeMs.toFixed(0)}ms</span>
       </span>
     )

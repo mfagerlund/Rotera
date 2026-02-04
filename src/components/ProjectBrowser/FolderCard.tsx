@@ -9,7 +9,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { Folder } from '../../services/project-db'
 import { InlineRenameInput } from './InlineRenameInput'
-import { getSolveQuality } from '../../optimization/optimize-project'
+import { getSolveQuality, formatRmsError } from '../../optimization/optimize-project'
 
 interface FolderCardProps {
   folder: Folder
@@ -17,9 +17,9 @@ interface FolderCardProps {
   isBatchOptimizing: boolean
   stats: {
     projectCount: number
-    minError: number | null
-    maxError: number | null
-    avgError: number | null
+    minRms: number | null
+    maxRms: number | null
+    avgRms: number | null
   } | undefined
   progress: { completed: number; total: number } | undefined
   isJustCompleted: boolean
@@ -68,14 +68,14 @@ export const FolderCard: React.FC<FolderCardProps> = ({
         <span style={{ color: isBatchOptimizing ? '#3498db' : 'var(--text-muted)' }}>
           {showProgress ? `${progress.completed}/${progress.total}` : stats.projectCount} projects
         </span>
-        {stats.avgError !== null && (
+        {stats.avgRms !== null && (
           <span style={{
             marginLeft: '8px',
-            color: getSolveQuality(undefined, stats.avgError).vividColor
+            color: getSolveQuality(stats.avgRms).vividColor
           }}>
-            avg: {stats.avgError.toFixed(2)}
+            avg: {formatRmsError(stats.avgRms)}
             <span style={{ opacity: 0.7, marginLeft: '4px' }}>
-              ({stats.minError?.toFixed(2)} - {stats.maxError?.toFixed(2)})
+              ({formatRmsError(stats.minRms ?? undefined)} - {formatRmsError(stats.maxRms ?? undefined)})
             </span>
           </span>
         )}

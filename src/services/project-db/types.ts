@@ -1,5 +1,7 @@
 export interface OptimizationResultSummary {
   error: number | null
+  /** RMS reprojection error in pixels - used for quality assessment */
+  rmsReprojectionError?: number
   converged: boolean
   solveTimeMs: number
   errorMessage?: string

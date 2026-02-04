@@ -60,14 +60,30 @@ function loadStoredResults(project: Project): any | null {
   }
 
   const totalError = residualCount > 0 ? Math.sqrt(totalSquaredError) : 0
+
+  // Compute RMS from stored image point residuals if not already on project
+  let rmsReprojectionError = project.lastRmsReprojectionError
+  if (rmsReprojectionError === undefined) {
+    let reprojSquaredError = 0
+    let reprojCount = 0
+    for (const ip of project.imagePoints.values()) {
+      if (ip.lastResiduals && ip.lastResiduals.length === 2) {
+        const pixelError = Math.sqrt(ip.lastResiduals[0] ** 2 + ip.lastResiduals[1] ** 2)
+        reprojSquaredError += pixelError ** 2
+        reprojCount++
+      }
+    }
+    rmsReprojectionError = reprojCount > 0 ? Math.sqrt(reprojSquaredError / reprojCount) : undefined
+  }
+
   const medianReprojectionError = project.lastMedianReprojectionError
-  const quality = getSolveQuality(medianReprojectionError, totalError)
+  const quality = getSolveQuality(rmsReprojectionError)
 
   return {
     converged: true, // If we have stored results, assume it was a successful run
     error: null,
     totalError,
-    pointAccuracy: totalError / Math.max(1, project.worldPoints.size),
+    rmsReprojectionError,
     iterations: 0, // Unknown from stored data
     outliers: [],
     medianReprojectionError,
@@ -273,7 +289,7 @@ export function useOptimizationPanel({
         converged: solverResult.converged,
         error: solverResult.error,
         totalError: solverResult.residual,
-        pointAccuracy: solverResult.residual / Math.max(1, project.worldPoints.size),
+        rmsReprojectionError: solverResult.rmsReprojectionError,
         iterations: solverResult.iterations,
         outliers: solverResult.outliers || [],
         medianReprojectionError: solverResult.medianReprojectionError,
@@ -285,13 +301,15 @@ export function useOptimizationPanel({
       setResults(result)
       setStatusMessage(null)
 
-      // Store median reprojection error in project for accurate quality on reload
+      // Store RMS and median reprojection error in project for accurate quality on reload
+      project.lastRmsReprojectionError = solverResult.rmsReprojectionError
       project.lastMedianReprojectionError = solverResult.medianReprojectionError
 
       if (project._dbId) {
         try {
           await ProjectDB.saveOptimizationResult(project._dbId, {
             error: solverResult.residual,
+            rmsReprojectionError: solverResult.rmsReprojectionError,
             converged: solverResult.converged,
             solveTimeMs,
             errorMessage: solverResult.error ?? undefined,
@@ -317,7 +335,7 @@ export function useOptimizationPanel({
         converged: false,
         error: errorMessage,
         totalError: Infinity,
-        pointAccuracy: 0,
+        rmsReprojectionError: undefined,
         iterations: 0,
         outliers: [],
         quality: getSolveQuality(undefined)
@@ -328,6 +346,7 @@ export function useOptimizationPanel({
         try {
           await ProjectDB.saveOptimizationResult(project._dbId, {
             error: null,
+            rmsReprojectionError: undefined,
             converged: false,
             solveTimeMs,
             errorMessage,
@@ -382,16 +401,30 @@ export function useOptimizationPanel({
         verbose: settings.verbose
       })
 
+      // Compute RMS from stored image point residuals after fine-tune
+      let rmsReprojectionError: number | undefined = undefined
+      let reprojSquaredError = 0
+      let reprojCount = 0
+      for (const ip of project.imagePoints.values()) {
+        if (ip.lastResiduals && ip.lastResiduals.length === 2) {
+          const pixelError = Math.sqrt(ip.lastResiduals[0] ** 2 + ip.lastResiduals[1] ** 2)
+          reprojSquaredError += pixelError ** 2
+          reprojCount++
+        }
+      }
+      if (reprojCount > 0) {
+        rmsReprojectionError = Math.sqrt(reprojSquaredError / reprojCount)
+      }
+
       const result = {
         converged: fineTuneResult.converged,
         error: fineTuneResult.error,
         totalError: fineTuneResult.residual,
-        pointAccuracy: fineTuneResult.residual / Math.max(1, project.worldPoints.size),
+        rmsReprojectionError,
         iterations: fineTuneResult.iterations,
         outliers: [],
         medianReprojectionError: undefined,
-        // Fine-tune doesn't compute median, fall back to residual (less accurate quality)
-        quality: getSolveQuality(undefined, fineTuneResult.residual),
+        quality: getSolveQuality(rmsReprojectionError),
         elapsedMs: fineTuneResult.solveTimeMs,
         solver: getSolverMode()
       }
@@ -413,7 +446,7 @@ export function useOptimizationPanel({
         converged: false,
         error: errorMessage,
         totalError: Infinity,
-        pointAccuracy: 0,
+        rmsReprojectionError: undefined,
         iterations: 0,
         outliers: [],
         quality: getSolveQuality(undefined)

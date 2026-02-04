@@ -62,7 +62,8 @@ export class Serialization {
       leftSidebarWidth: project.leftSidebarWidth,
       imageHeights: project.imageHeights,
       lockCameraPoses: project.lockCameraPoses,
-      lastMedianReprojectionError: project.lastMedianReprojectionError
+      lastMedianReprojectionError: project.lastMedianReprojectionError,
+      lastRmsReprojectionError: project.lastRmsReprojectionError
     }
 
     return JSON.stringify(dto, roundingReplacer, 2)
@@ -127,7 +128,8 @@ export class Serialization {
       dto.leftSidebarWidth ?? 180,
       dto.imageHeights ?? {},
       dto.lockCameraPoses ?? false,
-      dto.lastMedianReprojectionError
+      dto.lastMedianReprojectionError,
+      dto.lastRmsReprojectionError
     )
   }
 

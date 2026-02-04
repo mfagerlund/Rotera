@@ -6,7 +6,7 @@ import { Line } from '../../entities/line'
 import { Viewpoint } from '../../entities/viewpoint'
 import { ImagePoint } from '../../entities/imagePoint'
 import { CoplanarPointsConstraint } from '../../entities/constraints/coplanar-points-constraint'
-import { OutlierInfo, SolveQuality } from '../../optimization/optimize-project'
+import { OutlierInfo, SolveQuality, formatRmsError } from '../../optimization/optimize-project'
 import { getEntityKey } from '../../utils/entityKeys'
 import { formatXyz } from '../../utils/formatters'
 
@@ -15,7 +15,8 @@ interface OptimizationResultData {
   converged: boolean
   error: string | null
   totalError: number
-  pointAccuracy: number
+  /** RMS reprojection error in pixels - the primary quality metric */
+  rmsReprojectionError?: number
   iterations: number
   outliers: OutlierInfo[]
   medianReprojectionError?: number
@@ -172,7 +173,7 @@ export const OptimizationResults: React.FC<OptimizationResultsProps> = observer(
                     color: quality.color,
                     fontSize: '14px',
                   }}>
-                    {quality.label} Quality
+                    {quality.label}
                     {!results.converged && <span style={{ fontWeight: 'normal', opacity: 0.8 }}> (not converged)</span>}
                   </div>
                   <div style={{
@@ -180,26 +181,13 @@ export const OptimizationResults: React.FC<OptimizationResultsProps> = observer(
                     color: quality.color,
                     opacity: 0.8,
                   }}>
-                    Total error: {formatNumber(results.totalError)}
+                    RMS: {formatRmsError(results.rmsReprojectionError)}
                   </div>
-                </div>
-                <div style={{
-                  fontSize: '11px',
-                  color: '#666',
-                  textAlign: 'right',
-                }}>
-                  {results.totalError < 2.5 && '<2.5'}
-                  {results.totalError >= 2.5 && results.totalError < 5 && '2.5-5'}
-                  {results.totalError >= 5 && '>5'}
                 </div>
               </div>
             );
           })()}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>
-            <span>Error:{formatNumber(results.totalError)}</span>
-            <span style={{ margin: '0 4px', opacity: 0.5 }}>|</span>
-            <span>Accuracy:{formatNumber(results.pointAccuracy)}</span>
-            <span style={{ margin: '0 4px', opacity: 0.5 }}>|</span>
             <span>Iterations:{results.iterations}</span>
             {results.elapsedMs !== undefined && (
               <>

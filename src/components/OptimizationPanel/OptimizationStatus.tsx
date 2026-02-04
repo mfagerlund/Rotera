@@ -66,10 +66,10 @@ export const OptimizationStatus: React.FC<OptimizationStatusProps> = ({
               borderRadius: '4px',
             }}>
               <div style={{ fontSize: '10px', color: '#1565c0', textTransform: 'uppercase' }}>
-                Best Error{candidateProgress && ` (${candidateProgress.current}/${candidateProgress.total})`}
+                Best{candidateProgress && ` (${candidateProgress.current}/${candidateProgress.total})`}
               </div>
               <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#0d47a1' }}>
-                {bestError.toFixed(1)}
+                {bestError.toFixed(2)}
               </div>
             </div>
           )}

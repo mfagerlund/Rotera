@@ -213,10 +213,23 @@ export async function saveProject(project: Project, folderId?: string | null): P
       }
     }
 
+    // Compute RMS reprojection error from image points only (the normalized metric)
+    let reprojSquaredError = 0
+    let reprojCount = 0
+    for (const ip of project.imagePoints.values()) {
+      if (ip.lastResiduals && ip.lastResiduals.length === 2) {
+        const pixelError = Math.sqrt(ip.lastResiduals[0] ** 2 + ip.lastResiduals[1] ** 2)
+        reprojSquaredError += pixelError ** 2
+        reprojCount++
+      }
+    }
+    const rmsReprojectionError = reprojCount > 0 ? Math.sqrt(reprojSquaredError / reprojCount) : undefined
+
     const totalError = residualCount > 0 ? Math.sqrt(totalSquaredError) : 0
 
     optimizationResult = {
       error: totalError,
+      rmsReprojectionError,
       converged: true,
       solveTimeMs: 0,
       optimizedAt: new Date()

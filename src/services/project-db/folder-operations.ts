@@ -93,23 +93,25 @@ export async function getProjectsRecursive(folderId: string | null): Promise<Pro
   return allProjects
 }
 
-export async function getFolderStats(folderId: string): Promise<{ projectCount: number; minError: number | null; maxError: number | null; avgError: number | null }> {
+export async function getFolderStats(folderId: string): Promise<{ projectCount: number; minRms: number | null; maxRms: number | null; avgRms: number | null }> {
   const projects = await getProjectsRecursive(folderId)
 
-  const errors: number[] = []
+  const rmsValues: number[] = []
   for (const project of projects) {
-    if (project.optimizationResult?.error !== null && project.optimizationResult?.error !== undefined) {
-      errors.push(project.optimizationResult.error)
+    // Use RMS reprojection error (the normalized metric) for folder stats
+    const rms = project.optimizationResult?.rmsReprojectionError
+    if (rms !== null && rms !== undefined) {
+      rmsValues.push(rms)
     }
   }
 
-  if (errors.length === 0) {
-    return { projectCount: projects.length, minError: null, maxError: null, avgError: null }
+  if (rmsValues.length === 0) {
+    return { projectCount: projects.length, minRms: null, maxRms: null, avgRms: null }
   }
 
-  const minError = Math.min(...errors)
-  const maxError = Math.max(...errors)
-  const avgError = errors.reduce((a, b) => a + b, 0) / errors.length
+  const minRms = Math.min(...rmsValues)
+  const maxRms = Math.max(...rmsValues)
+  const avgRms = rmsValues.reduce((a, b) => a + b, 0) / rmsValues.length
 
-  return { projectCount: projects.length, minError, maxError, avgError }
+  return { projectCount: projects.length, minRms, maxRms, avgRms }
 }

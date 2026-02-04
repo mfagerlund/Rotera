@@ -9,6 +9,7 @@ import { optimizeProject } from '../../optimization/optimize-project'
 interface BatchOptimizationResult {
   projectId: string
   error: number | null
+  rmsReprojectionError?: number
   converged: boolean
   solveTimeMs: number
   errorMessage?: string
@@ -37,7 +38,7 @@ export const useProjectBrowser = () => {
   const [batchResults, setBatchResults] = useState<Map<string, BatchOptimizationResult>>(new Map())
   const [isBatchOptimizing, setIsBatchOptimizing] = useState(false)
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 })
-  const [folderStats, setFolderStats] = useState<Map<string, { projectCount: number; minError: number | null; maxError: number | null; avgError: number | null }>>(new Map())
+  const [folderStats, setFolderStats] = useState<Map<string, { projectCount: number; minRms: number | null; maxRms: number | null; avgRms: number | null }>>(new Map())
   const [totalProjectCount, setTotalProjectCount] = useState(0)
   const [optimizingProjectId, setOptimizingProjectId] = useState<string | null>(null)
   const [queuedProjectIds, setQueuedProjectIds] = useState<Set<string>>(new Set())
@@ -67,8 +68,8 @@ export const useProjectBrowser = () => {
       setAllFolders(loadedAllFolders)
       setTotalProjectCount(allProjectsRecursive.length)
 
-      // Load stats for each subfolder
-      const statsMap = new Map<string, { projectCount: number; minError: number | null; maxError: number | null; avgError: number | null }>()
+      // Load stats for each subfolder (RMS reprojection error stats)
+      const statsMap = new Map<string, { projectCount: number; minRms: number | null; maxRms: number | null; avgRms: number | null }>()
       await Promise.all(
         loadedFolders.map(async (folder) => {
           const stats = await ProjectDB.getFolderStats(folder.id)
@@ -490,6 +491,7 @@ export const useProjectBrowser = () => {
         batchResult = {
           projectId: summary.id,
           error: result.residual,
+          rmsReprojectionError: result.rmsReprojectionError,
           converged: result.converged,
           solveTimeMs,
           errorMessage: result.error ?? undefined,
@@ -500,6 +502,7 @@ export const useProjectBrowser = () => {
         // Save optimization result to database
         const optimizationResult: OptimizationResultSummary = {
           error: result.residual,
+          rmsReprojectionError: result.rmsReprojectionError,
           converged: result.converged,
           solveTimeMs,
           errorMessage: result.error ?? undefined,
@@ -586,25 +589,25 @@ export const useProjectBrowser = () => {
         }, 1500)
       }
 
-      // Compute folder stats locally from batch results
-      const statsMap = new Map<string, { projectCount: number; minError: number | null; maxError: number | null; avgError: number | null }>()
+      // Compute folder stats locally from batch results (using RMS)
+      const statsMap = new Map<string, { projectCount: number; minRms: number | null; maxRms: number | null; avgRms: number | null }>()
       for (const folder of folders) {
         const projectIds = folderToProjects.get(folder.id) ?? new Set()
-        const errors: number[] = []
+        const rmsValues: number[] = []
         for (const projectId of projectIds) {
           const result = newResults.get(projectId)
-          if (result && result.error !== null) {
-            errors.push(result.error)
+          if (result && result.rmsReprojectionError !== undefined) {
+            rmsValues.push(result.rmsReprojectionError)
           }
         }
-        if (errors.length === 0) {
-          statsMap.set(folder.id, { projectCount: projectIds.size, minError: null, maxError: null, avgError: null })
+        if (rmsValues.length === 0) {
+          statsMap.set(folder.id, { projectCount: projectIds.size, minRms: null, maxRms: null, avgRms: null })
         } else {
           statsMap.set(folder.id, {
             projectCount: projectIds.size,
-            minError: Math.min(...errors),
-            maxError: Math.max(...errors),
-            avgError: errors.reduce((a, b) => a + b, 0) / errors.length
+            minRms: Math.min(...rmsValues),
+            maxRms: Math.max(...rmsValues),
+            avgRms: rmsValues.reduce((a, b) => a + b, 0) / rmsValues.length
           })
         }
       }

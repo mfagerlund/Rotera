@@ -5,6 +5,11 @@
 import type { SolverResult, SolverOptions } from '../constraint-system';
 import type { OutlierInfo } from '../outlier-detection';
 import type { InferenceBranch } from '../inference-branching';
+import type { SolveQuality, QualityLevel } from '../quality-thresholds';
+
+// Re-export quality types and functions from centralized module
+export type { SolveQuality, QualityLevel };
+export { getSolveQuality, formatRmsError, getQualityBadgeProps, QUALITY_THRESHOLDS } from '../quality-thresholds';
 
 /**
  * Production default values for OptimizeProjectOptions.
@@ -14,53 +19,6 @@ export const OPTIMIZE_PROJECT_DEFAULTS = {
   maxIterations: 500,
   maxAttempts: 3,  // Generates 12 candidates via branching
 } as const;
-
-/**
- * Solve quality assessment based on total residual error.
- * This is the SINGLE SOURCE OF TRUTH for quality classification.
- */
-export interface SolveQuality {
-  label: 'Excellent' | 'Good' | 'Poor' | 'Unknown';
-  stars: 3 | 2 | 1 | 0;
-  starDisplay: '★★★' | '★★' | '★' | '?';
-  /** Muted color for text on badge backgrounds */
-  color: string;
-  /** Background color for badges */
-  bgColor: string;
-  /** Vivid color for standalone inline text */
-  vividColor: string;
-}
-
-/**
- * Compute solve quality from RMS reprojection error (preferred) or total residual error (fallback).
- * CANONICAL function - use this everywhere, never duplicate the thresholds.
- *
- * RMS (Root Mean Square) reprojection error thresholds (in pixels):
- * - Excellent (★★★): < 3px (very tight, even outliers are small)
- * - Good (★★): < 6px (acceptable for most use cases)
- * - Poor (★): >= 6px (significant outliers or systematic error)
- *
- * Note: RMS is more sensitive to outliers than median, which is what we want.
- * A few bad points will raise RMS significantly, alerting the user to problems.
- *
- * @param rmsReprojError - RMS reprojection error in pixels (preferred metric)
- * @param totalError - Total residual error (legacy fallback, not recommended)
- */
-export function getSolveQuality(rmsReprojError: number | undefined, totalError?: number): SolveQuality {
-  // Use RMS reprojection error if available (sensitive to outliers)
-  const error = rmsReprojError ?? totalError;
-
-  if (error === undefined) {
-    return { label: 'Unknown', stars: 0, starDisplay: '?', color: '#666', bgColor: '#f0f0f0', vividColor: '#999' };
-  }
-  if (error < 3) {
-    return { label: 'Excellent', stars: 3, starDisplay: '★★★', color: '#155724', bgColor: '#d4edda', vividColor: '#2ecc71' };
-  }
-  if (error < 6) {
-    return { label: 'Good', stars: 2, starDisplay: '★★', color: '#856404', bgColor: '#fff3cd', vividColor: '#f1c40f' };
-  }
-  return { label: 'Poor', stars: 1, starDisplay: '★', color: '#721c24', bgColor: '#f8d7da', vividColor: '#e74c3c' };
-}
 
 export interface OptimizeProjectOptions extends Omit<SolverOptions, 'optimizeCameraIntrinsics'> {
   autoInitializeCameras?: boolean;

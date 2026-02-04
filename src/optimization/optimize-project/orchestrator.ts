@@ -526,7 +526,7 @@ export async function optimizeProject(
 
   // Final summary
   const solveTimeMs = performance.now() - startTime;
-  const quality = getSolveQuality(rmsReprojectionError, result.residual);
+  const quality = getSolveQuality(rmsReprojectionError);
   const bestRes = getBestResidualSoFar();
   const isBest = Math.abs(result.residual - bestRes) < 0.01;
   const bestInfo = isBest ? '' : ` (best was ${bestRes.toFixed(1)})`;

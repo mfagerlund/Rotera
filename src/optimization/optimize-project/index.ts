@@ -9,8 +9,8 @@
 export { optimizeProject } from './orchestrator';
 
 // Re-export types and quality utilities
-export type { OptimizeProjectOptions, OptimizeProjectResult, SolveQuality } from './types';
-export { getSolveQuality, OPTIMIZE_PROJECT_DEFAULTS } from './types';
+export type { OptimizeProjectOptions, OptimizeProjectResult, SolveQuality, QualityLevel } from './types';
+export { getSolveQuality, formatRmsError, getQualityBadgeProps, QUALITY_THRESHOLDS, OPTIMIZE_PROJECT_DEFAULTS } from './types';
 
 // Re-export utilities from other modules (backwards compatibility)
 export { log, logDebug, logProgress, clearOptimizationLogs, optimizationLogs, setLogCallback, setVerbosity, getBestResidualSoFar, setCandidateProgress, getCandidateProgress } from '../optimization-logger';
