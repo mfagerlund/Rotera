@@ -18,6 +18,10 @@ import { conjugateGradientDamped } from './sparse/cg-solvers';
 import type { AnalyticalResidualProvider } from './analytical/types';
 import { accumulateNormalEquations } from './analytical/accumulate-normal-equations';
 
+// Track CG non-convergence warnings to avoid spamming console
+let cgWarningCount = 0;
+let cgWarningWorstResidual = 0;
+
 /**
  * Extended result that includes the Jacobian matrix (for validation).
  */
@@ -356,10 +360,14 @@ function solveSparseFromNormalEquations(
   );
 
   if (!cgResult.converged && cgResult.residualNorm > 1e-8) {
-    console.warn(
-      `[AnalyticalSparseLM] CG did not converge: ${cgResult.iterations}/${maxCgIter} iters, ` +
-        `residual=${cgResult.residualNorm.toExponential(2)}`
-    );
+    cgWarningCount++;
+    cgWarningWorstResidual = Math.max(cgWarningWorstResidual, cgResult.residualNorm);
+    if (cgWarningCount === 1) {
+      console.warn(
+        `[AnalyticalSparseLM] CG did not converge: ${cgResult.iterations}/${maxCgIter} iters, ` +
+          `residual=${cgResult.residualNorm.toExponential(2)} (further warnings suppressed)`
+      );
+    }
   }
 
   return cgResult.x;
@@ -462,10 +470,14 @@ function solveSparseNormalEquations(
 
   // Only warn if residual is actually large (not just missing tight tolerance)
   if (!cgResult.converged && cgResult.residualNorm > 1e-8) {
-    console.warn(
-      `[SparseLM] CG did not converge: ${cgResult.iterations}/${maxCgIter} iters, ` +
-      `residual=${cgResult.residualNorm.toExponential(2)}`
-    );
+    cgWarningCount++;
+    cgWarningWorstResidual = Math.max(cgWarningWorstResidual, cgResult.residualNorm);
+    if (cgWarningCount === 1) {
+      console.warn(
+        `[SparseLM] CG did not converge: ${cgResult.iterations}/${maxCgIter} iters, ` +
+        `residual=${cgResult.residualNorm.toExponential(2)} (further warnings suppressed)`
+      );
+    }
   }
 
   return cgResult.x;
@@ -503,6 +515,10 @@ export function transparentLM(
     useAnalyticalSolve = false,
     quaternionIndices,
   } = options;
+
+  // Reset CG warning counter for this solve
+  cgWarningCount = 0;
+  cgWarningWorstResidual = 0;
 
   /**
    * Renormalize quaternions to unit length.
@@ -793,6 +809,13 @@ export function transparentLM(
   }
 
   const computationTime = performance.now() - startTime;
+
+  // Log summary of suppressed CG warnings
+  if (cgWarningCount > 1) {
+    console.warn(
+      `[CG] ${cgWarningCount} non-convergence warnings (worst residual: ${cgWarningWorstResidual.toExponential(2)})`
+    );
+  }
 
   if (verbose) {
     console.log(`[TransparentLM] ${converged ? 'Converged' : 'Did not converge'}: ${convergenceReason}`);

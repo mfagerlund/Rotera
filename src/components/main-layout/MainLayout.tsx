@@ -47,23 +47,86 @@ import '../../styles/tools.css'
 
 import type { Viewpoint } from '../../entities/viewpoint'
 
+/**
+ * Compute intersection of two lines defined by points (a1,b1) and (a2,b2).
+ * Returns null if lines are parallel.
+ */
+function lineIntersectionUV(
+  a1u: number, a1v: number, b1u: number, b1v: number,
+  a2u: number, a2v: number, b2u: number, b2v: number
+): { u: number; v: number } | null {
+  const d1u = b1u - a1u, d1v = b1v - a1v
+  const d2u = b2u - a2u, d2v = b2v - a2v
+  const cross = d1u * d2v - d1v * d2u
+  if (Math.abs(cross) < 1e-10) return null
+  const du = a2u - a1u, dv = a2v - a1v
+  const t = (du * d2v - dv * d2u) / cross
+  return { u: a1u + t * d1u, v: a1v + t * d1v }
+}
+
+interface LineEndpointsUV {
+  au: number; av: number; bu: number; bv: number
+}
+
 function snapToCoincidentLine(
   wp: WorldPoint,
   u: number,
   v: number,
   viewpoint: Viewpoint
 ): { u: number; v: number } | null {
-  let best: { u: number; v: number } | null = null
-  let bestDist = Infinity
-
+  // Collect valid line endpoints in image coordinates
+  const lineEndpoints: LineEndpointsUV[] = []
   for (const lineRef of wp.coincidentWithLines) {
     const line = lineRef as LineEntity
     const ipsA = viewpoint.getImagePointsForWorldPoint(line.pointA)
     const ipsB = viewpoint.getImagePointsForWorldPoint(line.pointB)
     if (ipsA.length === 0 || ipsB.length === 0) continue
+    lineEndpoints.push({
+      au: ipsA[0].u, av: ipsA[0].v,
+      bu: ipsB[0].u, bv: ipsB[0].v
+    })
+  }
 
-    const au = ipsA[0].u, av = ipsA[0].v
-    const bu = ipsB[0].u, bv = ipsB[0].v
+  if (lineEndpoints.length === 0) return null
+
+  // If exactly 2 lines, snap to their intersection
+  if (lineEndpoints.length === 2) {
+    const l1 = lineEndpoints[0], l2 = lineEndpoints[1]
+    const intersection = lineIntersectionUV(
+      l1.au, l1.av, l1.bu, l1.bv,
+      l2.au, l2.av, l2.bu, l2.bv
+    )
+    if (intersection) return intersection
+  }
+
+  // If 3+ lines, find intersection closest to current position
+  if (lineEndpoints.length >= 3) {
+    let bestIntersection: { u: number; v: number } | null = null
+    let bestDist = Infinity
+    for (let i = 0; i < lineEndpoints.length; i++) {
+      for (let j = i + 1; j < lineEndpoints.length; j++) {
+        const l1 = lineEndpoints[i], l2 = lineEndpoints[j]
+        const intersection = lineIntersectionUV(
+          l1.au, l1.av, l1.bu, l1.bv,
+          l2.au, l2.av, l2.bu, l2.bv
+        )
+        if (intersection) {
+          const du = intersection.u - u, dv = intersection.v - v
+          const dist = du * du + dv * dv
+          if (dist < bestDist) {
+            bestDist = dist
+            bestIntersection = intersection
+          }
+        }
+      }
+    }
+    if (bestIntersection) return bestIntersection
+  }
+
+  // Fall back to snapping to closest line (for single line or parallel lines)
+  let best: { u: number; v: number } | null = null
+  let bestDist = Infinity
+  for (const { au, av, bu, bv } of lineEndpoints) {
     const abu = bu - au, abv = bv - av
     const apu = u - au, apv = v - av
     const t = (apu * abu + apv * abv) / (abu * abu + abv * abv)

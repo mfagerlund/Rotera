@@ -41,6 +41,9 @@ import {
   runLatePnPInitialization,
   runStage1Optimization,
   handleOutliersAndRerun,
+  snapshotSolverState,
+  restoreSolverState,
+  SolverStateSnapshot,
 } from './helpers';
 
 // Version for tracking code updates
@@ -355,8 +358,9 @@ export async function optimizeProject(
   }
 
   const needsStage1 = (singleCameraPoints.size > 0 || usedEssentialMatrix) && multiCameraPoints.size >= 4;
+  let stage1Snapshot: SolverStateSnapshot | undefined;
   if (needsStage1) {
-    runStage1Optimization(
+    const stage1Residual = runStage1Optimization(
       project,
       multiCameraPoints,
       singleCameraPoints,
@@ -367,6 +371,8 @@ export async function optimizeProject(
       damping,
       verbose
     );
+    // Snapshot state after Stage1 in case full solve diverges
+    stage1Snapshot = snapshotSolverState(worldPointArray, viewpointArray, stage1Residual);
   }
 
   // PHASE 5: Full Optimization (LM Solver)
@@ -388,6 +394,9 @@ export async function optimizeProject(
     verbose,
     optimizeCameraIntrinsics: shouldOptimizeIntrinsics,
     regularizationWeight: hasSingleAxisConstraint ? 0.1 : 0,
+    // Force dense mode when Stage1 ran successfully - analytical mode can diverge
+    // when adding single-camera points to a well-converged multi-camera solution
+    forceSolverMode: stage1Snapshot ? 'dense' : undefined,
   });
 
   project.worldPoints.forEach(p => system.addPoint(p as WorldPoint));
@@ -429,6 +438,26 @@ export async function optimizeProject(
   // Log solve result with progress tracking
   const camInfo = viewpointArray.map(v => `${v.name}:f=${v.focalLength.toFixed(0)}`).join(' ');
   logProgress('Solve', result.residual, `conv=${result.converged} iter=${result.iterations} rms=${rmsReprojectionError?.toFixed(2) ?? '?'}px | ${camInfo}${result.error ? ` | err=${result.error}` : ''}`);
+
+  // If full solve diverged compared to Stage1, restore Stage1 state
+  // This happens when single-camera points or full constraints destabilize the solve
+  if (stage1Snapshot && result.residual > stage1Snapshot.residual * 10) {
+    log(`[Restore] Full solve diverged (${result.residual.toFixed(1)} vs Stage1: ${stage1Snapshot.residual.toFixed(1)}) - restoring Stage1 state`);
+    restoreSolverState(stage1Snapshot);
+    result = {
+      converged: true,
+      iterations: result.iterations,
+      residual: stage1Snapshot.residual,
+      error: null,
+    };
+    // Recalculate outliers with restored state
+    if (shouldDetectOutliers && project.imagePoints.size > 0) {
+      const detection = detectOutliers(project, outlierThreshold, viewpointArray);
+      outliers = detection.outliers;
+      rmsReprojectionError = detection.rmsError;
+      medianReprojectionError = detection.medianError;
+    }
+  }
 
   // Handle outliers and potential re-run
   if (outliers && outliers.length > 0) {

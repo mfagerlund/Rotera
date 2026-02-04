@@ -21,6 +21,63 @@ import { canInitializeWithVanishingPoints } from '../vanishing-points';
 import { applyScaleFromAxisLines, translateToAnchorPoint } from '../initialization-phases';
 
 /**
+ * Snapshot of solver state that can be restored if optimization diverges.
+ */
+export interface SolverStateSnapshot {
+  worldPoints: Map<WorldPoint, [number, number, number] | undefined>;
+  cameras: Map<Viewpoint, {
+    position: [number, number, number];
+    rotation: [number, number, number, number];
+    focalLength: number;
+  }>;
+  residual: number;
+}
+
+/**
+ * Take a snapshot of current solver state (world point positions and camera poses).
+ */
+export function snapshotSolverState(
+  worldPoints: WorldPoint[],
+  viewpoints: Viewpoint[],
+  residual: number
+): SolverStateSnapshot {
+  const snapshot: SolverStateSnapshot = {
+    worldPoints: new Map(),
+    cameras: new Map(),
+    residual,
+  };
+
+  for (const wp of worldPoints) {
+    snapshot.worldPoints.set(wp, wp.optimizedXyz ? [...wp.optimizedXyz] as [number, number, number] : undefined);
+  }
+
+  for (const vp of viewpoints) {
+    snapshot.cameras.set(vp, {
+      position: [...vp.position] as [number, number, number],
+      rotation: [...vp.rotation] as [number, number, number, number],
+      focalLength: vp.focalLength,
+    });
+  }
+
+  return snapshot;
+}
+
+/**
+ * Restore solver state from a snapshot.
+ */
+export function restoreSolverState(snapshot: SolverStateSnapshot): void {
+  for (const [wp, pos] of snapshot.worldPoints) {
+    wp.optimizedXyz = pos ? [...pos] as [number, number, number] : undefined;
+  }
+
+  for (const [vp, state] of snapshot.cameras) {
+    vp.position = [...state.position] as [number, number, number];
+    vp.rotation = [...state.rotation] as [number, number, number, number];
+    vp.focalLength = state.focalLength;
+  }
+}
+
+/**
  * Get all WorldPoints referenced by a constraint.
  * Handles both `points` array (coplanar, collinear) and individual point properties (distance, angle).
  */
@@ -261,7 +318,7 @@ export function runStage1Optimization(
   maxIterations: number,
   damping: number,
   verbose: boolean
-): void {
+): number {
   // Force dense mode for stage1 - needs reliability for multi-camera point optimization
   const stage1System = new ConstraintSystem({
     tolerance,
@@ -348,6 +405,8 @@ export function runStage1Optimization(
     );
     log(`[Stage2] Single-cam init: ${initResult.initialized} ok, ${initResult.failed} failed`);
   }
+
+  return stage1Result.residual;
 }
 
 export function handleOutliersAndRerun(
@@ -365,11 +424,17 @@ export function handleOutliersAndRerun(
   shouldOptimizeIntrinsics: (vp: IOptimizableCamera) => boolean,
   outlierThreshold: number
 ): { result: SolverResult; outliers: OutlierInfo[]; rmsError: number; medianError: number } | null {
-  log(`[Outliers] ${outliers.length} found (threshold based on rms=${rmsError.toFixed(1)}px):`);
+  // Mark outliers and show compact summary
   for (const outlier of outliers) {
-    log(`  ${outlier.worldPointName}@${outlier.viewpointName}: ${outlier.error.toFixed(1)}px`);
     outlier.imagePoint.isOutlier = true;
   }
+
+  // Show as range with worst 3
+  const sorted = [...outliers].sort((a, b) => b.error - a.error);
+  const worst3 = sorted.slice(0, 3).map(o => `${o.worldPointName}@${o.viewpointName.substring(0, 8)}:${o.error.toFixed(0)}px`).join(', ');
+  const minErr = sorted[sorted.length - 1]?.error.toFixed(0) ?? '0';
+  const maxErr = sorted[0]?.error.toFixed(0) ?? '0';
+  log(`[Outliers] ${outliers.length} found (${minErr}-${maxErr}px, rms=${rmsError.toFixed(1)}px): ${worst3}${outliers.length > 3 ? '...' : ''}`);
 
   const outliersByCamera = new Map<Viewpoint, number>();
   for (const outlier of outliers) {

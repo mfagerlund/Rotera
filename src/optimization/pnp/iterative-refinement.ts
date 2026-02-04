@@ -119,12 +119,6 @@ export function initializeCameraWithPnP(
   centroid[1] /= constrainedPoints.length;
   centroid[2] /= constrainedPoints.length;
 
-  log(`  Centroid of ${constrainedPoints.length} constrained points: [${centroid.map(x => x.toFixed(3)).join(', ')}]`);
-  log(`  Sample constrained points (first 5):`);
-  for (let i = 0; i < Math.min(5, constrainedPoints.length); i++) {
-    log(`    [${constrainedPoints[i].map(x => x.toFixed(3)).join(', ')}]`);
-  }
-
   let maxDist = 0;
   for (const pt of constrainedPoints) {
     const dx = pt[0] - centroid[0];
@@ -135,8 +129,8 @@ export function initializeCameraWithPnP(
   }
 
   const cameraDistance = Math.max(maxDist * 2.5, 10);
-  log(`  Max distance from centroid: ${maxDist.toFixed(3)}`);
-  log(`  Computed camera distance: ${cameraDistance.toFixed(3)}`);
+  // Compact: centroid, maxDist, camDist on one line
+  log(`  ${constrainedPoints.length} pts, centroid=[${centroid.map(x => x.toFixed(2)).join(',')}], maxD=${maxDist.toFixed(2)}, camD=${cameraDistance.toFixed(2)}`);
 
   // Helper to run PnP optimization with given initial position/rotation
   function runPnPFromDirection(
@@ -190,7 +184,6 @@ export function initializeCameraWithPnP(
 
   // First try the standard direction: negative Z from centroid
   const initialPosition: [number, number, number] = [centroid[0], centroid[1], centroid[2] - cameraDistance];
-  log(`  Initial camera position: [${initialPosition.map(x => x.toFixed(3)).join(', ')}]`);
 
   const initialError = computeReprojectionError(vpConcrete);
   let result = runPnPFromDirection(initialPosition, [1, 0, 0, 0]);
@@ -215,7 +208,6 @@ export function initializeCameraWithPnP(
 
   // If first direction gave poor results (high error OR points behind), try other directions
   if (!isFirstDirectionValid) {
-    log(`  First direction: error=${finalError.toFixed(2)} px, points in front=${pointsInFrontForBest}/${constrainedPoints.length} - trying other directions...`);
 
     const otherDirections: { name: string; offset: [number, number, number]; rotation: [number, number, number, number] }[] = [
       { name: '+Z', offset: [0, 0, cameraDistance], rotation: [0, 0, 1, 0] },
@@ -244,7 +236,6 @@ export function initializeCameraWithPnP(
         result = dirResult;
         bestIterations = dirResult.iterations;
         pointsInFrontForBest = dirPointsInFront;
-        log(`  Direction ${dir.name}: error=${dirResult.error.toFixed(2)} px, points in front=${dirPointsInFront}/${constrainedPoints.length} (improved)`);
       }
 
       // Early exit if we found a good solution (low error AND points in front)
@@ -256,10 +247,7 @@ export function initializeCameraWithPnP(
   vpConcrete.position = result.position;
   vpConcrete.rotation = result.rotation;
 
-  log(`PnP: Initialized ${vpConcrete.name} using ${constrainedPoints.length} constrained points`);
-  log(`  Initial reprojection error: ${initialError.toFixed(2)} px`);
-  log(`  Final reprojection error: ${finalError.toFixed(2)} px (${bestIterations} iterations)`);
-  log(`  Position: [${vpConcrete.position.map(x => x.toFixed(3)).join(', ')}]`);
+  log(`PnP: ${vpConcrete.name} (${constrainedPoints.length} pts): err ${initialError.toFixed(0)}→${finalError.toFixed(1)}px, ${bestIterations} iters, pos=[${vpConcrete.position.map(x => x.toFixed(1)).join(',')}]`);
 
   // Validate the result to detect degenerate solutions
   // A degenerate solution typically has:
@@ -276,16 +264,12 @@ export function initializeCameraWithPnP(
   const [qw, qx, qy, qz] = vpConcrete.rotation;
   const quatMag = Math.sqrt(qw * qw + qx * qx + qy * qy + qz * qz);
   if (quatMag < 0.5 || quatMag > 2.0) {
-    log(`  WARNING: Degenerate quaternion with magnitude ${quatMag.toFixed(4)}`);
     reliable = false;
-    reason = `Degenerate quaternion (magnitude ${quatMag.toFixed(3)} instead of 1)`;
-    // Reset to identity rotation
+    reason = `Degenerate quat |q|=${quatMag.toFixed(2)}`;
     vpConcrete.rotation = [1, 0, 0, 0];
   } else if (Math.abs(quatMag - 1.0) > 0.01) {
-    // Renormalize if slightly off
     const invMag = 1.0 / quatMag;
     vpConcrete.rotation = [qw * invMag, qx * invMag, qy * invMag, qz * invMag];
-    log(`  Renormalized quaternion (was ${quatMag.toFixed(4)})`);
   }
 
   // Check 1: Verify camera didn't drift too far from initial position estimate
@@ -297,29 +281,22 @@ export function initializeCameraWithPnP(
   const finalDistFromCentroid = Math.sqrt(finalDx * finalDx + finalDy * finalDy + finalDz * finalDz);
   const distanceRatio = finalDistFromCentroid / cameraDistance;
 
-  log(`  Final distance from centroid: ${finalDistFromCentroid.toFixed(3)} (ratio to initial: ${distanceRatio.toFixed(2)}x)`);
-
   const maxDistanceRatio = 15.0; // Allow up to 15x the initial estimate (generous because heuristic is rough)
   if (distanceRatio > maxDistanceRatio) {
     reliable = false;
-    reason = `Camera drifted too far: ${finalDistFromCentroid.toFixed(1)} units (${distanceRatio.toFixed(1)}x initial estimate of ${cameraDistance.toFixed(1)})`;
-    log(`  WARNING: ${reason}`);
+    reason = `Camera drifted ${distanceRatio.toFixed(0)}x (${finalDistFromCentroid.toFixed(0)} vs expected ${cameraDistance.toFixed(0)})`;
+    log(`  WARN: ${reason} - resetting to initial`);
 
     // Reset to initial position since the optimization diverged
     vpConcrete.position = [centroid[0], centroid[1], centroid[2] - cameraDistance];
     vpConcrete.rotation = [1, 0, 0, 0];
-    log(`  Resetting camera to initial position: [${vpConcrete.position.map(x => x.toFixed(3)).join(', ')}]`);
   }
 
   // Check 2: If final error is still very high, the result is unreliable
-  // Note: 80px threshold allows for reasonable manual clicking accuracy
-  // while still rejecting clearly bad solutions
-  // Raised from 60px to handle challenging multi-camera geometries
   const maxAcceptableError = 80; // pixels
   if (finalError > maxAcceptableError && reliable) {
     reliable = false;
-    reason = `Final error too high: ${finalError.toFixed(1)}px > ${maxAcceptableError}px`;
-    log(`  WARNING: ${reason}`);
+    reason = `Final error ${finalError.toFixed(0)}px > ${maxAcceptableError}px`;
   }
 
   // Check 3: Verify that most constrained points are in front of the camera
@@ -343,7 +320,6 @@ export function initializeCameraWithPnP(
   // If most/all points are behind the camera, PnP found the "flipped" solution
   // Try rotating 180° around X axis to flip the view direction
   if (pointsInFront < constrainedPoints.length * 0.5) {
-    log(`  Only ${pointsInFront}/${constrainedPoints.length} points in front - trying 180° flip...`);
 
     // 180° rotation around X axis: quaternion [0, 1, 0, 0]
     // q_new = q_old * q_flip (right multiply for local rotation)
