@@ -167,16 +167,16 @@ describe('Regression - Calibration', () => {
 
     const result = await optimizeProject(project, PRODUCTION_OPTIONS)
 
-    // Only cameras 3 and 4 can be initialized
+    // All cameras should be initialized
     expect(result.camerasInitialized).toBeDefined()
-    expect(result.camerasInitialized!.sort()).toEqual(['3', '4'])
+    expect(result.camerasInitialized!.sort()).toEqual(['2', '3', '4'])
 
-    // Camera 2 should NOT be excluded
+    // No cameras should be excluded
     expect(result.camerasExcluded).toBeUndefined()
 
-    // Relaxed threshold due to geometric limitation
+    // Good accuracy expected
     expect(result.medianReprojectionError).toBeDefined()
-    expect(result.medianReprojectionError!).toBeLessThan(20)
+    expect(result.medianReprojectionError!).toBeLessThan(5)
 
     // Fine-tune check
     const errorBeforeFineTune = result.medianReprojectionError!

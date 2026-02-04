@@ -5,6 +5,8 @@
  * never materializing the full Jacobian matrix.
  */
 
+import type { WorldPoint } from '../../entities/world-point/WorldPoint';
+
 /**
  * A provider computes one residual and its gradient.
  * Knows which variables it depends on (sparse pattern).
@@ -61,8 +63,9 @@ export interface VariableLayout {
   /**
    * Returns indices for a world point's [x, y, z].
    * -1 for any locked coordinate.
+   * Takes a WorldPoint object (not string) to handle duplicate names.
    */
-  getWorldPointIndices(pointId: string): readonly [number, number, number];
+  getWorldPointIndices(point: WorldPoint): readonly [number, number, number];
 
   /**
    * Returns indices for camera position [x, y, z].
@@ -79,8 +82,9 @@ export interface VariableLayout {
   /**
    * Get the locked value for a world point coordinate.
    * Used when computing residuals for locked variables.
+   * Takes a WorldPoint object (not string) to handle duplicate names.
    */
-  getLockedWorldPointValue(pointId: string, axis: 'x' | 'y' | 'z'): number | undefined;
+  getLockedWorldPointValue(point: WorldPoint, axis: 'x' | 'y' | 'z'): number | undefined;
 
   /**
    * Get the locked value for a camera position coordinate.

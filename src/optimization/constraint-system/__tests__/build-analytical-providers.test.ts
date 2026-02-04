@@ -68,13 +68,13 @@ describe('ConstraintSystem.buildAnalyticalProviders', () => {
     expect(providers.length).toBe(2);
 
     // Verify locked point indices are -1
-    const aIndices = layout.getWorldPointIndices('A');
+    const aIndices = layout.getWorldPointIndices(pointA);
     expect(aIndices).toEqual([-1, -1, -1]);
 
     // Verify locked values are available
-    expect(layout.getLockedWorldPointValue('A', 'x')).toBe(0);
-    expect(layout.getLockedWorldPointValue('A', 'y')).toBe(0);
-    expect(layout.getLockedWorldPointValue('A', 'z')).toBe(0);
+    expect(layout.getLockedWorldPointValue(pointA, 'x')).toBe(0);
+    expect(layout.getLockedWorldPointValue(pointA, 'y')).toBe(0);
+    expect(layout.getLockedWorldPointValue(pointA, 'z')).toBe(0);
   });
 
   it('builds providers for distance constraints', () => {

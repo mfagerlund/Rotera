@@ -911,15 +911,16 @@ export class ConstraintSystem {
     const layout = builder.build();
 
     // Helper to get point indices and locked values
+    // Uses WorldPoint object directly (not name or id) to handle duplicate names
     const getPointInfo = (point: WorldPoint): {
       indices: readonly [number, number, number];
       locked: readonly [number | null, number | null, number | null];
     } => {
-      const indices = layout.getWorldPointIndices(point.name);
+      const indices = layout.getWorldPointIndices(point);
       const locked: [number | null, number | null, number | null] = [
-        layout.getLockedWorldPointValue(point.name, 'x') ?? null,
-        layout.getLockedWorldPointValue(point.name, 'y') ?? null,
-        layout.getLockedWorldPointValue(point.name, 'z') ?? null,
+        layout.getLockedWorldPointValue(point, 'x') ?? null,
+        layout.getLockedWorldPointValue(point, 'y') ?? null,
+        layout.getLockedWorldPointValue(point, 'z') ?? null,
       ];
       return { indices, locked };
     };

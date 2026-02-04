@@ -42,7 +42,7 @@ describe('ConstraintSystem gradient comparison', () => {
 
     console.log('Variable layout:');
     console.log('  numVariables:', layout.numVariables);
-    console.log('  Point P indices:', layout.getWorldPointIndices('P'));
+    console.log('  Point P indices:', layout.getWorldPointIndices(point));
     console.log('  Camera Cam pos indices:', layout.getCameraPosIndices('Cam'));
     console.log('  Camera Cam quat indices:', layout.getCameraQuatIndices('Cam'));
     console.log('  Provider count:', providers.length);
@@ -69,19 +69,19 @@ describe('ConstraintSystem gradient comparison', () => {
       const residuals: Value[] = [];
 
       // Get point coordinates
-      const pIndices = layout.getWorldPointIndices('P');
+      const pIndices = layout.getWorldPointIndices(point);
       const px =
         pIndices[0] >= 0
           ? variables[pIndices[0]]
-          : new Value(layout.getLockedWorldPointValue('P', 'x')!);
+          : new Value(layout.getLockedWorldPointValue(point, 'x')!);
       const py =
         pIndices[1] >= 0
           ? variables[pIndices[1]]
-          : new Value(layout.getLockedWorldPointValue('P', 'y')!);
+          : new Value(layout.getLockedWorldPointValue(point, 'y')!);
       const pz =
         pIndices[2] >= 0
           ? variables[pIndices[2]]
-          : new Value(layout.getLockedWorldPointValue('P', 'z')!);
+          : new Value(layout.getLockedWorldPointValue(point, 'z')!);
 
       // Get camera pose
       const posIndices = layout.getCameraPosIndices('Cam');
@@ -299,19 +299,19 @@ describe('ConstraintSystem gradient comparison', () => {
       const residuals: Value[] = [];
 
       // Get point coordinates
-      const pIndices = layout.getWorldPointIndices('P');
+      const pIndices = layout.getWorldPointIndices(point);
       const px =
         pIndices[0] >= 0
           ? variables[pIndices[0]]
-          : new Value(layout.getLockedWorldPointValue('P', 'x')!);
+          : new Value(layout.getLockedWorldPointValue(point, 'x')!);
       const py =
         pIndices[1] >= 0
           ? variables[pIndices[1]]
-          : new Value(layout.getLockedWorldPointValue('P', 'y')!);
+          : new Value(layout.getLockedWorldPointValue(point, 'y')!);
       const pz =
         pIndices[2] >= 0
           ? variables[pIndices[2]]
-          : new Value(layout.getLockedWorldPointValue('P', 'z')!);
+          : new Value(layout.getLockedWorldPointValue(point, 'z')!);
 
       // Get camera pose
       const posIndices = layout.getCameraPosIndices('Cam');

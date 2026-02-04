@@ -65,7 +65,7 @@ describe('JtJ/negJtr Comparison at Iteration 1', () => {
     // Log variable layout details
     log('\nWorld points:');
     for (const wp of project.worldPoints) {
-      const indices = layout.getWorldPointIndices(wp.name);
+      const indices = layout.getWorldPointIndices(wp);
       log(`  ${wp.name}: indices=[${indices.join(', ')}]`);
     }
 

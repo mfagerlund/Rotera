@@ -29,8 +29,9 @@ export class VariableLayoutBuilder {
   private values: number[] = [];
 
   // Point indices: [x, y, z], -1 for locked
-  private pointIndices = new Map<string, [number, number, number]>();
-  private pointLockedValues = new Map<string, [number | null, number | null, number | null]>();
+  // Use WorldPoint objects as keys (not names) to handle duplicate names
+  private pointIndices = new Map<WorldPoint, [number, number, number]>();
+  private pointLockedValues = new Map<WorldPoint, [number | null, number | null, number | null]>();
 
   // Camera position indices: [x, y, z], -1 for locked
   private cameraPosIndices = new Map<string, [number, number, number]>();
@@ -89,8 +90,9 @@ export class VariableLayoutBuilder {
     const yIdx = yLocked ? -1 : this.allocate(optimizedXyz?.[1] ?? 0);
     const zIdx = zLocked ? -1 : this.allocate(optimizedXyz?.[2] ?? 0);
 
-    this.pointIndices.set(point.name, [xIdx, yIdx, zIdx]);
-    this.pointLockedValues.set(point.name, [
+    // Use point object as key (not name or id) to handle duplicate names
+    this.pointIndices.set(point, [xIdx, yIdx, zIdx]);
+    this.pointLockedValues.set(point, [
       xLocked ? xValue : null,
       yLocked ? yValue : null,
       zLocked ? zValue : null,
@@ -207,10 +209,10 @@ export class VariableLayoutBuilder {
       numVariables,
       initialValues,
 
-      getWorldPointIndices(pointId: string): readonly [number, number, number] {
-        const indices = pointIndices.get(pointId);
+      getWorldPointIndices(point: WorldPoint): readonly [number, number, number] {
+        const indices = pointIndices.get(point);
         if (!indices) {
-          throw new Error(`WorldPoint "${pointId}" not found in layout`);
+          throw new Error(`WorldPoint "${point.name}" not found in layout`);
         }
         return indices;
       },
@@ -231,8 +233,8 @@ export class VariableLayoutBuilder {
         return indices;
       },
 
-      getLockedWorldPointValue(pointId: string, axis: 'x' | 'y' | 'z'): number | undefined {
-        const locked = pointLockedValues.get(pointId);
+      getLockedWorldPointValue(point: WorldPoint, axis: 'x' | 'y' | 'z'): number | undefined {
+        const locked = pointLockedValues.get(point);
         if (!locked) return undefined;
         const idx = axis === 'x' ? 0 : axis === 'y' ? 1 : 2;
         return locked[idx] ?? undefined;
