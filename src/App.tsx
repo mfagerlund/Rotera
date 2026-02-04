@@ -7,6 +7,7 @@ import { Project } from './entities/project'
 import { loadProject, getIsDirty, getProject } from './store/project-store'
 import { SessionStore } from './services/session-store'
 import { HelpLabelsOverlay } from './components/HelpLabels/HelpLabelsOverlay'
+import { ViteConnectionStatus } from './components/ViteConnectionStatus'
 import './styles/rotera.css'
 import './styles/enhanced-workspace.css'
 import './styles/workspace.css'
@@ -113,6 +114,7 @@ function App() {
   if (view === 'browser') {
     return (
       <>
+        <ViteConnectionStatus />
         <ProjectBrowser
           onOpenProject={handleOpenProject}
           onCreateProject={handleCreateProject}
@@ -131,6 +133,7 @@ function App() {
 
   return (
     <>
+      <ViteConnectionStatus />
       <MainLayout onReturnToBrowser={handleReturnToBrowser} />
       <HelpLabelsOverlay />
     </>

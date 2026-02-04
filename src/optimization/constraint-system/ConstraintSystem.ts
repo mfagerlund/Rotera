@@ -967,13 +967,15 @@ export class ConstraintSystem {
 
           // Create collinear providers for the 3 points (A, P, B)
           // Cross product of (P-A) × (B-A) = 0
+          // Apply GEOMETRIC_SCALE to match Line.computeResiduals
           const collinearProviders = createCollinearProviders(
             pointAInfo.indices,
             pointPInfo.indices,  // P in the middle
             pointBInfo.indices,
             createPointGetter(pointAInfo.indices, pointAInfo.locked),
             createPointGetter(pointPInfo.indices, pointPInfo.locked),
-            createPointGetter(pointBInfo.indices, pointBInfo.locked)
+            createPointGetter(pointBInfo.indices, pointBInfo.locked),
+            GEOMETRIC_SCALE
           );
           providers.push(...collinearProviders);
         }

@@ -29,6 +29,8 @@ const ALLOWED_PATHS = [
   /[\\/]project-db[\\/]/, // All files in project-db directory (database layer)
   /[\\/]ProjectBrowser\.tsx$/,
   /[\\/]ProjectBrowser[\\/]/, // All files in ProjectBrowser directory (browser UI layer)
+  // Analytical solver uses IDs as Map keys for variable layout (allowed per CLAUDE.md)
+  /[\\/]optimization[\\/]analytical[\\/]/,
 ];
 
 const ENTITY_ID_PATTERNS = [
