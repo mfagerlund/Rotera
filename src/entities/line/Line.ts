@@ -1,6 +1,4 @@
 import type { ISelectable, SelectableType } from '../../types/selectable'
-import type { IResidualProvider, ValueMap } from '../../optimization/IOptimizable'
-import { V, Value, Vec3 } from 'scalar-autograd'
 import * as vec3 from '../../utils/vec3'
 import type { WorldPoint } from '../world-point'
 import type { IConstraint, ILine, IWorldPoint } from '../interfaces'
@@ -21,7 +19,7 @@ export type LineDirection =
   | 'xz'    // Lies in XZ plane (Y=0, horizontal ground plane)
   | 'yz'    // Lies in YZ plane (X=0)
 
-export class Line implements ISelectable, ILine, IResidualProvider, ISerializable<LineDto> {
+export class Line implements ISelectable, ILine, ISerializable<LineDto> {
   lastResiduals: number[] = []
   selected = false
   referencingConstraints: Set<IConstraint> = new Set()
@@ -438,95 +436,6 @@ export class Line implements ISelectable, ILine, IResidualProvider, ISerializabl
       point.removeCoincidentWithLine(this)
     }
     this.coincidentPoints.clear()
-  }
-
-  // ============================================================================
-  // IResidualProvider implementation (optimization system)
-  // ============================================================================
-
-  /**
-   * Compute residuals for this line's intrinsic constraints (direction and length).
-   */
-  computeResiduals(valueMap: ValueMap): Value[] {
-    const residuals: Value[] = []
-
-    const vecA = valueMap.points.get(this.pointA)
-    const vecB = valueMap.points.get(this.pointB)
-
-    if (!vecA || !vecB) {
-      console.warn(`Line: endpoints not found in valueMap`)
-      return residuals
-    }
-
-    const direction = vecB.sub(vecA)
-
-    // Scale direction residuals to be comparable to pixel-level reprojection errors
-    // A 1-meter offset from the constraint direction should be weighted similarly to ~100 pixels
-    const GEOMETRIC_SCALE = 100.0
-    const geoScale = V.C(GEOMETRIC_SCALE)
-
-    switch (this.direction) {
-      case 'x':
-        // X-aligned: penalize Y and Z components
-        residuals.push(V.mul(direction.y, geoScale), V.mul(direction.z, geoScale))
-        break
-
-      case 'y':
-        // Y-aligned (vertical): penalize X and Z components
-        residuals.push(V.mul(direction.x, geoScale), V.mul(direction.z, geoScale))
-        break
-
-      case 'z':
-        // Z-aligned: penalize X and Y components
-        residuals.push(V.mul(direction.x, geoScale), V.mul(direction.y, geoScale))
-        break
-
-      case 'xy':
-        // XY plane: penalize Z component
-        residuals.push(V.mul(direction.z, geoScale))
-        break
-
-      case 'xz':
-        // XZ plane (horizontal): penalize Y component
-        residuals.push(V.mul(direction.y, geoScale))
-        break
-
-      case 'yz':
-        // YZ plane: penalize X component
-        residuals.push(V.mul(direction.x, geoScale))
-        break
-
-      case 'free':
-        break
-    }
-
-    if (this.hasFixedLength() && this.targetLength !== undefined) {
-      const dist = direction.magnitude
-      const targetLength = this.targetLength
-      const lengthResidual = V.mul(V.sub(dist, V.C(targetLength)), geoScale)
-      residuals.push(lengthResidual)
-    }
-
-    // Coincident point constraints: cross product of AP × AB should be zero
-    for (const point of this.coincidentPoints) {
-      const vecP = valueMap.points.get(point)
-      if (!vecP) continue
-
-      const AP = vecP.sub(vecA)
-      const cross = Vec3.cross(AP, direction)
-      residuals.push(
-        V.mul(cross.x, geoScale),
-        V.mul(cross.y, geoScale),
-        V.mul(cross.z, geoScale)
-      )
-    }
-
-    return residuals
-  }
-
-  evaluateAndStoreResiduals(valueMap: ValueMap): void {
-    const residualValues = this.computeResiduals(valueMap)
-    this.lastResiduals = residualValues.map(r => r.data)
   }
 
   getOptimizationInfo() {

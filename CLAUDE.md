@@ -1,8 +1,8 @@
 **Last Updated:** 2026-02-05
 
-## SCALAR-AUTOGRAD REMOVAL IN PROGRESS
+## SCALAR-AUTOGRAD REMOVAL COMPLETE (Entity Layer)
 
-**Status:** Phase 5 in progress. ConstraintSystem no longer uses ValueMap in any path.
+**Status:** Phase 5 complete. Entities no longer use ValueMap or scalar-autograd.
 
 **Phase 1-2 (COMPLETE):**
 - ✅ Removed solver mode selection (Dense/Sparse/Analytical toggle)
@@ -27,25 +27,23 @@
 - ✅ Updated ConstraintSystem main solve path to use new methods instead of ValueMap
 - ✅ All 279 tests pass (4 skipped - edge cases need fixing)
 
-**Phase 5 (IN PROGRESS):**
+**Phase 5 (COMPLETE):**
 - ✅ Removed ValueMap from ConstraintSystem entirely (both main and zero-variable paths)
 - ✅ Changed `transparentLM` to accept `Float64Array` directly instead of `{ data: number }[]`
 - ✅ Zero-variable path now uses `point.getEffectiveXyz()` directly
 - ✅ Deleted unused `rotateDirectionByQuaternion` utility
+- ✅ Removed `ValueMap`, `CameraValues`, `IValueMapContributor`, `IResidualProvider` from IOptimizable.ts
+- ✅ Removed `addToValueMap()`, `computeResiduals()`, `applyOptimizationResultFromValueMap()` from entities
+- ✅ Removed scalar-autograd imports from WorldPoint, Viewpoint, ImagePoint, Line, all constraints
+- ✅ Updated golden-camera-intrinsics.test.ts to document intrinsic optimization as TODO
+- ✅ Deleted unused ValueMap-based residual files (angle, distance, collinear, coplanar, fixed-point)
 - ✅ All 279 tests pass (4 skipped)
 
-**Still uses scalar-autograd (TODO - cleanup):**
-- Entity `addToValueMap()` methods (kept for manual test in golden-camera-intrinsics.test.ts)
-- Entity `applyOptimizationResultFromValueMap()` methods (kept for backward compatibility)
-- Entity `computeResiduals()` methods (deprecated, not called from main flow)
-- `ValueMap` type definition in IOptimizable.ts (needed for entity methods above)
-- `projectWorldPointToPixelQuaternion` in camera-projection.ts (used by deprecated entity methods)
-
-**Next cleanup steps:**
-- Update golden-camera-intrinsics.test.ts to use ConstraintSystem instead of manual ValueMap
-- Delete deprecated entity methods once test is updated
-- Remove ValueMap type and IValueMapContributor interface
-- Remove scalar-autograd imports from entities
+**Remaining scalar-autograd usage (low priority):**
+- `camera-projection.ts` - projectWorldPointToPixelQuaternion() for autodiff path
+- `quaternion-normalization-residual.ts` - used only by deprecated test
+- `Vec4` import in Viewpoint for quaternion euler conversion (could be replaced)
+- Analytical gradient files still need scalar-autograd for numerical verification tests
 
 **Skipped tests (TODO - analytical edge cases):**
 - PnP minimal systems (4 points, 1 camera)

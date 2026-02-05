@@ -1,7 +1,5 @@
 import type { ISelectable, SelectableType } from '../../types/selectable'
 import type { IValidatable, ValidationContext, EntityValidationResult, EntityValidationError } from '../../validation/validator'
-import type { ValueMap, IResidualProvider } from '../../optimization/IOptimizable'
-import type { Value } from 'scalar-autograd'
 import * as vec3 from '../../utils/vec3'
 import { ValidationHelpers } from '../../validation/validator'
 import type { WorldPoint } from '../world-point'
@@ -34,7 +32,7 @@ export interface ConstraintRepository {
   // Empty for now - constraints use object references directly
 }
 
-export abstract class Constraint implements ISelectable, IValidatable, IResidualProvider, ISerializable<ConstraintDto> {
+export abstract class Constraint implements ISelectable, IValidatable, ISerializable<ConstraintDto> {
   lastResiduals: number[] = []
   selected = false
   name: string
@@ -52,7 +50,6 @@ export abstract class Constraint implements ISelectable, IValidatable, IResidual
   abstract getConstraintType(): string
   abstract evaluate(): ConstraintEvaluation
   abstract validateConstraintSpecific(): EntityValidationResult
-  abstract computeResiduals(valueMap: ValueMap): Value[]
   abstract serialize(context: SerializationContext): ConstraintDto
 
   // ISelectable implementation

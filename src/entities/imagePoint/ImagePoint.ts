@@ -5,14 +5,10 @@ import type { Viewpoint } from '../viewpoint'
 import type { ISerializable } from '../serialization/ISerializable'
 import type { SerializationContext } from '../serialization/SerializationContext'
 import type { ImagePointDto } from './ImagePointDto'
-import type { IResidualProvider, IOptimizationResultReceiver, ValueMap } from '../../optimization/IOptimizable'
-import { V, Value } from 'scalar-autograd'
-import { projectWorldPointToPixelQuaternion } from '../../optimization/camera-projection'
 import { projectPointToPixel } from '../../optimization/analytical/project-point-plain'
-import { Quaternion } from '../../optimization/Quaternion'
 import {makeAutoObservable} from 'mobx'
 
-export class ImagePoint implements ISelectable, IImagePoint, IResidualProvider, IOptimizationResultReceiver, ISerializable<ImagePointDto> {
+export class ImagePoint implements ISelectable, IImagePoint, ISerializable<ImagePointDto> {
     selected = false
     lastResiduals: number[] = []
     isOutlier = false
@@ -99,121 +95,6 @@ export class ImagePoint implements ISelectable, IImagePoint, IResidualProvider, 
             throw new Error('Confidence must be between 0 and 1')
         }
         this.confidence = confidence
-    }
-
-    computeResiduals(valueMap: ValueMap): Value[] {
-        const worldPointVec = valueMap.points.get(this.worldPoint)
-        if (!worldPointVec) {
-            return []
-        }
-
-        const cameraValues = valueMap.cameras.get(this.viewpoint)
-        if (!cameraValues) {
-            return []
-        }
-
-        // Use isZReflected only when valueMap.useIsZReflected is true.
-        // - During calibration: false (isZReflected changes mid-optimization)
-        // - During fine-tune: true (isZReflected is already set correctly)
-        const isZReflected = valueMap.useIsZReflected ? cameraValues.isZReflected : false
-
-        const projection = projectWorldPointToPixelQuaternion(
-            worldPointVec,
-            cameraValues.position,
-            cameraValues.rotation,
-            cameraValues.focalLength,
-            cameraValues.aspectRatio,
-            cameraValues.principalPointX,
-            cameraValues.principalPointY,
-            cameraValues.skew,
-            cameraValues.k1,
-            cameraValues.k2,
-            cameraValues.k3,
-            cameraValues.p1,
-            cameraValues.p2,
-            isZReflected
-        )
-
-        if (!projection) {
-            // Point is behind camera (Z < 0.1).
-            // Different handling for calibration vs fine-tune:
-            // - Calibration (useIsZReflected=false): Use differentiable penalty to guide solver
-            // - Fine-tune (useIsZReflected=true): Skip this point (cameras are already correct)
-            if (valueMap.useIsZReflected) {
-                // During fine-tune, points should be in front. If not, it's likely a numerical
-                // artifact - skip this point rather than adding a destabilizing penalty.
-                return []
-            }
-
-            // During calibration, use differentiable penalty based on camera Z to guide the solver.
-            const translated = worldPointVec.sub(cameraValues.position)
-            const rotated = Quaternion.rotateVector(cameraValues.rotation, translated)
-            const camZ = isZReflected ? V.neg(rotated.z) : rotated.z
-
-            // Soft penalty that pushes points towards Z > 0.1
-            // The penalty should be differentiable and guide the solver to move points forward.
-            const NEAR_PLANE = 0.1
-            const SCALE = 500  // Moderate penalty scale
-
-            // Compute penalty: scale * (NEAR_PLANE - z) for z < NEAR_PLANE
-            // The penalty increases as the point goes further behind
-            const deficit = V.sub(V.C(NEAR_PLANE), camZ)  // How far below threshold
-            const penalty = V.mul(deficit, V.C(SCALE))
-
-            return [penalty, penalty]
-        }
-
-        const [projected_u, projected_v] = projection
-
-        const residual_u = V.sub(projected_u, V.C(this.u))
-        const residual_v = V.sub(projected_v, V.C(this.v))
-
-        return [residual_u, residual_v]
-    }
-
-    /**
-     * Apply optimization result and compute residuals.
-     * @deprecated Use applyOptimizationResultWithoutResiduals + distributeResiduals instead
-     */
-    applyOptimizationResult(_valueMap: ValueMap): void {
-        const residuals = this.computeResiduals(_valueMap)
-        this.lastResiduals = residuals.map(r => r.data)
-        this.applyOptimizationResultWithoutResiduals(_valueMap)
-    }
-
-    /**
-     * Apply optimization result without computing residuals.
-     * Residuals are set separately via analytical provider results.
-     */
-    applyOptimizationResultWithoutResiduals(_valueMap: ValueMap): void {
-        const worldPointVec = _valueMap.points.get(this.worldPoint)
-        const cameraValues = _valueMap.cameras.get(this.viewpoint)
-
-        if (worldPointVec && cameraValues) {
-            const isZReflected = _valueMap.useIsZReflected ? cameraValues.isZReflected : false
-
-            const projection = projectWorldPointToPixelQuaternion(
-                worldPointVec,
-                cameraValues.position,
-                cameraValues.rotation,
-                cameraValues.focalLength,
-                cameraValues.aspectRatio,
-                cameraValues.principalPointX,
-                cameraValues.principalPointY,
-                cameraValues.skew,
-                cameraValues.k1,
-                cameraValues.k2,
-                cameraValues.k3,
-                cameraValues.p1,
-                cameraValues.p2,
-                isZReflected
-            )
-
-            if (projection) {
-                this.reprojectedU = projection[0].data
-                this.reprojectedV = projection[1].data
-            }
-        }
     }
 
     /**

@@ -1,8 +1,6 @@
 // Base class for line relationship constraints (parallel, perpendicular)
 
 import type { EntityValidationResult } from '../../validation/validator'
-import type { ValueMap } from '../../optimization/IOptimizable'
-import type { Value } from 'scalar-autograd'
 import type { Line } from '../line/Line'
 import {
   Constraint,
@@ -39,11 +37,6 @@ export abstract class LineRelationshipConstraint extends Constraint {
       warnings: [],
       summary: `${this.getConstraintType()} constraint validation passed`
     }
-  }
-
-  computeResiduals(valueMap: ValueMap): Value[] {
-    console.warn(`${this.getConstraintType()} constraint ${this.getName()}: not yet implemented - requires line support in valueMap`)
-    return []
   }
 
   abstract serialize(context: SerializationContext): ConstraintDto

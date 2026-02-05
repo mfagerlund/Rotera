@@ -1,17 +1,14 @@
 import type {ISelectable, SelectableType} from '../../types/selectable'
-import type {IValueMapContributor, ValueMap} from '../../optimization/IOptimizable'
 import type {IWorldPoint, ILine, IConstraint} from '../interfaces'
 import type {ImagePoint} from '../imagePoint'
-import {V, Value, Vec3} from 'scalar-autograd'
 import * as vec3 from '../../utils/vec3'
 import type { ISerializable } from '../serialization/ISerializable'
 import type { SerializationContext } from '../serialization/SerializationContext'
 import type { WorldPointDto } from './WorldPointDto'
 import {makeAutoObservable} from 'mobx'
-import { projectWorldPointToPixelQuaternion } from '../../optimization/camera-projection'
 
 
-export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributor, IWorldPoint, ISerializable<WorldPointDto> {
+export class WorldPoint implements ISelectable, IWorldPoint, ISerializable<WorldPointDto> {
     selected = false
     connectedLines: Set<ILine> = new Set()
     coincidentWithLines: Set<ILine> = new Set()
@@ -387,121 +384,6 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
 
     applyOptimizationResult(result: { xyz: [number, number, number], residual?: number }): void {
         this.optimizedXyz = [...result.xyz] as [number , number , number ]
-    }
-
-    // ============================================================================
-    // IValueMapContributor implementation (optimization system)
-    // ============================================================================
-
-    /**
-     * Add this point to the ValueMap for optimization.
-     * Locked axes become constants (V.C), unlocked axes become variables (V.W).
-     * Priority: lockedXyz > inferredXyz > optimizedXyz
-     */
-    addToValueMap(valueMap: ValueMap): Value[] {
-        const lockedXyz = this.lockedXyz;
-        const inferredXyz = this.inferredXyz;
-        const optimizedXyz = this.optimizedXyz;
-
-        const variables: Value[] = []
-
-        const xLocked = this.isXLocked()
-        const yLocked = this.isYLocked()
-        const zLocked = this.isZLocked()
-
-        const xValue = lockedXyz[0] ?? inferredXyz[0]
-        const yValue = lockedXyz[1] ?? inferredXyz[1]
-        const zValue = lockedXyz[2] ?? inferredXyz[2]
-
-        const x = xLocked ? V.C(xValue!) : V.W(optimizedXyz?.[0] ?? 0)
-        const y = yLocked ? V.C(yValue!) : V.W(optimizedXyz?.[1] ?? 0)
-        const z = zLocked ? V.C(zValue!) : V.W(optimizedXyz?.[2] ?? 0)
-
-        const vec = new Vec3(x, y, z)
-        valueMap.points.set(this, vec)
-
-        if (!xLocked) variables.push(x)
-        if (!yLocked) variables.push(y)
-        if (!zLocked) variables.push(z)
-
-        return variables
-    }
-
-    computeResiduals(valueMap: ValueMap): Value[] {
-        const residuals: Value[] = []
-
-        const worldPointVec = valueMap.points.get(this)
-        if (!worldPointVec) {
-            return residuals
-        }
-
-        // Aggregate reprojection residuals for every observation of this world point
-        for (const imagePoint of this.imagePoints) {
-            const cameraValues = valueMap.cameras.get(imagePoint.viewpoint)
-            if (!cameraValues) continue
-
-            // Use isZReflected only when valueMap.useIsZReflected is true
-            const isZReflected = valueMap.useIsZReflected ? cameraValues.isZReflected : false
-
-            const projection = projectWorldPointToPixelQuaternion(
-                worldPointVec,
-                cameraValues.position,
-                cameraValues.rotation,
-                cameraValues.focalLength,
-                cameraValues.aspectRatio,
-                cameraValues.principalPointX,
-                cameraValues.principalPointY,
-                cameraValues.skew,
-                cameraValues.k1,
-                cameraValues.k2,
-                cameraValues.k3,
-                cameraValues.p1,
-                cameraValues.p2,
-                isZReflected
-            )
-
-            if (!projection) {
-                // Behind camera - push large residual to flag the issue
-                residuals.push(V.C(1000), V.C(1000))
-                continue
-            }
-
-            const [projectedU, projectedV] = projection
-            residuals.push(
-                V.sub(projectedU, V.C(imagePoint.u)),
-                V.sub(projectedV, V.C(imagePoint.v))
-            )
-        }
-
-        return residuals
-    }
-
-    /**
-     * Apply optimization results from ValueMap.
-     * Note: lastResiduals is NOT set here - residuals are distributed
-     * from analytical providers via ConstraintSystem.distributeResiduals().
-     */
-    applyOptimizationResultFromValueMap(valueMap: ValueMap): void {
-        const vec = valueMap.points.get(this)
-        if (!vec) {
-            return
-        }
-
-        const xLocked = this.isXLocked()
-        const yLocked = this.isYLocked()
-        const zLocked = this.isZLocked()
-
-        const xValue = this.lockedXyz[0] ?? this.inferredXyz[0]
-        const yValue = this.lockedXyz[1] ?? this.inferredXyz[1]
-        const zValue = this.lockedXyz[2] ?? this.inferredXyz[2]
-
-        const xyz: [number, number, number] = [
-            xLocked ? xValue! : vec.x.data,
-            yLocked ? yValue! : vec.y.data,
-            zLocked ? zValue! : vec.z.data
-        ]
-
-        this.applyOptimizationResult({xyz})
     }
 
     /**

@@ -1,8 +1,6 @@
 // Fixed point constraint
 
 import type { EntityValidationResult } from '../../validation/validator'
-import type { ValueMap } from '../../optimization/IOptimizable'
-import { V, type Value } from 'scalar-autograd'
 import { ValidationHelpers } from '../../validation/validator'
 import type { WorldPoint } from '../world-point'
 import {
@@ -105,30 +103,6 @@ export class FixedPointConstraint extends Constraint {
       warnings: [],
       summary: errors.length === 0 ? 'Fixed point constraint validation passed' : `Fixed point constraint validation failed: ${errors.length} errors`
     }
-  }
-
-  /**
-   * Compute residuals for fixed point constraint.
-   * Residual: Distance from point to target position should be zero.
-   * Returns [dx, dy, dz] where each component should be 0 when constraint is satisfied.
-   */
-  computeResiduals(valueMap: ValueMap): Value[] {
-    const pointVec = valueMap.points.get(this.point)
-
-    if (!pointVec) {
-      console.warn(`Fixed point constraint ${this.getName()}: point not found in valueMap`)
-      return []
-    }
-
-    const targetXyz = this.targetXyz
-
-    // Residual = current position - target position
-    // Each component should be 0 when point is at target
-    const dx = V.sub(pointVec.x, V.C(targetXyz[0]))
-    const dy = V.sub(pointVec.y, V.C(targetXyz[1]))
-    const dz = V.sub(pointVec.z, V.C(targetXyz[2]))
-
-    return [dx, dy, dz]
   }
 
   serialize(context: SerializationContext): FixedPointConstraintDto {

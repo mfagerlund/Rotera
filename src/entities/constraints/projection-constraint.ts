@@ -2,9 +2,6 @@
 // This is the fundamental constraint in photogrammetry and bundle adjustment
 
 import type { EntityValidationResult } from '../../validation/validator'
-import type { ValueMap } from '../../optimization/IOptimizable'
-import { V, type Value } from 'scalar-autograd'
-import { projectWorldPointToPixel } from '../../optimization/camera-projection'
 import { ValidationHelpers } from '../../validation/validator'
 import type { WorldPoint } from '../world-point'
 import type { Viewpoint } from '../viewpoint/Viewpoint'
@@ -107,60 +104,6 @@ export class ProjectionConstraint extends Constraint {
   setObservedPixel(u: number, v: number): void {
     this.observedU = u
     this.observedV = v
-  }
-
-  /**
-   * Compute residuals for projection constraint.
-   *
-   * Residual: [projected_u - observed_u, projected_v - observed_v]
-   * Should be [0, 0] when the 3D point projects exactly to the observed pixel.
-   *
-   * This is the fundamental constraint in bundle adjustment.
-   */
-  computeResiduals(valueMap: ValueMap): Value[] {
-    const worldPointVec = valueMap.points.get(this.worldPoint)
-
-    if (!worldPointVec) {
-      console.warn(`Projection constraint ${this.getName()}: world point not found in valueMap`)
-      return []
-    }
-
-    const cameraValues = valueMap.cameras.get(this.viewpoint)
-    if (!cameraValues) {
-      console.warn(`Projection constraint ${this.getName()}: camera not found in valueMap`)
-      return []
-    }
-
-    // Project world point through camera
-    const projection = projectWorldPointToPixel(
-      worldPointVec,
-      cameraValues.position,
-      cameraValues.rotation,
-      cameraValues.focalLength,
-      cameraValues.aspectRatio,
-      cameraValues.principalPointX,
-      cameraValues.principalPointY,
-      cameraValues.skew,
-      cameraValues.k1,
-      cameraValues.k2,
-      cameraValues.k3,
-      cameraValues.p1,
-      cameraValues.p2
-    )
-
-    if (!projection) {
-      // Point is behind camera or projection failed
-      // Return large residual to discourage this configuration
-      return [V.C(1000), V.C(1000)]
-    }
-
-    const [projected_u, projected_v] = projection
-
-    // Residuals: projected - observed (should be 0)
-    const residual_u = V.sub(projected_u, V.C(this.observedU))
-    const residual_v = V.sub(projected_v, V.C(this.observedV))
-
-    return [residual_u, residual_v]
   }
 
   serialize(context: SerializationContext): ProjectionConstraintDto {

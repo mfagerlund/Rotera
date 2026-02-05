@@ -1,8 +1,6 @@
 // Collinear points constraint
 
 import type { EntityValidationResult } from '../../validation/validator'
-import type { ValueMap } from '../../optimization/IOptimizable'
-import { Vec3, type Value } from 'scalar-autograd'
 import * as vec3 from '../../utils/vec3'
 import { ValidationHelpers } from '../../validation/validator'
 import type { WorldPoint } from '../world-point/WorldPoint'
@@ -118,37 +116,6 @@ export class CollinearPointsConstraint extends Constraint {
       warnings: [],
       summary: errors.length === 0 ? 'Collinear points constraint validation passed' : `Collinear points constraint validation failed: ${errors.length} errors`
     }
-  }
-
-  /**
-   * Compute residuals for collinear points constraint.
-   * Residual: For 3+ points to be collinear, the cross product of vectors
-   * from point 0 to point 1 and point 0 to point 2 should be zero.
-   * Returns 3 residuals (x, y, z components of cross product).
-   */
-  computeResiduals(valueMap: ValueMap): Value[] {
-    if (this.points.length < 3) {
-      console.warn('Collinear constraint requires at least 3 points')
-      return []
-    }
-
-    const p0 = valueMap.points.get(this.points[0])
-    const p1 = valueMap.points.get(this.points[1])
-    const p2 = valueMap.points.get(this.points[2])
-
-    if (!p0 || !p1 || !p2) {
-      console.warn(`Collinear constraint ${this.getName()}: not enough points found in valueMap`)
-      return []
-    }
-
-    // Calculate vectors from p0 using Vec3 API
-    const v1 = p1.sub(p0)
-    const v2 = p2.sub(p0)
-
-    // Cross product should be (0, 0, 0) for collinear points
-    const cross = Vec3.cross(v1, v2)
-
-    return [cross.x, cross.y, cross.z]
   }
 
   serialize(context: SerializationContext): CollinearPointsConstraintDto {

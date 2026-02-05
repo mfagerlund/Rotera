@@ -1,8 +1,6 @@
 // Angle constraint between three points
 
 import type { EntityValidationResult, EntityValidationError } from '../../validation/validator'
-import type { ValueMap } from '../../optimization/IOptimizable'
-import { V, Vec3, type Value } from 'scalar-autograd'
 import { ValidationHelpers } from '../../validation/validator'
 import type { WorldPoint } from '../world-point/WorldPoint'
 import {
@@ -101,36 +99,6 @@ export class AngleConstraint extends Constraint {
       warnings,
       summary: errors.length === 0 ? 'Angle constraint validation passed' : `Angle constraint validation failed: ${errors.length} errors`
     }
-  }
-
-  /**
-   * Compute residuals for angle constraint.
-   * Residual: (actual_angle - target_angle) in radians
-   * Should be 0 when the angle at the vertex equals the target.
-   */
-  computeResiduals(valueMap: ValueMap): Value[] {
-    const pointAVec = valueMap.points.get(this.pointA)
-    const vertexVec = valueMap.points.get(this.vertex)
-    const pointCVec = valueMap.points.get(this.pointC)
-
-    if (!pointAVec || !vertexVec || !pointCVec) {
-      console.warn(`Angle constraint ${this.getName()}: points not found in valueMap`)
-      return []
-    }
-
-    const targetAngleRadians = (this.targetAngle * Math.PI) / 180
-
-    // Calculate vectors from vertex using Vec3 API
-    const v1 = pointAVec.sub(vertexVec)
-    const v2 = pointCVec.sub(vertexVec)
-
-    // Calculate angle using Vec3.angleBetween
-    const actualAngle = Vec3.angleBetween(v1, v2)
-
-    // Residual = actual - target
-    const residual = V.sub(actualAngle, V.C(targetAngleRadians))
-
-    return [residual]
   }
 
   serialize(context: SerializationContext): AngleConstraintDto {

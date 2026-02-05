@@ -1,8 +1,6 @@
 // Equal angles constraint
 
 import type { EntityValidationResult, EntityValidationError } from '../../validation/validator'
-import type { ValueMap } from '../../optimization/IOptimizable'
-import { Vec3, type Value } from 'scalar-autograd'
 import { ValidationHelpers } from '../../validation/validator'
 import type { WorldPoint } from '../world-point/WorldPoint'
 import type { SerializationContext } from '../serialization/SerializationContext'
@@ -64,21 +62,6 @@ export class EqualAnglesConstraint extends EqualityConstraintBase<[WorldPoint, W
     return null
   }
 
-  protected computeAutogradValue(triplet: [WorldPoint, WorldPoint, WorldPoint], valueMap: ValueMap): Value | undefined {
-    const [pointA, vertex, pointC] = triplet
-
-    const pointAVec = valueMap.points.get(pointA)
-    const vertexVec = valueMap.points.get(vertex)
-    const pointCVec = valueMap.points.get(pointC)
-
-    if (!pointAVec || !vertexVec || !pointCVec) return undefined
-
-    const v1 = pointAVec.sub(vertexVec)
-    const v2 = pointCVec.sub(vertexVec)
-
-    return Vec3.angleBetween(v1, v2)
-  }
-
   validateConstraintSpecific(): EntityValidationResult {
     const errors: EntityValidationError[] = []
     const warnings: EntityValidationError[] = []
@@ -125,10 +108,6 @@ export class EqualAnglesConstraint extends EqualityConstraintBase<[WorldPoint, W
       warnings,
       summary: errors.length === 0 ? 'Equal angles constraint validation passed' : `Equal angles constraint validation failed: ${errors.length} errors`
     }
-  }
-
-  computeResiduals(valueMap: ValueMap): Value[] {
-    return this.computeResidualValues(valueMap)
   }
 
   serialize(context: SerializationContext): EqualAnglesConstraintDto {

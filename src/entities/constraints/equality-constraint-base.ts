@@ -1,9 +1,6 @@
 // Base class for equality constraints (equal angles, equal distances)
 
-import type { Value } from 'scalar-autograd'
-import { V } from 'scalar-autograd'
 import { Constraint, type ConstraintEvaluation } from './base-constraint'
-import type { ValueMap } from '../../optimization/IOptimizable'
 
 export abstract class EqualityConstraintBase<T> extends Constraint {
   tolerance: number
@@ -15,7 +12,6 @@ export abstract class EqualityConstraintBase<T> extends Constraint {
 
   protected abstract getItems(): T[]
   protected abstract computeValue(item: T): number | null
-  protected abstract computeAutogradValue(item: T, valueMap: ValueMap): Value | undefined
 
   evaluate(): ConstraintEvaluation {
     const values: number[] = []
@@ -40,38 +36,5 @@ export abstract class EqualityConstraintBase<T> extends Constraint {
       value: standardDeviation,
       satisfied: Math.abs(standardDeviation - 0) <= this.tolerance
     }
-  }
-
-  protected computeResidualValues(valueMap: ValueMap): Value[] {
-    const items = this.getItems()
-
-    if (items.length < 2) {
-      console.warn(`${this.getConstraintType()} constraint requires at least 2 items`)
-      return []
-    }
-
-    // Calculate all values
-    const values: Value[] = []
-    for (const item of items) {
-      const value = this.computeAutogradValue(item, valueMap)
-      if (value) {
-        values.push(value)
-      }
-    }
-
-    if (values.length < 2) {
-      console.warn(`${this.getConstraintType()} constraint ${this.getName()}: not enough valid items found`)
-      return []
-    }
-
-    // Create residuals: value_i - value_0 should all be 0
-    const residuals: Value[] = []
-    const referenceValue = values[0]
-
-    for (let i = 1; i < values.length; i++) {
-      residuals.push(V.sub(values[i], referenceValue))
-    }
-
-    return residuals
   }
 }

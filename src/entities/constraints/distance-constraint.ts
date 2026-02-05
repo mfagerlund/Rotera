@@ -1,6 +1,4 @@
 import type { EntityValidationResult } from '../../validation/validator'
-import type { ValueMap } from '../../optimization/IOptimizable'
-import { V, type Value } from 'scalar-autograd'
 import { ValidationHelpers } from '../../validation/validator'
 import type { WorldPoint } from '../world-point'
 import {
@@ -93,30 +91,6 @@ export class DistanceConstraint extends Constraint {
       warnings: [],
       summary: errors.length === 0 ? 'Distance constraint validation passed' : `Distance constraint validation failed: ${errors.length} errors`
     }
-  }
-
-  /**
-   * Compute residuals for distance constraint.
-   * Residual: (actual_distance - target_distance)
-   * Should be 0 when the distance between points equals the target.
-   */
-  computeResiduals(valueMap: ValueMap): Value[] {
-    const pointAVec = valueMap.points.get(this.pointA)
-    const pointBVec = valueMap.points.get(this.pointB)
-
-    if (!pointAVec || !pointBVec) {
-      console.warn(`Distance constraint ${this.getName()}: points not found in valueMap`)
-      return []
-    }
-
-    // Calculate actual distance using Vec3 API
-    const diff = pointBVec.sub(pointAVec)
-    const dist = diff.magnitude
-
-    // Residual = actual - target
-    const residual = V.sub(dist, V.C(this.targetDistance))
-
-    return [residual]
   }
 
   serialize(context: SerializationContext): DistanceConstraintDto {

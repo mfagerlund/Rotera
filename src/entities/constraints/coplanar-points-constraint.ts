@@ -1,8 +1,6 @@
 // Coplanar points constraint
 
 import type { EntityValidationResult } from '../../validation/validator'
-import type { ValueMap } from '../../optimization/IOptimizable'
-import { V, Vec3, type Value } from 'scalar-autograd'
 import * as vec3 from '../../utils/vec3'
 import { ValidationHelpers } from '../../validation/validator'
 import type { WorldPoint } from '../world-point/WorldPoint'
@@ -151,67 +149,6 @@ export class CoplanarPointsConstraint extends Constraint {
       warnings: [],
       summary: errors.length === 0 ? 'Coplanar points constraint validation passed' : `Coplanar points constraint validation failed: ${errors.length} errors`
     }
-  }
-
-  /**
-   * Compute residuals for coplanar points constraint.
-   *
-   * Uses rotating base triangles so all points participate in defining planes:
-   * - Point 3 tested against plane(0,1,2)
-   * - Point 4 tested against plane(1,2,3)
-   * - Point 5 tested against plane(2,3,4)
-   * - Point i tested against plane(i-3, i-2, i-1)
-   *
-   * This distributes the "plane-defining" role across all points, improving
-   * numerical stability and making the constraint more symmetric.
-   */
-  computeResiduals(valueMap: ValueMap): Value[] {
-    if (this.points.length < 4) {
-      console.warn('Coplanar constraint requires at least 4 points')
-      return []
-    }
-
-    const residuals: Value[] = []
-    const epsilon = V.C(1e-10)
-
-    // For each point i >= 3, test it against the plane defined by (i-3, i-2, i-1)
-    for (let i = 3; i < this.points.length; i++) {
-      const baseIdx0 = i - 3
-      const baseIdx1 = i - 2
-      const baseIdx2 = i - 1
-
-      const pBase0 = valueMap.points.get(this.points[baseIdx0])
-      const pBase1 = valueMap.points.get(this.points[baseIdx1])
-      const pBase2 = valueMap.points.get(this.points[baseIdx2])
-      const pTest = valueMap.points.get(this.points[i])
-
-      if (!pBase0 || !pBase1 || !pBase2 || !pTest) {
-        console.warn(`Coplanar constraint ${this.getName()}: missing points for residual ${i}`)
-        continue
-      }
-
-      // Calculate edge vectors for the base triangle
-      const edge1 = pBase1.sub(pBase0)
-      const edge2 = pBase2.sub(pBase0)
-
-      // Normal vector (not normalized) = edge1 × edge2
-      const normal = Vec3.cross(edge1, edge2)
-
-      // |normal| = 2 * area of base triangle
-      const normalLengthSq = Vec3.dot(normal, normal)
-      const normalLength = V.sqrt(V.add(normalLengthSq, epsilon))
-
-      // Vector from base point to test point
-      const v = pTest.sub(pBase0)
-
-      // Signed distance from plane = (v · normal) / |normal|
-      const dotProduct = Vec3.dot(v, normal)
-      const signedDistance = V.div(dotProduct, normalLength)
-
-      residuals.push(signedDistance)
-    }
-
-    return residuals
   }
 
   serialize(context: SerializationContext): CoplanarPointsConstraintDto {

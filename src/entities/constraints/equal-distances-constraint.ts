@@ -1,8 +1,6 @@
 // Equal distances constraint
 
 import type { EntityValidationResult, EntityValidationError } from '../../validation/validator'
-import type { ValueMap } from '../../optimization/IOptimizable'
-import type { Value } from 'scalar-autograd'
 import { ValidationHelpers } from '../../validation/validator'
 import type { WorldPoint } from '../world-point/WorldPoint'
 import type { Line } from '../line/Line'
@@ -64,18 +62,6 @@ export class EqualDistancesConstraint extends EqualityConstraintBase<[WorldPoint
     return null
   }
 
-  protected computeAutogradValue(pair: [WorldPoint, WorldPoint], valueMap: ValueMap): Value | undefined {
-    const [p1, p2] = pair
-
-    const p1Vec = valueMap.points.get(p1)
-    const p2Vec = valueMap.points.get(p2)
-
-    if (!p1Vec || !p2Vec) return undefined
-
-    const diff = p2Vec.sub(p1Vec)
-    return diff.magnitude
-  }
-
   validateConstraintSpecific(): EntityValidationResult {
     const errors: EntityValidationError[] = []
     const warnings: EntityValidationError[] = []
@@ -118,10 +104,6 @@ export class EqualDistancesConstraint extends EqualityConstraintBase<[WorldPoint
       warnings,
       summary: errors.length === 0 ? 'Equal distances constraint validation passed' : `Equal distances constraint validation failed: ${errors.length} errors`
     }
-  }
-
-  computeResiduals(valueMap: ValueMap): Value[] {
-    return this.computeResidualValues(valueMap)
   }
 
   serialize(context: SerializationContext): EqualDistancesConstraintDto {
