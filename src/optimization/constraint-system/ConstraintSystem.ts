@@ -367,26 +367,42 @@ export class ConstraintSystem {
         quaternionIndices: quaternionIndices.length > 0 ? quaternionIndices : undefined,
       });
 
-      // Update points with solved values (using entity-driven approach)
+      // Get final variables from solver result
+      const finalVariables = new Float64Array(result.variableValues);
+
+      // Update points with solved values (using Phase 4 variable-based approach)
       for (const point of this.points) {
-        point.applyOptimizationResultFromValueMap(valueMap);
+        point.applyOptimizationResultFromVariables(
+          finalVariables,
+          () => layout.getWorldPointIndices(point),
+          (axis) => layout.getLockedWorldPointValue(point, axis)
+        );
       }
 
-      // Update cameras with solved values
+      // Update cameras with solved values (using Phase 4 variable-based approach)
       for (const camera of this.cameras) {
-        if ('applyOptimizationResultFromValueMap' in camera && typeof camera.applyOptimizationResultFromValueMap === 'function') {
-          camera.applyOptimizationResultFromValueMap(valueMap);
+        if ('applyOptimizationResultFromVariables' in camera && typeof camera.applyOptimizationResultFromVariables === 'function') {
+          const posIndices = layout.getCameraPosIndices(camera.name);
+          const quatIndices = layout.getCameraQuatIndices(camera.name);
+          const intrinsicsIndices = layout.getCameraIntrinsicsIndices(camera.name);
+          const intrinsicsValues = layout.getCameraIntrinsicsValues(camera.name);
+          camera.applyOptimizationResultFromVariables(
+            finalVariables,
+            posIndices,
+            quatIndices,
+            intrinsicsIndices,
+            intrinsicsValues
+          );
         }
       }
 
-      // Update image points with solved values (without computing residuals)
+      // Update image points with reprojected positions (using entity properties, no autodiff)
       for (const imagePoint of this.imagePoints) {
-        imagePoint.applyOptimizationResultWithoutResiduals(valueMap);
+        imagePoint.computeReprojectedPositionFromEntities(this.useIsZReflected);
       }
 
       // Distribute residuals from analytical providers to entities
       // This replaces the old computeResiduals calls on lines, constraints, and image points
-      const finalVariables = new Float64Array(result.variableValues);
       this.distributeResiduals(analyticalProviders, finalVariables);
 
       // Use final cost from analytical solver (already computed as sum of squared residuals)

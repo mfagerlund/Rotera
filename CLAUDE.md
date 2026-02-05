@@ -2,7 +2,7 @@
 
 ## SCALAR-AUTOGRAD REMOVAL IN PROGRESS
 
-**Status:** Phase 3 complete! Residuals now distributed from analytical providers.
+**Status:** Phase 4 complete! Result application now bypasses ValueMap in main solve path.
 
 **Phase 1-2 (COMPLETE):**
 - ✅ Removed solver mode selection (Dense/Sparse/Analytical toggle)
@@ -18,11 +18,18 @@
 - ✅ Removed computeResiduals calls from entity applyOptimizationResult methods
 - ✅ Updated useOptimization hook to read from lastResiduals instead of autodiff
 - ✅ Deleted unused compute-constraint-residuals.ts
+
+**Phase 4 (COMPLETE):**
+- ✅ Added `applyOptimizationResultFromVariables()` to WorldPoint (reads from variables array + layout)
+- ✅ Added `applyOptimizationResultFromVariables()` to Viewpoint (reads camera params from variables + layout)
+- ✅ Added `computeReprojectedPositionFromEntities()` to ImagePoint (plain-number projection)
+- ✅ Created `project-point-plain.ts` utility for plain-number camera projection
+- ✅ Updated ConstraintSystem main solve path to use new methods instead of ValueMap
 - ✅ All 279 tests pass (4 skipped - edge cases need fixing)
 
-**Still uses scalar-autograd (Phase 4+ work):**
-- Entity `addToValueMap()` methods (build variables)
-- Entity `applyOptimizationResultFromValueMap()` methods (extract results)
+**Still uses scalar-autograd (Phase 5+ work):**
+- Entity `addToValueMap()` methods (still builds ValueMap for zero-variable path)
+- Entity `applyOptimizationResultFromValueMap()` methods (used in zero-variable path only)
 - Entity `computeResiduals()` methods (deprecated, still exist but not called from main flow)
 - `ValueMap` type definition in IOptimizable.ts
 

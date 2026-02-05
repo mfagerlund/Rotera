@@ -8,6 +8,7 @@ import type { ImagePointDto } from './ImagePointDto'
 import type { IResidualProvider, IOptimizationResultReceiver, ValueMap } from '../../optimization/IOptimizable'
 import { V, Value } from 'scalar-autograd'
 import { projectWorldPointToPixelQuaternion } from '../../optimization/camera-projection'
+import { projectPointToPixel } from '../../optimization/analytical/project-point-plain'
 import { Quaternion } from '../../optimization/Quaternion'
 import {makeAutoObservable} from 'mobx'
 
@@ -212,6 +213,44 @@ export class ImagePoint implements ISelectable, IImagePoint, IResidualProvider, 
                 this.reprojectedU = projection[0].data
                 this.reprojectedV = projection[1].data
             }
+        }
+    }
+
+    /**
+     * Compute reprojected position from entity properties (no autodiff).
+     * Call this after WorldPoint and Viewpoint have been updated from variables.
+     */
+    computeReprojectedPositionFromEntities(useIsZReflected: boolean): void {
+        const wpXyz = this.worldPoint.optimizedXyz
+        if (!wpXyz) return
+
+        const vp = this.viewpoint
+
+        const intrinsics = {
+            fx: vp.focalLength,
+            fy: vp.focalLength * vp.aspectRatio,
+            cx: vp.principalPointX,
+            cy: vp.principalPointY,
+            k1: vp.radialDistortion[0],
+            k2: vp.radialDistortion[1],
+            k3: vp.radialDistortion[2],
+            p1: vp.tangentialDistortion[0],
+            p2: vp.tangentialDistortion[1],
+        }
+
+        const isZReflected = useIsZReflected ? vp.isZReflected : false
+
+        const projected = projectPointToPixel(
+            wpXyz,
+            vp.position,
+            vp.rotation,
+            intrinsics,
+            isZReflected
+        )
+
+        if (projected) {
+            this.reprojectedU = projected[0]
+            this.reprojectedV = projected[1]
         }
     }
 

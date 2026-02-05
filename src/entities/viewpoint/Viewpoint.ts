@@ -567,6 +567,83 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IOptimizabl
         // and not needed for UI display.
     }
 
+    /**
+     * Apply optimization results from variables array and layout.
+     * This is the new Phase 4 method that doesn't require ValueMap/scalar-autograd.
+     */
+    applyOptimizationResultFromVariables(
+        variables: Float64Array,
+        posIndices: readonly [number, number, number],
+        quatIndices: readonly [number, number, number, number],
+        intrinsicsIndices: { focalLength: number; aspectRatio: number; principalPointX: number; principalPointY: number; skew: number; k1: number; k2: number; k3: number; p1: number; p2: number } | undefined,
+        intrinsicsValues: { focalLength: number; aspectRatio: number; principalPointX: number; principalPointY: number; skew: number; k1: number; k2: number; k3: number; p1: number; p2: number } | undefined
+    ): void {
+        // Apply position (from variables if optimized, otherwise keep current)
+        if (posIndices[0] >= 0) {
+            this.position = [
+                variables[posIndices[0]],
+                variables[posIndices[1]],
+                variables[posIndices[2]]
+            ]
+        }
+
+        // Apply rotation (from variables if optimized, otherwise keep current)
+        if (quatIndices[0] >= 0) {
+            this.rotation = [
+                variables[quatIndices[0]],
+                variables[quatIndices[1]],
+                variables[quatIndices[2]],
+                variables[quatIndices[3]]
+            ]
+        }
+
+        // Apply intrinsics
+        if (intrinsicsIndices && intrinsicsValues) {
+            // Apply focal length with hard bounds
+            const maxDim = Math.max(this.imageWidth, this.imageHeight)
+            const minF = maxDim * 0.3
+            const maxF = maxDim * 5.0
+            const rawFocalLength = intrinsicsIndices.focalLength >= 0
+                ? variables[intrinsicsIndices.focalLength]
+                : intrinsicsValues.focalLength
+            this.focalLength = Math.max(minF, Math.min(maxF, rawFocalLength))
+
+            // Aspect ratio
+            this.aspectRatio = intrinsicsIndices.aspectRatio >= 0
+                ? variables[intrinsicsIndices.aspectRatio]
+                : intrinsicsValues.aspectRatio
+
+            // Principal point (only update if image might be cropped)
+            if (this.isPossiblyCropped) {
+                this.principalPointX = intrinsicsIndices.principalPointX >= 0
+                    ? variables[intrinsicsIndices.principalPointX]
+                    : intrinsicsValues.principalPointX
+                this.principalPointY = intrinsicsIndices.principalPointY >= 0
+                    ? variables[intrinsicsIndices.principalPointY]
+                    : intrinsicsValues.principalPointY
+            } else {
+                this.principalPointX = this.imageWidth / 2
+                this.principalPointY = this.imageHeight / 2
+            }
+
+            // Skew
+            this.skewCoefficient = intrinsicsIndices.skew >= 0
+                ? variables[intrinsicsIndices.skew]
+                : intrinsicsValues.skew
+
+            // Distortion (currently never optimized in analytical solver)
+            this.radialDistortion = [
+                intrinsicsIndices.k1 >= 0 ? variables[intrinsicsIndices.k1] : intrinsicsValues.k1,
+                intrinsicsIndices.k2 >= 0 ? variables[intrinsicsIndices.k2] : intrinsicsValues.k2,
+                intrinsicsIndices.k3 >= 0 ? variables[intrinsicsIndices.k3] : intrinsicsValues.k3
+            ]
+            this.tangentialDistortion = [
+                intrinsicsIndices.p1 >= 0 ? variables[intrinsicsIndices.p1] : intrinsicsValues.p1,
+                intrinsicsIndices.p2 >= 0 ? variables[intrinsicsIndices.p2] : intrinsicsValues.p2
+            ]
+        }
+    }
+
     serialize(context: SerializationContext): ViewpointDto {
         // Use our stable id and register with context
         context.registerEntity(this, this.id)

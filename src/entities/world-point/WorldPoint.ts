@@ -504,6 +504,30 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
         this.applyOptimizationResult({xyz})
     }
 
+    /**
+     * Apply optimization results from variables array and layout.
+     * This is the new Phase 4 method that doesn't require ValueMap/scalar-autograd.
+     */
+    applyOptimizationResultFromVariables(
+        variables: Float64Array,
+        getIndices: () => readonly [number, number, number],
+        getLockedValue: (axis: 'x' | 'y' | 'z') => number | undefined
+    ): void {
+        const indices = getIndices()
+
+        const xLocked = this.isXLocked()
+        const yLocked = this.isYLocked()
+        const zLocked = this.isZLocked()
+
+        const xyz: [number, number, number] = [
+            xLocked ? (this.lockedXyz[0] ?? this.inferredXyz[0]!) : (indices[0] >= 0 ? variables[indices[0]] : getLockedValue('x')!),
+            yLocked ? (this.lockedXyz[1] ?? this.inferredXyz[1]!) : (indices[1] >= 0 ? variables[indices[1]] : getLockedValue('y')!),
+            zLocked ? (this.lockedXyz[2] ?? this.inferredXyz[2]!) : (indices[2] >= 0 ? variables[indices[2]] : getLockedValue('z')!)
+        ]
+
+        this.applyOptimizationResult({xyz})
+    }
+
     getOptimizationInfo() {
         const residuals = this.lastResiduals
         const totalResidual = residuals.length > 0
