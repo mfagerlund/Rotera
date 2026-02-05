@@ -562,9 +562,9 @@ export class Viewpoint implements ISelectable, IValueMapContributor, IOptimizabl
         this.skewCoefficient = cameraValues.skew.data
         this.radialDistortion = [cameraValues.k1.data, cameraValues.k2.data, cameraValues.k3.data]
         this.tangentialDistortion = [cameraValues.p1.data, cameraValues.p2.data]
-
-        const residuals = this.computeResiduals(valueMap)
-        this.lastResiduals = residuals.map(r => r.data)
+        // Note: lastResiduals is NOT set here - Viewpoint's internal residuals
+        // (quat normalization, focal regularization) are internal to the solver
+        // and not needed for UI display.
     }
 
     serialize(context: SerializationContext): ViewpointDto {

@@ -170,10 +170,21 @@ export class ImagePoint implements ISelectable, IImagePoint, IResidualProvider, 
         return [residual_u, residual_v]
     }
 
+    /**
+     * Apply optimization result and compute residuals.
+     * @deprecated Use applyOptimizationResultWithoutResiduals + distributeResiduals instead
+     */
     applyOptimizationResult(_valueMap: ValueMap): void {
         const residuals = this.computeResiduals(_valueMap)
         this.lastResiduals = residuals.map(r => r.data)
+        this.applyOptimizationResultWithoutResiduals(_valueMap)
+    }
 
+    /**
+     * Apply optimization result without computing residuals.
+     * Residuals are set separately via analytical provider results.
+     */
+    applyOptimizationResultWithoutResiduals(_valueMap: ValueMap): void {
         const worldPointVec = _valueMap.points.get(this.worldPoint)
         const cameraValues = _valueMap.cameras.get(this.viewpoint)
 

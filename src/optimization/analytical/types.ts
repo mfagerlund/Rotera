@@ -8,6 +8,18 @@
 import type { WorldPoint } from '../../entities/world-point/WorldPoint';
 
 /**
+ * Owner info for mapping residuals back to entities after solve.
+ * Each provider knows which entity it belongs to and which residual
+ * index it corresponds to within that entity's lastResiduals array.
+ */
+export interface ResidualOwner {
+  /** The entity that owns this residual */
+  entity: unknown;
+  /** Index of this residual within the entity's lastResiduals array */
+  residualIndex: number;
+}
+
+/**
  * A provider computes one residual and its gradient.
  * Knows which variables it depends on (sparse pattern).
  *
@@ -43,6 +55,13 @@ export interface AnalyticalResidualProvider {
    * gradient[i] = d(residual) / d(variables[variableIndices[i]])
    */
   computeGradient(variables: Float64Array): Float64Array;
+
+  /**
+   * Optional owner info for mapping residuals back to entities after solve.
+   * Set during buildAnalyticalProviders() to track which entity
+   * each residual belongs to for populating lastResiduals.
+   */
+  owner?: ResidualOwner;
 }
 
 /**

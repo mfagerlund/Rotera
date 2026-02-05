@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
-import { ConstraintSystem, SolverResult } from '../optimization/constraint-system';
+import { SolverResult } from '../optimization/constraint-system';
 import { WorldPoint } from '../entities/world-point/WorldPoint';
 import { Line } from '../entities/line/Line';
 import { Viewpoint } from '../entities/viewpoint/Viewpoint';
@@ -50,52 +50,24 @@ export const useOptimization = () => {
   const cancelRequestedRef = useRef(false);
 
   /**
-   * Compute residuals for all constraints without optimizing
+   * Get residuals for all constraints from their lastResiduals field.
+   * Residuals are populated during optimization via analytical providers.
    */
   const computeResiduals = useCallback(
     (
-      points: WorldPoint[],
-      lines: Line[],
-      viewpoints: Viewpoint[],
+      _points: WorldPoint[],
+      _lines: Line[],
+      _viewpoints: Viewpoint[],
       constraints: Constraint[]
     ): ConstraintResidual[] => {
-      const system = new ConstraintSystem({
-        tolerance: 1e-6,
-        maxIterations: 0, // Don't optimize, just evaluate
-        verbose: false,
-      });
-
-      // Add entities
-      points.forEach((p) => system.addPoint(p));
-      lines.forEach((l) => system.addLine(l));
-      viewpoints.forEach((v) => {
-        system.addCamera(v);
-        v.imagePoints.forEach((ip) => system.addImagePoint(ip));
-      });
-      constraints.forEach((c) => system.addConstraint(c));
-
-      // Build value map
-      const valueMap = {
-        points: new Map(),
-        cameras: new Map(),
-      };
-
-      points.forEach((p) => p.addToValueMap(valueMap));
-      viewpoints.forEach((v) => {
-        v.addToValueMap(valueMap, {
-          optimizePose: !v.isPoseLocked,
-          optimizeIntrinsics: false,
-          optimizeDistortion: false,
-        });
-      });
-
-      // Compute residuals for each constraint
+      // Read residuals from each constraint's lastResiduals field
+      // (populated during optimization by distributeResiduals)
       const residuals: ConstraintResidual[] = [];
 
       for (const constraint of constraints) {
-        const constraintResiduals = constraint.computeResiduals(valueMap);
+        const lastResiduals = constraint.lastResiduals || [];
         const residualMagnitude = Math.sqrt(
-          constraintResiduals.reduce((sum, r) => sum + r.data ** 2, 0)
+          lastResiduals.reduce((sum, r) => sum + r ** 2, 0)
         );
 
         residuals.push({

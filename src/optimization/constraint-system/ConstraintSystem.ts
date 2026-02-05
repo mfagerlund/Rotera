@@ -23,7 +23,7 @@ import { rotateDirectionByQuaternion } from './utils';
 import type { SolverResult, SolverOptions } from './types';
 
 // Analytical providers
-import type { AnalyticalResidualProvider, VariableLayout } from '../analytical/types';
+import type { AnalyticalResidualProvider, VariableLayout, ResidualOwner } from '../analytical/types';
 import {
   VariableLayoutBuilder,
   createPointGetter,
@@ -126,18 +126,59 @@ export class ConstraintSystem {
   }
 
   /**
+   * Distribute residuals from providers to their owning entities.
+   * Each provider knows which entity it belongs to (via owner field)
+   * and which residual index within that entity's lastResiduals array.
+   *
+   * @param providers - The analytical providers with owner info
+   * @param variables - The final variable values after solve
+   */
+  private distributeResiduals(
+    providers: AnalyticalResidualProvider[],
+    variables: Float64Array
+  ): void {
+    // Group residuals by owner entity
+    const entityResiduals = new Map<unknown, { maxIndex: number; values: Map<number, number> }>();
+
+    for (const provider of providers) {
+      if (!provider.owner) continue;
+
+      const { entity, residualIndex } = provider.owner;
+      const residualValue = provider.computeResidual(variables);
+
+      if (!entityResiduals.has(entity)) {
+        entityResiduals.set(entity, { maxIndex: -1, values: new Map() });
+      }
+
+      const entry = entityResiduals.get(entity)!;
+      entry.values.set(residualIndex, residualValue);
+      entry.maxIndex = Math.max(entry.maxIndex, residualIndex);
+    }
+
+    // Assign residuals to each entity's lastResiduals array
+    for (const [entity, { maxIndex, values }] of entityResiduals) {
+      const residualsArray = new Array<number>(maxIndex + 1).fill(0);
+      for (const [idx, val] of values) {
+        residualsArray[idx] = val;
+      }
+
+      // Set lastResiduals on the entity (Line, Constraint, or ImagePoint)
+      if ('lastResiduals' in (entity as object)) {
+        (entity as { lastResiduals: number[] }).lastResiduals = residualsArray;
+      }
+    }
+  }
+
+  /**
    * Solve all constraints in the system.
    * Updates point positions to satisfy constraints.
    *
    * Entity-driven approach:
    * 1. Points add themselves to ValueMap (per-axis locking)
-   * 2. Lines compute their intrinsic residuals
-   * 3. Constraints compute their residuals
-   * 4. Solver optimizes all variables
-   * 5. Points extract optimized values with provenance
-   *
-   * Uses autodiff (scalar-autograd) for gradient computation with optional
-   * sparse CG for solving normal equations (controlled by USE_SPARSE_SOLVE).
+   * 2. Analytical providers compute residuals and gradients
+   * 3. Solver optimizes all variables using Levenberg-Marquardt
+   * 4. Points extract optimized values
+   * 5. Residuals are distributed back to entities from provider results
    */
   solve(): SolverResult {
     return this.solveWithAutodiff();
@@ -338,28 +379,15 @@ export class ConstraintSystem {
         }
       }
 
-      // Update image points with solved values
+      // Update image points with solved values (without computing residuals)
       for (const imagePoint of this.imagePoints) {
-        imagePoint.applyOptimizationResult(valueMap);
+        imagePoint.applyOptimizationResultWithoutResiduals(valueMap);
       }
 
-      // Evaluate and store residuals for lines (intrinsic constraints)
-      for (const line of this.lines) {
-        if ('evaluateAndStoreResiduals' in line && typeof line.evaluateAndStoreResiduals === 'function') {
-          line.evaluateAndStoreResiduals(valueMap);
-        }
-      }
-
-      // Evaluate and store residuals for constraints
-      for (const constraint of this.constraints) {
-        const residuals = constraint.computeResiduals(valueMap);
-        constraint.lastResiduals = residuals.map(r => r.data);
-      }
-
-      // Validate push/pop symmetry in verbose mode
-      if (this.verbose) {
-        this.validateResidualSymmetry(valueMap);
-      }
+      // Distribute residuals from analytical providers to entities
+      // This replaces the old computeResiduals calls on lines, constraints, and image points
+      const finalVariables = new Float64Array(result.variableValues);
+      this.distributeResiduals(analyticalProviders, finalVariables);
 
       // Use final cost from analytical solver (already computed as sum of squared residuals)
       const residualMagnitude = Math.sqrt(result.finalCost);
@@ -381,82 +409,6 @@ export class ConstraintSystem {
         error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
-  }
-
-  /**
-   * Validate that entities pop the same number of residuals they push.
-   * This ensures architectural invariant: push count == pop count.
-   *
-   * @param valueMap - The ValueMap with solved values
-   */
-  private validateResidualSymmetry(valueMap: ValueMap): void {
-    const pushCounts = new Map<any, { count: number; name: string }>();
-
-    // Count pushed residuals for lines
-    for (const line of this.lines) {
-      const residuals = line.computeResiduals(valueMap);
-      pushCounts.set(line, {
-        count: residuals.length,
-        name: line.name || 'Line'
-      });
-    }
-
-    // Count pushed residuals for cameras
-    for (const camera of this.cameras) {
-      if ('computeResiduals' in camera && typeof camera.computeResiduals === 'function') {
-        const residuals = camera.computeResiduals(valueMap);
-        pushCounts.set(camera, {
-          count: residuals.length,
-          name: camera.name || 'Camera'
-        });
-      }
-    }
-
-    // Count pushed residuals for image points
-    for (const imagePoint of this.imagePoints) {
-      const residuals = imagePoint.computeResiduals(valueMap);
-      pushCounts.set(imagePoint, {
-        count: residuals.length,
-        name: imagePoint.getName()
-      });
-    }
-
-    // Count pushed residuals for constraints
-    for (const constraint of this.constraints) {
-      const residuals = constraint.computeResiduals(valueMap);
-      pushCounts.set(constraint, {
-        count: residuals.length,
-        name: constraint.getName()
-      });
-    }
-
-    // Verify pop counts match push counts
-    let hasViolations = false;
-    for (const [entity, info] of pushCounts) {
-      if ('lastResiduals' in entity) {
-        const lastResiduals = (entity as Line | Constraint).lastResiduals;
-        const actualCount = lastResiduals?.length ?? 0;
-        if (actualCount !== info.count) {
-          if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
-            console.error(
-              `[ConstraintSystem] Push/pop mismatch for "${info.name}": ` +
-              `pushed ${info.count}, popped ${actualCount}`
-            );
-          }
-          hasViolations = true;
-        }
-      } else if (info.count > 0) {
-        if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
-          console.warn(
-            `[ConstraintSystem] "${info.name}" pushed ${info.count} residuals ` +
-            `but has no lastResiduals field to pop them into`
-          );
-        }
-        hasViolations = true;
-      }
-    }
-
-    // All entities have symmetric push/pop residuals
   }
 
   /**
@@ -514,10 +466,21 @@ export class ConstraintSystem {
     // Geometric scale for direction/length residuals (same as Line.computeResiduals)
     const GEOMETRIC_SCALE = 100.0;
 
+    // Helper to add owner info to providers
+    const addOwner = (
+      provider: AnalyticalResidualProvider,
+      entity: unknown,
+      residualIndex: number
+    ): AnalyticalResidualProvider => {
+      (provider as { owner?: ResidualOwner }).owner = { entity, residualIndex };
+      return provider;
+    };
+
     // 3. Add line direction and length providers
     for (const line of this.lines) {
       const pointAInfo = getPointInfo(line.pointA);
       const pointBInfo = getPointInfo(line.pointB);
+      let lineResidualIndex = 0;
 
       // Direction constraint (if not 'free')
       if (line.direction !== 'free') {
@@ -529,21 +492,22 @@ export class ConstraintSystem {
           createPointGetter(pointAInfo.indices, pointAInfo.locked),
           createPointGetter(pointBInfo.indices, pointBInfo.locked)
         );
-        providers.push(...directionProviders);
+        for (const p of directionProviders) {
+          providers.push(addOwner(p, line, lineResidualIndex++));
+        }
       }
 
       // Length constraint (if set)
       if (line.targetLength !== undefined) {
-        providers.push(
-          createLineLengthProvider(
-            pointAInfo.indices,
-            pointBInfo.indices,
-            line.targetLength,
-            GEOMETRIC_SCALE,
-            createPointGetter(pointAInfo.indices, pointAInfo.locked),
-            createPointGetter(pointBInfo.indices, pointBInfo.locked)
-          )
+        const lengthProvider = createLineLengthProvider(
+          pointAInfo.indices,
+          pointBInfo.indices,
+          line.targetLength,
+          GEOMETRIC_SCALE,
+          createPointGetter(pointAInfo.indices, pointAInfo.locked),
+          createPointGetter(pointBInfo.indices, pointBInfo.locked)
         );
+        providers.push(addOwner(lengthProvider, line, lineResidualIndex++));
       }
 
       // Coincident point constraints (cross product AP × AB = 0)
@@ -564,7 +528,9 @@ export class ConstraintSystem {
             createPointGetter(pointBInfo.indices, pointBInfo.locked),
             GEOMETRIC_SCALE
           );
-          providers.push(...collinearProviders);
+          for (const p of collinearProviders) {
+            providers.push(addOwner(p, line, lineResidualIndex++));
+          }
         }
       }
     }
@@ -653,6 +619,7 @@ export class ConstraintSystem {
       };
 
       // createReprojectionProviders takes observation as an object
+      // Returns 2 providers: [u residual, v residual]
       const reprojectionProviders = createReprojectionProviders(
         worldPointInfo.indices,
         posIndices,
@@ -665,7 +632,10 @@ export class ConstraintSystem {
         intrinsicsIndices,
         reprojectionFlags
       );
-      providers.push(...reprojectionProviders);
+      // ImagePoint residuals: [du, dv] at indices 0, 1
+      for (let i = 0; i < reprojectionProviders.length; i++) {
+        providers.push(addOwner(reprojectionProviders[i], imagePoint, i));
+      }
     }
 
     // 5b. Add vanishing line providers for cameras with vanishing lines
@@ -720,19 +690,20 @@ export class ConstraintSystem {
 
     // 6. Add explicit constraint providers
     for (const constraint of this.constraints) {
+      let constraintResidualIndex = 0;
+
       if (constraint instanceof DistanceConstraint) {
         const pointAInfo = getPointInfo(constraint.pointA);
         const pointBInfo = getPointInfo(constraint.pointB);
 
-        providers.push(
-          createDistanceProvider(
-            pointAInfo.indices,
-            pointBInfo.indices,
-            constraint.targetDistance,
-            createPointGetter(pointAInfo.indices, pointAInfo.locked),
-            createPointGetter(pointBInfo.indices, pointBInfo.locked)
-          )
+        const distProvider = createDistanceProvider(
+          pointAInfo.indices,
+          pointBInfo.indices,
+          constraint.targetDistance,
+          createPointGetter(pointAInfo.indices, pointAInfo.locked),
+          createPointGetter(pointBInfo.indices, pointBInfo.locked)
         );
+        providers.push(addOwner(distProvider, constraint, constraintResidualIndex++));
       } else if (constraint instanceof AngleConstraint) {
         const pointAInfo = getPointInfo(constraint.pointA);
         const vertexInfo = getPointInfo(constraint.vertex);
@@ -741,17 +712,16 @@ export class ConstraintSystem {
         // Convert target angle from degrees to radians
         const targetAngleRadians = (constraint.targetAngle * Math.PI) / 180;
 
-        providers.push(
-          createAngleProvider(
-            pointAInfo.indices,
-            vertexInfo.indices,
-            pointCInfo.indices,
-            targetAngleRadians,
-            createPointGetter(pointAInfo.indices, pointAInfo.locked),
-            createPointGetter(vertexInfo.indices, vertexInfo.locked),
-            createPointGetter(pointCInfo.indices, pointCInfo.locked)
-          )
+        const angleProvider = createAngleProvider(
+          pointAInfo.indices,
+          vertexInfo.indices,
+          pointCInfo.indices,
+          targetAngleRadians,
+          createPointGetter(pointAInfo.indices, pointAInfo.locked),
+          createPointGetter(vertexInfo.indices, vertexInfo.locked),
+          createPointGetter(pointCInfo.indices, pointCInfo.locked)
         );
+        providers.push(addOwner(angleProvider, constraint, constraintResidualIndex++));
       } else if (constraint instanceof CoplanarPointsConstraint) {
         const pointInfos = constraint.points.map(p => getPointInfo(p));
         const pointIndices = pointInfos.map(info => info.indices);
@@ -762,7 +732,9 @@ export class ConstraintSystem {
             createPointGetter(info.indices, info.locked)(vars)
           )
         );
-        providers.push(...coplanarProviders);
+        for (const p of coplanarProviders) {
+          providers.push(addOwner(p, constraint, constraintResidualIndex++));
+        }
       } else if (constraint instanceof FixedPointConstraint) {
         const pointInfo = getPointInfo(constraint.point);
 
@@ -771,7 +743,9 @@ export class ConstraintSystem {
           constraint.targetXyz,
           createPointGetter(pointInfo.indices, pointInfo.locked)
         );
-        providers.push(...fixedPointProviders);
+        for (const p of fixedPointProviders) {
+          providers.push(addOwner(p, constraint, constraintResidualIndex++));
+        }
       } else if (constraint instanceof EqualDistancesConstraint) {
         // Build point pair info for each pair
         const pairs = constraint.distancePairs.map(([p1, p2]) => ({
@@ -782,7 +756,9 @@ export class ConstraintSystem {
         }));
 
         const equalDistProviders = createEqualDistancesProviders(pairs);
-        providers.push(...equalDistProviders);
+        for (const p of equalDistProviders) {
+          providers.push(addOwner(p, constraint, constraintResidualIndex++));
+        }
       } else if (constraint instanceof EqualAnglesConstraint) {
         // Build triplet info for each angle triplet
         const triplets = constraint.angleTriplets.map(([pointA, vertex, pointC]) => ({
@@ -795,7 +771,9 @@ export class ConstraintSystem {
         }));
 
         const equalAnglesProviders = createEqualAnglesProviders(triplets);
-        providers.push(...equalAnglesProviders);
+        for (const p of equalAnglesProviders) {
+          providers.push(addOwner(p, constraint, constraintResidualIndex++));
+        }
       } else if (constraint instanceof CollinearPointsConstraint) {
         // CollinearPointsConstraint uses cross product residuals
         // For 3 or more points, the first point is the anchor
@@ -817,7 +795,9 @@ export class ConstraintSystem {
               createPointGetter(p1Info.indices, p1Info.locked),
               createPointGetter(pInfo.indices, pInfo.locked)
             );
-            providers.push(...collinearProviders);
+            for (const p of collinearProviders) {
+              providers.push(addOwner(p, constraint, constraintResidualIndex++));
+            }
           }
         }
       }

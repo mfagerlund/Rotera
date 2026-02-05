@@ -478,6 +478,8 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
 
     /**
      * Apply optimization results from ValueMap.
+     * Note: lastResiduals is NOT set here - residuals are distributed
+     * from analytical providers via ConstraintSystem.distributeResiduals().
      */
     applyOptimizationResultFromValueMap(valueMap: ValueMap): void {
         const vec = valueMap.points.get(this)
@@ -499,8 +501,6 @@ export class WorldPoint implements ISelectable, IWorldPoint, IValueMapContributo
             zLocked ? zValue! : vec.z.data
         ]
 
-        const residuals = this.computeResiduals(valueMap)
-        this.lastResiduals = residuals.map(r => r.data)
         this.applyOptimizationResult({xyz})
     }
 

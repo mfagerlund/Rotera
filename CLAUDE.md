@@ -2,26 +2,28 @@
 
 ## SCALAR-AUTOGRAD REMOVAL IN PROGRESS
 
-**Status:** Phases 1-3 partial complete. ~2,000 lines removed.
+**Status:** Phase 3 complete! Residuals now distributed from analytical providers.
 
 **Phase 1-2 (COMPLETE):**
 - ✅ Removed solver mode selection (Dense/Sparse/Analytical toggle)
 - ✅ Analytical mode is now the ONLY mode (no fallback)
 - ✅ Removed autodiff gradient computation from LM solver
 - ✅ Deleted obsolete test files (autodiff comparison, validation)
+
+**Phase 3 (COMPLETE):**
+- ✅ Deleted residualFn from ConstraintSystem
+- ✅ Deleted validateSparseAgainstDense and validateResidualSymmetry methods
+- ✅ Added owner tracking to analytical providers (ResidualOwner interface)
+- ✅ Added distributeResiduals() to populate entity lastResiduals from provider results
+- ✅ Removed computeResiduals calls from entity applyOptimizationResult methods
+- ✅ Updated useOptimization hook to read from lastResiduals instead of autodiff
+- ✅ Deleted unused compute-constraint-residuals.ts
 - ✅ All 279 tests pass (4 skipped - edge cases need fixing)
 
-**Phase 3 (PARTIAL):**
-- ✅ Deleted residualFn from ConstraintSystem (~100 lines)
-- ✅ Deleted validateSparseAgainstDense method (~200 lines)
-- ✅ Deleted solveDenseNormalEquations method (~60 lines)
-- ✅ Removed unused imports: SparseMatrix, conjugateGradientDamped, V
-- ⏳ Entity `computeResiduals` still needed for `lastResiduals` storage
-
-**Still uses scalar-autograd:**
+**Still uses scalar-autograd (Phase 4+ work):**
 - Entity `addToValueMap()` methods (build variables)
 - Entity `applyOptimizationResultFromValueMap()` methods (extract results)
-- Entity `computeResiduals()` methods (store lastResiduals for UI)
+- Entity `computeResiduals()` methods (deprecated, still exist but not called from main flow)
 - `ValueMap` type definition in IOptimizable.ts
 
 **Skipped tests (TODO - analytical edge cases):**
