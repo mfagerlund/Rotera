@@ -240,12 +240,10 @@ export async function optimizeProject(
             // Apply scale and translation before testing
             applyScaleAndTranslateForTest(axisConstrainedLines, worldPointArray, viewpointArray, lockedPointsForCheck);
 
-            // Force dense mode for quality testing - needs reliability
             const testSystem = new ConstraintSystem({
               maxIterations: maxIter,
               tolerance: 1e-4,
               verbose: false,
-              forceSolverMode: 'dense',
             });
             worldPointArray.forEach(p => testSystem.addPoint(p));
             lineArray.forEach(l => testSystem.addLine(l));
@@ -394,9 +392,6 @@ export async function optimizeProject(
     verbose,
     optimizeCameraIntrinsics: shouldOptimizeIntrinsics,
     regularizationWeight: hasSingleAxisConstraint ? 0.1 : 0,
-    // Force dense mode when Stage1 ran successfully - analytical mode can diverge
-    // when adding single-camera points to a well-converged multi-camera solution
-    forceSolverMode: stage1Snapshot ? 'dense' : undefined,
   });
 
   project.worldPoints.forEach(p => system.addPoint(p as WorldPoint));

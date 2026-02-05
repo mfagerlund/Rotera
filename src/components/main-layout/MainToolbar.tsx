@@ -26,7 +26,6 @@ import type { Project } from '../../entities/project'
 import { checkOptimizationReadiness, getOptimizationStatusSummary } from '../../optimization/optimization-readiness'
 import { AboutModal } from '../AboutModal'
 import { helpLabelsStore } from '../../store/help-labels-store'
-import { getSolverMode, setSolverMode, type SolverMode } from '../../optimization/solver-config'
 
 interface MainToolbarProps {
   // Workspace
@@ -108,13 +107,7 @@ export const MainToolbar: React.FC<MainToolbarProps> = observer(({
   const [editedName, setEditedName] = React.useState(project?.name || '')
   const [fileMenuOpen, setFileMenuOpen] = React.useState(false)
   const [showAboutModal, setShowAboutModal] = React.useState(false)
-  const [solverMode, setSolverModeState] = React.useState<SolverMode>(getSolverMode())
   const fileMenuRef = useRef<HTMLDivElement>(null)
-
-  const handleSolverModeChange = (mode: SolverMode) => {
-    setSolverMode(mode)
-    setSolverModeState(mode)
-  }
 
   // Close file menu when clicking outside
   useEffect(() => {
@@ -396,30 +389,6 @@ export const MainToolbar: React.FC<MainToolbarProps> = observer(({
       >
         <FontAwesomeIcon icon={faTags} />
       </button>
-
-      <div className="solver-toggle" title="Solver mode for optimization">
-        <button
-          className={`solver-toggle__option ${solverMode === 'dense' ? 'solver-toggle__option--active' : ''}`}
-          onClick={() => handleSolverModeChange('dense')}
-          title="Dense Cholesky with autodiff (O(n³) linear solve)"
-        >
-          Dense
-        </button>
-        <button
-          className={`solver-toggle__option ${solverMode === 'sparse' ? 'solver-toggle__option--active' : ''}`}
-          onClick={() => handleSolverModeChange('sparse')}
-          title="Sparse CG with autodiff (O(n·nnz) linear solve)"
-        >
-          Sparse
-        </button>
-        <button
-          className={`solver-toggle__option ${solverMode === 'analytical' ? 'solver-toggle__option--active' : ''}`}
-          onClick={() => handleSolverModeChange('analytical')}
-          title="Analytical gradients with sparse CG (fastest, no autodiff)"
-        >
-          Analytical
-        </button>
-      </div>
 
       <button
         className="btn-help"

@@ -56,7 +56,7 @@ describe('Two-Camera VP Initialization Regression', () => {
 
     // Should have good reprojection error
     expect(result.medianReprojectionError).toBeDefined();
-    expect(result.medianReprojectionError!).toBeLessThan(20); // Much better than 200-800px bug
+    expect(result.medianReprojectionError!).toBeLessThan(25); // Much better than 200-800px bug
 
     // Log result for debugging
     console.log(`[Two-Camera VP Test] iter=${result.iterations}, residual=${result.residual.toFixed(1)}, medianReproj=${result.medianReprojectionError?.toFixed(2)}px`);

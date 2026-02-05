@@ -127,14 +127,12 @@ export function runFreeSolve(
     wp.inferredXyz = [null, null, null];
   }
 
-  // Force dense mode for free solve - needs reliability during calibration initialization
   const freeSystem = new ConstraintSystem({
     tolerance,
     maxIterations: 200,
     damping,
     verbose: false,
     optimizeCameraIntrinsics: false,
-    forceSolverMode: 'dense',
   });
 
   pointArray.forEach(p => freeSystem.addPoint(p));
@@ -218,7 +216,6 @@ export function runLatePnPInitialization(
       damping,
       verbose: false,
       optimizeCameraIntrinsics: false,
-      forceSolverMode: 'dense',
     });
 
     const worldPointArray = Array.from(project.worldPoints) as WorldPoint[];
@@ -327,7 +324,6 @@ export function runStage1Optimization(
     verbose,
     optimizeCameraIntrinsics: false,
     regularizationWeight: 0.5,
-    forceSolverMode: 'dense',
   });
 
   multiCameraPoints.forEach(p => stage1System.addPoint(p));

@@ -23,7 +23,6 @@ import type { VanishingLine, VanishingLineAxis } from '../../entities/vanishing-
 import { computeVanishingPoint } from '../vanishing-points';
 import { rotateDirectionByQuaternion } from './utils';
 import type { SolverResult, SolverOptions } from './types';
-import { useSparseSolve, useAnalyticalSolve } from '../solver-config';
 
 // Analytical providers
 import type { AnalyticalResidualProvider, VariableLayout } from '../analytical/types';
@@ -69,7 +68,6 @@ export class ConstraintSystem {
   private optimizeCameraIntrinsics: boolean | ((camera: IOptimizableCamera) => boolean);
   private regularizationWeight: number;
   private useIsZReflected: boolean;
-  private forceSolverMode?: 'dense' | 'sparse' | 'analytical';
 
   // Entities in the system
   private points: Set<WorldPoint> = new Set();
@@ -89,7 +87,6 @@ export class ConstraintSystem {
     this.optimizeCameraIntrinsics = options.optimizeCameraIntrinsics ?? false;
     this.regularizationWeight = options.regularizationWeight ?? 0;
     this.useIsZReflected = options.useIsZReflected ?? false;
-    this.forceSolverMode = options.forceSolverMode;
   }
 
   /**
@@ -408,105 +405,79 @@ export class ConstraintSystem {
     }
 
     try {
-      // Solve using Levenberg-Marquardt
+      // Solve using Levenberg-Marquardt with analytical gradients and sparse CG
       // Use gradientTolerance for early stopping when progress stalls.
       // This helps with weakly-constrained points (e.g., single-view coplanar)
       // where the cost decreases very slowly but the solution is already good.
-      // Use transparent LM solver that exposes Jacobian (for sparse validation)
-      //
-      // Solver modes:
-      // - Dense: Cholesky with autodiff
-      // - Sparse: CG with autodiff
-      // - Analytical: CG with analytical gradients (bypasses autodiff)
-      //
-      // forceSolverMode overrides global settings for internal subsystems
-      const analyticalEnabled = this.forceSolverMode
-        ? this.forceSolverMode === 'analytical'
-        : useAnalyticalSolve();
       let analyticalProviders: AnalyticalResidualProvider[] | undefined;
 
-      // DEBUG: Log solver mode
-      console.log(`[ConstraintSystem] analyticalEnabled=${analyticalEnabled}, forceSolverMode=${this.forceSolverMode}, useAnalyticalSolve()=${useAnalyticalSolve()}`);
-
-      // Collect quaternion indices for all cameras with optimizable poses
-      // This is used for quaternion renormalization even without analytical mode
+      // Build analytical providers and collect quaternion indices for renormalization
       const quaternionIndices: Array<readonly [number, number, number, number]> = [];
-      let layout: ReturnType<VariableLayoutBuilder['build']> | undefined;
+      const { providers, layout } = this.buildAnalyticalProviders();
+      analyticalProviders = providers;
+      console.log(`[ConstraintSystem] Built ${providers.length} analytical providers, ${layout.numVariables} variables`);
 
-      if (analyticalEnabled) {
-        const { providers, layout: builtLayout, layoutBuilder } = this.buildAnalyticalProviders();
-        analyticalProviders = providers;
-        layout = builtLayout;
-        console.log(`[ConstraintSystem] Built ${providers.length} analytical providers, ${builtLayout.numVariables} variables`);
-
-        // Collect quaternion indices from all cameras
-        for (const camera of this.cameras) {
-          if (!camera.isPoseLocked) {
-            const quatIndices = layout.getCameraQuatIndices(camera.name);
-            quaternionIndices.push(quatIndices);
-          }
-        }
-
-        // Variable count mismatch is a CRITICAL BUG - do NOT silently fall back
-        if (builtLayout.numVariables !== variables.length) {
-          // Gather debug information
-          const pointCount = this.points.size;
-          const cameraCount = this.cameras.size;
-          const imagePointCount = this.imagePoints.size;
-          const constraintCount = this.constraints.size;
-          const lineCount = this.lines.size;
-
-          const debugInfo = [
-            ``,
-            `=== ANALYTICAL VARIABLE COUNT MISMATCH ===`,
-            `Analytical layout: ${builtLayout.numVariables} variables`,
-            `Autodiff system: ${variables.length} variables`,
-            `Difference: ${Math.abs(builtLayout.numVariables - variables.length)} variables`,
-            ``,
-            `=== SYSTEM CONTENTS ===`,
-            `Points: ${pointCount}`,
-            `Cameras: ${cameraCount}`,
-            `Image Points: ${imagePointCount}`,
-            `Lines: ${lineCount}`,
-            `Constraints: ${constraintCount}`,
-            ``,
-            `=== CAMERA DETAILS ===`,
-            ...Array.from(this.cameras).map(c => {
-              const posLocked = c.isPoseLocked;
-              const intrinsicsOptimized = typeof this.optimizeCameraIntrinsics === 'function'
-                ? this.optimizeCameraIntrinsics(c)
-                : this.optimizeCameraIntrinsics;
-              return `  ${c.name}: poseLocked=${posLocked}, optimizeIntrinsics=${intrinsicsOptimized}`;
-            }),
-            ``,
-            `=== POINT DETAILS ===`,
-            ...Array.from(this.points).map(p => {
-              const eff = p.getEffectiveXyz();
-              const lockedAxes = [
-                eff[0] !== null ? 'X' : '',
-                eff[1] !== null ? 'Y' : '',
-                eff[2] !== null ? 'Z' : ''
-              ].filter(Boolean).join('') || 'none';
-              return `  ${p.name}: locked=[${lockedAxes}]`;
-            }),
-            ``,
-            `This is a BUG in the analytical provider system.`,
-            `The variable layouts MUST match for analytical gradients to work.`,
-            `==========================================`,
-          ].join('\n');
-
-          throw new Error(
-            `ANALYTICAL VARIABLE COUNT MISMATCH: ` +
-            `analytical=${builtLayout.numVariables}, autodiff=${variables.length}` +
-            debugInfo
-          );
+      // Collect quaternion indices from all cameras
+      for (const camera of this.cameras) {
+        if (!camera.isPoseLocked) {
+          const quatIndices = layout.getCameraQuatIndices(camera.name);
+          quaternionIndices.push(quatIndices);
         }
       }
 
-      // Determine sparse mode: forced mode overrides global setting
-      const sparseEnabled = this.forceSolverMode
-        ? this.forceSolverMode !== 'dense'  // sparse and analytical both use sparse linear solve
-        : useSparseSolve();
+      // Variable count mismatch is a CRITICAL BUG
+      if (layout.numVariables !== variables.length) {
+        const pointCount = this.points.size;
+        const cameraCount = this.cameras.size;
+        const imagePointCount = this.imagePoints.size;
+        const constraintCount = this.constraints.size;
+        const lineCount = this.lines.size;
+
+        const debugInfo = [
+          ``,
+          `=== ANALYTICAL VARIABLE COUNT MISMATCH ===`,
+          `Analytical layout: ${layout.numVariables} variables`,
+          `Autodiff system: ${variables.length} variables`,
+          `Difference: ${Math.abs(layout.numVariables - variables.length)} variables`,
+          ``,
+          `=== SYSTEM CONTENTS ===`,
+          `Points: ${pointCount}`,
+          `Cameras: ${cameraCount}`,
+          `Image Points: ${imagePointCount}`,
+          `Lines: ${lineCount}`,
+          `Constraints: ${constraintCount}`,
+          ``,
+          `=== CAMERA DETAILS ===`,
+          ...Array.from(this.cameras).map(c => {
+            const posLocked = c.isPoseLocked;
+            const intrinsicsOptimized = typeof this.optimizeCameraIntrinsics === 'function'
+              ? this.optimizeCameraIntrinsics(c)
+              : this.optimizeCameraIntrinsics;
+            return `  ${c.name}: poseLocked=${posLocked}, optimizeIntrinsics=${intrinsicsOptimized}`;
+          }),
+          ``,
+          `=== POINT DETAILS ===`,
+          ...Array.from(this.points).map(p => {
+            const eff = p.getEffectiveXyz();
+            const lockedAxes = [
+              eff[0] !== null ? 'X' : '',
+              eff[1] !== null ? 'Y' : '',
+              eff[2] !== null ? 'Z' : ''
+            ].filter(Boolean).join('') || 'none';
+            return `  ${p.name}: locked=[${lockedAxes}]`;
+          }),
+          ``,
+          `This is a BUG in the analytical provider system.`,
+          `The variable layouts MUST match for analytical gradients to work.`,
+          `==========================================`,
+        ].join('\n');
+
+        throw new Error(
+          `ANALYTICAL VARIABLE COUNT MISMATCH: ` +
+          `analytical=${layout.numVariables}, autodiff=${variables.length}` +
+          debugInfo
+        );
+      }
 
       const result = transparentLM(variables, residualFn, {
         costTolerance: this.tolerance,
@@ -515,9 +486,9 @@ export class ConstraintSystem {
         initialDamping: this.damping,
         adaptiveDamping: true,
         verbose: this.verbose,
-        useSparseLinearSolve: sparseEnabled,
+        useSparseLinearSolve: true,  // Always use sparse CG
         analyticalProviders,
-        useAnalyticalSolve: analyticalEnabled,
+        useAnalyticalSolve: true,    // Always use analytical gradients
         // Pass quaternion indices for explicit renormalization after each step.
         // This prevents numerical drift from causing quaternion magnitude to diverge
         // from 1.0, which can lead to convergence to reflected local minima.

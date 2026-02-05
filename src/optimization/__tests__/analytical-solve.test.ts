@@ -1,10 +1,9 @@
 /**
- * Tests for Phase 7: Analytical Solve
+ * Tests for Analytical LM Solver
  *
- * Verifies that useAnalyticalSolve produces the same results as autodiff.
+ * Verifies the analytical solver works correctly.
  */
 
-import { Value } from 'scalar-autograd';
 import { transparentLM } from '../autodiff-dense-lm';
 import { ConstraintSystem } from '../constraint-system/ConstraintSystem';
 import { WorldPoint } from '../../entities/world-point/WorldPoint';
@@ -13,7 +12,12 @@ import { Viewpoint } from '../../entities/viewpoint/Viewpoint';
 import { ImagePoint } from '../../entities/imagePoint/ImagePoint';
 import { DistanceConstraint } from '../../entities/constraints/distance-constraint';
 
-describe('Analytical Solve (Phase 7)', () => {
+/** Simple wrapper to create variable objects compatible with the solver */
+function createVariables(values: Float64Array): { data: number }[] {
+  return Array.from(values).map(v => ({ data: v }));
+}
+
+describe('Analytical Solve', () => {
   describe('basic optimization', () => {
     it('solves distance constraint with analytical path', () => {
       // Create 2 points with distance constraint
@@ -31,20 +35,10 @@ describe('Analytical Solve (Phase 7)', () => {
       system.addConstraint(constraint);
 
       const { providers, layout } = system.buildAnalyticalProviders();
+      const variables = createVariables(layout.initialValues);
 
-      // Create autodiff variables
-      const variables = Array.from(layout.initialValues).map((v, i) => new Value(v, `v${i}`, true));
-
-      // Residual function for autodiff
-      const residualFn = (_vars: Value[]): Value[] => {
-        // Not used when useAnalyticalSolve=true, but needed for signature
-        return [];
-      };
-
-      // Solve using analytical path
-      const result = transparentLM(variables, residualFn, {
+      const result = transparentLM(variables, null, {
         analyticalProviders: providers,
-        useAnalyticalSolve: true,
         maxIterations: 100,
         verbose: false,
         costTolerance: 1e-10,
@@ -79,12 +73,10 @@ describe('Analytical Solve (Phase 7)', () => {
       system.addLine(line);
 
       const { providers, layout } = system.buildAnalyticalProviders();
+      const variables = createVariables(layout.initialValues);
 
-      const variables = Array.from(layout.initialValues).map((v, i) => new Value(v, `v${i}`, true));
-
-      const result = transparentLM(variables, () => [], {
+      const result = transparentLM(variables, null, {
         analyticalProviders: providers,
-        useAnalyticalSolve: true,
         maxIterations: 100,
       });
 
@@ -121,14 +113,10 @@ describe('Analytical Solve (Phase 7)', () => {
       system.addConstraint(constraint2);
 
       const { providers, layout } = system.buildAnalyticalProviders();
+      const variables = createVariables(layout.initialValues);
 
-      const variables = Array.from(layout.initialValues).map(
-        (v, i) => new Value(v, `v${i}`, true)
-      );
-
-      const result = transparentLM(variables, () => [], {
+      const result = transparentLM(variables, null, {
         analyticalProviders: providers,
-        useAnalyticalSolve: true,
         maxIterations: 100,
       });
 
@@ -175,12 +163,10 @@ describe('Analytical Solve (Phase 7)', () => {
       system.addImagePoint(imagePoint);
 
       const { providers, layout } = system.buildAnalyticalProviders();
+      const variables = createVariables(layout.initialValues);
 
-      const variables = Array.from(layout.initialValues).map((v, i) => new Value(v, `v${i}`, true));
-
-      const result = transparentLM(variables, () => [], {
+      const result = transparentLM(variables, null, {
         analyticalProviders: providers,
-        useAnalyticalSolve: true,
         maxIterations: 100,
       });
 
@@ -196,15 +182,14 @@ describe('Analytical Solve (Phase 7)', () => {
   });
 
   describe('error handling', () => {
-    it('throws when useAnalyticalSolve=true but no providers', () => {
-      const variables = [new Value(1, 'v0', true), new Value(2, 'v1', true)];
+    it('throws when no providers given', () => {
+      const variables = createVariables(new Float64Array([1, 2]));
 
       expect(() => {
-        transparentLM(variables, () => [], {
-          useAnalyticalSolve: true,
-          // analyticalProviders not set
+        transparentLM(variables, null, {
+          analyticalProviders: [],
         });
-      }).toThrow('useAnalyticalSolve requires analyticalProviders');
+      }).toThrow('analyticalProviders is required and must not be empty');
     });
   });
 
@@ -224,12 +209,10 @@ describe('Analytical Solve (Phase 7)', () => {
       system.addConstraint(constraint);
 
       const { providers, layout } = system.buildAnalyticalProviders();
+      const variables = createVariables(layout.initialValues);
 
-      const variables = Array.from(layout.initialValues).map((v, i) => new Value(v, `v${i}`, true));
-
-      const result = transparentLM(variables, () => [], {
+      const result = transparentLM(variables, null, {
         analyticalProviders: providers,
-        useAnalyticalSolve: true,
         useSparseLinearSolve: true, // Use sparse CG
         maxIterations: 100,
         costTolerance: 1e-10,

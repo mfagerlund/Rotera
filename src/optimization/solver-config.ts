@@ -1,66 +1,51 @@
 /**
  * Solver Configuration
  *
- * Configuration for the Levenberg-Marquardt solver.
+ * The solver now uses analytical mode exclusively.
+ * Dense and sparse autodiff modes have been removed.
  */
 
 /**
- * Solver mode options:
- * - 'dense': Dense Cholesky with autodiff (O(n³) linear solve)
- * - 'sparse': Sparse CG with autodiff (O(n·nnz) linear solve)
- * - 'analytical': Sparse CG with analytical gradients (bypasses autodiff entirely)
+ * Solver mode - now only 'analytical' is supported.
  */
-export type SolverMode = 'dense' | 'sparse' | 'analytical';
-
-/**
- * Current solver mode. Default is 'analytical'.
- *
- * Analytical mode bypasses autodiff entirely, computing gradients directly.
- * This is faster and is the target mode for production.
- */
-let SOLVER_MODE: SolverMode = 'analytical';
+export type SolverMode = 'analytical';
 
 /**
  * Set the solver mode.
+ * @deprecated No-op - analytical mode is always used.
  */
-export function setSolverMode(mode: SolverMode): void {
-  SOLVER_MODE = mode;
+export function setSolverMode(_mode: SolverMode): void {
+  // No-op - analytical mode is always used
 }
 
 /**
  * Get the current solver mode.
+ * @returns Always 'analytical'
  */
 export function getSolverMode(): SolverMode {
-  return SOLVER_MODE;
+  return 'analytical';
 }
 
 /**
- * Check if sparse linear solve is enabled (true for 'sparse' and 'analytical' modes).
+ * Check if sparse linear solve is enabled.
+ * @returns Always true - analytical mode uses sparse CG
  */
 export function useSparseSolve(): boolean {
-  return SOLVER_MODE === 'sparse' || SOLVER_MODE === 'analytical';
+  return true;
 }
 
 /**
- * Check if analytical gradients are enabled (true for 'analytical' mode).
+ * Check if analytical gradients are enabled.
+ * @returns Always true
  */
 export function useAnalyticalSolve(): boolean {
-  return SOLVER_MODE === 'analytical';
+  return true;
 }
 
 /**
  * Legacy function for backwards compatibility.
- * @deprecated Use setSolverMode() instead
+ * @deprecated No-op - analytical mode is always used
  */
-export function setUseSparseSolve(enabled: boolean): void {
-  // Preserve analytical mode if currently set, otherwise toggle between dense/sparse
-  if (SOLVER_MODE === 'analytical') {
-    // If disabling sparse, switch to dense
-    if (!enabled) {
-      SOLVER_MODE = 'dense';
-    }
-    // If enabling sparse, stay on analytical (it's already sparse)
-  } else {
-    SOLVER_MODE = enabled ? 'sparse' : 'dense';
-  }
+export function setUseSparseSolve(_enabled: boolean): void {
+  // No-op - analytical mode is always used
 }

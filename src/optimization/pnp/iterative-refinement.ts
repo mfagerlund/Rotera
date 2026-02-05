@@ -140,14 +140,11 @@ export function initializeCameraWithPnP(
     vpConcrete.position = position;
     vpConcrete.rotation = rotation;
 
-    // Force dense mode for PnP refinement - it's a small system and we need reliability
-    // over speed. Analytical mode may fail for minimal systems.
     const system = new ConstraintSystem({
       maxIterations: 100,
       tolerance: 1e-6,
       damping: 10.0,
       verbose: false,
-      forceSolverMode: 'dense',
     });
 
     for (const ip of vpConcrete.imagePoints) {
