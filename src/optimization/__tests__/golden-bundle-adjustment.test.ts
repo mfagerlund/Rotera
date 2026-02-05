@@ -4,8 +4,7 @@ import { WorldPoint } from '../../entities/world-point';
 import { Viewpoint } from '../../entities/viewpoint';
 import { ImagePoint } from '../../entities/imagePoint';
 import { optimizeProject } from '../optimize-project';
-import { projectWorldPointToPixelQuaternion } from '../camera-projection';
-import { V, Vec3, Vec4 } from 'scalar-autograd';
+import { projectPointToPixel, PlainCameraIntrinsics } from '../analytical/project-point-plain';
 
 function seededRandom(seed: number) {
   let state = seed;
@@ -89,6 +88,15 @@ describe('GOLDEN-7: Full Bundle Adjustment (CORRECT VERSION)', () => {
       project.addWorldPoint(wp);
     }
 
+    const intrinsics: PlainCameraIntrinsics = {
+      fx: focalLength,
+      fy: focalLength,
+      cx: imageWidth / 2,
+      cy: imageHeight / 2,
+      k1: 0, k2: 0, k3: 0,
+      p1: 0, p2: 0,
+    };
+
     let totalImagePoints = 0;
     for (let camIdx = 0; camIdx < groundTruthCameras.length; camIdx++) {
       const gtCam = groundTruthCameras[camIdx];
@@ -98,41 +106,15 @@ describe('GOLDEN-7: Full Bundle Adjustment (CORRECT VERSION)', () => {
         const gtPt = groundTruthPoints[ptIdx];
         const wp = worldPoints[ptIdx];
 
-        const worldVec = new Vec3(
-          V.C(gtPt.xyz[0]),
-          V.C(gtPt.xyz[1]),
-          V.C(gtPt.xyz[2])
-        );
-        const camPos = new Vec3(
-          V.C(gtCam.position[0]),
-          V.C(gtCam.position[1]),
-          V.C(gtCam.position[2])
-        );
-        const camRot = new Vec4(
-          V.C(gtCam.rotation[0]),
-          V.C(gtCam.rotation[1]),
-          V.C(gtCam.rotation[2]),
-          V.C(gtCam.rotation[3])
-        );
-
-        const projection = projectWorldPointToPixelQuaternion(
-          worldVec,
-          camPos,
-          camRot,
-          V.C(focalLength),
-          V.C(1.0),
-          V.C(imageWidth / 2),
-          V.C(imageHeight / 2),
-          V.C(0),
-          V.C(0),
-          V.C(0),
-          V.C(0),
-          V.C(0),
-          V.C(0)
+        const projection = projectPointToPixel(
+          gtPt.xyz,
+          gtCam.position,
+          gtCam.rotation,
+          intrinsics
         );
 
         if (projection) {
-          const ip = ImagePoint.create(wp, cam, projection[0].data, projection[1].data);
+          const ip = ImagePoint.create(wp, cam, projection[0], projection[1]);
           project.addImagePoint(ip);
           cam.addImagePoint(ip);
           wp.addImagePoint(ip);

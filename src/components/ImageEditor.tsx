@@ -5,8 +5,7 @@ import { faTrash } from '@fortawesome/free-solid-svg-icons'
 import FloatingWindow from './FloatingWindow'
 import type { Viewpoint } from '../entities/viewpoint'
 import { useConfirm } from './ConfirmDialog'
-import { V, Vec3, Vec4 } from 'scalar-autograd'
-import { projectWorldPointToPixelQuaternion } from '../optimization/camera-projection'
+import { projectToPixel } from '../utils/projection'
 import { computeVanishingPoint, collectDirectionConstrainedLines, VPLineData } from '../optimization/vanishing-points'
 import { VanishingLineAxis } from '../entities/vanishing-line'
 
@@ -48,39 +47,11 @@ export const ImageEditor: React.FC<ImageEditorProps> = observer(({
         const xyz = optimizationInfo.optimizedXyz ?? wp.getEffectiveXyz()
         if (xyz && xyz[0] !== null && xyz[1] !== null && xyz[2] !== null) {
           try {
-            const worldVec = new Vec3(V.C(xyz[0]), V.C(xyz[1]), V.C(xyz[2]))
-            const camPos = new Vec3(
-              V.C(viewpoint.position[0]),
-              V.C(viewpoint.position[1]),
-              V.C(viewpoint.position[2])
-            )
-            const camRot = new Vec4(
-              V.C(viewpoint.rotation[0]),
-              V.C(viewpoint.rotation[1]),
-              V.C(viewpoint.rotation[2]),
-              V.C(viewpoint.rotation[3])
-            )
-
-            const proj = projectWorldPointToPixelQuaternion(
-              worldVec,
-              camPos,
-              camRot,
-              V.C(viewpoint.focalLength),
-              V.C(viewpoint.aspectRatio),
-              V.C(viewpoint.principalPointX),
-              V.C(viewpoint.principalPointY),
-              V.C(viewpoint.skewCoefficient),
-              V.C(viewpoint.radialDistortion[0]),
-              V.C(viewpoint.radialDistortion[1]),
-              V.C(viewpoint.radialDistortion[2]),
-              V.C(viewpoint.tangentialDistortion[0]),
-              V.C(viewpoint.tangentialDistortion[1]),
-              viewpoint.isZReflected
-            )
+            const proj = projectToPixel([xyz[0], xyz[1], xyz[2]], viewpoint)
 
             if (proj) {
-              dx = proj[0].data - ip.u
-              dy = proj[1].data - ip.v
+              dx = proj.u - ip.u
+              dy = proj.v - ip.v
             }
           } catch (err) {
             // Ignore projection failures in the editor summary

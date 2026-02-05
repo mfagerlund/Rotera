@@ -20,8 +20,7 @@ import { ImagePoint } from '../../entities/imagePoint';
 import { Line } from '../../entities/line';
 import { VanishingLine } from '../../entities/vanishing-line';
 import { optimizeProject } from '../optimize-project';
-import { V, Vec3, Vec4 } from 'scalar-autograd';
-import { projectWorldPointToPixelQuaternion } from '../camera-projection';
+import { projectPointToPixel, PlainCameraIntrinsics } from '../analytical/project-point-plain';
 
 describe('GOLDEN-VP: Single Camera with Vanishing Point Initialization', () => {
   it('should achieve near-zero reprojection error with analytically generated image points', async () => {
@@ -98,31 +97,17 @@ describe('GOLDEN-VP: Single Camera with Vanishing Point Initialization', () => {
     // Project all world points to image using the optimizer's projection formula
     console.log('\nGENERATING IMAGE POINTS (using optimizer projection formula):');
 
+    const intrinsics: PlainCameraIntrinsics = {
+      fx: focalLength,
+      fy: focalLength,
+      cx: principalPointX,
+      cy: principalPointY,
+      k1: 0, k2: 0, k3: 0,
+      p1: 0, p2: 0,
+    };
+
     function projectPoint(worldPos: [number, number, number]): [number, number] | null {
-      const worldVec = new Vec3(V.C(worldPos[0]), V.C(worldPos[1]), V.C(worldPos[2]));
-      const camPosVec = new Vec3(V.C(cameraPosition[0]), V.C(cameraPosition[1]), V.C(cameraPosition[2]));
-      const camRotQuat = new Vec4(
-        V.C(cameraRotation[0]),
-        V.C(cameraRotation[1]),
-        V.C(cameraRotation[2]),
-        V.C(cameraRotation[3])
-      );
-
-      const result = projectWorldPointToPixelQuaternion(
-        worldVec,
-        camPosVec,
-        camRotQuat,
-        V.C(focalLength),
-        V.C(1.0), // aspectRatio
-        V.C(principalPointX),
-        V.C(principalPointY),
-        V.C(0), // skew
-        V.C(0), V.C(0), V.C(0), // k1, k2, k3
-        V.C(0), V.C(0) // p1, p2
-      );
-
-      if (!result) return null;
-      return [result[0].data, result[1].data];
+      return projectPointToPixel(worldPos, cameraPosition, cameraRotation, intrinsics);
     }
 
     for (let i = 0; i < worldPoints.length; i++) {

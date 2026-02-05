@@ -17,27 +17,57 @@
 import { describe, it, expect } from '@jest/globals';
 import { loadProjectFromJson } from '../../store/project-serialization';
 import { optimizeProject } from '../optimize-project';
-import { projectWorldPointToPixelQuaternion, worldToCameraCoordinatesQuaternion } from '../camera-projection';
+import { projectPointToPixel, PlainCameraIntrinsics } from '../analytical/project-point-plain';
 import { optimizationLogs } from '../optimization-logger';
 import { WorldPoint } from '../../entities/world-point';
 import { Viewpoint } from '../../entities/viewpoint';
 import { ImagePoint } from '../../entities/imagePoint';
-import { V, Vec3, Vec4 } from 'scalar-autograd';
 import * as fs from 'fs';
 import * as path from 'path';
+
+/**
+ * Transform world point to camera coordinates using quaternion rotation.
+ */
+function worldToCameraCoordinates(
+  worldPoint: [number, number, number],
+  cameraPos: [number, number, number],
+  cameraRot: [number, number, number, number]
+): { x: number; y: number; z: number } {
+  // Translate to camera origin
+  const tx = worldPoint[0] - cameraPos[0];
+  const ty = worldPoint[1] - cameraPos[1];
+  const tz = worldPoint[2] - cameraPos[2];
+
+  // Quaternion rotation: v' = q * v * q*
+  const [qw, qx, qy, qz] = cameraRot;
+
+  // q_vec · t (dot product)
+  const dot = qx * tx + qy * ty + qz * tz;
+
+  // |q_vec|² (squared magnitude of vector part)
+  const qVecSq = qx * qx + qy * qy + qz * qz;
+
+  // w² - |q_vec|²
+  const wSqMinusQVecSq = qw * qw - qVecSq;
+
+  // q_vec × t (cross product)
+  const cx = qy * tz - qz * ty;
+  const cy = qz * tx - qx * tz;
+  const cz = qx * ty - qy * tx;
+
+  // v' = 2*(q_vec · t)*q_vec + (w² - |q_vec|²)*t + 2*w*(q_vec × t)
+  return {
+    x: 2 * dot * qx + wSqMinusQVecSq * tx + 2 * qw * cx,
+    y: 2 * dot * qy + wSqMinusQVecSq * ty + 2 * qw * cy,
+    z: 2 * dot * qz + wSqMinusQVecSq * tz + 2 * qw * cz,
+  };
+}
 
 describe('Single-Camera Behind-Points Regression', () => {
   const fixturePath = path.join(__dirname, 'fixtures', 'farnsworth-house-5.rotera');
 
   function countPointsBehindCamera(project: ReturnType<typeof loadProjectFromJson>, useIsZReflected: boolean) {
     const vp = Array.from(project.viewpoints)[0] as Viewpoint;
-    const camPos = new Vec3(V.C(vp.position[0]), V.C(vp.position[1]), V.C(vp.position[2]));
-    const camRot = new Vec4(
-      V.C(vp.rotation[0]),
-      V.C(vp.rotation[1]),
-      V.C(vp.rotation[2]),
-      V.C(vp.rotation[3])
-    );
 
     let behindCount = 0;
     let frontCount = 0;
@@ -46,19 +76,17 @@ describe('Single-Camera Behind-Points Regression', () => {
       const worldPoint = wp as WorldPoint;
       if (!worldPoint.optimizedXyz) continue;
 
-      const worldVec = new Vec3(
-        V.C(worldPoint.optimizedXyz[0]),
-        V.C(worldPoint.optimizedXyz[1]),
-        V.C(worldPoint.optimizedXyz[2])
+      let camCoords = worldToCameraCoordinates(
+        worldPoint.optimizedXyz as [number, number, number],
+        vp.position as [number, number, number],
+        vp.rotation as [number, number, number, number]
       );
 
-      let camCoords = worldToCameraCoordinatesQuaternion(worldVec, camPos, camRot);
-
       if (useIsZReflected) {
-        camCoords = new Vec3(V.neg(camCoords.x), V.neg(camCoords.y), V.neg(camCoords.z));
+        camCoords = { x: -camCoords.x, y: -camCoords.y, z: -camCoords.z };
       }
 
-      if (camCoords.z.data < 0.099) {
+      if (camCoords.z < 0.099) {
         behindCount++;
       } else {
         frontCount++;
@@ -147,13 +175,6 @@ describe('Single-Camera Behind-Points Regression', () => {
     console.log(`[Optimization] iter=${result.iterations}, residual=${result.residual.toFixed(2)}, converged=${result.converged}`);
 
     const vp = Array.from(project.viewpoints)[0] as Viewpoint;
-    const camPos = new Vec3(V.C(vp.position[0]), V.C(vp.position[1]), V.C(vp.position[2]));
-    const camRot = new Vec4(
-      V.C(vp.rotation[0]),
-      V.C(vp.rotation[1]),
-      V.C(vp.rotation[2]),
-      V.C(vp.rotation[3])
-    );
 
     // Check with the stored isZReflected value
     const useIsZReflected = vp.isZReflected;
@@ -167,14 +188,17 @@ describe('Single-Camera Behind-Points Regression', () => {
 
     for (const wp of observedPoints) {
       if (!wp.optimizedXyz) continue;
-      const worldVec = new Vec3(V.C(wp.optimizedXyz[0]), V.C(wp.optimizedXyz[1]), V.C(wp.optimizedXyz[2]));
-      let camCoords = worldToCameraCoordinatesQuaternion(worldVec, camPos, camRot);
+      let camCoords = worldToCameraCoordinates(
+        wp.optimizedXyz as [number, number, number],
+        vp.position as [number, number, number],
+        vp.rotation as [number, number, number, number]
+      );
       if (useIsZReflected) {
-        camCoords = new Vec3(V.neg(camCoords.x), V.neg(camCoords.y), V.neg(camCoords.z));
+        camCoords = { x: -camCoords.x, y: -camCoords.y, z: -camCoords.z };
       }
-      if (camCoords.z.data < 0.099) {
+      if (camCoords.z < 0.099) {
         observedBehindCount++;
-        behindDetails.push(`${wp.getName()}: camZ=${camCoords.z.data}, world=[${wp.optimizedXyz?.join(',')}]`);
+        behindDetails.push(`${wp.getName()}: camZ=${camCoords.z}, world=[${wp.optimizedXyz?.join(',')}]`);
       }
     }
 
@@ -205,13 +229,18 @@ describe('Single-Camera Behind-Points Regression', () => {
     });
 
     const vp = Array.from(project.viewpoints)[0] as Viewpoint;
-    const camPos = new Vec3(V.C(vp.position[0]), V.C(vp.position[1]), V.C(vp.position[2]));
-    const camRot = new Vec4(
-      V.C(vp.rotation[0]),
-      V.C(vp.rotation[1]),
-      V.C(vp.rotation[2]),
-      V.C(vp.rotation[3])
-    );
+
+    const intrinsics: PlainCameraIntrinsics = {
+      fx: vp.focalLength,
+      fy: vp.focalLength * vp.aspectRatio,
+      cx: vp.principalPointX,
+      cy: vp.principalPointY,
+      k1: vp.radialDistortion[0],
+      k2: vp.radialDistortion[1],
+      k3: vp.radialDistortion[2],
+      p1: vp.tangentialDistortion[0],
+      p2: vp.tangentialDistortion[1],
+    };
 
     const errors: number[] = [];
     let behindCamera = 0;
@@ -221,32 +250,17 @@ describe('Single-Camera Behind-Points Regression', () => {
       const wp = imagePoint.worldPoint as WorldPoint;
       if (!wp.optimizedXyz) continue;
 
-      const worldVec = new Vec3(
-        V.C(wp.optimizedXyz[0]),
-        V.C(wp.optimizedXyz[1]),
-        V.C(wp.optimizedXyz[2])
-      );
-
-      const projected = projectWorldPointToPixelQuaternion(
-        worldVec,
-        camPos,
-        camRot,
-        V.C(vp.focalLength),
-        V.C(vp.aspectRatio),
-        V.C(vp.principalPointX),
-        V.C(vp.principalPointY),
-        V.C(vp.skewCoefficient),
-        V.C(vp.radialDistortion[0]),
-        V.C(vp.radialDistortion[1]),
-        V.C(vp.radialDistortion[2]),
-        V.C(vp.tangentialDistortion[0]),
-        V.C(vp.tangentialDistortion[1]),
+      const projected = projectPointToPixel(
+        wp.optimizedXyz as [number, number, number],
+        vp.position as [number, number, number],
+        vp.rotation as [number, number, number, number],
+        intrinsics,
         vp.isZReflected
       );
 
       if (projected) {
-        const du = projected[0].data - imagePoint.u;
-        const dv = projected[1].data - imagePoint.v;
+        const du = projected[0] - imagePoint.u;
+        const dv = projected[1] - imagePoint.v;
         const error = Math.sqrt(du * du + dv * dv);
         errors.push(error);
       } else {
@@ -302,28 +316,23 @@ describe('Single-Camera Behind-Points Regression', () => {
     handednessLogs.forEach(l => console.log(`  ${l}`));
 
     // Check if points are in front
-    const camPos = new Vec3(V.C(vp.position[0]), V.C(vp.position[1]), V.C(vp.position[2]));
-    const camRot = new Vec4(V.C(vp.rotation[0]), V.C(vp.rotation[1]), V.C(vp.rotation[2]), V.C(vp.rotation[3]));
-
     let behindCount = 0;
     for (const wp of project.worldPoints) {
       const worldPoint = wp as WorldPoint;
       if (!worldPoint.optimizedXyz) continue;
 
-      const worldVec = new Vec3(
-        V.C(worldPoint.optimizedXyz[0]),
-        V.C(worldPoint.optimizedXyz[1]),
-        V.C(worldPoint.optimizedXyz[2])
+      let camCoords = worldToCameraCoordinates(
+        worldPoint.optimizedXyz as [number, number, number],
+        vp.position as [number, number, number],
+        vp.rotation as [number, number, number, number]
       );
-
-      let camCoords = worldToCameraCoordinatesQuaternion(worldVec, camPos, camRot);
       if (vp.isZReflected) {
-        camCoords = new Vec3(V.neg(camCoords.x), V.neg(camCoords.y), V.neg(camCoords.z));
+        camCoords = { x: -camCoords.x, y: -camCoords.y, z: -camCoords.z };
       }
 
-      if (camCoords.z.data < 0.099) {
+      if (camCoords.z < 0.099) {
         behindCount++;
-        console.log(`BEHIND: ${worldPoint.getName()} Z=${camCoords.z.data.toFixed(2)} (world: [${worldPoint.optimizedXyz!.map(c => c.toFixed(2)).join(', ')}])`);
+        console.log(`BEHIND: ${worldPoint.getName()} Z=${camCoords.z.toFixed(2)} (world: [${worldPoint.optimizedXyz!.map(c => c.toFixed(2)).join(', ')}])`);
       }
     }
 
@@ -335,19 +344,17 @@ describe('Single-Camera Behind-Points Regression', () => {
       const worldPoint = wp as WorldPoint;
       if (!worldPoint.optimizedXyz) continue;
 
-      const worldVec2 = new Vec3(
-        V.C(worldPoint.optimizedXyz[0]),
-        V.C(worldPoint.optimizedXyz[1]),
-        V.C(worldPoint.optimizedXyz[2])
+      let camCoords2 = worldToCameraCoordinates(
+        worldPoint.optimizedXyz as [number, number, number],
+        vp.position as [number, number, number],
+        vp.rotation as [number, number, number, number]
       );
-
-      let camCoords2 = worldToCameraCoordinatesQuaternion(worldVec2, camPos, camRot);
       if (vp.isZReflected) {
-        camCoords2 = new Vec3(V.neg(camCoords2.x), V.neg(camCoords2.y), V.neg(camCoords2.z));
+        camCoords2 = { x: -camCoords2.x, y: -camCoords2.y, z: -camCoords2.z };
       }
 
-      if (camCoords2.z.data < 0.099) {
-        behindNames.push(`${worldPoint.getName()}(Z=${camCoords2.z.data.toFixed(2)})`);
+      if (camCoords2.z < 0.099) {
+        behindNames.push(`${worldPoint.getName()}(Z=${camCoords2.z.toFixed(2)})`);
       }
     }
 

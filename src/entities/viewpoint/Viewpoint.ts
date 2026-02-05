@@ -2,8 +2,7 @@ import type {ISelectable, SelectableType} from '../../types/selectable'
 import type {IOptimizableCamera} from '../../optimization/IOptimizable'
 import type {IWorldPoint, IViewpoint} from '../interfaces'
 import type {ImagePoint} from '../imagePoint'
-import {Vec4} from 'scalar-autograd'
-import {Quaternion} from '../../optimization/Quaternion'
+import {quaternionFromEuler, quaternionToEuler} from '../../utils/quaternion'
 import type { ISerializable } from '../serialization/ISerializable'
 import type { SerializationContext } from '../serialization/SerializationContext'
 import type { ViewpointDto } from './ViewpointDto'
@@ -239,8 +238,7 @@ export class Viewpoint implements ISelectable, IOptimizableCamera, IViewpoint, I
         if (options.rotation) {
             rotation = options.rotation
         } else if (options.rotationEuler) {
-            const quat = Quaternion.fromEuler(...options.rotationEuler)
-            rotation = quat.toArray()
+            rotation = quaternionFromEuler(...options.rotationEuler)
         } else {
             rotation = [1, 0, 0, 0] // Identity quaternion
         }
@@ -352,13 +350,11 @@ export class Viewpoint implements ISelectable, IOptimizableCamera, IViewpoint, I
     // Removed getter - access fields directly: use [viewpoint.imageWidth, viewpoint.imageHeight]
 
     getRotationEuler(): [number, number, number] {
-        const quat = Vec4.fromData(...this.rotation)
-        return Quaternion.toEuler(quat)
+        return quaternionToEuler(this.rotation)
     }
 
     setRotationEuler(roll: number, pitch: number, yaw: number): void {
-        const quat = Quaternion.fromEuler(roll, pitch, yaw)
-        this.rotation = quat.toArray()
+        this.rotation = quaternionFromEuler(roll, pitch, yaw)
     }
     addImagePoint(imagePoint: ImagePoint): void {
         this.imagePoints.add(imagePoint)

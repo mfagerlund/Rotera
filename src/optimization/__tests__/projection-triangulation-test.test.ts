@@ -4,60 +4,48 @@
  */
 
 import { describe, test, expect } from '@jest/globals';
-import { Vec3, Vec4, V } from 'scalar-autograd';
-import { Quaternion } from '../Quaternion';
-import { projectWorldPointToPixelQuaternion } from '../camera-projection';
+import { projectPointToPixel, PlainCameraIntrinsics } from '../analytical/project-point-plain';
 import { triangulateRayRay } from '../triangulation';
 
 describe('Projection-Triangulation Round-Trip', () => {
   test('project → triangulate → reproject should give same pixels', () => {
     console.log('\n=== PROJECTION → TRIANGULATION → REPROJECTION TEST ===\n');
 
-    const worldPoint = [5, 2, 15];
+    const worldPoint: [number, number, number] = [5, 2, 15];
     console.log(`World point: [${worldPoint.join(', ')}]`);
 
     const cam1 = {
-      position: [0, 0, 0],
-      rotation: [1, 0, 0, 0],
+      position: [0, 0, 0] as [number, number, number],
+      rotation: [1, 0, 0, 0] as [number, number, number, number],
       focalLength: 1000,
       principalPointX: 500,
       principalPointY: 500
     };
 
     const cam2 = {
-      position: [10, 0, 0],
-      rotation: [1, 0, 0, 0],
+      position: [10, 0, 0] as [number, number, number],
+      rotation: [1, 0, 0, 0] as [number, number, number, number],
       focalLength: 1000,
       principalPointX: 500,
       principalPointY: 500
     };
 
+    const intrinsics: PlainCameraIntrinsics = {
+      fx: cam1.focalLength,
+      fy: cam1.focalLength,
+      cx: cam1.principalPointX,
+      cy: cam1.principalPointY,
+      k1: 0, k2: 0, k3: 0,
+      p1: 0, p2: 0,
+    };
+
     console.log(`Camera 1: pos=[${cam1.position.join(', ')}], rot=[${cam1.rotation.join(', ')}]`);
     console.log(`Camera 2: pos=[${cam2.position.join(', ')}], rot=[${cam2.rotation.join(', ')}]`);
 
-    const wp = new Vec3(V.C(worldPoint[0]), V.C(worldPoint[1]), V.C(worldPoint[2]));
-
-    const c1p = new Vec3(V.C(cam1.position[0]), V.C(cam1.position[1]), V.C(cam1.position[2]));
-    const c1r = new Vec4(V.C(cam1.rotation[0]), V.C(cam1.rotation[1]), V.C(cam1.rotation[2]), V.C(cam1.rotation[3]));
-
-    const c2p = new Vec3(V.C(cam2.position[0]), V.C(cam2.position[1]), V.C(cam2.position[2]));
-    const c2r = new Vec4(V.C(cam2.rotation[0]), V.C(cam2.rotation[1]), V.C(cam2.rotation[2]), V.C(cam2.rotation[3]));
-
     console.log('\n---  STEP 1: PROJECT to both cameras ---');
 
-    const pixel1Result = projectWorldPointToPixelQuaternion(
-      wp, c1p, c1r,
-      V.C(cam1.focalLength), V.C(1.0),
-      V.C(cam1.principalPointX), V.C(cam1.principalPointY),
-      V.C(0), V.C(0), V.C(0), V.C(0), V.C(0), V.C(0)
-    );
-
-    const pixel2Result = projectWorldPointToPixelQuaternion(
-      wp, c2p, c2r,
-      V.C(cam2.focalLength), V.C(1.0),
-      V.C(cam2.principalPointX), V.C(cam2.principalPointY),
-      V.C(0), V.C(0), V.C(0), V.C(0), V.C(0), V.C(0)
-    );
+    const pixel1Result = projectPointToPixel(worldPoint, cam1.position, cam1.rotation, intrinsics);
+    const pixel2Result = projectPointToPixel(worldPoint, cam2.position, cam2.rotation, intrinsics);
 
     if (!pixel1Result || !pixel2Result) {
       console.log('ERROR: Projection failed!');
@@ -66,10 +54,8 @@ describe('Projection-Triangulation Round-Trip', () => {
       return;
     }
 
-    const u1 = pixel1Result[0].data;
-    const v1 = pixel1Result[1].data;
-    const u2 = pixel2Result[0].data;
-    const v2 = pixel2Result[1].data;
+    const [u1, v1] = pixel1Result;
+    const [u2, v2] = pixel2Result;
 
     console.log(`Camera 1 pixel: [${u1.toFixed(2)}, ${v1.toFixed(2)}]`);
     console.log(`Camera 2 pixel: [${u2.toFixed(2)}, ${v2.toFixed(2)}]`);
@@ -106,20 +92,17 @@ describe('Projection-Triangulation Round-Trip', () => {
 
     console.log('\n--- STEP 3: REPROJECT triangulated point ---');
 
-    const wpTri = new Vec3(V.C(triangulated[0]), V.C(triangulated[1]), V.C(triangulated[2]));
-
-    const reprojPixel1 = projectWorldPointToPixelQuaternion(
-      wpTri, c1p, c1r,
-      V.C(cam1.focalLength), V.C(1.0),
-      V.C(cam1.principalPointX), V.C(cam1.principalPointY),
-      V.C(0), V.C(0), V.C(0), V.C(0), V.C(0), V.C(0)
+    const reprojPixel1 = projectPointToPixel(
+      triangulated as [number, number, number],
+      cam1.position,
+      cam1.rotation,
+      intrinsics
     );
-
-    const reprojPixel2 = projectWorldPointToPixelQuaternion(
-      wpTri, c2p, c2r,
-      V.C(cam2.focalLength), V.C(1.0),
-      V.C(cam2.principalPointX), V.C(cam2.principalPointY),
-      V.C(0), V.C(0), V.C(0), V.C(0), V.C(0), V.C(0)
+    const reprojPixel2 = projectPointToPixel(
+      triangulated as [number, number, number],
+      cam2.position,
+      cam2.rotation,
+      intrinsics
     );
 
     if (!reprojPixel1 || !reprojPixel2) {
@@ -129,10 +112,8 @@ describe('Projection-Triangulation Round-Trip', () => {
       return;
     }
 
-    const u1Reproj = reprojPixel1[0].data;
-    const v1Reproj = reprojPixel1[1].data;
-    const u2Reproj = reprojPixel2[0].data;
-    const v2Reproj = reprojPixel2[1].data;
+    const [u1Reproj, v1Reproj] = reprojPixel1;
+    const [u2Reproj, v2Reproj] = reprojPixel2;
 
     console.log(`Camera 1 reprojection: [${u1Reproj.toFixed(2)}, ${v1Reproj.toFixed(2)}]`);
     console.log(`Camera 1 original:     [${u1.toFixed(2)}, ${v1.toFixed(2)}]`);
@@ -151,10 +132,10 @@ describe('Projection-Triangulation Round-Trip', () => {
     console.log(`Expected: < 0.001 pixels (near machine precision)`);
 
     if (avgError > 0.01) {
-      console.log(`\n❌ FAILED: Reprojection error too large!`);
+      console.log(`\nFAILED: Reprojection error too large!`);
       console.log(`This indicates a BUG in either projection or triangulation.`);
     } else {
-      console.log(`\n✓ PASSED: Projection and triangulation are consistent`);
+      console.log(`\nPASSED: Projection and triangulation are consistent`);
     }
 
     expect(avgError).toBeLessThan(0.01);

@@ -13,8 +13,7 @@ import { optimizeProject } from '../optimize-project'
 import { WorldPoint } from '../../entities/world-point'
 import { Viewpoint } from '../../entities/viewpoint'
 import { ImagePoint } from '../../entities/imagePoint'
-import { projectWorldPointToPixelQuaternion } from '../camera-projection'
-import { V, Vec3, Vec4 } from 'scalar-autograd'
+import { projectPointToPixel, PlainCameraIntrinsics } from '../analytical/project-point-plain'
 import { setUseSparseSolve, useSparseSolve } from '../solver-config'
 
 const CALIBRATION_FIXTURES_DIR = path.join(__dirname, 'fixtures', 'Calibration')
@@ -41,23 +40,29 @@ describe('Fine-tune optimization', () => {
     let initialMaxError = 0
     for (const vp of project.viewpoints) {
       const viewpoint = vp as Viewpoint
+      const intrinsics: PlainCameraIntrinsics = {
+        fx: viewpoint.focalLength,
+        fy: viewpoint.focalLength * viewpoint.aspectRatio,
+        cx: viewpoint.principalPointX,
+        cy: viewpoint.principalPointY,
+        k1: viewpoint.radialDistortion[0],
+        k2: viewpoint.radialDistortion[1],
+        k3: viewpoint.radialDistortion[2],
+        p1: viewpoint.tangentialDistortion[0],
+        p2: viewpoint.tangentialDistortion[1],
+      }
       for (const ip of viewpoint.imagePoints) {
         const imagePoint = ip as ImagePoint
         const wp = imagePoint.worldPoint as WorldPoint
         if (wp.optimizedXyz) {
-          const worldPoint = new Vec3(V.C(wp.optimizedXyz[0]), V.C(wp.optimizedXyz[1]), V.C(wp.optimizedXyz[2]))
-          const cameraPosition = new Vec3(V.C(viewpoint.position[0]), V.C(viewpoint.position[1]), V.C(viewpoint.position[2]))
-          const cameraRotation = new Vec4(V.C(viewpoint.rotation[0]), V.C(viewpoint.rotation[1]), V.C(viewpoint.rotation[2]), V.C(viewpoint.rotation[3]))
-          const projected = projectWorldPointToPixelQuaternion(
-            worldPoint, cameraPosition, cameraRotation,
-            V.C(viewpoint.focalLength), V.C(viewpoint.aspectRatio),
-            V.C(viewpoint.principalPointX), V.C(viewpoint.principalPointY),
-            V.C(viewpoint.skewCoefficient),
-            V.C(viewpoint.radialDistortion[0]), V.C(viewpoint.radialDistortion[1]), V.C(viewpoint.radialDistortion[2]),
-            V.C(viewpoint.tangentialDistortion[0]), V.C(viewpoint.tangentialDistortion[1])
+          const projected = projectPointToPixel(
+            wp.optimizedXyz as [number, number, number],
+            viewpoint.position as [number, number, number],
+            viewpoint.rotation as [number, number, number, number],
+            intrinsics
           )
           if (projected) {
-            const error = Math.sqrt((projected[0].data - imagePoint.u) ** 2 + (projected[1].data - imagePoint.v) ** 2)
+            const error = Math.sqrt((projected[0] - imagePoint.u) ** 2 + (projected[1] - imagePoint.v) ** 2)
             initialMaxError = Math.max(initialMaxError, error)
           }
         }
@@ -80,23 +85,29 @@ describe('Fine-tune optimization', () => {
     let finalMaxError = 0
     for (const vp of project.viewpoints) {
       const viewpoint = vp as Viewpoint
+      const intrinsics: PlainCameraIntrinsics = {
+        fx: viewpoint.focalLength,
+        fy: viewpoint.focalLength * viewpoint.aspectRatio,
+        cx: viewpoint.principalPointX,
+        cy: viewpoint.principalPointY,
+        k1: viewpoint.radialDistortion[0],
+        k2: viewpoint.radialDistortion[1],
+        k3: viewpoint.radialDistortion[2],
+        p1: viewpoint.tangentialDistortion[0],
+        p2: viewpoint.tangentialDistortion[1],
+      }
       for (const ip of viewpoint.imagePoints) {
         const imagePoint = ip as ImagePoint
         const wp = imagePoint.worldPoint as WorldPoint
         if (wp.optimizedXyz) {
-          const worldPoint = new Vec3(V.C(wp.optimizedXyz[0]), V.C(wp.optimizedXyz[1]), V.C(wp.optimizedXyz[2]))
-          const cameraPosition = new Vec3(V.C(viewpoint.position[0]), V.C(viewpoint.position[1]), V.C(viewpoint.position[2]))
-          const cameraRotation = new Vec4(V.C(viewpoint.rotation[0]), V.C(viewpoint.rotation[1]), V.C(viewpoint.rotation[2]), V.C(viewpoint.rotation[3]))
-          const projected = projectWorldPointToPixelQuaternion(
-            worldPoint, cameraPosition, cameraRotation,
-            V.C(viewpoint.focalLength), V.C(viewpoint.aspectRatio),
-            V.C(viewpoint.principalPointX), V.C(viewpoint.principalPointY),
-            V.C(viewpoint.skewCoefficient),
-            V.C(viewpoint.radialDistortion[0]), V.C(viewpoint.radialDistortion[1]), V.C(viewpoint.radialDistortion[2]),
-            V.C(viewpoint.tangentialDistortion[0]), V.C(viewpoint.tangentialDistortion[1])
+          const projected = projectPointToPixel(
+            wp.optimizedXyz as [number, number, number],
+            viewpoint.position as [number, number, number],
+            viewpoint.rotation as [number, number, number, number],
+            intrinsics
           )
           if (projected) {
-            const error = Math.sqrt((projected[0].data - imagePoint.u) ** 2 + (projected[1].data - imagePoint.v) ** 2)
+            const error = Math.sqrt((projected[0] - imagePoint.u) ** 2 + (projected[1] - imagePoint.v) ** 2)
             finalMaxError = Math.max(finalMaxError, error)
           }
         }
@@ -145,23 +156,29 @@ describe('Fine-tune optimization', () => {
     let perturbedMaxError = 0
     for (const vp of project.viewpoints) {
       const viewpoint = vp as Viewpoint
+      const intrinsics: PlainCameraIntrinsics = {
+        fx: viewpoint.focalLength,
+        fy: viewpoint.focalLength * viewpoint.aspectRatio,
+        cx: viewpoint.principalPointX,
+        cy: viewpoint.principalPointY,
+        k1: viewpoint.radialDistortion[0],
+        k2: viewpoint.radialDistortion[1],
+        k3: viewpoint.radialDistortion[2],
+        p1: viewpoint.tangentialDistortion[0],
+        p2: viewpoint.tangentialDistortion[1],
+      }
       for (const ip of viewpoint.imagePoints) {
         const imagePoint = ip as ImagePoint
         const wp = imagePoint.worldPoint as WorldPoint
         if (wp.optimizedXyz) {
-          const worldPoint = new Vec3(V.C(wp.optimizedXyz[0]), V.C(wp.optimizedXyz[1]), V.C(wp.optimizedXyz[2]))
-          const cameraPosition = new Vec3(V.C(viewpoint.position[0]), V.C(viewpoint.position[1]), V.C(viewpoint.position[2]))
-          const cameraRotation = new Vec4(V.C(viewpoint.rotation[0]), V.C(viewpoint.rotation[1]), V.C(viewpoint.rotation[2]), V.C(viewpoint.rotation[3]))
-          const projected = projectWorldPointToPixelQuaternion(
-            worldPoint, cameraPosition, cameraRotation,
-            V.C(viewpoint.focalLength), V.C(viewpoint.aspectRatio),
-            V.C(viewpoint.principalPointX), V.C(viewpoint.principalPointY),
-            V.C(viewpoint.skewCoefficient),
-            V.C(viewpoint.radialDistortion[0]), V.C(viewpoint.radialDistortion[1]), V.C(viewpoint.radialDistortion[2]),
-            V.C(viewpoint.tangentialDistortion[0]), V.C(viewpoint.tangentialDistortion[1])
+          const projected = projectPointToPixel(
+            wp.optimizedXyz as [number, number, number],
+            viewpoint.position as [number, number, number],
+            viewpoint.rotation as [number, number, number, number],
+            intrinsics
           )
           if (projected) {
-            const error = Math.sqrt((projected[0].data - imagePoint.u) ** 2 + (projected[1].data - imagePoint.v) ** 2)
+            const error = Math.sqrt((projected[0] - imagePoint.u) ** 2 + (projected[1] - imagePoint.v) ** 2)
             perturbedMaxError = Math.max(perturbedMaxError, error)
           }
         }
@@ -181,23 +198,29 @@ describe('Fine-tune optimization', () => {
     let finalMaxError = 0
     for (const vp of project.viewpoints) {
       const viewpoint = vp as Viewpoint
+      const intrinsics: PlainCameraIntrinsics = {
+        fx: viewpoint.focalLength,
+        fy: viewpoint.focalLength * viewpoint.aspectRatio,
+        cx: viewpoint.principalPointX,
+        cy: viewpoint.principalPointY,
+        k1: viewpoint.radialDistortion[0],
+        k2: viewpoint.radialDistortion[1],
+        k3: viewpoint.radialDistortion[2],
+        p1: viewpoint.tangentialDistortion[0],
+        p2: viewpoint.tangentialDistortion[1],
+      }
       for (const ip of viewpoint.imagePoints) {
         const imagePoint = ip as ImagePoint
         const wp = imagePoint.worldPoint as WorldPoint
         if (wp.optimizedXyz) {
-          const worldPoint = new Vec3(V.C(wp.optimizedXyz[0]), V.C(wp.optimizedXyz[1]), V.C(wp.optimizedXyz[2]))
-          const cameraPosition = new Vec3(V.C(viewpoint.position[0]), V.C(viewpoint.position[1]), V.C(viewpoint.position[2]))
-          const cameraRotation = new Vec4(V.C(viewpoint.rotation[0]), V.C(viewpoint.rotation[1]), V.C(viewpoint.rotation[2]), V.C(viewpoint.rotation[3]))
-          const projected = projectWorldPointToPixelQuaternion(
-            worldPoint, cameraPosition, cameraRotation,
-            V.C(viewpoint.focalLength), V.C(viewpoint.aspectRatio),
-            V.C(viewpoint.principalPointX), V.C(viewpoint.principalPointY),
-            V.C(viewpoint.skewCoefficient),
-            V.C(viewpoint.radialDistortion[0]), V.C(viewpoint.radialDistortion[1]), V.C(viewpoint.radialDistortion[2]),
-            V.C(viewpoint.tangentialDistortion[0]), V.C(viewpoint.tangentialDistortion[1])
+          const projected = projectPointToPixel(
+            wp.optimizedXyz as [number, number, number],
+            viewpoint.position as [number, number, number],
+            viewpoint.rotation as [number, number, number, number],
+            intrinsics
           )
           if (projected) {
-            const error = Math.sqrt((projected[0].data - imagePoint.u) ** 2 + (projected[1].data - imagePoint.v) ** 2)
+            const error = Math.sqrt((projected[0] - imagePoint.u) ** 2 + (projected[1] - imagePoint.v) ** 2)
             finalMaxError = Math.max(finalMaxError, error)
           }
         }

@@ -1,7 +1,6 @@
 /**
  * Utility functions for 3D vector operations on plain number arrays.
- * These are non-differentiable operations for geometric calculations.
- * For autodiff-enabled vectors, use Vec3 from scalar-autograd instead.
+ * All vector operations in the codebase use plain numbers.
  */
 
 export type Vec3Array = [number, number, number]

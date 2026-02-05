@@ -4,13 +4,21 @@ import { Project } from '../../entities/project';
 import { WorldPoint } from '../../entities/world-point';
 import { Viewpoint } from '../../entities/viewpoint';
 import { ImagePoint } from '../../entities/imagePoint';
-import { projectWorldPointToPixelQuaternion } from '../camera-projection';
-import { V, Vec3, Vec4 } from 'scalar-autograd';
+import { projectPointToPixel, PlainCameraIntrinsics } from '../analytical/project-point-plain';
 
 describe('7-Point Essential Matrix Algorithm', () => {
   const focalLength = 1000;
   const imageWidth = 1000;
   const imageHeight = 1000;
+
+  const intrinsics: PlainCameraIntrinsics = {
+    fx: focalLength,
+    fy: focalLength,
+    cx: imageWidth / 2,
+    cy: imageHeight / 2,
+    k1: 0, k2: 0, k3: 0,
+    p1: 0, p2: 0,
+  };
 
   function createCamera(name: string): Viewpoint {
     return Viewpoint.create(
@@ -35,27 +43,7 @@ describe('7-Point Essential Matrix Algorithm', () => {
     cameraPos: [number, number, number],
     cameraRot: [number, number, number, number]
   ): [number, number] | null {
-    const worldVec = new Vec3(V.C(worldXyz[0]), V.C(worldXyz[1]), V.C(worldXyz[2]));
-    const camPos = new Vec3(V.C(cameraPos[0]), V.C(cameraPos[1]), V.C(cameraPos[2]));
-    const camRot = new Vec4(V.C(cameraRot[0]), V.C(cameraRot[1]), V.C(cameraRot[2]), V.C(cameraRot[3]));
-
-    const projection = projectWorldPointToPixelQuaternion(
-      worldVec,
-      camPos,
-      camRot,
-      V.C(focalLength),
-      V.C(1.0),
-      V.C(imageWidth / 2),
-      V.C(imageHeight / 2),
-      V.C(0),
-      V.C(0),
-      V.C(0),
-      V.C(0),
-      V.C(0),
-      V.C(0)
-    );
-
-    return projection ? [projection[0].data, projection[1].data] : null;
+    return projectPointToPixel(worldXyz, cameraPos, cameraRot, intrinsics);
   }
 
   it('should initialize two cameras from exactly 7 point correspondences', async () => {

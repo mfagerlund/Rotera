@@ -6,11 +6,36 @@
  * from analytical providers, avoiding materialization of the full J matrix.
  */
 
-import type { NonlinearLeastSquaresOptions, NonlinearLeastSquaresResult } from 'scalar-autograd';
 import { SparseMatrix } from './sparse/SparseMatrix';
 import { conjugateGradientDamped } from './sparse/cg-solvers';
 import type { AnalyticalResidualProvider } from './analytical/types';
 import { accumulateNormalEquations } from './analytical/accumulate-normal-equations';
+
+/**
+ * Options for nonlinear least squares solver.
+ */
+export interface NonlinearLeastSquaresOptions {
+  maxIterations?: number;
+  costTolerance?: number;
+  paramTolerance?: number;
+  gradientTolerance?: number;
+  initialDamping?: number;
+  adaptiveDamping?: boolean;
+  dampingIncreaseFactor?: number;
+  dampingDecreaseFactor?: number;
+  verbose?: boolean;
+}
+
+/**
+ * Result from nonlinear least squares solver.
+ */
+export interface NonlinearLeastSquaresResult {
+  success: boolean;
+  iterations: number;
+  finalCost: number;
+  convergenceReason: string;
+  computationTime: number;
+}
 
 // Track CG non-convergence warnings to avoid spamming console
 let cgWarningCount = 0;

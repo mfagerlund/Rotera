@@ -9,8 +9,7 @@ import type { IViewpoint, IWorldPoint } from '../../entities/interfaces';
 import type { Viewpoint } from '../../entities/viewpoint';
 import type { WorldPoint } from '../../entities/world-point';
 import { ConstraintSystem } from '../constraint-system';
-import { projectWorldPointToPixelQuaternion } from '../camera-projection';
-import { V, Vec3, Vec4 } from 'scalar-autograd';
+import { projectPointToPixel, PlainCameraIntrinsics } from '../analytical/project-point-plain';
 import { log, logOnce } from '../optimization-logger';
 import { quaternionToMatrix } from './math-utils';
 
@@ -371,50 +370,34 @@ function computeReprojectionError(vp: Viewpoint): number {
   let totalError = 0;
   let count = 0;
 
+  const intrinsics: PlainCameraIntrinsics = {
+    fx: vp.focalLength ?? 1000,
+    fy: (vp.focalLength ?? 1000) * (vp.aspectRatio ?? 1.0),
+    cx: vp.principalPointX ?? 500,
+    cy: vp.principalPointY ?? 500,
+    k1: vp.radialDistortion[0] ?? 0,
+    k2: vp.radialDistortion[1] ?? 0,
+    k3: vp.radialDistortion[2] ?? 0,
+    p1: vp.tangentialDistortion[0] ?? 0,
+    p2: vp.tangentialDistortion[1] ?? 0
+  };
+
   for (const ip of vp.imagePoints) {
     const wp = ip.worldPoint as WorldPoint;
     if (!wp.optimizedXyz) continue;
 
     try {
-      const worldPoint = new Vec3(
-        V.C(wp.optimizedXyz[0]),
-        V.C(wp.optimizedXyz[1]),
-        V.C(wp.optimizedXyz[2])
-      );
-
-      const cameraPosition = new Vec3(
-        V.C(vp.position[0]),
-        V.C(vp.position[1]),
-        V.C(vp.position[2])
-      );
-
-      const cameraRotation = new Vec4(
-        V.C(vp.rotation[0]),
-        V.C(vp.rotation[1]),
-        V.C(vp.rotation[2]),
-        V.C(vp.rotation[3])
-      );
-
-      const projected = projectWorldPointToPixelQuaternion(
-        worldPoint,
-        cameraPosition,
-        cameraRotation,
-        V.C(vp.focalLength ?? 1000),
-        V.C(vp.aspectRatio ?? 1.0),
-        V.C(vp.principalPointX ?? 500),
-        V.C(vp.principalPointY ?? 500),
-        V.C(vp.skewCoefficient ?? 0),
-        V.C(vp.radialDistortion[0] ?? 0),
-        V.C(vp.radialDistortion[1] ?? 0),
-        V.C(vp.radialDistortion[2] ?? 0),
-        V.C(vp.tangentialDistortion[0] ?? 0),
-        V.C(vp.tangentialDistortion[1] ?? 0),
+      const projected = projectPointToPixel(
+        wp.optimizedXyz,
+        vp.position,
+        vp.rotation,
+        intrinsics,
         vp.isZReflected
       );
 
       if (projected) {
-        const dx = projected[0].data - ip.u;
-        const dy = projected[1].data - ip.v;
+        const dx = projected[0] - ip.u;
+        const dy = projected[1] - ip.v;
         totalError += Math.sqrt(dx * dx + dy * dy);
         count++;
       }

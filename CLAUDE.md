@@ -1,56 +1,31 @@
 **Last Updated:** 2026-02-05
 
-## SCALAR-AUTOGRAD REMOVAL COMPLETE (Entity Layer)
+## SCALAR-AUTOGRAD FULLY REMOVED
 
-**Status:** Phase 5 complete. Entities no longer use ValueMap or scalar-autograd.
+**Status:** scalar-autograd has been completely removed from the codebase. No production code or test code uses it.
 
-**Phase 1-2 (COMPLETE):**
-- ✅ Removed solver mode selection (Dense/Sparse/Analytical toggle)
-- ✅ Analytical mode is now the ONLY mode (no fallback)
-- ✅ Removed autodiff gradient computation from LM solver
-- ✅ Deleted obsolete test files (autodiff comparison, validation)
+**What was removed:**
+- `camera-projection.ts` - autodiff projection (deleted)
+- `Quaternion.ts` - autodiff quaternion class (deleted)
+- `quaternion-normalization-residual.ts` - autodiff quaternion normalization (deleted)
+- 8 gradient comparison tests that verified analytical vs autodiff gradients (deleted)
+- All test files updated to use plain-number projection utilities
 
-**Phase 3 (COMPLETE):**
-- ✅ Deleted residualFn from ConstraintSystem
-- ✅ Deleted validateSparseAgainstDense and validateResidualSymmetry methods
-- ✅ Added owner tracking to analytical providers (ResidualOwner interface)
-- ✅ Added distributeResiduals() to populate entity lastResiduals from provider results
-- ✅ Removed computeResiduals calls from entity applyOptimizationResult methods
-- ✅ Updated useOptimization hook to read from lastResiduals instead of autodiff
-- ✅ Deleted unused compute-constraint-residuals.ts
+**Current state:**
+- All production code uses plain-number utilities
+- All tests use `projectPointToPixel` from `analytical/project-point-plain.ts`
+- 249 tests pass, 4 skipped, 1 pre-existing flaky test
 
-**Phase 4 (COMPLETE):**
-- ✅ Added `applyOptimizationResultFromVariables()` to WorldPoint (reads from variables array + layout)
-- ✅ Added `applyOptimizationResultFromVariables()` to Viewpoint (reads camera params from variables + layout)
-- ✅ Added `computeReprojectedPositionFromEntities()` to ImagePoint (plain-number projection)
-- ✅ Created `project-point-plain.ts` utility for plain-number camera projection
-- ✅ Updated ConstraintSystem main solve path to use new methods instead of ValueMap
-- ✅ All 279 tests pass (4 skipped - edge cases need fixing)
-
-**Phase 5 (COMPLETE):**
-- ✅ Removed ValueMap from ConstraintSystem entirely (both main and zero-variable paths)
-- ✅ Changed `transparentLM` to accept `Float64Array` directly instead of `{ data: number }[]`
-- ✅ Zero-variable path now uses `point.getEffectiveXyz()` directly
-- ✅ Deleted unused `rotateDirectionByQuaternion` utility
-- ✅ Removed `ValueMap`, `CameraValues`, `IValueMapContributor`, `IResidualProvider` from IOptimizable.ts
-- ✅ Removed `addToValueMap()`, `computeResiduals()`, `applyOptimizationResultFromValueMap()` from entities
-- ✅ Removed scalar-autograd imports from WorldPoint, Viewpoint, ImagePoint, Line, all constraints
-- ✅ Updated golden-camera-intrinsics.test.ts to document intrinsic optimization as TODO
-- ✅ Deleted unused ValueMap-based residual files (angle, distance, collinear, coplanar, fixed-point)
-- ✅ All 279 tests pass (4 skipped)
-
-**Remaining scalar-autograd usage (low priority):**
-- `camera-projection.ts` - projectWorldPointToPixelQuaternion() for autodiff path
-- `quaternion-normalization-residual.ts` - used only by deprecated test
-- `Vec4` import in Viewpoint for quaternion euler conversion (could be replaced)
-- Analytical gradient files still need scalar-autograd for numerical verification tests
+**Plain utilities used instead:**
+- `projectPointToPixel` - plain-number camera projection
+- `projectToPixel` - convenience wrapper for projection
+- `quaternionFromEuler` / `quaternionToEuler` - plain quaternion euler conversion
+- `quaternionRotateVector` - plain quaternion rotation
 
 **Skipped tests (TODO - analytical edge cases):**
 - PnP minimal systems (4 points, 1 camera)
 - 3 Loose Cropped (subsystem dependencies)
 - No Vanishing Lines (initialization issue)
-
-See `docs/scalar-autograd-removal-plan.md` for full plan.
 
 ---
 

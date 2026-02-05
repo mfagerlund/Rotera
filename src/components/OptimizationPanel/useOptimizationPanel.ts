@@ -6,8 +6,7 @@ import { WorldPoint } from '../../entities/world-point'
 import { useOptimization } from '../../hooks/useOptimization'
 import { defaultOptimizationSettings } from '../../services/optimization'
 import { initializeCameraWithPnP } from '../../optimization/pnp'
-import { projectWorldPointToPixelQuaternion } from '../../optimization/camera-projection'
-import { V, Vec3, Vec4 } from 'scalar-autograd'
+import { projectToPixel } from '../../utils/projection'
 import { ProjectDB } from '../../services/project-db'
 import { checkOptimizationReadiness } from '../../optimization/optimization-readiness'
 import { setLogCallback, getSolveQuality, getBestResidualSoFar, getCandidateProgress } from '../../optimization/optimize-project'
@@ -108,45 +107,11 @@ function computeCameraReprojectionError(vp: Viewpoint): number {
 
     try {
       const optimizedXyz = wp.getOptimizationInfo().optimizedXyz!
-      const worldPoint = new Vec3(
-        V.C(optimizedXyz[0]),
-        V.C(optimizedXyz[1]),
-        V.C(optimizedXyz[2])
-      )
-
-      const cameraPosition = new Vec3(
-        V.C(vp.position[0]),
-        V.C(vp.position[1]),
-        V.C(vp.position[2])
-      )
-
-      const cameraRotation = new Vec4(
-        V.C(vp.rotation[0]),
-        V.C(vp.rotation[1]),
-        V.C(vp.rotation[2]),
-        V.C(vp.rotation[3])
-      )
-
-      const projected = projectWorldPointToPixelQuaternion(
-        worldPoint,
-        cameraPosition,
-        cameraRotation,
-        V.C(vp.focalLength ?? 1000),
-        V.C(vp.aspectRatio ?? 1.0),
-        V.C(vp.principalPointX ?? 500),
-        V.C(vp.principalPointY ?? 500),
-        V.C(vp.skewCoefficient ?? 0),
-        V.C(vp.radialDistortion[0] ?? 0),
-        V.C(vp.radialDistortion[1] ?? 0),
-        V.C(vp.radialDistortion[2] ?? 0),
-        V.C(vp.tangentialDistortion[0] ?? 0),
-        V.C(vp.tangentialDistortion[1] ?? 0),
-        vp.isZReflected
-      )
+      const projected = projectToPixel(optimizedXyz, vp)
 
       if (projected) {
-        const dx = projected[0].data - ip.u
-        const dy = projected[1].data - ip.v
+        const dx = projected.u - ip.u
+        const dy = projected.v - ip.v
         totalError += Math.sqrt(dx * dx + dy * dy)
         count++
       }

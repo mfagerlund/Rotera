@@ -5,8 +5,7 @@ import { Viewpoint } from '../../entities/viewpoint';
 import { ImagePoint } from '../../entities/imagePoint';
 import { Line } from '../../entities/line';
 import { optimizeProject } from '../optimize-project';
-import { Vec4, V, Vec3 } from 'scalar-autograd';
-import { projectWorldPointToPixelQuaternion } from '../camera-projection';
+import { projectPointToPixel, PlainCameraIntrinsics } from '../analytical/project-point-plain';
 
 describe('GOLDEN-3: Line Direction Constraints', () => {
   // Skipped: Too slow after inference-branching - 6 axis-aligned lines = 64 branches
@@ -160,30 +159,21 @@ describe('GOLDEN-3: Line Direction Constraints', () => {
 
     console.log('GENERATING SYNTHETIC IMAGE POINTS:\n');
 
+    const intrinsics: PlainCameraIntrinsics = {
+      fx: focalLength,
+      fy: focalLength,
+      cx: principalPoint[0],
+      cy: principalPoint[1],
+      k1: 0, k2: 0, k3: 0,
+      p1: 0, p2: 0,
+    };
+
     function projectPoint(
       worldPos: [number, number, number],
       cameraPos: [number, number, number],
       cameraRot: [number, number, number, number]
     ): [number, number] | null {
-      const worldVec = new Vec3(V.C(worldPos[0]), V.C(worldPos[1]), V.C(worldPos[2]));
-      const camPosVec = new Vec3(V.C(cameraPos[0]), V.C(cameraPos[1]), V.C(cameraPos[2]));
-      const camRotQuat = new Vec4(V.C(cameraRot[0]), V.C(cameraRot[1]), V.C(cameraRot[2]), V.C(cameraRot[3]));
-
-      const result = projectWorldPointToPixelQuaternion(
-        worldVec,
-        camPosVec,
-        camRotQuat,
-        V.C(focalLength),
-        V.C(1.0),
-        V.C(principalPoint[0]),
-        V.C(principalPoint[1]),
-        V.C(0),
-        V.C(0), V.C(0), V.C(0),
-        V.C(0), V.C(0)
-      );
-
-      if (!result) return null;
-      return [result[0].data, result[1].data];
+      return projectPointToPixel(worldPos, cameraPos, cameraRot, intrinsics);
     }
 
     let imagePointCount = 0;

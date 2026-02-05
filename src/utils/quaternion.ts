@@ -1,9 +1,7 @@
 /**
- * Simple quaternion utilities for UI and display operations.
- * These work with regular numbers for non-optimization code.
- *
- * For optimization/autodiff operations that require automatic differentiation,
- * use `src/optimization/Quaternion.ts` instead (works with scalar-autograd Values).
+ * Plain-number quaternion utilities for geometric operations.
+ * All quaternion operations in the codebase use plain numbers.
+ * scalar-autograd has been completely removed from the project.
  */
 
 /**
@@ -75,4 +73,68 @@ export function quaternionMultiply(
     w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2,
     w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2,
   ];
+}
+
+/**
+ * Create quaternion from Euler angles (roll, pitch, yaw) in radians.
+ * Using ZYX (yaw-pitch-roll) convention.
+ *
+ * @param roll - Rotation around X axis (radians)
+ * @param pitch - Rotation around Y axis (radians)
+ * @param yaw - Rotation around Z axis (radians)
+ * @returns Quaternion [w, x, y, z]
+ */
+export function quaternionFromEuler(
+  roll: number,
+  pitch: number,
+  yaw: number,
+): [number, number, number, number] {
+  const cr = Math.cos(roll / 2);
+  const sr = Math.sin(roll / 2);
+  const cp = Math.cos(pitch / 2);
+  const sp = Math.sin(pitch / 2);
+  const cy = Math.cos(yaw / 2);
+  const sy = Math.sin(yaw / 2);
+
+  const w = cr * cp * cy + sr * sp * sy;
+  const x = sr * cp * cy - cr * sp * sy;
+  const y = cr * sp * cy + sr * cp * sy;
+  const z = cr * cp * sy - sr * sp * cy;
+
+  return [w, x, y, z];
+}
+
+/**
+ * Convert quaternion to Euler angles (roll, pitch, yaw) in radians.
+ * Using ZYX (yaw-pitch-roll) convention.
+ *
+ * @param q - Quaternion [w, x, y, z]
+ * @returns [roll, pitch, yaw] in radians
+ */
+export function quaternionToEuler(
+  q: number[] | readonly number[],
+): [number, number, number] {
+  const w = q[0];
+  const x = q[1];
+  const y = q[2];
+  const z = q[3];
+
+  // Roll (X-axis rotation)
+  const sinr_cosp = 2 * (w * x + y * z);
+  const cosr_cosp = 1 - 2 * (x * x + y * y);
+  const roll = Math.atan2(sinr_cosp, cosr_cosp);
+
+  // Pitch (Y-axis rotation)
+  const sinp = 2 * (w * y - z * x);
+  const pitch =
+    Math.abs(sinp) >= 1
+      ? Math.sign(sinp) * (Math.PI / 2) // Use 90 degrees if out of range
+      : Math.asin(sinp);
+
+  // Yaw (Z-axis rotation)
+  const siny_cosp = 2 * (w * z + x * y);
+  const cosy_cosp = 1 - 2 * (y * y + z * z);
+  const yaw = Math.atan2(siny_cosp, cosy_cosp);
+
+  return [roll, pitch, yaw];
 }

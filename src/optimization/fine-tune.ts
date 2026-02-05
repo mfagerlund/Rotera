@@ -13,8 +13,7 @@ import { Line } from '../entities/line'
 import { Constraint } from '../entities/constraints'
 import { log, logDebug, clearOptimizationLogs, setVerbosity } from './optimization-logger'
 import { triangulateRayRay } from './triangulation'
-import { projectWorldPointToPixelQuaternion } from './camera-projection'
-import { V, Vec3, Vec4 } from 'scalar-autograd'
+import { projectPointToPixel, PlainCameraIntrinsics } from './analytical/project-point-plain'
 
 export interface FineTuneOptions {
   tolerance?: number              // Default: 1e-8 (tight)
@@ -202,68 +201,55 @@ export function fineTuneProject(project: Project, options: FineTuneOptions = {})
       if (!wp.optimizedXyz) continue
 
       try {
-        const worldVec = new Vec3(
-          V.C(wp.optimizedXyz[0]),
-          V.C(wp.optimizedXyz[1]),
-          V.C(wp.optimizedXyz[2])
-        )
-        const camPos = new Vec3(
-          V.C(vp.position[0]),
-          V.C(vp.position[1]),
-          V.C(vp.position[2])
-        )
-        const camRot = new Vec4(
-          V.C(vp.rotation[0]),
-          V.C(vp.rotation[1]),
-          V.C(vp.rotation[2]),
-          V.C(vp.rotation[3])
-        )
-
         // UI method: uses stored PP and isZReflected
-        const projUI = projectWorldPointToPixelQuaternion(
-          worldVec,
-          camPos,
-          camRot,
-          V.C(vp.focalLength),
-          V.C(vp.aspectRatio),
-          V.C(vp.principalPointX),
-          V.C(vp.principalPointY),
-          V.C(vp.skewCoefficient),
-          V.C(vp.radialDistortion[0]),
-          V.C(vp.radialDistortion[1]),
-          V.C(vp.radialDistortion[2]),
-          V.C(vp.tangentialDistortion[0]),
-          V.C(vp.tangentialDistortion[1]),
+        const uiIntrinsics: PlainCameraIntrinsics = {
+          fx: vp.focalLength,
+          fy: vp.focalLength * vp.aspectRatio,
+          cx: vp.principalPointX,
+          cy: vp.principalPointY,
+          k1: vp.radialDistortion[0],
+          k2: vp.radialDistortion[1],
+          k3: vp.radialDistortion[2],
+          p1: vp.tangentialDistortion[0],
+          p2: vp.tangentialDistortion[1]
+        }
+        const projUI = projectPointToPixel(
+          wp.optimizedXyz,
+          vp.position,
+          vp.rotation,
+          uiIntrinsics,
           vp.isZReflected
         )
 
-        // Solver method: uses effective PP and isZReflected=false (like calibration)
+        // Solver method: uses effective PP and isZReflected (like calibration)
         const effectivePPX = vp.isPossiblyCropped ? vp.principalPointX : vp.imageWidth / 2
         const effectivePPY = vp.isPossiblyCropped ? vp.principalPointY : vp.imageHeight / 2
-        const projSolver = projectWorldPointToPixelQuaternion(
-          worldVec,
-          camPos,
-          camRot,
-          V.C(vp.focalLength),
-          V.C(vp.aspectRatio),
-          V.C(effectivePPX),
-          V.C(effectivePPY),
-          V.C(vp.skewCoefficient),
-          V.C(vp.radialDistortion[0]),
-          V.C(vp.radialDistortion[1]),
-          V.C(vp.radialDistortion[2]),
-          V.C(vp.tangentialDistortion[0]),
-          V.C(vp.tangentialDistortion[1]),
-          vp.isZReflected  // Use camera's setting (projection now correctly negates X,Y,Z)
+        const solverIntrinsics: PlainCameraIntrinsics = {
+          fx: vp.focalLength,
+          fy: vp.focalLength * vp.aspectRatio,
+          cx: effectivePPX,
+          cy: effectivePPY,
+          k1: vp.radialDistortion[0],
+          k2: vp.radialDistortion[1],
+          k3: vp.radialDistortion[2],
+          p1: vp.tangentialDistortion[0],
+          p2: vp.tangentialDistortion[1]
+        }
+        const projSolver = projectPointToPixel(
+          wp.optimizedXyz,
+          vp.position,
+          vp.rotation,
+          solverIntrinsics,
+          vp.isZReflected
         )
 
         if (projUI && projSolver) {
-          const dxUI = projUI[0].data - imagePoint.u
-          const dyUI = projUI[1].data - imagePoint.v
+          const dxUI = projUI[0] - imagePoint.u
+          const dyUI = projUI[1] - imagePoint.v
           uiTotalSquaredError += dxUI * dxUI + dyUI * dyUI
 
-          const dxSolver = projSolver[0].data - imagePoint.u
-          const dySolver = projSolver[1].data - imagePoint.v
+          const dxSolver = projSolver[0] - imagePoint.u
+          const dySolver = projSolver[1] - imagePoint.v
           solverTotalSquaredError += dxSolver * dxSolver + dySolver * dySolver
 
           ipCount++
