@@ -5,21 +5,19 @@
  * with analytically computed gradients.
  *
  * This system orchestrates entity-driven optimization:
- * - WorldPoints add themselves to the ValueMap (deciding locked vs free axes)
+ * - VariableLayoutBuilder collects entities and builds variable indices
  * - Analytical providers compute residuals and gradients directly
  * - Solver uses sparse conjugate gradient for efficiency
  */
 
-import { Value } from 'scalar-autograd';
 import { transparentLM } from '../autodiff-dense-lm';
-import type { ValueMap, IOptimizableCamera } from '../IOptimizable';
+import type { IOptimizableCamera } from '../IOptimizable';
 import type { WorldPoint } from '../../entities/world-point/WorldPoint';
 import { Line } from '../../entities/line/Line';
 import type { ImagePoint } from '../../entities/imagePoint/ImagePoint';
 import { Constraint } from '../../entities/constraints/base-constraint';
 import type { VanishingLine, VanishingLineAxis } from '../../entities/vanishing-line';
 import { computeVanishingPoint } from '../vanishing-points';
-import { rotateDirectionByQuaternion } from './utils';
 import type { SolverResult, SolverOptions } from './types';
 
 // Analytical providers
@@ -185,19 +183,10 @@ export class ConstraintSystem {
   }
 
   /**
-   * Solve using autodiff backend (scalar-autograd).
+   * Solve using analytical gradients (scalar-autograd removed in Phase 5).
    */
   private solveWithAutodiff(): SolverResult {
-    // 1. Build ValueMap by asking each entity to add itself
-    const variables: Value[] = [];
-    const valueMap: ValueMap = {
-      points: new Map(),
-      cameras: new Map(),
-      useIsZReflected: this.useIsZReflected,
-    };
-
-    // Capture initial positions for regularization BEFORE adding to ValueMap
-    // (since addToValueMap may create new Value objects)
+    // Capture initial positions for regularization BEFORE building layout
     this.initialPositions.clear();
     if (this.regularizationWeight > 0) {
       for (const point of this.points) {
@@ -207,89 +196,60 @@ export class ConstraintSystem {
       }
     }
 
-    // Add points
-    let pointVarCount = 0;
-    for (const point of this.points) {
-      const pointVariables = point.addToValueMap(valueMap);
-      pointVarCount += pointVariables.length;
-      variables.push(...pointVariables);
-    }
-
-    // Add cameras (if they implement IOptimizableCamera)
-    let cameraVarCount = 0;
-    for (const camera of this.cameras) {
-      if ('addToValueMap' in camera && typeof camera.addToValueMap === 'function') {
-        const optimizeIntrinsics =
-          typeof this.optimizeCameraIntrinsics === 'function'
-            ? this.optimizeCameraIntrinsics(camera)
-            : this.optimizeCameraIntrinsics;
-        const cameraVariables = camera.addToValueMap(valueMap, {
-          optimizePose: !camera.isPoseLocked,
-          optimizeIntrinsics,
-          optimizeDistortion: false,
-        });
-        cameraVarCount += cameraVariables.length;
-        variables.push(...cameraVariables);
-      }
-    }
-
-    if (this.verbose) {
-      console.log(`[ConstraintSystem] Variables: ${variables.length} total (${pointVarCount} from ${this.points.size} points, ${cameraVarCount} from ${this.cameras.size} cameras)`);
-    }
-
-    // Log variable counts for debugging
-    if (this.verbose) {
-      console.log(`[ConstraintSystem] Variables: ${variables.length} total (${pointVarCount} from ${this.points.size} points, ${cameraVarCount} from ${this.cameras.size} cameras)`);
-    }
-
-    // If no variables to optimize, check if constraints are satisfied using analytical providers
-    if (variables.length === 0) {
-      // Build analytical providers to compute residuals
-      const { providers, layout } = this.buildAnalyticalProviders();
-      const varsArray = new Float64Array(0);  // No variables
-
-      // Compute residual magnitude from analytical providers
-      let residualSumSquared = 0;
-      for (const provider of providers) {
-        const r = provider.computeResidual(varsArray);
-        residualSumSquared += r * r;
-      }
-      const residualMagnitude = Math.sqrt(residualSumSquared);
-
-      // With no free variables, we consider the system "converged" if the residual is reasonable.
-      // This happens when all world points have inferred coordinates and camera is pose-locked.
-      // The residual is the sum of all constraint residuals (reprojection, coplanarity, direction, etc.)
-      // A residual under 250 is acceptable for a fully-constrained system.
-      const REASONABLE_RESIDUAL_THRESHOLD = 250;
-      const isReasonable = residualMagnitude < REASONABLE_RESIDUAL_THRESHOLD;
-
-      // Still need to apply optimization results to set optimizedXyz for fully-locked points
-      for (const point of this.points) {
-        point.applyOptimizationResultFromValueMap(valueMap);
-      }
-
-      return {
-        converged: isReasonable,
-        iterations: 0,
-        residual: residualMagnitude,
-        error: isReasonable ? null : 'Over-constrained (no free variables)',
-      };
-    }
-
     try {
+      // Build analytical providers and layout (determines variable count)
+      const { providers, layout } = this.buildAnalyticalProviders();
+      const numVariables = layout.numVariables;
+
+      if (this.verbose) {
+        console.log(`[ConstraintSystem] Variables: ${numVariables} total from layout`);
+      }
+
+      // If no variables to optimize, check if constraints are satisfied using analytical providers
+      if (numVariables === 0) {
+        const varsArray = new Float64Array(0);  // No variables
+
+        // Compute residual magnitude from analytical providers
+        let residualSumSquared = 0;
+        for (const provider of providers) {
+          const r = provider.computeResidual(varsArray);
+          residualSumSquared += r * r;
+        }
+        const residualMagnitude = Math.sqrt(residualSumSquared);
+
+        // With no free variables, we consider the system "converged" if the residual is reasonable.
+        // This happens when all world points have inferred coordinates and camera is pose-locked.
+        // The residual is the sum of all constraint residuals (reprojection, coplanarity, direction, etc.)
+        // A residual under 250 is acceptable for a fully-constrained system.
+        const REASONABLE_RESIDUAL_THRESHOLD = 250;
+        const isReasonable = residualMagnitude < REASONABLE_RESIDUAL_THRESHOLD;
+
+        // Apply optimization results to set optimizedXyz for fully-locked points
+        // Since all points are fully constrained, use their effective (locked/inferred) values directly
+        for (const point of this.points) {
+          const effective = point.getEffectiveXyz();
+          if (effective[0] !== null && effective[1] !== null && effective[2] !== null) {
+            point.applyOptimizationResult({
+              xyz: [effective[0], effective[1], effective[2]] as [number, number, number]
+            });
+          }
+        }
+
+        return {
+          converged: isReasonable,
+          iterations: 0,
+          residual: residualMagnitude,
+          error: isReasonable ? null : 'Over-constrained (no free variables)',
+        };
+      }
+
       // Solve using Levenberg-Marquardt with analytical gradients and sparse CG
       // Use gradientTolerance for early stopping when progress stalls.
       // This helps with weakly-constrained points (e.g., single-view coplanar)
       // where the cost decreases very slowly but the solution is already good.
-      let analyticalProviders: AnalyticalResidualProvider[] | undefined;
 
-      // Build analytical providers and collect quaternion indices for renormalization
+      // Collect quaternion indices from all cameras for renormalization
       const quaternionIndices: Array<readonly [number, number, number, number]> = [];
-      const { providers, layout } = this.buildAnalyticalProviders();
-      analyticalProviders = providers;
-      console.log(`[ConstraintSystem] Built ${providers.length} analytical providers, ${layout.numVariables} variables`);
-
-      // Collect quaternion indices from all cameras
       for (const camera of this.cameras) {
         if (!camera.isPoseLocked) {
           const quatIndices = layout.getCameraQuatIndices(camera.name);
@@ -297,61 +257,11 @@ export class ConstraintSystem {
         }
       }
 
-      // Variable count mismatch is a CRITICAL BUG
-      if (layout.numVariables !== variables.length) {
-        const pointCount = this.points.size;
-        const cameraCount = this.cameras.size;
-        const imagePointCount = this.imagePoints.size;
-        const constraintCount = this.constraints.size;
-        const lineCount = this.lines.size;
-
-        const debugInfo = [
-          ``,
-          `=== ANALYTICAL VARIABLE COUNT MISMATCH ===`,
-          `Analytical layout: ${layout.numVariables} variables`,
-          `Autodiff system: ${variables.length} variables`,
-          `Difference: ${Math.abs(layout.numVariables - variables.length)} variables`,
-          ``,
-          `=== SYSTEM CONTENTS ===`,
-          `Points: ${pointCount}`,
-          `Cameras: ${cameraCount}`,
-          `Image Points: ${imagePointCount}`,
-          `Lines: ${lineCount}`,
-          `Constraints: ${constraintCount}`,
-          ``,
-          `=== CAMERA DETAILS ===`,
-          ...Array.from(this.cameras).map(c => {
-            const posLocked = c.isPoseLocked;
-            const intrinsicsOptimized = typeof this.optimizeCameraIntrinsics === 'function'
-              ? this.optimizeCameraIntrinsics(c)
-              : this.optimizeCameraIntrinsics;
-            return `  ${c.name}: poseLocked=${posLocked}, optimizeIntrinsics=${intrinsicsOptimized}`;
-          }),
-          ``,
-          `=== POINT DETAILS ===`,
-          ...Array.from(this.points).map(p => {
-            const eff = p.getEffectiveXyz();
-            const lockedAxes = [
-              eff[0] !== null ? 'X' : '',
-              eff[1] !== null ? 'Y' : '',
-              eff[2] !== null ? 'Z' : ''
-            ].filter(Boolean).join('') || 'none';
-            return `  ${p.name}: locked=[${lockedAxes}]`;
-          }),
-          ``,
-          `This is a BUG in the analytical provider system.`,
-          `The variable layouts MUST match for analytical gradients to work.`,
-          `==========================================`,
-        ].join('\n');
-
-        throw new Error(
-          `ANALYTICAL VARIABLE COUNT MISMATCH: ` +
-          `analytical=${layout.numVariables}, autodiff=${variables.length}` +
-          debugInfo
-        );
+      if (this.verbose) {
+        console.log(`[ConstraintSystem] Built ${providers.length} analytical providers, ${numVariables} variables`);
       }
 
-      const result = transparentLM(variables, null, {
+      const result = transparentLM(layout.initialValues, null, {
         costTolerance: this.tolerance,
         gradientTolerance: this.tolerance * 10, // Stop when gradient is small
         maxIterations: this.maxIterations,
@@ -359,7 +269,7 @@ export class ConstraintSystem {
         adaptiveDamping: true,
         verbose: this.verbose,
         useSparseLinearSolve: true,  // Always use sparse CG
-        analyticalProviders,
+        analyticalProviders: providers,
         useAnalyticalSolve: true,    // Always use analytical gradients
         // Pass quaternion indices for explicit renormalization after each step.
         // This prevents numerical drift from causing quaternion magnitude to diverge
@@ -403,7 +313,7 @@ export class ConstraintSystem {
 
       // Distribute residuals from analytical providers to entities
       // This replaces the old computeResiduals calls on lines, constraints, and image points
-      this.distributeResiduals(analyticalProviders, finalVariables);
+      this.distributeResiduals(providers, finalVariables);
 
       // Use final cost from analytical solver (already computed as sum of squared residuals)
       const residualMagnitude = Math.sqrt(result.finalCost);

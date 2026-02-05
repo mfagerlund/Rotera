@@ -1,15 +1,14 @@
 /**
- * ConstraintSystem - 3D constraint solver using ScalarAutograd
+ * ConstraintSystem - 3D constraint solver using analytical gradients
  *
- * Inspired by ScalarAutograd's SketchSolver but adapted for 3D photogrammetry.
- * Solves geometric constraints by minimizing residuals using Levenberg-Marquardt.
+ * Solves geometric constraints by minimizing residuals using Levenberg-Marquardt
+ * with analytically computed Jacobians.
  *
  * This system orchestrates entity-driven optimization:
- * - WorldPoints add themselves to the ValueMap (deciding locked vs free axes)
- * - Lines compute their own intrinsic residuals (direction, length)
- * - Constraints compute their own residuals
+ * - VariableLayoutBuilder collects entities and builds variable indices
+ * - Analytical providers compute residuals and gradients
+ * - Sparse CG solver handles the normal equations
  */
 
 export { ConstraintSystem } from './ConstraintSystem';
 export type { SolverResult, SolverOptions } from './types';
-export { rotateDirectionByQuaternion } from './utils';

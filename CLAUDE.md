@@ -2,7 +2,7 @@
 
 ## SCALAR-AUTOGRAD REMOVAL IN PROGRESS
 
-**Status:** Phase 4 complete! Result application now bypasses ValueMap in main solve path.
+**Status:** Phase 5 in progress. ConstraintSystem no longer uses ValueMap in any path.
 
 **Phase 1-2 (COMPLETE):**
 - ✅ Removed solver mode selection (Dense/Sparse/Analytical toggle)
@@ -27,11 +27,25 @@
 - ✅ Updated ConstraintSystem main solve path to use new methods instead of ValueMap
 - ✅ All 279 tests pass (4 skipped - edge cases need fixing)
 
-**Still uses scalar-autograd (Phase 5+ work):**
-- Entity `addToValueMap()` methods (still builds ValueMap for zero-variable path)
-- Entity `applyOptimizationResultFromValueMap()` methods (used in zero-variable path only)
-- Entity `computeResiduals()` methods (deprecated, still exist but not called from main flow)
-- `ValueMap` type definition in IOptimizable.ts
+**Phase 5 (IN PROGRESS):**
+- ✅ Removed ValueMap from ConstraintSystem entirely (both main and zero-variable paths)
+- ✅ Changed `transparentLM` to accept `Float64Array` directly instead of `{ data: number }[]`
+- ✅ Zero-variable path now uses `point.getEffectiveXyz()` directly
+- ✅ Deleted unused `rotateDirectionByQuaternion` utility
+- ✅ All 279 tests pass (4 skipped)
+
+**Still uses scalar-autograd (TODO - cleanup):**
+- Entity `addToValueMap()` methods (kept for manual test in golden-camera-intrinsics.test.ts)
+- Entity `applyOptimizationResultFromValueMap()` methods (kept for backward compatibility)
+- Entity `computeResiduals()` methods (deprecated, not called from main flow)
+- `ValueMap` type definition in IOptimizable.ts (needed for entity methods above)
+- `projectWorldPointToPixelQuaternion` in camera-projection.ts (used by deprecated entity methods)
+
+**Next cleanup steps:**
+- Update golden-camera-intrinsics.test.ts to use ConstraintSystem instead of manual ValueMap
+- Delete deprecated entity methods once test is updated
+- Remove ValueMap type and IValueMapContributor interface
+- Remove scalar-autograd imports from entities
 
 **Skipped tests (TODO - analytical edge cases):**
 - PnP minimal systems (4 points, 1 camera)

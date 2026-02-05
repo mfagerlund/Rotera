@@ -186,7 +186,7 @@ function solveSparseFromNormalEquations(
  * @param options - Solver options including analyticalProviders (required)
  */
 export function transparentLM(
-  initialValues: { data: number }[],
+  initialValues: Float64Array,
   _residualFn: unknown,
   options: TransparentLMOptions
 ): TransparentLMResult {
@@ -217,8 +217,8 @@ export function transparentLM(
   const startTime = performance.now();
   const maxInnerIterations = 10;
 
-  // Initialize variable values from input
-  const variables = new Float64Array(initialValues.map(v => v.data));
+  // Copy initial values to working array
+  const variables = new Float64Array(initialValues);
 
   // Validate analytical providers have valid variable indices
   for (let i = 0; i < analyticalProviders.length; i++) {
@@ -382,11 +382,6 @@ export function transparentLM(
   const finalCost = finalNormalEqs.cost;
   residuals = Array.from(finalNormalEqs.residuals);
 
-  // Update input values with final results
-  for (let j = 0; j < numVariables; j++) {
-    initialValues[j].data = variables[j];
-  }
-
   const computationTime = performance.now() - startTime;
 
   // Log summary of suppressed CG warnings
@@ -413,21 +408,3 @@ export function transparentLM(
   };
 }
 
-/**
- * Drop-in replacement for nonlinearLeastSquares that returns
- * standard NonlinearLeastSquaresResult.
- */
-export function nonlinearLeastSquaresTransparent(
-  initialValues: { data: number }[],
-  residualFn: unknown,
-  options: TransparentLMOptions
-): NonlinearLeastSquaresResult {
-  const result = transparentLM(initialValues, residualFn, options);
-  return {
-    success: result.success,
-    iterations: result.iterations,
-    finalCost: result.finalCost,
-    convergenceReason: result.convergenceReason,
-    computationTime: result.computationTime,
-  };
-}

@@ -12,11 +12,6 @@ import { Viewpoint } from '../../entities/viewpoint/Viewpoint';
 import { ImagePoint } from '../../entities/imagePoint/ImagePoint';
 import { DistanceConstraint } from '../../entities/constraints/distance-constraint';
 
-/** Simple wrapper to create variable objects compatible with the solver */
-function createVariables(values: Float64Array): { data: number }[] {
-  return Array.from(values).map(v => ({ data: v }));
-}
-
 describe('Analytical Solve', () => {
   describe('basic optimization', () => {
     it('solves distance constraint with analytical path', () => {
@@ -35,9 +30,8 @@ describe('Analytical Solve', () => {
       system.addConstraint(constraint);
 
       const { providers, layout } = system.buildAnalyticalProviders();
-      const variables = createVariables(layout.initialValues);
 
-      const result = transparentLM(variables, null, {
+      const result = transparentLM(layout.initialValues, null, {
         analyticalProviders: providers,
         maxIterations: 100,
         verbose: false,
@@ -50,9 +44,9 @@ describe('Analytical Solve', () => {
       expect(result.finalCost).toBeLessThan(1e-8);
 
       // Verify the distance is now ~2.0
-      const finalX = variables[0].data;
-      const finalY = variables[1].data;
-      const finalZ = variables[2].data;
+      const finalX = result.variableValues[0];
+      const finalY = result.variableValues[1];
+      const finalZ = result.variableValues[2];
       const distance = Math.sqrt(finalX * finalX + finalY * finalY + finalZ * finalZ);
       expect(Math.abs(distance - 2.0)).toBeLessThan(0.01);
     });
@@ -73,9 +67,8 @@ describe('Analytical Solve', () => {
       system.addLine(line);
 
       const { providers, layout } = system.buildAnalyticalProviders();
-      const variables = createVariables(layout.initialValues);
 
-      const result = transparentLM(variables, null, {
+      const result = transparentLM(layout.initialValues, null, {
         analyticalProviders: providers,
         maxIterations: 100,
       });
@@ -84,9 +77,9 @@ describe('Analytical Solve', () => {
       expect(result.finalCost).toBeLessThan(1e-6);
 
       // Verify point B is at (2, 0, 0)
-      expect(Math.abs(variables[0].data - 2.0)).toBeLessThan(0.01);
-      expect(Math.abs(variables[1].data)).toBeLessThan(0.01);
-      expect(Math.abs(variables[2].data)).toBeLessThan(0.01);
+      expect(Math.abs(result.variableValues[0] - 2.0)).toBeLessThan(0.01);
+      expect(Math.abs(result.variableValues[1])).toBeLessThan(0.01);
+      expect(Math.abs(result.variableValues[2])).toBeLessThan(0.01);
     });
 
     it('solves multiple distance constraints with analytical path', () => {
@@ -113,9 +106,8 @@ describe('Analytical Solve', () => {
       system.addConstraint(constraint2);
 
       const { providers, layout } = system.buildAnalyticalProviders();
-      const variables = createVariables(layout.initialValues);
 
-      const result = transparentLM(variables, null, {
+      const result = transparentLM(layout.initialValues, null, {
         analyticalProviders: providers,
         maxIterations: 100,
       });
@@ -124,12 +116,12 @@ describe('Analytical Solve', () => {
       expect(result.finalCost).toBeLessThan(0.01);
 
       // Check distances are approximately correct
-      const bx = variables[0].data,
-        by = variables[1].data,
-        bz = variables[2].data;
-      const cx = variables[3].data,
-        cy = variables[4].data,
-        cz = variables[5].data;
+      const bx = result.variableValues[0],
+        by = result.variableValues[1],
+        bz = result.variableValues[2];
+      const cx = result.variableValues[3],
+        cy = result.variableValues[4],
+        cz = result.variableValues[5];
 
       const distAB = Math.sqrt(bx * bx + by * by + bz * bz);
       const distBC = Math.sqrt((cx - bx) ** 2 + (cy - by) ** 2 + (cz - bz) ** 2);
@@ -163,9 +155,8 @@ describe('Analytical Solve', () => {
       system.addImagePoint(imagePoint);
 
       const { providers, layout } = system.buildAnalyticalProviders();
-      const variables = createVariables(layout.initialValues);
 
-      const result = transparentLM(variables, null, {
+      const result = transparentLM(layout.initialValues, null, {
         analyticalProviders: providers,
         maxIterations: 100,
       });
@@ -176,17 +167,15 @@ describe('Analytical Solve', () => {
 
       // The point should remain on the ray through (0,0,5+) approximately
       // X and Y should be close to 0 (projects to center)
-      expect(Math.abs(variables[0].data)).toBeLessThan(0.1);
-      expect(Math.abs(variables[1].data)).toBeLessThan(0.1);
+      expect(Math.abs(result.variableValues[0])).toBeLessThan(0.1);
+      expect(Math.abs(result.variableValues[1])).toBeLessThan(0.1);
     });
   });
 
   describe('error handling', () => {
     it('throws when no providers given', () => {
-      const variables = createVariables(new Float64Array([1, 2]));
-
       expect(() => {
-        transparentLM(variables, null, {
+        transparentLM(new Float64Array([1, 2]), null, {
           analyticalProviders: [],
         });
       }).toThrow('analyticalProviders is required and must not be empty');
@@ -209,9 +198,8 @@ describe('Analytical Solve', () => {
       system.addConstraint(constraint);
 
       const { providers, layout } = system.buildAnalyticalProviders();
-      const variables = createVariables(layout.initialValues);
 
-      const result = transparentLM(variables, null, {
+      const result = transparentLM(layout.initialValues, null, {
         analyticalProviders: providers,
         useSparseLinearSolve: true, // Use sparse CG
         maxIterations: 100,
