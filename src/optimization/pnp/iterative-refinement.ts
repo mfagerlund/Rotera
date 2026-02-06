@@ -82,6 +82,15 @@ export function initializeCameraWithPnP(
     return false;
   };
 
+  // Relaxed filter: visible in at least one initialized camera
+  const isVisibleInInitializedCamera = (wp: WorldPoint): boolean => {
+    if (!initializedCameraNames || initializedCameraNames.size === 0) return true;
+    for (const ip of wp.imagePoints) {
+      if (initializedCameraNames.has(ip.viewpoint.name)) return true;
+    }
+    return false;
+  };
+
   // For centroid/geometry calculation:
   // - Default mode (useTriangulatedPoints=false): Only use constrained points (locked or inferred coordinates)
   //   Unconstrained points may have garbage optimizedXyz from previous failed optimizations.
@@ -105,6 +114,19 @@ export function initializeCameraWithPnP(
 
     if (canUsePoint && wp.optimizedXyz) {
       constrainedPoints.push(wp.optimizedXyz);
+    }
+  }
+
+  // Fallback: if strict filter gives < 3 points, try relaxed filter
+  // This handles cases like Crossing where only 1 point is fully constrained
+  // but other points are visible in the initialized camera and have optimizedXyz.
+  if (constrainedPoints.length < 3 && useTriangulatedPoints && initializedCameraNames) {
+    constrainedPoints.length = 0;
+    for (const ip of vpConcrete.imagePoints) {
+      const wp = ip.worldPoint as WorldPoint;
+      if (wp.optimizedXyz && isVisibleInInitializedCamera(wp)) {
+        constrainedPoints.push(wp.optimizedXyz);
+      }
     }
   }
 

@@ -277,6 +277,21 @@ export function runLatePnPInitialization(
   // Build set of initialized camera names for triangulation check
   const initializedCameraSet = new Set(camerasInitialized);
 
+  // Save world point positions before the late PnP loop when multiple cameras need PnP.
+  // The ConstraintSystem solve inside PnP writes back to all entities (including world points),
+  // which would corrupt positions for subsequent late PnP calls.
+  const needSaveRestore = stillUninitializedCameras.length > 1;
+  let savedPositions: Map<WorldPoint, [number, number, number]> | null = null;
+  if (needSaveRestore) {
+    savedPositions = new Map();
+    for (const wp of worldPointSet) {
+      const wpConcrete = wp as WorldPoint;
+      if (wpConcrete.optimizedXyz) {
+        savedPositions.set(wpConcrete, [...wpConcrete.optimizedXyz] as [number, number, number]);
+      }
+    }
+  }
+
   for (const vp of stillUninitializedCameras) {
     const vpConcrete = vp as Viewpoint;
     const hasImagePoints = vpConcrete.imagePoints.size > 0;
@@ -291,6 +306,15 @@ export function runLatePnPInitialization(
         useTriangulatedPoints: true,
         initializedCameraNames: initializedCameraSet,
       });
+
+      // Restore world point positions after PnP (camera pose is kept).
+      // Only needed when multiple cameras need PnP to prevent corruption between calls.
+      if (savedPositions) {
+        for (const [wp, pos] of savedPositions) {
+          wp.optimizedXyz = pos;
+        }
+      }
+
       if (pnpResult.success && pnpResult.reliable) {
         camerasInitialized.push(vpConcrete.name);
         initializedCameraSet.add(vpConcrete.name);  // Update set for subsequent PnP calls

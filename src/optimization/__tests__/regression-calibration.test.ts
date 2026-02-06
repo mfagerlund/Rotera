@@ -87,7 +87,8 @@ describe('Regression - Calibration', () => {
     await runTest('Balcony House X,Y and Z Lines.json', 2)
   })
 
-  it.concurrent('Balcony House Z Line.json', async () => {
+  // Non-concurrent: underconstrained geometry is sensitive to seeded RNG interleaving
+  it('Balcony House Z Line.json', async () => {
     await runTest('Balcony House Z Line.json', 10)  // Relaxed - underconstrained geometry
   })
 
@@ -113,6 +114,11 @@ describe('Regression - Calibration', () => {
 
   it.concurrent('2 Loose.json', async () => {
     await runTest('2 Loose.json', 2)
+  })
+
+  // Non-concurrent: multi-camera late PnP is sensitive to seeded RNG interleaving
+  it('Crossing.rotera', async () => {
+    await runTest('Crossing.rotera', 2)
   })
 
   // ============================================

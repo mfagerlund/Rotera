@@ -1,0 +1,1083 @@
+{
+  "formatVersion": 1,
+  "name": "Crossing",
+  "worldPoints": [
+    {
+      "id": "WorldPoint_0",
+      "name": "WP1",
+      "lockedXyz": [
+        null,
+        null,
+        null
+      ],
+      "inferredXyz": [
+        0,
+        null,
+        0
+      ],
+      "optimizedXyz": [
+        0,
+        -0.0024220204,
+        0
+      ],
+      "color": "#FF6B6B"
+    },
+    {
+      "id": "WorldPoint_1",
+      "name": "WP2",
+      "lockedXyz": [
+        0,
+        0,
+        0
+      ],
+      "inferredXyz": [
+        0,
+        0,
+        0
+      ],
+      "optimizedXyz": [
+        0,
+        0,
+        0
+      ],
+      "color": "#4ECDC4"
+    },
+    {
+      "id": "WorldPoint_2",
+      "name": "WP3",
+      "lockedXyz": [
+        null,
+        null,
+        null
+      ],
+      "inferredXyz": [
+        0,
+        0,
+        null
+      ],
+      "optimizedXyz": [
+        0,
+        0,
+        -0.026771625
+      ],
+      "color": "#45B7D1"
+    },
+    {
+      "id": "WorldPoint_3",
+      "name": "WP4",
+      "lockedXyz": [
+        null,
+        null,
+        null
+      ],
+      "inferredXyz": [
+        0,
+        null,
+        null
+      ],
+      "optimizedXyz": [
+        0,
+        0.32331089,
+        -1.5251008
+      ],
+      "color": "#FFA07A"
+    },
+    {
+      "id": "WorldPoint_4",
+      "name": "WP5",
+      "lockedXyz": [
+        null,
+        null,
+        null
+      ],
+      "inferredXyz": [
+        null,
+        null,
+        0
+      ],
+      "optimizedXyz": [
+        -0.037809159,
+        0.0002648171,
+        0
+      ],
+      "color": "#98D8C8"
+    },
+    {
+      "id": "WorldPoint_5",
+      "name": "WP6",
+      "lockedXyz": [
+        null,
+        null,
+        null
+      ],
+      "inferredXyz": [
+        null,
+        null,
+        null
+      ],
+      "optimizedXyz": [
+        0.0021571953,
+        0.034322821,
+        -0.12466352
+      ],
+      "color": "#F7DC6F"
+    },
+    {
+      "id": "WorldPoint_6",
+      "name": "WP7",
+      "lockedXyz": [
+        null,
+        2.7,
+        null
+      ],
+      "inferredXyz": [
+        null,
+        2.7,
+        null
+      ],
+      "optimizedXyz": [
+        4.3228088,
+        2.7,
+        -9.0022512
+      ],
+      "color": "#BB8FCE"
+    },
+    {
+      "id": "WorldPoint_7",
+      "name": "WP8",
+      "lockedXyz": [
+        null,
+        null,
+        null
+      ],
+      "inferredXyz": [
+        null,
+        0,
+        null
+      ],
+      "optimizedXyz": [
+        3.9266409,
+        0,
+        -9.1167627
+      ],
+      "color": "#85C1E2"
+    },
+    {
+      "id": "WorldPoint_8",
+      "name": "WP9",
+      "lockedXyz": [
+        null,
+        null,
+        null
+      ],
+      "inferredXyz": [
+        null,
+        null,
+        null
+      ],
+      "optimizedXyz": [
+        0.87012919,
+        0.78871215,
+        -3.3702382
+      ],
+      "color": "#F8B739"
+    },
+    {
+      "id": "WorldPoint_9",
+      "name": "WP10",
+      "lockedXyz": [
+        null,
+        null,
+        null
+      ],
+      "inferredXyz": [
+        null,
+        null,
+        null
+      ],
+      "optimizedXyz": [
+        2.1048436,
+        0.60526235,
+        -3.5827067
+      ],
+      "color": "#52B788"
+    },
+    {
+      "id": "WorldPoint_10",
+      "name": "WP11",
+      "lockedXyz": [
+        null,
+        null,
+        null
+      ],
+      "inferredXyz": [
+        0,
+        null,
+        0
+      ],
+      "optimizedXyz": [
+        0,
+        -0.019288639,
+        0
+      ],
+      "color": "#E63946"
+    },
+    {
+      "id": "WorldPoint_11",
+      "name": "WP12",
+      "lockedXyz": [
+        null,
+        null,
+        null
+      ],
+      "inferredXyz": [
+        0,
+        null,
+        null
+      ],
+      "optimizedXyz": [
+        0,
+        0.17367714,
+        -1.4414553
+      ],
+      "color": "#A8DADC"
+    },
+    {
+      "id": "WorldPoint_12",
+      "name": "WP13",
+      "lockedXyz": [
+        null,
+        null,
+        null
+      ],
+      "inferredXyz": [
+        null,
+        null,
+        0
+      ],
+      "optimizedXyz": [
+        -0.017491877,
+        -0.02273953,
+        0
+      ],
+      "color": "#457B9D"
+    },
+    {
+      "id": "WorldPoint_13",
+      "name": "WP14",
+      "lockedXyz": [
+        null,
+        null,
+        null
+      ],
+      "inferredXyz": [
+        null,
+        null,
+        0
+      ],
+      "optimizedXyz": [
+        -0.018407285,
+        -0.022314797,
+        0
+      ],
+      "color": "#F1FAEE"
+    },
+    {
+      "id": "WorldPoint_14",
+      "name": "WP15",
+      "lockedXyz": [
+        null,
+        null,
+        null
+      ],
+      "inferredXyz": [
+        null,
+        null,
+        null
+      ],
+      "optimizedXyz": [
+        0.32909467,
+        11.329244,
+        -118.61624
+      ],
+      "color": "#E76F51"
+    },
+    {
+      "id": "WorldPoint_15",
+      "name": "WP16",
+      "lockedXyz": [
+        null,
+        null,
+        null
+      ],
+      "inferredXyz": [
+        null,
+        null,
+        null
+      ],
+      "optimizedXyz": [
+        0.13131349,
+        15.867139,
+        -118.62973
+      ],
+      "color": "#2A9D8F"
+    }
+  ],
+  "viewpoints": [
+    {
+      "id": "ba0389ef-c3cc-4130-9717-e02d5fb81fe0",
+      "name": "farnsworth-5",
+      "filename": "farnsworth-5.jpg",
+      "url": "",
+      "imageWidth": 960,
+      "imageHeight": 1280,
+      "focalLength": 1336.3861,
+      "principalPointX": 553.75212,
+      "principalPointY": 531.7045,
+      "skewCoefficient": 0,
+      "aspectRatio": 1,
+      "useSimpleIntrinsics": true,
+      "isPossiblyCropped": true,
+      "radialDistortion": [
+        0,
+        0,
+        0
+      ],
+      "tangentialDistortion": [
+        0,
+        0
+      ],
+      "position": [
+        -0.005939396,
+        -0.0071519674,
+        0.10127045
+      ],
+      "rotation": [
+        0.10102692,
+        -0.09239747,
+        -0.98656276,
+        -0.089163884
+      ],
+      "calibrationAccuracy": 0,
+      "isProcessed": false,
+      "opacity": 1,
+      "color": "#ffff00",
+      "isPoseLocked": false
+    },
+    {
+      "id": "e60c72f9-ced1-485c-9bf1-3e020f4490a7",
+      "name": "farnsworth-4",
+      "filename": "farnsworth-4.jpg",
+      "url": "",
+      "imageWidth": 1600,
+      "imageHeight": 1066,
+      "focalLength": 1144.4522,
+      "principalPointX": 198.88633,
+      "principalPointY": 515.05707,
+      "skewCoefficient": 0,
+      "aspectRatio": 1,
+      "useSimpleIntrinsics": true,
+      "isPossiblyCropped": true,
+      "radialDistortion": [
+        0,
+        0,
+        0
+      ],
+      "tangentialDistortion": [
+        0,
+        0
+      ],
+      "position": [
+        0.0015030407,
+        -0.020413269,
+        0.14141907
+      ],
+      "rotation": [
+        -0.38744442,
+        0.095409172,
+        0.91637984,
+        0.032123231
+      ],
+      "calibrationAccuracy": 0,
+      "isProcessed": false,
+      "opacity": 1,
+      "color": "#ffff00",
+      "isPoseLocked": false
+    }
+  ],
+  "lines": [
+    {
+      "id": "Line_16",
+      "name": "",
+      "pointAId": "WorldPoint_0",
+      "pointBId": "WorldPoint_1",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "y",
+      "tolerance": 0.001,
+      "lastResiduals": [
+        0,
+        0,
+        0,
+        0,
+        -0.0091574554
+      ],
+      "coincidentPointIds": [
+        "WorldPoint_4"
+      ]
+    },
+    {
+      "id": "Line_17",
+      "name": "",
+      "pointAId": "WorldPoint_1",
+      "pointBId": "WorldPoint_2",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "z",
+      "tolerance": 0.001,
+      "lastResiduals": [
+        0,
+        0,
+        0,
+        10.512256,
+        0,
+        -30.330228,
+        0.88103991,
+        0
+      ],
+      "coincidentPointIds": [
+        "WorldPoint_7",
+        "WorldPoint_14"
+      ]
+    },
+    {
+      "id": "Line_18",
+      "name": "",
+      "pointAId": "WorldPoint_2",
+      "pointBId": "WorldPoint_3",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "y",
+      "tolerance": 0.001,
+      "lastResiduals": [
+        0,
+        -149.83292,
+        -1.9777369,
+        0.32321885,
+        0.069744471
+      ],
+      "coincidentPointIds": [
+        "WorldPoint_5"
+      ]
+    },
+    {
+      "id": "Line_19",
+      "name": "",
+      "pointAId": "WorldPoint_3",
+      "pointBId": "WorldPoint_0",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "z",
+      "tolerance": 0.001,
+      "lastResiduals": [
+        0,
+        -32.573291
+      ]
+    },
+    {
+      "id": "Line_20",
+      "name": "",
+      "pointAId": "WorldPoint_4",
+      "pointBId": "WorldPoint_5",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "z",
+      "tolerance": 0.001,
+      "lastResiduals": [
+        3.9966354,
+        3.4058004,
+        -2.9959774,
+        18.382281,
+        4.0615372,
+        1.6492968,
+        -2.1509347,
+        -0.058879783
+      ],
+      "coincidentPointIds": [
+        "WorldPoint_6",
+        "WorldPoint_8"
+      ]
+    },
+    {
+      "id": "Line_21",
+      "name": "",
+      "pointAId": "WorldPoint_6",
+      "pointBId": "WorldPoint_7",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "y",
+      "targetLength": 2.7,
+      "tolerance": 0.001,
+      "lastResiduals": [
+        -39.616795,
+        -11.451146,
+        3.1311391
+      ]
+    },
+    {
+      "id": "Line_22",
+      "name": "",
+      "pointAId": "WorldPoint_8",
+      "pointBId": "WorldPoint_9",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "x",
+      "tolerance": 0.001,
+      "lastResiduals": [
+        -18.34498,
+        -21.246853
+      ]
+    },
+    {
+      "id": "Line_23",
+      "name": "",
+      "pointAId": "WorldPoint_10",
+      "pointBId": "WorldPoint_11",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "z",
+      "tolerance": 0.001,
+      "lastResiduals": [
+        0,
+        19.296578,
+        -0.80969346,
+        18.928253,
+        2.533901
+      ],
+      "coincidentPointIds": [
+        "WorldPoint_15"
+      ]
+    },
+    {
+      "id": "Line_24",
+      "name": "",
+      "pointAId": "WorldPoint_1",
+      "pointBId": "WorldPoint_10",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "y",
+      "tolerance": 0.001,
+      "lastResiduals": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "Line_25",
+      "name": "",
+      "pointAId": "WorldPoint_2",
+      "pointBId": "WorldPoint_11",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "y",
+      "tolerance": 0.001,
+      "lastResiduals": [
+        0,
+        -141.46836
+      ]
+    },
+    {
+      "id": "Line_26",
+      "name": "",
+      "pointAId": "WorldPoint_0",
+      "pointBId": "WorldPoint_12",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "x",
+      "tolerance": 0.001,
+      "lastResiduals": [
+        -2.031751,
+        0
+      ]
+    },
+    {
+      "id": "Line_27",
+      "name": "",
+      "pointAId": "WorldPoint_12",
+      "pointBId": "WorldPoint_13",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "y",
+      "tolerance": 0.001,
+      "lastResiduals": [
+        -0.091540863,
+        0
+      ]
+    },
+    {
+      "id": "Line_28",
+      "name": "",
+      "pointAId": "WorldPoint_13",
+      "pointBId": "WorldPoint_4",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "x",
+      "tolerance": 0.001,
+      "lastResiduals": [
+        2.2579614,
+        0
+      ]
+    },
+    {
+      "id": "Line_29",
+      "name": "",
+      "pointAId": "WorldPoint_15",
+      "pointBId": "WorldPoint_14",
+      "color": "#0696d7",
+      "isConstruction": false,
+      "lineStyle": "solid",
+      "thickness": 1,
+      "direction": "y",
+      "tolerance": 0.001,
+      "lastResiduals": [
+        19.778118,
+        1.3490311
+      ]
+    }
+  ],
+  "imagePoints": [
+    {
+      "id": "ImagePoint_30",
+      "worldPointId": "WorldPoint_0",
+      "viewpointId": "ba0389ef-c3cc-4130-9717-e02d5fb81fe0",
+      "u": 211.80703,
+      "v": 271.37552,
+      "confidence": 1,
+      "lastResiduals": [
+        0.19067778,
+        0.19067778
+      ]
+    },
+    {
+      "id": "ImagePoint_31",
+      "worldPointId": "WorldPoint_1",
+      "viewpointId": "ba0389ef-c3cc-4130-9717-e02d5fb81fe0",
+      "u": 220.12107,
+      "v": 615.91556,
+      "confidence": 1,
+      "lastResiduals": [
+        0.00023156778,
+        0.00023156778
+      ]
+    },
+    {
+      "id": "ImagePoint_32",
+      "worldPointId": "WorldPoint_3",
+      "viewpointId": "ba0389ef-c3cc-4130-9717-e02d5fb81fe0",
+      "u": 804.94792,
+      "v": 532.88448,
+      "confidence": 1,
+      "lastResiduals": [
+        43.93169,
+        -4.5185665
+      ]
+    },
+    {
+      "id": "ImagePoint_33",
+      "worldPointId": "WorldPoint_4",
+      "viewpointId": "ba0389ef-c3cc-4130-9717-e02d5fb81fe0",
+      "u": 212.64259,
+      "v": 306.00165,
+      "confidence": 1,
+      "lastResiduals": [
+        4.059316,
+        4.059316
+      ]
+    },
+    {
+      "id": "ImagePoint_34",
+      "worldPointId": "WorldPoint_5",
+      "viewpointId": "ba0389ef-c3cc-4130-9717-e02d5fb81fe0",
+      "u": 804.76392,
+      "v": 545.26848,
+      "confidence": 1,
+      "lastResiduals": [
+        -3.6604501,
+        1.3937438
+      ]
+    },
+    {
+      "id": "ImagePoint_35",
+      "worldPointId": "WorldPoint_6",
+      "viewpointId": "ba0389ef-c3cc-4130-9717-e02d5fb81fe0",
+      "u": 324.42092,
+      "v": 351.1695,
+      "confidence": 1,
+      "lastResiduals": [
+        -29.095597,
+        -24.880971
+      ]
+    },
+    {
+      "id": "ImagePoint_36",
+      "worldPointId": "WorldPoint_7",
+      "viewpointId": "ba0389ef-c3cc-4130-9717-e02d5fb81fe0",
+      "u": 335.1049,
+      "v": 619.61346,
+      "confidence": 1,
+      "lastResiduals": [
+        -69.427616,
+        68.727902
+      ]
+    },
+    {
+      "id": "ImagePoint_37",
+      "worldPointId": "WorldPoint_8",
+      "viewpointId": "ba0389ef-c3cc-4130-9717-e02d5fb81fe0",
+      "u": 544.80206,
+      "v": 440.22202,
+      "confidence": 1,
+      "lastResiduals": [
+        -8.9383602,
+        4.5743959
+      ]
+    },
+    {
+      "id": "ImagePoint_38",
+      "worldPointId": "WorldPoint_9",
+      "viewpointId": "ba0389ef-c3cc-4130-9717-e02d5fb81fe0",
+      "u": 156.31337,
+      "v": 504.52322,
+      "confidence": 1,
+      "lastResiduals": [
+        -5.0076419,
+        -45.178183
+      ]
+    },
+    {
+      "id": "ImagePoint_39",
+      "worldPointId": "WorldPoint_10",
+      "viewpointId": "ba0389ef-c3cc-4130-9717-e02d5fb81fe0",
+      "u": 221.62561,
+      "v": 657.73303,
+      "confidence": 1,
+      "lastResiduals": [
+        1.5169192,
+        1.5169192
+      ]
+    },
+    {
+      "id": "ImagePoint_40",
+      "worldPointId": "WorldPoint_0",
+      "viewpointId": "e60c72f9-ced1-485c-9bf1-3e020f4490a7",
+      "u": 603.8334,
+      "v": 266.14843,
+      "confidence": 1,
+      "lastResiduals": [
+        1.3389672,
+        1.3389672
+      ]
+    },
+    {
+      "id": "ImagePoint_41",
+      "worldPointId": "WorldPoint_1",
+      "viewpointId": "e60c72f9-ced1-485c-9bf1-3e020f4490a7",
+      "u": 605.01265,
+      "v": 551.73972,
+      "confidence": 1,
+      "lastResiduals": [
+        1.3572018,
+        1.3572018
+      ]
+    },
+    {
+      "id": "ImagePoint_42",
+      "worldPointId": "WorldPoint_2",
+      "viewpointId": "e60c72f9-ced1-485c-9bf1-3e020f4490a7",
+      "u": 1419.0386,
+      "v": 539.47694,
+      "confidence": 1,
+      "lastResiduals": [
+        -1.3112535,
+        0.87030495
+      ]
+    },
+    {
+      "id": "ImagePoint_43",
+      "worldPointId": "WorldPoint_3",
+      "viewpointId": "e60c72f9-ced1-485c-9bf1-3e020f4490a7",
+      "u": 1420.2052,
+      "v": 384.86382,
+      "confidence": 1,
+      "lastResiduals": [
+        8.591547,
+        16.184648
+      ]
+    },
+    {
+      "id": "ImagePoint_44",
+      "worldPointId": "WorldPoint_4",
+      "viewpointId": "e60c72f9-ced1-485c-9bf1-3e020f4490a7",
+      "u": 603.96552,
+      "v": 298.14484,
+      "confidence": 1,
+      "lastResiduals": [
+        14.899075,
+        14.899075
+      ]
+    },
+    {
+      "id": "ImagePoint_45",
+      "worldPointId": "WorldPoint_5",
+      "viewpointId": "e60c72f9-ced1-485c-9bf1-3e020f4490a7",
+      "u": 1420.0679,
+      "v": 403.06727,
+      "confidence": 1,
+      "lastResiduals": [
+        0.52181724,
+        -1.5793576
+      ]
+    },
+    {
+      "id": "ImagePoint_46",
+      "worldPointId": "WorldPoint_6",
+      "viewpointId": "e60c72f9-ced1-485c-9bf1-3e020f4490a7",
+      "u": 703.40048,
+      "v": 311.04397,
+      "confidence": 1,
+      "lastResiduals": [
+        -15.01149,
+        -50.629097
+      ]
+    },
+    {
+      "id": "ImagePoint_47",
+      "worldPointId": "WorldPoint_7",
+      "viewpointId": "e60c72f9-ced1-485c-9bf1-3e020f4490a7",
+      "u": 703.80756,
+      "v": 550.25144,
+      "confidence": 1,
+      "lastResiduals": [
+        -30.097879,
+        41.454703
+      ]
+    },
+    {
+      "id": "ImagePoint_48",
+      "worldPointId": "WorldPoint_8",
+      "viewpointId": "e60c72f9-ced1-485c-9bf1-3e020f4490a7",
+      "u": 947.86451,
+      "v": 342.43425,
+      "confidence": 1,
+      "lastResiduals": [
+        14.600294,
+        1.8468995
+      ]
+    },
+    {
+      "id": "ImagePoint_49",
+      "worldPointId": "WorldPoint_9",
+      "viewpointId": "e60c72f9-ced1-485c-9bf1-3e020f4490a7",
+      "u": 543.56753,
+      "v": 374.42174,
+      "confidence": 1,
+      "lastResiduals": [
+        22.250741,
+        19.397565
+      ]
+    },
+    {
+      "id": "ImagePoint_50",
+      "worldPointId": "WorldPoint_10",
+      "viewpointId": "e60c72f9-ced1-485c-9bf1-3e020f4490a7",
+      "u": 604.62546,
+      "v": 585.62387,
+      "confidence": 1,
+      "lastResiduals": [
+        1.211984,
+        1.211984
+      ]
+    },
+    {
+      "id": "ImagePoint_51",
+      "worldPointId": "WorldPoint_11",
+      "viewpointId": "e60c72f9-ced1-485c-9bf1-3e020f4490a7",
+      "u": 1419.0839,
+      "v": 556.89782,
+      "confidence": 1,
+      "lastResiduals": [
+        -19.90391,
+        -20.744676
+      ]
+    },
+    {
+      "id": "ImagePoint_52",
+      "worldPointId": "WorldPoint_12",
+      "viewpointId": "e60c72f9-ced1-485c-9bf1-3e020f4490a7",
+      "u": 189.04544,
+      "v": 322.07009,
+      "confidence": 1,
+      "lastResiduals": [
+        7.4500386,
+        7.4500386
+      ]
+    },
+    {
+      "id": "ImagePoint_53",
+      "worldPointId": "WorldPoint_13",
+      "viewpointId": "e60c72f9-ced1-485c-9bf1-3e020f4490a7",
+      "u": 189.57684,
+      "v": 345.9241,
+      "confidence": 1,
+      "lastResiduals": [
+        7.7810543,
+        7.7810543
+      ]
+    },
+    {
+      "id": "ImagePoint_54",
+      "worldPointId": "WorldPoint_14",
+      "viewpointId": "e60c72f9-ced1-485c-9bf1-3e020f4490a7",
+      "u": 1383.9297,
+      "v": 540.00583,
+      "confidence": 1,
+      "lastResiduals": [
+        -3.0134744,
+        38.579085
+      ]
+    },
+    {
+      "id": "ImagePoint_55",
+      "worldPointId": "WorldPoint_15",
+      "viewpointId": "e60c72f9-ced1-485c-9bf1-3e020f4490a7",
+      "u": 1384.1044,
+      "v": 558.13155,
+      "confidence": 1,
+      "lastResiduals": [
+        14.215113,
+        -40.466637
+      ]
+    },
+    {
+      "id": "ImagePoint_56",
+      "worldPointId": "WorldPoint_14",
+      "viewpointId": "ba0389ef-c3cc-4130-9717-e02d5fb81fe0",
+      "u": 793.76735,
+      "v": 640.05563,
+      "confidence": 1,
+      "lastResiduals": [
+        31.918429,
+        30.560544
+      ]
+    },
+    {
+      "id": "ImagePoint_57",
+      "worldPointId": "WorldPoint_15",
+      "viewpointId": "ba0389ef-c3cc-4130-9717-e02d5fb81fe0",
+      "u": 793.96735,
+      "v": 653.25563,
+      "confidence": 1,
+      "lastResiduals": [
+        42.7199,
+        -33.197027
+      ]
+    }
+  ],
+  "constraints": [
+    {
+      "id": "CoplanarPointsConstraint_58",
+      "type": "coplanar_points",
+      "name": "Loop_coplanar",
+      "pointIds": [
+        "WorldPoint_0",
+        "WorldPoint_1",
+        "WorldPoint_2",
+        "WorldPoint_3"
+      ],
+      "tolerance": 0.001,
+      "lastResiduals": [
+        0
+      ]
+    },
+    {
+      "id": "CoplanarPointsConstraint_59",
+      "type": "coplanar_points",
+      "name": "Loop_coplanar",
+      "pointIds": [
+        "WorldPoint_0",
+        "WorldPoint_12",
+        "WorldPoint_13",
+        "WorldPoint_4"
+      ],
+      "tolerance": 0.001,
+      "lastResiduals": [
+        0
+      ]
+    }
+  ],
+  "showPointNames": true,
+  "autoSave": true,
+  "theme": "dark",
+  "measurementUnits": "meters",
+  "precisionDigits": 3,
+  "showConstraintGlyphs": true,
+  "showMeasurements": true,
+  "autoOptimize": false,
+  "gridVisible": true,
+  "snapToGrid": false,
+  "defaultWorkspace": "world",
+  "showConstructionGeometry": true,
+  "enableSmartSnapping": true,
+  "constraintPreview": true,
+  "visualFeedbackLevel": "standard",
+  "viewSettings": {
+    "visibility": {
+      "worldPoints": true,
+      "lines": true,
+      "planes": true,
+      "vanishingLines": true,
+      "vanishingPoints": true,
+      "perspectiveGrid": false,
+      "reprojectionErrors": false,
+      "cameraVanishingGeometry": true
+    },
+    "locking": {
+      "worldPoints": false,
+      "lines": false,
+      "planes": false,
+      "vanishingLines": false
+    },
+    "isExpanded": false
+  },
+  "leftSidebarWidth": 180,
+  "imageHeights": {},
+  "lockCameraPoses": false,
+  "lastMedianReprojectionError": 18.323687,
+  "lastRmsReprojectionError": 33.67451
+}
