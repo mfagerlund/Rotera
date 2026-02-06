@@ -42,6 +42,8 @@ import { Serialization } from '../../entities/Serialization'
 import { checkOptimizationReadiness } from '../../optimization/optimization-readiness'
 // Auto-save removed - user wants explicit saves only
 
+import { CalibrationSheetDialog } from '../CalibrationSheetDialog'
+
 import '../../styles/enhanced-workspace.css'
 import '../../styles/tools.css'
 
@@ -281,6 +283,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
   })
 
   const [constructionPreview, setConstructionPreview] = useState<ConstructionPreview | null>(null)
+  const [showCalibrationSheets, setShowCalibrationSheets] = useState(false)
   const [currentVanishingLineAxis, setCurrentVanishingLineAxis] = useState<'x' | 'y' | 'z'>('x')
   const [orientationPaintDirection, setOrientationPaintDirection] = useState<LineDirection>('free')
   const [mousePosition, setMousePosition] = useState<{ u: number; v: number } | null>(null)
@@ -744,6 +747,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
     handleCreateVanishingLine,
     currentVanishingLineAxis,
     project,
+    worldPointsArray,
     toolContext,
     handleMousePositionChange,
     setActiveTool
@@ -824,6 +828,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
               onReloadProject={handleReloadProject}
               onOpenOptimization={handleTriggerOptimization}
               isDirty={isDirty}
+              onOpenCalibrationSheets={() => setShowCalibrationSheets(true)}
             />
 
             <div className="content-area">
@@ -831,6 +836,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
                 ref={leftPanelRef}
                 width={leftSidebarWidth}
                 onWidthChange={setLeftSidebarWidth}
+                project={project}
                 images={viewpointsArray}
                 currentViewpoint={currentViewpoint}
                 worldPoints={worldPointsArray}
@@ -983,6 +989,11 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
       />
 
       {dialog}
+
+      <CalibrationSheetDialog
+        isVisible={showCalibrationSheets}
+        onClose={() => setShowCalibrationSheets(false)}
+      />
     </>
   )
 })

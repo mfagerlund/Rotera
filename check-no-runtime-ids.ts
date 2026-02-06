@@ -31,6 +31,8 @@ const ALLOWED_PATHS = [
   /[\\/]ProjectBrowser[\\/]/, // All files in ProjectBrowser directory (browser UI layer)
   // Analytical solver uses IDs as Map keys for variable layout (allowed per CLAUDE.md)
   /[\\/]optimization[\\/]analytical[\\/]/,
+  // Calibration uses ArUco marker IDs (external protocol), not entity IDs
+  /[\\/]calibration[\\/]/,
 ];
 
 const ENTITY_ID_PATTERNS = [

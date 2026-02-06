@@ -3,7 +3,7 @@
 import React from 'react'
 import { observer } from 'mobx-react-lite'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowsUpDown, faCheck, faPencil, faTrash, faCopy, faVideo, faImage } from '@fortawesome/free-solid-svg-icons'
+import { faArrowsUpDown, faCheck, faPencil, faTrash, faCopy, faVideo, faImage, faQrcode } from '@fortawesome/free-solid-svg-icons'
 import { faCircle } from '@fortawesome/free-regular-svg-icons'
 import { getEntityKey } from '../../utils/entityKeys'
 import type { ImageNavigationItemProps } from './types'
@@ -40,6 +40,7 @@ export const ImageNavigationItem: React.FC<ImageNavigationItemProps> = observer(
   onCopyPointsToCurrentImage,
   onViewFromCamera,
   onShowInImageView,
+  onDetectMarkers,
   currentViewpoint
 }) => {
   const imgRef = React.useRef<HTMLImageElement>(null)
@@ -149,6 +150,20 @@ export const ImageNavigationItem: React.FC<ImageNavigationItemProps> = observer(
               title="Show in ImageView"
             >
               <FontAwesomeIcon icon={faImage} />
+            </button>
+            {/* Detect markers button */}
+            <button
+              className="btn-image-top-action"
+              onClick={(e) => {
+                e.stopPropagation()
+                if (onDetectMarkers) {
+                  onDetectMarkers(image)
+                }
+              }}
+              title="Detect calibration markers"
+              style={{ color: '#00e5ff' }}
+            >
+              <FontAwesomeIcon icon={faQrcode} />
             </button>
             <button
               className="btn-image-top-action"

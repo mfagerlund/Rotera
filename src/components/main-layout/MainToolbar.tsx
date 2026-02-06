@@ -17,7 +17,8 @@ import {
   faFileLines,
   faRotate,
   faQuestionCircle,
-  faTags
+  faTags,
+  faQrcode
 } from '@fortawesome/free-solid-svg-icons'
 import { downloadRoteraProject } from '../../services/blender-export'
 import { WorkspaceSwitcher } from '../WorkspaceManager'
@@ -50,6 +51,9 @@ interface MainToolbarProps {
 
   // Dirty state
   isDirty?: boolean
+
+  // Calibration
+  onOpenCalibrationSheets?: () => void
 }
 
 export const MainToolbar: React.FC<MainToolbarProps> = observer(({
@@ -65,7 +69,8 @@ export const MainToolbar: React.FC<MainToolbarProps> = observer(({
   onSaveAsProject,
   onReloadProject,
   onOpenOptimization,
-  isDirty
+  isDirty,
+  onOpenCalibrationSheets
 }) => {
   const handleClearProject = async () => {
     setFileMenuOpen(false)
@@ -342,6 +347,17 @@ export const MainToolbar: React.FC<MainToolbarProps> = observer(({
             >
               <FontAwesomeIcon icon={faRotate} />
               <span>{isReloading ? 'Reloading...' : 'Reload Project'}</span>
+            </button>
+            <div className="file-menu-divider" />
+            <button
+              className="file-menu-item"
+              onClick={() => {
+                setFileMenuOpen(false)
+                onOpenCalibrationSheets?.()
+              }}
+            >
+              <FontAwesomeIcon icon={faQrcode} />
+              <span>Calibration Sheets...</span>
             </button>
             <div className="file-menu-divider" />
             <button

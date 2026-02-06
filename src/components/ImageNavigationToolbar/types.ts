@@ -1,5 +1,6 @@
 // ImageNavigationToolbar types
 
+import type { Project } from '../../entities/project'
 import type { Viewpoint } from '../../entities/viewpoint'
 import type { WorldPoint } from '../../entities/world-point'
 
@@ -8,6 +9,7 @@ export interface ImageNavigationToolbarRef {
 }
 
 export interface ImageNavigationToolbarProps {
+  project: Project
   images: Viewpoint[]
   currentViewpoint: Viewpoint | null
   worldPoints: WorldPoint[]
@@ -30,6 +32,7 @@ export interface ImageNavigationToolbarProps {
   onCopyPointsToCurrentImage?: (sourceViewpoint: Viewpoint) => void
   onViewFromCamera?: (viewpoint: Viewpoint) => void
   onShowInImageView?: (viewpoint: Viewpoint) => void
+  onDetectMarkers?: (viewpoint: Viewpoint) => void
 }
 
 export interface ImageNavigationItemProps {
@@ -60,5 +63,6 @@ export interface ImageNavigationItemProps {
   onCopyPointsToCurrentImage?: (sourceViewpoint: Viewpoint) => void
   onViewFromCamera?: (viewpoint: Viewpoint) => void
   onShowInImageView?: (viewpoint: Viewpoint) => void
+  onDetectMarkers?: (viewpoint: Viewpoint) => void
   currentViewpoint: Viewpoint | null
 }

@@ -1,5 +1,6 @@
 import React, { forwardRef } from 'react'
 import { observer } from 'mobx-react-lite'
+import { Project } from '../../entities/project'
 import { WorldPoint } from '../../entities/world-point'
 import { Viewpoint } from '../../entities/viewpoint'
 import { Line as LineEntity } from '../../entities/line'
@@ -11,6 +12,7 @@ export type LeftPanelRef = ImageNavigationToolbarRef
 interface LeftPanelProps {
   width: number
   onWidthChange: (width: number) => void
+  project: Project
   images: Viewpoint[]
   currentViewpoint: Viewpoint | null
   worldPoints: WorldPoint[]
@@ -38,6 +40,7 @@ interface LeftPanelProps {
 export const LeftPanel = observer(forwardRef<LeftPanelRef, LeftPanelProps>(({
   width,
   onWidthChange,
+  project,
   images,
   currentViewpoint,
   worldPoints,
@@ -69,6 +72,7 @@ export const LeftPanel = observer(forwardRef<LeftPanelRef, LeftPanelProps>(({
     >
       <ImageNavigationToolbar
         ref={ref}
+        project={project}
         images={images}
         currentViewpoint={currentViewpoint}
         worldPoints={worldPoints}

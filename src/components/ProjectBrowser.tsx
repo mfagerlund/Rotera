@@ -15,7 +15,8 @@ import {
   faChevronDown,
   faChevronRight,
   faCaretDown,
-  faTags
+  faTags,
+  faQrcode
 } from '@fortawesome/free-solid-svg-icons'
 import { Project } from '../entities/project'
 import { useConfirm } from './ConfirmDialog'
@@ -27,6 +28,7 @@ import { FolderCard } from './ProjectBrowser/FolderCard'
 import { MoveDialog, CopyDialog, ExportDialog, ImportDialog } from './ProjectBrowser/ProjectDialogs'
 import { ExamplesModal } from './ProjectBrowser/ExamplesModal'
 import { AboutModal } from './AboutModal'
+import { CalibrationSheetDialog } from './CalibrationSheetDialog'
 import { helpLabelsStore } from '../store/help-labels-store'
 
 interface ProjectBrowserProps {
@@ -43,6 +45,7 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
   const [hasOldDb, setHasOldDb] = React.useState(false)
   const [showExamplesModal, setShowExamplesModal] = React.useState(false)
   const [showAboutModal, setShowAboutModal] = React.useState(false)
+  const [showCalibrationSheets, setShowCalibrationSheets] = React.useState(false)
   const [gettingStartedExpanded, setGettingStartedExpanded] = React.useState<boolean | null>(null)
   const [openDropdown, setOpenDropdown] = React.useState<'file' | 'help' | null>(null)
   const importProjectInputRef = useRef<HTMLInputElement>(null)
@@ -242,6 +245,15 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
               </div>
             )}
           </div>
+
+          {/* Calibration Sheets */}
+          <button
+            className="project-browser__dropdown-trigger"
+            onClick={() => setShowCalibrationSheets(true)}
+            title="Download printable calibration sheets for scale + orientation"
+          >
+            <FontAwesomeIcon icon={faQrcode} /> Calibration Sheets
+          </button>
 
           {/* Help Dropdown */}
           <div className="project-browser__dropdown" ref={helpDropdownRef}>
@@ -534,6 +546,10 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = observer(({
       <AboutModal
         isVisible={showAboutModal}
         onClose={() => setShowAboutModal(false)}
+      />
+      <CalibrationSheetDialog
+        isVisible={showCalibrationSheets}
+        onClose={() => setShowCalibrationSheets(false)}
       />
 
       {dialog}

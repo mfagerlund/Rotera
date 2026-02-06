@@ -7,6 +7,7 @@ import { faPlus } from '@fortawesome/free-solid-svg-icons'
 import { ImageUtils } from '../../utils/imageUtils'
 import { useConfirm } from '../ConfirmDialog'
 import ImageEditor from '../ImageEditor'
+import { MarkerDetectionDialog } from '../MarkerDetectionDialog'
 import { ImageNavigationItem } from './ImageNavigationItem'
 import type { ImageNavigationToolbarProps, ImageNavigationToolbarRef } from './types'
 import type { Viewpoint } from '../../entities/viewpoint'
@@ -14,6 +15,7 @@ import type { WorldPoint } from '../../entities/world-point'
 import { getEntityKey } from '../../utils/entityKeys'
 
 export const ImageNavigationToolbar = observer(forwardRef<ImageNavigationToolbarRef, ImageNavigationToolbarProps>(({
+  project,
   images,
   currentViewpoint,
   worldPoints,
@@ -48,6 +50,7 @@ export const ImageNavigationToolbar = observer(forwardRef<ImageNavigationToolbar
   const [draggedImage, setDraggedImage] = React.useState<Viewpoint | null>(null)
   const [dragOverImage, setDragOverImage] = React.useState<Viewpoint | null>(null)
   const [editingImage, setEditingImage] = React.useState<Viewpoint | null>(null)
+  const [detectingMarkersImage, setDetectingMarkersImage] = React.useState<Viewpoint | null>(null)
 
   const handleAddImage = () => {
     fileInputRef.current?.click()
@@ -152,6 +155,11 @@ export const ImageNavigationToolbar = observer(forwardRef<ImageNavigationToolbar
           }}
         />
       )}
+      <MarkerDetectionDialog
+        project={project}
+        viewpoint={detectingMarkersImage}
+        onClose={() => setDetectingMarkersImage(null)}
+      />
       <div className="image-toolbar">
         <div className="image-toolbar-header">
           <h3>Viewpoints</h3>
@@ -211,6 +219,7 @@ export const ImageNavigationToolbar = observer(forwardRef<ImageNavigationToolbar
                 onCopyPointsToCurrentImage={onCopyPointsToCurrentImage}
                 onViewFromCamera={onViewFromCamera}
                 onShowInImageView={onShowInImageView}
+                onDetectMarkers={setDetectingMarkersImage}
                 currentViewpoint={currentViewpoint}
               />
             ))
