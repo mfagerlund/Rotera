@@ -80,10 +80,10 @@ Example projects are available at [rotera.xyz/examples/](https://rotera.xyz/exam
 ## Technical Details
 
 - Built with React, TypeScript, and MobX
-- Uses [ScalarAutograd](https://github.com/mfagerlund/ScalarAutograd) for automatic differentiation
-- Nonlinear least squares optimization with Levenberg-Marquardt
-- Two-camera initialization via 7-point/8-point algorithms
+- Analytical gradient computation with Levenberg-Marquardt optimization
+- Two-camera initialization via Essential Matrix (5-point/8-point algorithms)
 - Single-camera initialization via PnP when world points are known
+- Camera orientation from vanishing points when axis-aligned lines are available
 
 ## Run Locally
 

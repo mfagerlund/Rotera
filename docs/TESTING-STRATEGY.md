@@ -1,6 +1,6 @@
 # Testing Strategy
 
-**Last Updated:** 2025-12-25
+**Last Updated:** 2026-02-06
 
 ## Running Tests
 
@@ -17,30 +17,25 @@ npm test -- solving-scenarios.test.ts --watchAll=false
 
 **Important:** On Windows, use `--watchAll=false` to avoid issues with file watchers and unprintable characters in test output.
 
-## Test Coverage Status
+## Test Suite Status
 
-**Current Coverage:** 1.5% line coverage
+**Current:** 259 passed, 2 skipped
 
-The coverage threshold has been lowered from 80% to match current reality. This is a known technical debt item that will be addressed incrementally.
-
-| Module | Coverage | Status |
-|--------|----------|--------|
-| `src/optimization/` | ~50-70% | Best covered (core solver logic) |
-| `src/entities/` | ~5-10% | Serialization tested |
-| `src/components/` | 0% | No component tests |
-| `src/hooks/` | ~10% | Only `useDomainOperations` partially |
-| `src/services/` | 0% | No service tests |
-| `src/utils/` | ~4% | Only `vec3.ts` partially |
+| Category | Status |
+|----------|--------|
+| Optimization (core solver, regression, analytical) | Comprehensive |
+| Entities (serialization) | Covered |
+| Components (React UI) | Not tested |
+| Hooks | Partial |
+| Services (file I/O, IndexedDB) | Not tested |
 
 ## Test File Locations
 
 ### Optimization Tests (Primary Test Suite)
-- `src/optimization/__tests__/solving-scenarios.test.ts` - **Primary test suite** with 10 comprehensive scenarios
-  - Phase 1 (4 scenarios): Single camera initialization via PnP and VP
-  - Phase 2 (3 scenarios): Two-camera systems with Essential Matrix
-  - Phase 3 (3 scenarios): Complex multi-constraint scenarios
-  - Total: 10 scenarios, 174 tests
-- `src/optimization/__tests__/fixed-point-constraint.test.ts` - Tests for coordinate locking/inference
+- `src/optimization/__tests__/solving-scenarios.test.ts` - Primary test suite (10 scenarios)
+- `src/optimization/__tests__/regression-calibration.test.ts` - Regression tests on real project fixtures
+- `src/optimization/__tests__/analytical-3loose.test.ts` - Multi-camera analytical solve
+- `src/optimization/__tests__/fixed-point-constraint.test.ts` - Coordinate locking/inference
 
 ### Entity Tests
 - `src/entities/__tests__/Serialization.test.ts` - Entity serialization/deserialization
@@ -80,9 +75,7 @@ Fixture generation helpers in `src/optimization/__tests__/fixture-generator-help
 - `createVanishingLines()` - Creates vanishing lines from 3D line segments
 - `saveFixture()` - Handles fixture file saving
 
-## Test Quality Assessment
-
-**Current Quality Score: 9.5/10** (per test-improvements-report.md)
+## Test Quality
 
 ### Strengths
 - Comprehensive scenario coverage (10 scenarios covering major use cases)
@@ -94,7 +87,6 @@ Fixture generation helpers in `src/optimization/__tests__/fixture-generator-help
 - No component tests (React UI untested)
 - No service tests (file I/O, IndexedDB untested)
 - No hook tests (except partial coverage of `useDomainOperations`)
-- Low overall coverage despite solid optimization test suite
 
 ## Recommended Testing Priorities
 
@@ -135,11 +127,9 @@ Fixture generation helpers in `src/optimization/__tests__/fixture-generator-help
 - Individual scenarios typically complete in <1 second
 - Fixtures eliminate need for complex test setup, improving test speed
 
-## Related Documentation
+## Related
 
-- `test-improvements-report.md` - Detailed analysis of test suite quality and improvements
-- `scratch/SOLVING-TEST-PROTOCOL.md` - Protocol for systematic optimization testing
-- Test fixtures stored in: `src/optimization/__tests__/fixtures/`
+- Test fixtures: `src/optimization/__tests__/fixtures/`
 
 ## Future Improvements
 

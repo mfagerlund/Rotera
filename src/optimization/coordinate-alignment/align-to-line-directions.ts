@@ -335,10 +335,8 @@ export function alignSceneToLineDirections(
     log(`[Align] ${firstAxisKey}-axis: chose -${firstAxisKey.toUpperCase()}`);
   }
 
-  // NOTE: Second axis alignment was attempted but produced worse results for some fixtures.
-  // For now, we only align the first axis and use camera baseline heuristic for the remaining DoF.
-  // TODO: Investigate why second axis alignment fails and fix before re-enabling.
-  // See the git history for the removed second axis alignment code.
+  // Only first axis is aligned; the camera baseline heuristic below handles the remaining DoF.
+  // Second axis alignment was tried but produced worse results — see git history.
 
   // Use camera baseline heuristic to resolve the remaining rotational DoF
   if (cameras.length >= 2) {

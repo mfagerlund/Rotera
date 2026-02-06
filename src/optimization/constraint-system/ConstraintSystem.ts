@@ -746,10 +746,8 @@ export class ConstraintSystem {
       }
     }
 
-    // 8. Sign preservation is DISABLED - was causing test failures
-    // The issue is that most Y coordinates are locked, not free, so sign preservation
-    // can't prevent reflection to the wrong local minimum.
-    // TODO: Investigate why analytical mode converges to reflected solutions.
+    // Sign preservation disabled: only works on free variables, but most Y coords are locked.
+    // The strategy-as-candidate system mitigates reflection by testing multiple init paths.
 
     return { providers, layout, layoutBuilder: builder };
   }

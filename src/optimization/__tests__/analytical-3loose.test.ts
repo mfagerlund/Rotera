@@ -18,10 +18,7 @@ const FIXTURES_DIR = path.join(__dirname, 'fixtures', 'Calibration');
 const log = (msg: string) => process.stderr.write(msg + '\n');
 
 describe('Analytical 3 Loose', () => {
-  // TODO: Fix analytical solver for this fixture
-  // This test was passing when subsystems (PnP refinement, preliminary solve) used dense mode.
-  // Full analytical pipeline produces 416px error - needs investigation.
-  it.skip('analytical mode on 3 Loose Cropped - exact UI scenario', async () => {
+  it('analytical mode on 3 Loose Cropped - exact UI scenario', async () => {
     // Load the exact same file that the user loads in the UI
     // "3 Loose Cropped.json" already has isPossiblyCropped: true and optimized values
     const jsonPath = path.join(FIXTURES_DIR, '3 Loose Cropped.json');

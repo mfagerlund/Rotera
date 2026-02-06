@@ -21,8 +21,8 @@
 └──────────────┬──────────────────────────┘
                │ Serialization (DTOs)
 ┌──────────────▼──────────────────────────┐
-│  Solver Layer (ScalarAutograd)          │
-│  - Optimization engine in browser       │
+│  Solver Layer (Analytical Gradients)    │
+│  - Levenberg-Marquardt optimization     │
 │  - Takes entities, returns positions    │
 └─────────────────────────────────────────┘
 ```
@@ -532,21 +532,6 @@ All clarifying questions have been resolved:
 
 ---
 
-**Version**: 1.2
-**Last Updated**: 2025-10-20
-**Status**: ✅ APPROVED - All decisions finalized, DTO consolidation COMPLETE
-
-**Recent Updates (v1.2)**:
-- ✅ **COMPLETED**: DTO Consolidation - toDto/fromDto methods added to entities (DTO interface files remain for type definitions)
-- ✅ **COMPLETED**: Set-based collections - Converted all entity collections from Maps to Sets
-- ✅ **COMPLETED**: Object references everywhere - Fixed all ID-based lookups to use entity references
-- All 46 files updated following architectural rules
-- DTO interface files (*Dto.ts) preserved for type definitions only - entities use toDto/fromDto methods
-- 39 TypeScript errors fixed
-- Zero violations of architectural principles remain
-
-**Previous Updates (v1.1)**:
-- Added rule 1.3: Use direct field access, not silly getters (TypeScript superpower!)
-- Added rule 1.4: IDs exist ONLY for serialization (with required warning comment)
-- Updated Q6: Use Sets everywhere, Maps serve no purpose at runtime
-- Maps only acceptable as temporary local variables during deserialization
+**Version**: 1.3
+**Last Updated**: 2026-02-06
+**Status**: APPROVED - All decisions finalized

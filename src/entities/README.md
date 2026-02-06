@@ -1,6 +1,6 @@
 # Entity Architecture - DO NOT MODIFY
 
-**Last Updated:** 2025-12-25
+**Last Updated:** 2026-02-06
 
 ## CRITICAL: These entities are STABLE and LOCKED
 
@@ -55,22 +55,6 @@ Project automatically runs `propagateInferences()` when:
 - WorldView: Points colored by status
 - ImageViewer: Small colored dot in center of each point
 - WorldPointEditor: Status badge + inferred coordinates display
-
-## Optimization System Status
-
-**✅ Completed: Vanishing Point Camera Initialization**
-
-VanishingLine entity and camera initialization from vanishing points fully implemented and tested.
-
-**✅ Completed: Optimization System Validation**
-
-Comprehensive test coverage validates the entire optimization pipeline:
-- ✅ Phase 1 (4/4 scenarios): Single camera initialization via PnP and VP
-- ✅ Phase 2 (3/3 scenarios): Two-camera systems with Essential Matrix
-- ✅ Phase 3 (3/3 scenarios): Complex multi-constraint scenarios
-- 4 production bugs discovered and fixed through systematic testing
-
-**Test Suite:** `src/optimization/__tests__/solving-scenarios.test.ts` (10 scenarios, 174 tests)
 
 ## Key Architecture Rules
 

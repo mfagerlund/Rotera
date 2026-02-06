@@ -1,32 +1,4 @@
-**Last Updated:** 2026-02-05
-
-## SCALAR-AUTOGRAD FULLY REMOVED
-
-**Status:** scalar-autograd has been completely removed from the codebase. No production code or test code uses it.
-
-**What was removed:**
-- `camera-projection.ts` - autodiff projection (deleted)
-- `Quaternion.ts` - autodiff quaternion class (deleted)
-- `quaternion-normalization-residual.ts` - autodiff quaternion normalization (deleted)
-- 8 gradient comparison tests that verified analytical vs autodiff gradients (deleted)
-- All test files updated to use plain-number projection utilities
-
-**Current state:**
-- All production code uses plain-number utilities
-- All tests use `projectPointToPixel` from `analytical/project-point-plain.ts`
-- 249 tests pass, 4 skipped, 1 pre-existing flaky test
-
-**Plain utilities used instead:**
-- `projectPointToPixel` - plain-number camera projection
-- `projectToPixel` - convenience wrapper for projection
-- `quaternionFromEuler` / `quaternionToEuler` - plain quaternion euler conversion
-- `quaternionRotateVector` - plain quaternion rotation
-
-**Skipped tests (TODO - analytical edge cases):**
-- PnP minimal systems (4 points, 1 camera)
-- 3 Loose Cropped (subsystem dependencies)
-
----
+**Last Updated:** 2026-02-06
 
 - Dev server: `npm run dev` (runs on http://localhost:5173)
 - Before we're done with a task, run `bash check.sh`
@@ -92,11 +64,7 @@ When creating fixtures:
 
 **Current focus: Code organization and maintenance**
 
-Optimization system validation complete:
-- ✅ All 10 test scenarios passing (single camera, two-camera, complex constraints)
-- ✅ 4 production bugs found and fixed through systematic testing
-- Test suite: `src/optimization/__tests__/solving-scenarios.test.ts`
-- See `scratch/SOLVING-TEST-PROTOCOL.md` for test protocol details
+**Test suite:** 259 passed, 2 skipped (PnP minimal systems only)
 
 ### Coordinate Inference System (✓ Implemented - Phase 0)
 
