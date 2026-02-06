@@ -25,7 +25,6 @@
 **Skipped tests (TODO - analytical edge cases):**
 - PnP minimal systems (4 points, 1 camera)
 - 3 Loose Cropped (subsystem dependencies)
-- No Vanishing Lines (initialization issue)
 
 ---
 
@@ -47,6 +46,22 @@
 - NO pre-optimized values that put the solver in a different starting position
 - NO different code paths between tests and UI
 - Tests that don't match UI behavior are USELESS and MUST be fixed
+
+## CRITICAL: NEVER CHEAT TO MAKE TESTS PASS
+
+**When given a project file to debug, NEVER "fix" the test by:**
+
+- Using a different/modified fixture file than the user's actual file
+- Adding silent early-returns that skip tests when files are missing
+- Modifying fixture data to pre-solve problems
+- Skipping failing tests without fixing the underlying issue
+
+**ALWAYS verify:**
+- The fixture file ACTUALLY EXISTS in the test directory before claiming tests pass
+- The test produces the SAME RMS/error as the UI with the user's file
+- If `fs.existsSync()` check exists, the file must be present or the test is meaningless
+
+**The user will test in the UI. If the UI still fails, YOUR FIX DIDN'T WORK.**
 
 When creating fixtures:
 1. Save the project state BEFORE clicking Solve in UI

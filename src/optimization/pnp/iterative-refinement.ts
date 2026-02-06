@@ -60,9 +60,17 @@ export function initializeCameraWithPnP(
   const vpConcrete = viewpoint as Viewpoint;
 
   // Helper to check if point is visible in 2+ initialized cameras (truly triangulated)
+  // - size===0: No cameras initialized yet (e.g. single-camera late PnP). All points come
+  //   from unified initialization (locked/inferred), so allow all.
+  // - size===1: Only 1 camera VP-initialized. Phase 6 may have placed remaining points
+  //   randomly. Only use fully constrained points to avoid garbage centroids.
+  // - size>=2: Check if visible in 2+ initialized cameras (truly triangulated).
   const isTrulyTriangulated = (wp: WorldPoint): boolean => {
-    if (!initializedCameraNames || initializedCameraNames.size < 2) {
-      return true; // No filter if not enough cameras to triangulate
+    if (!initializedCameraNames || initializedCameraNames.size === 0) {
+      return true;
+    }
+    if (initializedCameraNames.size === 1) {
+      return wp.isFullyConstrained();
     }
     let visibleCount = 0;
     for (const ip of wp.imagePoints) {

@@ -63,8 +63,7 @@ describe('Regression - Calibration', () => {
     await runTest('Full Solve.json', 2)
   })
 
-  // TODO: Fix analytical solver for this fixture (190px error without dense subsystems)
-  it.skip('No Vanisining Lines.json', async () => {
+  it.concurrent('No Vanisining Lines.json', async () => {
     await runTest('No Vanisining Lines.json', 2)
   })
 
