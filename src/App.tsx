@@ -68,7 +68,8 @@ function App() {
   const handleNameModalSubmit = useCallback(async (name: string) => {
     const newProject = Project.create(name)
     // Save immediately to IndexedDB
-    await ProjectDB.saveProject(newProject)
+    const currentFolderId = SessionStore.getCurrentFolderId()
+    await ProjectDB.saveProject(newProject, currentFolderId)
     loadProject(newProject)
     // Save session
     if (newProject._dbId) {

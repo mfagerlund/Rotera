@@ -265,6 +265,8 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
   const windowContent = (
     <div
       ref={windowRef}
+      className={className}
+      data-floating-window="true"
       style={{
         position: 'fixed',
         left: `${position.x}px`,

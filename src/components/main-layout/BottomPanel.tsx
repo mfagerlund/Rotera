@@ -266,7 +266,9 @@ export const BottomPanel: React.FC<BottomPanelProps> = observer(({
           onUpdateWorldPoint={onUpdateWorldPoint}
           onDeleteWorldPoint={onDeleteWorldPoint}
           onDeleteImagePoint={onDeleteImagePoint}
+          onAddImagePoint={onAddImagePoint}
           images={viewpointsMap}
+          currentViewpoint={currentViewpoint}
         />
       )}
 

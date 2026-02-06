@@ -1,6 +1,6 @@
 import { AR } from 'js-aruco2'
 import type { MarkerDefinition } from './marker-registry'
-import { MARKER_DEFINITIONS } from './marker-registry'
+import { MARKER_DEFINITIONS, getMarkerGapMeters } from './marker-registry'
 
 // A4 dimensions in mm
 const A4_WIDTH_MM = 210
@@ -38,15 +38,15 @@ export function generateCalibrationSheet(markerId: number): string {
   const svgX = MARGIN_MM - quietZoneMm
   const svgY = MARGIN_MM - quietZoneMm
 
-  // Axes must start AFTER the quiet zone on the right/bottom side.
-  // Drawing anything in the quiet zone breaks ArUco contour detection.
-  // Gap = 1 quiet zone cell between the detected BR corner and the axis origin.
-  const originX = MARGIN_MM + markerSizeMm + quietZoneMm
-  const originY = MARGIN_MM + markerSizeMm + quietZoneMm
+  // Gap between marker BR corner and axis origin, rounded to nearest 1cm.
+  // Must exceed the quiet zone (s/7) to avoid breaking ArUco detection.
+  const gapMm = getMarkerGapMeters(def) * 1000
+  const originX = MARGIN_MM + markerSizeMm + gapMm
+  const originY = MARGIN_MM + markerSizeMm + gapMm
 
-  // Available space for axes
-  const axisXLength = A4_WIDTH_MM - originX - MARGIN_MM
-  const axisZLength = A4_HEIGHT_MM - originY - MARGIN_MM - 30 // Reserve space for footer
+  // Available space for axes (clamped to A4 edges)
+  const axisXLength = Math.max(0, A4_WIDTH_MM - originX - MARGIN_MM)
+  const axisZLength = Math.max(0, A4_HEIGHT_MM - originY - MARGIN_MM - 30) // Reserve space for footer
 
   // Grid spacing in mm (matching cm markings)
   const gridSpacingMm = 10

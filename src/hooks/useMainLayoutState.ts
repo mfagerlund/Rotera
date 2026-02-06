@@ -1,10 +1,10 @@
 // Central state management for MainLayout
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { WorldPoint } from '../entities/world-point'
 import { Line as LineEntity } from '../entities/line'
 import { Viewpoint } from '../entities/viewpoint'
 import { CoplanarPointsConstraint } from '../entities/constraints/coplanar-points-constraint'
-import { getProject } from '../store/project-store'
+import type { Project } from '../entities/project'
 
 export type ActiveTool = 'select' | 'point' | 'line' | 'plane' | 'circle' | 'loop' | 'vanishing' | 'orientationPaint'
 
@@ -72,11 +72,12 @@ export interface MainLayoutState {
 }
 
 export interface UseMainLayoutStateOptions {
+  project: Project | null
   onOpenWorldPointEdit?: (worldPoint: WorldPoint) => void
 }
 
-export function useMainLayoutState(options: UseMainLayoutStateOptions = {}): MainLayoutState {
-  const { onOpenWorldPointEdit } = options
+export function useMainLayoutState(options: UseMainLayoutStateOptions = { project: null }): MainLayoutState {
+  const { project, onOpenWorldPointEdit } = options
   // Tool state
   const [activeTool, setActiveTool] = useState<ActiveTool>('select')
 
@@ -99,33 +100,43 @@ export function useMainLayoutState(options: UseMainLayoutStateOptions = {}): Mai
   const [hoveredCoplanarConstraint, setHoveredCoplanarConstraint] = useState<CoplanarPointsConstraint | null>(null)
 
   // Sidebar width - stored in project
-  const project = getProject()
-  const [leftSidebarWidth, setLeftSidebarWidthState] = useState(() => project.leftSidebarWidth)
+  const [leftSidebarWidth, setLeftSidebarWidthState] = useState(() => project?.leftSidebarWidth ?? 180)
 
   const setLeftSidebarWidth = useCallback((width: number) => {
     setLeftSidebarWidthState(width)
-    getProject().leftSidebarWidth = width
-  }, [])
+    if (project) {
+      project.leftSidebarWidth = width
+    }
+  }, [project])
 
   // Image heights - stored in project
-  const [imageHeights, setImageHeightsState] = useState<Record<string, number>>(() => project.imageHeights)
+  const [imageHeights, setImageHeightsState] = useState<Record<string, number>>(() => project?.imageHeights ?? {})
 
   const handleImageHeightChange = useCallback((viewpoint: Viewpoint, height: number) => {
-    const proj = getProject()
-    const newHeights = { ...proj.imageHeights, [viewpoint.id]: height }
+    if (!project) return
+    const newHeights = { ...project.imageHeights, [viewpoint.id]: height }
     setImageHeightsState(newHeights)
-    proj.imageHeights = newHeights
-  }, [])
+    project.imageHeights = newHeights
+  }, [project])
 
   // Image sort order - stored in project
   const [imageSortOrder, setImageSortOrderState] = useState<string[]>(() => {
-    return project.imageSortOrder ?? []
+    return project?.imageSortOrder ?? []
   })
 
   const handleImageReorder = useCallback((newOrder: string[]) => {
     setImageSortOrderState(newOrder)
-    getProject().imageSortOrder = newOrder
-  }, [])
+    if (project) {
+      project.imageSortOrder = newOrder
+    }
+  }, [project])
+
+  useEffect(() => {
+    if (!project) return
+    setLeftSidebarWidthState(project.leftSidebarWidth)
+    setImageHeightsState(project.imageHeights)
+    setImageSortOrderState(project.imageSortOrder ?? [])
+  }, [project])
 
   // Edit line state
   const [editingLine, setEditingLine] = useState<LineEntity | null>(null)

@@ -279,6 +279,7 @@ export const MainLayout: React.FC<MainLayoutProps> = observer(({ onReturnToBrows
     openVPQualityWindow,
     closeVPQualityWindow
   } = useMainLayoutState({
+    project,
     onOpenWorldPointEdit: handleOpenWorldPointEdit
   })
 

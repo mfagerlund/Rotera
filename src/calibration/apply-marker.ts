@@ -2,7 +2,6 @@ import type { Project } from '../entities/project'
 import { WorldPoint } from '../entities/world-point'
 import { ImagePoint } from '../entities/imagePoint'
 import type { Viewpoint } from '../entities/viewpoint'
-import { DistanceConstraint } from '../entities/constraints/distance-constraint'
 import { CoplanarPointsConstraint } from '../entities/constraints/coplanar-points-constraint'
 import { Constraint } from '../entities/constraints'
 import type { DetectedMarker } from './detect-markers'
@@ -12,6 +11,8 @@ import {
   MARKER_CORNER_LABELS,
   type MarkerCornerLabel
 } from './marker-registry'
+
+const round6 = (v: number) => Math.round(v * 1e6) / 1e6
 
 export type PlacementMode = 'floor' | 'wall'
 export type WorldUnit = 'm' | 'cm' | 'mm'
@@ -30,7 +31,7 @@ export interface AppliedMarkerResult {
 }
 
 function markerPointName(markerId: number, corner: MarkerCornerLabel): string {
-  if (corner === 'BR') return 'O' // Origin point — aligns with axis intersection on the sheet
+  if (corner === 'BR') return 'R' // Reference point at (0,0,0)
   return `Marker_${markerId}_${corner}`
 }
 
@@ -56,7 +57,7 @@ function findExistingMarkerPoints(
  * Apply a detected marker to the project:
  * - Creates or reuses 4 WorldPoints with locked coordinates
  * - Creates 4 ImagePoints linking them to the viewpoint
- * - Creates distance + coplanar constraints
+ * - Creates coplanar constraint
  */
 export function applyDetectedMarker(
   project: Project,
@@ -72,10 +73,10 @@ export function applyDetectedMarker(
 
   const scale = UNIT_SCALE[unit]
   const positions = getMarkerCornerPositions(def, placement)
-    .map(([x, y, z]) => [x * scale, y * scale, z * scale] as [number, number, number]) as
+    .map(([x, y, z]) => [round6(x * scale), round6(y * scale), round6(z * scale)] as [number, number, number]) as
     [[number, number, number], [number, number, number], [number, number, number], [number, number, number]]
   const markerColor = '#00e5ff' // Cyan for marker corner points
-  const originColor = '#ff9800' // Orange for origin point (BR corner)
+  const originColor = '#ff9800' // Orange for reference point (BR corner)
 
   // Reuse existing WorldPoints if this marker was already detected in another viewpoint
   const existing = findExistingMarkerPoints(project, detected.id)
@@ -104,36 +105,8 @@ export function applyDetectedMarker(
   // Only create constraints on first detection (not when reusing)
   const constraints: Constraint[] = []
   if (!reused) {
-    const s = def.edgeSizeMeters * scale
-    const diag = s * Math.SQRT2
-
-    // Edge distance constraints (TL-TR, TR-BR, BR-BL, BL-TL)
-    const edges: [number, number][] = [[0, 1], [1, 2], [2, 3], [3, 0]]
-    for (const [a, b] of edges) {
-      const nameA = MARKER_CORNER_LABELS[a] === 'BR' ? 'O' : MARKER_CORNER_LABELS[a]
-      const nameB = MARKER_CORNER_LABELS[b] === 'BR' ? 'O' : MARKER_CORNER_LABELS[b]
-      const dc = DistanceConstraint.create(
-        `Marker_${detected.id}_edge_${nameA}_${nameB}`,
-        worldPoints[a], worldPoints[b], s
-      )
-      project.addConstraint(dc)
-      constraints.push(dc)
-    }
-
-    // Diagonal distance constraints (TL-BR, TR-BL)
-    const diags: [number, number][] = [[0, 2], [1, 3]]
-    for (const [a, b] of diags) {
-      const diagNameA = MARKER_CORNER_LABELS[a] === 'BR' ? 'O' : MARKER_CORNER_LABELS[a]
-      const diagNameB = MARKER_CORNER_LABELS[b] === 'BR' ? 'O' : MARKER_CORNER_LABELS[b]
-      const dc = DistanceConstraint.create(
-        `Marker_${detected.id}_diag_${diagNameA}_${diagNameB}`,
-        worldPoints[a], worldPoints[b], diag
-      )
-      project.addConstraint(dc)
-      constraints.push(dc)
-    }
-
-    // Coplanar constraint
+    // All 4 corners have locked positions, so distance constraints are redundant.
+    // Only coplanar constraint is needed.
     const coplanar = CoplanarPointsConstraint.create(
       `Marker_${detected.id}_coplanar`,
       [...worldPoints]

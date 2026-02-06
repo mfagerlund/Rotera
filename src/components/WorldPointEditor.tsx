@@ -6,9 +6,10 @@ import { Line } from '../entities/line'
 import FloatingWindow from './FloatingWindow'
 import { useConfirm } from './ConfirmDialog'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faCircleDot, faTrash } from '@fortawesome/free-solid-svg-icons'
+import { faCircleDot, faCrosshairs, faTrash } from '@fortawesome/free-solid-svg-icons'
 import { triggerInference } from '../store/project-store'
 import { formatXyz } from '../utils/formatters'
+import { hasValidCameraPose, projectToPixel } from '../utils/projection'
 
 type ProjectImage = Viewpoint
 
@@ -95,7 +96,9 @@ interface WorldPointEditorProps {
   onUpdateWorldPoint: (updatedPoint: WorldPoint) => void
   onDeleteWorldPoint?: (worldPoint: WorldPoint) => void
   onDeleteImagePoint?: (imagePoint: any) => void
+  onAddImagePoint?: (worldPoint: WorldPoint, viewpoint: Viewpoint, u: number, v: number) => void
   images: Map<string, ProjectImage>
+  currentViewpoint?: Viewpoint | null
 }
 
 export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
@@ -105,7 +108,9 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
   onUpdateWorldPoint,
   onDeleteWorldPoint,
   onDeleteImagePoint,
-  images
+  onAddImagePoint,
+  images,
+  currentViewpoint = null
 }) => {
   const { confirm, dialog } = useConfirm()
   const [editedName, setEditedName] = useState(worldPoint.name)
@@ -200,6 +205,30 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
 
   if (!isOpen) return null
 
+  const effectiveXyz = worldPoint.getEffectiveXyz()
+  const hasEffectiveXyz = effectiveXyz.every((v): v is number => v !== null)
+  const projectionXyz = worldPoint.optimizedXyz ?? (hasEffectiveXyz ? (effectiveXyz as [number, number, number]) : undefined)
+  const canProject = !!currentViewpoint && !!projectionXyz && !!onAddImagePoint && hasValidCameraPose(currentViewpoint)
+  const projectionTitle = !currentViewpoint
+    ? 'Select a current viewpoint to project this point'
+    : !projectionXyz
+      ? 'Requires known XYZ (locked/inferred or optimized)'
+      : !onAddImagePoint
+        ? 'Image point creation is not available here'
+        : !hasValidCameraPose(currentViewpoint)
+          ? 'Current viewpoint has no valid camera pose'
+          : 'Project XYZ into the current viewpoint and set the image point'
+
+  const handleProjectToCurrentViewpoint = () => {
+    if (!currentViewpoint || !projectionXyz) return
+    const projection = projectToPixel(projectionXyz, currentViewpoint)
+    if (!projection) {
+      alert('Projection failed. The point may be behind the camera or outside a valid pose.')
+      return
+    }
+    onAddImagePoint?.(worldPoint, currentViewpoint, projection.u, projection.v)
+  }
+
   // Get image points for this world point
   const imagePointsList = Array.from(worldPoint.imagePoints)
 
@@ -210,7 +239,7 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
         title={`Edit World Point: ${worldPoint.name}`}
         isOpen={isOpen}
         onClose={handleCancel}
-        width={450}
+        width={520}
         maxHeight={700}
         storageKey="world-point-edit"
         showOkCancel={true}
@@ -330,7 +359,7 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
                     setLockedZ('0')
                     handleChange()
                   }}
-                  title="Set to origin (0, 0, 0)"
+                  title="Set locked coordinates to the origin (0, 0, 0)"
                   style={{
                     padding: '4px 8px',
                     fontSize: '10px',
@@ -365,7 +394,7 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
                     setLockedZ('')
                     handleChange()
                   }}
-                  title="Clear all coordinates"
+                  title="Clear all locked coordinates"
                   style={{
                     padding: '4px 8px',
                     fontSize: '12px',
@@ -391,6 +420,39 @@ export const WorldPointEditor: React.FC<WorldPointEditorProps> = observer(({
                   }}
                 >
                   ×
+                </button>
+                <button
+                  type="button"
+                  onClick={handleProjectToCurrentViewpoint}
+                  title={projectionTitle}
+                  disabled={!canProject}
+                  style={{
+                    padding: '4px 8px',
+                    fontSize: '12px',
+                    border: '1px solid #555',
+                    borderRadius: '3px',
+                    background: '#2a2a2a',
+                    color: '#999',
+                    cursor: canProject ? 'pointer' : 'not-allowed',
+                    height: '26px',
+                    minWidth: '26px',
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: canProject ? 1 : 0.45
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!canProject) return
+                    e.currentTarget.style.background = '#3a3a3a'
+                    e.currentTarget.style.color = '#fff'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = '#2a2a2a'
+                    e.currentTarget.style.color = '#999'
+                  }}
+                >
+                  <FontAwesomeIcon icon={faCrosshairs} />
                 </button>
               </div>
             </div>

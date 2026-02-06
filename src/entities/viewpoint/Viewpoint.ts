@@ -255,7 +255,7 @@ export class Viewpoint implements ISelectable, IOptimizableCamera, IViewpoint, I
             skewCoefficient: options.skewCoefficient ?? 0,
             aspectRatio: options.aspectRatio ?? 1,
             useSimpleIntrinsics: options.useSimpleIntrinsics ?? true,
-            isPossiblyCropped: options.isPossiblyCropped ?? false,
+            isPossiblyCropped: options.isPossiblyCropped ?? true,
             radialDistortion: options.radialDistortion ?? [0, 0, 0],
             tangentialDistortion: options.tangentialDistortion ?? [0, 0],
             position: options.position ?? [0, 0, 0],

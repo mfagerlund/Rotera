@@ -326,11 +326,19 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = observer(({
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Tab' && !event.ctrlKey && !event.metaKey && !event.altKey) {
-        // Only if not in an input field
-        if (!(event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement)) {
-          event.preventDefault()
-          workspaceActions.toggleWorkspace()
+        const target = event.target as HTMLElement | null
+        if (target) {
+          const tag = target.tagName
+          const isFormElement = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON'
+          const isEditable = target.isContentEditable
+          const inFloatingWindow = !!target.closest('[data-floating-window="true"]')
+          const inModal = !!target.closest('.about-modal')
+          if (isFormElement || isEditable || inFloatingWindow || inModal) {
+            return
+          }
         }
+        event.preventDefault()
+        workspaceActions.toggleWorkspace()
       }
     }
 
