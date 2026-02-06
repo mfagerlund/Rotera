@@ -7,17 +7,14 @@ import {
   matrixToQuaternion as matrixToQuaternionCommon,
   solveLinearSystem3x3 as solveLinearSystem3x3Common
 } from '../math-utils-common'
+import { cross as vec3Cross } from '../../utils/vec3'
 
 // Re-export common utilities
 export const normalize = normalizeCommon
 export const matrixToQuaternion = matrixToQuaternionCommon
 
 export function cross(a: number[], b: number[]): number[] {
-  return [
-    a[1] * b[2] - a[2] * b[1],
-    a[2] * b[0] - a[0] * b[2],
-    a[0] * b[1] - a[1] * b[0]
-  ]
+  return vec3Cross(a as [number, number, number], b as [number, number, number])
 }
 
 export function quaternionToEulerDegrees(q: [number, number, number, number]): { rollDeg: number; pitchDeg: number; yawDeg: number } {

@@ -1,31 +1,30 @@
 /**
  * Unified candidate testing system.
- * Replaces the three nested retry mechanisms with a single candidate generation + probe approach.
+ * Tests all combinations of (strategy × seed × branch × alignment) with lightweight probes,
+ * then runs full optimization on the winner.
  *
- * Instead of:
- * - 3 random seed attempts × 4 inference branches × 2 alignment options = up to 24 full solves
- *
- * We now:
- * 1. Generate all candidates upfront (seed × branch × alignment)
- * 2. Run lightweight probes (50-100 iterations) on each
- * 3. Pick best candidate based on probe residual
- * 4. Run FULL optimization only on winner
+ * Strategy-as-candidate: instead of the orchestrator's if/else tree picking ONE init strategy,
+ * we enumerate all viable strategies and let probe residuals objectively pick the best one.
  */
 
 import { Project } from '../../entities/project';
 import { WorldPoint } from '../../entities/world-point';
 import { Viewpoint } from '../../entities/viewpoint';
 import { generateAllInferenceBranches, InferenceBranch } from '../inference-branching';
+import { canInitializeWithVanishingPoints } from '../vanishing-points';
 import { log, logDebug, setCandidateProgress } from '../optimization-logger';
 import { OPTIMIZE_PROJECT_DEFAULTS, type OptimizeProjectOptions } from './types';
+import { getViableStrategies, STRATEGIES, type InitStrategyId } from '../camera-initialization/init-strategy';
 
 /**
  * A candidate represents a specific combination of:
+ * - Init strategy (vp-pnp, stepped-vp, essential-matrix, late-pnp-only)
  * - Random seed (for camera perturbation and randomized solves)
  * - Inference branch (sign choices for axis-aligned lines)
  * - Alignment sign (for Essential Matrix ambiguous cases)
  */
 export interface OptimizationCandidate {
+  initStrategy: InitStrategyId | undefined;
   seed: number;
   branch: InferenceBranch | null;
   alignmentSign: 'positive' | 'negative' | undefined;
@@ -57,6 +56,7 @@ export function generateAllCandidates(
   // 2. No auto-initialization (pure constraint solve - no ambiguity to resolve)
   if (options._skipCandidateTesting || (!autoInitializeCameras && !autoInitializeWorldPoints)) {
     return [{
+      initStrategy: options._initStrategy,
       seed: options._seed ?? 42,
       branch: options._branch ?? null,
       alignmentSign: options._alignmentSign,
@@ -70,57 +70,128 @@ export function generateAllCandidates(
   // Generate inference branches
   const branches = generateAllInferenceBranches(project);
   const hasMultipleBranches = branches.length > 1;
+  const branchesToTest: (InferenceBranch | null)[] = hasMultipleBranches ? branches : [null];
 
-  // Determine if we might have alignment ambiguity
-  // (We won't know for sure until after camera initialization, but we can pre-generate both options)
-  // Only count enabled viewpoints
-  const viewpointCount = Array.from(project.viewpoints).filter(vp => vp.enabledInSolve).length;
-  const mightUseEssentialMatrix = viewpointCount === 2; // Heuristic: EM used for 2-camera case
-
-  // For each random seed / attempt
+  // Seed attempts
   const attempts = maxAttempts > 1 ? [1, 2, 3] : [1];
 
-  // For each inference branch (or single default branch)
-  const branchesToTest = hasMultipleBranches ? branches : [null];
+  // Compute viable strategies from project state
+  const viewpointArray = (Array.from(project.viewpoints) as Viewpoint[]).filter(vp => vp.enabledInSolve);
+  const worldPointSet = new Set(Array.from(project.worldPoints) as WorldPoint[]);
+  const worldPointArray = Array.from(project.worldPoints) as WorldPoint[];
+  const lockedPoints = worldPointArray.filter(wp => wp.isFullyConstrained());
 
-  for (const attempt of attempts) {
-    // Use deterministic seeds like old multi-attempt system
-    const seed = attempt === 1 ? 42 : attempt === 2 ? 12345 : 98765 + attempt;
-    // Camera perturbation for retry attempts (helps escape local minima in EM cases)
-    const perturbScale = attempt > 1 ? 0.5 * attempt : undefined;
+  const uninitializedCameras = viewpointArray.filter(vp =>
+    vp.position[0] === 0 && vp.position[1] === 0 && vp.position[2] === 0
+  );
 
-    for (const branch of branchesToTest) {
-      // For Essential Matrix cases, test both alignment signs
-      if (mightUseEssentialMatrix) {
-        candidates.push({
-          seed,
-          branch,
-          alignmentSign: 'positive',
-          perturbCameras: perturbScale,
-          description: makeDescription(seed, branch, 'positive'),
-        });
+  let viableStrategies: InitStrategyId[] = [];
 
-        candidates.push({
-          seed,
-          branch,
-          alignmentSign: 'negative',
-          perturbCameras: perturbScale,
-          description: makeDescription(seed, branch, 'negative'),
-        });
-      } else {
-        candidates.push({
-          seed,
-          branch,
-          alignmentSign: undefined,
-          perturbCameras: perturbScale,
-          description: makeDescription(seed, branch, undefined),
-        });
-      }
-    }
+  if (autoInitializeCameras && uninitializedCameras.length >= 1) {
+    const canAnyUseVPStrict = uninitializedCameras.some(vp =>
+      canInitializeWithVanishingPoints(vp, worldPointSet, { allowSinglePoint: false })
+    );
+    const canAnyUseVPRelaxed = uninitializedCameras.some(vp =>
+      canInitializeWithVanishingPoints(vp, worldPointSet, { allowSinglePoint: true })
+    );
+
+    viableStrategies = getViableStrategies({
+      uninitializedCameras,
+      worldPoints: worldPointSet,
+      lockedPoints,
+      canAnyUseVPStrict,
+      canAnyUseVPRelaxed,
+    });
   }
 
-  // Always log candidate count for debugging
-  log(`[Candidates] Generated ${candidates.length} candidates (attempts=${attempts.length}, branches=${branchesToTest.length}, alignments=${mightUseEssentialMatrix ? 2 : 1})`);
+  // If we have multiple viable strategies, generate candidates per strategy
+  if (viableStrategies.length > 1) {
+    for (const strategy of viableStrategies) {
+      const strategyDef = STRATEGIES[strategy];
+
+      // VP-based strategies are deterministic from geometry - only use seed 42
+      // EM is sensitive to starting point - vary all seeds
+      const seedsForStrategy = strategyDef.isDeterministic ? [attempts[0]] : attempts;
+
+      for (const attempt of seedsForStrategy) {
+        const seed = attempt === 1 ? 42 : attempt === 2 ? 12345 : 98765 + attempt;
+        const perturbScale = attempt > 1 ? 0.5 * attempt : undefined;
+
+        for (const branch of branchesToTest) {
+          if (strategyDef.hasAlignmentAmbiguity) {
+            candidates.push({
+              initStrategy: strategy,
+              seed,
+              branch,
+              alignmentSign: 'positive',
+              perturbCameras: perturbScale,
+              description: makeDescription(strategy, seed, branch, 'positive'),
+            });
+            candidates.push({
+              initStrategy: strategy,
+              seed,
+              branch,
+              alignmentSign: 'negative',
+              perturbCameras: perturbScale,
+              description: makeDescription(strategy, seed, branch, 'negative'),
+            });
+          } else {
+            candidates.push({
+              initStrategy: strategy,
+              seed,
+              branch,
+              alignmentSign: undefined,
+              perturbCameras: perturbScale,
+              description: makeDescription(strategy, seed, branch, undefined),
+            });
+          }
+        }
+      }
+    }
+
+    log(`[Candidates] Generated ${candidates.length} candidates (strategies=${viableStrategies.join(',')}, branches=${branchesToTest.length})`);
+  } else {
+    // Single or no viable strategy - fall back to old behavior (no strategy dimension)
+    // The legacy orchestrator cascade handles strategy selection
+    const mightUseEssentialMatrix = viewpointArray.length === 2;
+
+    for (const attempt of attempts) {
+      const seed = attempt === 1 ? 42 : attempt === 2 ? 12345 : 98765 + attempt;
+      const perturbScale = attempt > 1 ? 0.5 * attempt : undefined;
+
+      for (const branch of branchesToTest) {
+        if (mightUseEssentialMatrix) {
+          candidates.push({
+            initStrategy: undefined,
+            seed,
+            branch,
+            alignmentSign: 'positive',
+            perturbCameras: perturbScale,
+            description: makeDescription(undefined, seed, branch, 'positive'),
+          });
+          candidates.push({
+            initStrategy: undefined,
+            seed,
+            branch,
+            alignmentSign: 'negative',
+            perturbCameras: perturbScale,
+            description: makeDescription(undefined, seed, branch, 'negative'),
+          });
+        } else {
+          candidates.push({
+            initStrategy: undefined,
+            seed,
+            branch,
+            alignmentSign: undefined,
+            perturbCameras: perturbScale,
+            description: makeDescription(undefined, seed, branch, undefined),
+          });
+        }
+      }
+    }
+
+    log(`[Candidates] Generated ${candidates.length} candidates (attempts=${attempts.length}, branches=${branchesToTest.length}, alignments=${mightUseEssentialMatrix ? 2 : 1})`);
+  }
 
   return candidates;
 }
@@ -129,11 +200,16 @@ export function generateAllCandidates(
  * Create a human-readable description for a candidate
  */
 function makeDescription(
+  strategy: InitStrategyId | undefined,
   seed: number,
   branch: InferenceBranch | null,
   alignmentSign: 'positive' | 'negative' | undefined
 ): string {
   const parts: string[] = [];
+
+  if (strategy) {
+    parts.push(strategy);
+  }
 
   parts.push(`seed=${seed}`);
 
@@ -239,8 +315,35 @@ export function restoreProjectState(
 }
 
 /**
+ * Build probe options for a candidate optimization run.
+ */
+function buildProbeOptions(
+  candidate: OptimizationCandidate,
+  options: OptimizeProjectOptions,
+  maxIterations: number
+): OptimizeProjectOptions {
+  return {
+    ...options,
+    maxIterations,
+    maxAttempts: 1,
+    verbose: false,
+    _skipCandidateTesting: true,
+    _skipBranching: true,
+    _branch: candidate.branch ?? undefined,
+    _seed: candidate.seed,
+    _alignmentSign: candidate.alignmentSign,
+    _perturbCameras: candidate.perturbCameras,
+    _initStrategy: candidate.initStrategy,
+    _attempt: 1,
+  };
+}
+
+/**
  * Test all candidates and return the best one.
- * This is the main entry point that replaces the three nested retry mechanisms.
+ *
+ * If candidate count > 24, uses two-tier probing:
+ * - Tier 1 (50 iterations): All candidates, keep top 8
+ * - Tier 2 (200 iterations): Top 8, pick best
  *
  * @param project The project to optimize
  * @param options Optimization options
@@ -261,89 +364,93 @@ export async function testAllCandidates(
     return null;
   }
 
-  // Use residual (sum of squared errors) as the quality metric, NOT median
-  // A low median can hide catastrophic outliers (e.g., 4 points at 1414px)
-  // Strict threshold ensures we test all candidates unless one is truly excellent
-  // (For most scenes, this means all candidates are tested and the best is selected)
+  // Use residual (sum of squared errors) as the quality metric
   const GOOD_ENOUGH_THRESHOLD = 10.0;
-  // Probes are fast exploratory runs - cap at 200 for speed
-  // When there are multiple candidates, probe iterations are always capped for speed
-  // The user's maxIterations setting applies when there's only one candidate
-  const PROBE_ITERATIONS = Math.min(options.maxIterations ?? 200, 200);
 
-  // Save original state - isZReflected already reset by orchestrator at top-level entry
+  // Save original state
   const originalState = saveProjectState(project);
+
+  let candidatesToTest = candidates;
+  const useTwoTier = candidates.length > 24;
+
+  // Tier 1: Quick probes to narrow down if too many candidates
+  if (useTwoTier) {
+    const TIER1_ITERATIONS = 50;
+    log(`[Candidates] Two-tier probing: ${candidates.length} candidates, tier1=${TIER1_ITERATIONS} iter`);
+
+    const tier1Results: { candidate: OptimizationCandidate; residual: number }[] = [];
+
+    for (let i = 0; i < candidates.length; i++) {
+      const candidate = candidates[i];
+      setCandidateProgress(i + 1, candidates.length);
+      restoreProjectState(project, originalState);
+
+      try {
+        const probeResult = await optimizeProject(project, buildProbeOptions(candidate, options, TIER1_ITERATIONS));
+        tier1Results.push({ candidate, residual: probeResult.residual ?? Infinity });
+      } catch {
+        tier1Results.push({ candidate, residual: Infinity });
+      }
+    }
+
+    // Sort by residual and keep top 8
+    tier1Results.sort((a, b) => a.residual - b.residual);
+    const top = tier1Results.slice(0, 8);
+    candidatesToTest = top.map(t => t.candidate);
+    log(`[Candidates] Tier 1 done. Top 8 residuals: [${top.map(t => t.residual.toFixed(1)).join(', ')}]`);
+  }
+
+  // Main probing (tier 2 if two-tier, otherwise single-tier)
+  const PROBE_ITERATIONS = Math.min(options.maxIterations ?? 200, 200);
 
   let bestResidual = Infinity;
   let bestCandidate: OptimizationCandidate | null = null;
 
-  // Test each candidate with lightweight probes
-  for (let i = 0; i < candidates.length; i++) {
-    const candidate = candidates[i];
-
-    // Update candidate progress for UI
-    setCandidateProgress(i + 1, candidates.length);
-
-    // Restore to original state before each probe to ensure independence
-    // This prevents probes from benefiting from previous probes' partial convergence,
-    // which would make the winning probe non-reproducible in the full run
+  for (let i = 0; i < candidatesToTest.length; i++) {
+    const candidate = candidatesToTest[i];
+    setCandidateProgress(i + 1, candidatesToTest.length);
     restoreProjectState(project, originalState);
 
-    // Run probe with reduced iterations
-    const probeResult = await optimizeProject(project, {
-      ...options,
-      maxIterations: PROBE_ITERATIONS,
-      maxAttempts: 1,
-      verbose: false,
-      _skipCandidateTesting: true,
-      _skipBranching: true,
-      _branch: candidate.branch ?? undefined,
-      _seed: candidate.seed,
-      _alignmentSign: candidate.alignmentSign,
-      _perturbCameras: candidate.perturbCameras,
-      _attempt: 1, // Mark as non-first to skip multi-attempt
-    });
+    try {
+      const probeResult = await optimizeProject(project, buildProbeOptions(candidate, options, PROBE_ITERATIONS));
 
-    const residual = probeResult.residual ?? Infinity;
-    logDebug(`[Candidate] #${i + 1}/${candidates.length}: ${candidate.description} → residual=${residual.toFixed(1)}`);
+      const residual = probeResult.residual ?? Infinity;
+      logDebug(`[Candidate] #${i + 1}/${candidatesToTest.length}: ${candidate.description} -> residual=${residual.toFixed(1)}`);
 
-    // Track best candidate by residual
-    if (residual < bestResidual) {
-      bestResidual = residual;
-      bestCandidate = candidate;
-    }
+      if (residual < bestResidual) {
+        bestResidual = residual;
+        bestCandidate = candidate;
+      }
 
-    // If good enough, stop testing remaining candidates and proceed to full solve
-    // We still run full solve to honor the user's maxIterations setting
-    if (residual < GOOD_ENOUGH_THRESHOLD) {
-      logDebug(`[Candidate] #${i + 1} is good enough (residual=${residual.toFixed(1)} < ${GOOD_ENOUGH_THRESHOLD})`);
-      log(`[Candidate] Early winner: ${candidate.description} - skipping remaining candidates`);
-      break; // Exit loop early, but still run full solve below
+      if (residual < GOOD_ENOUGH_THRESHOLD) {
+        logDebug(`[Candidate] #${i + 1} is good enough (residual=${residual.toFixed(1)} < ${GOOD_ENOUGH_THRESHOLD})`);
+        log(`[Candidate] Early winner: ${candidate.description} - skipping remaining candidates`);
+        break;
+      }
+    } catch {
+      logDebug(`[Candidate] #${i + 1}/${candidatesToTest.length}: ${candidate.description} -> FAILED (exception)`);
     }
   }
 
-  // Clear candidate progress - done testing
+  // Clear candidate progress
   setCandidateProgress(0, 0);
 
   // Re-run full optimization with best candidate's parameters
-  // Always run full solve to honor user's maxIterations setting
   if (bestCandidate) {
     log(`[Candidate] Winner: ${bestCandidate.description} (probe residual=${bestResidual.toFixed(1)})`);
     log(`[Candidate] Running full optimization with user's maxIterations...`);
 
-    // Restore to original state (not best probe state) for a clean full run
-    // The best probe might have been partially converged - we want a complete run
     restoreProjectState(project, originalState);
 
     const fullResult = await optimizeProject(project, {
       ...options,
-      // Keep user's maxIterations for full run
       _skipCandidateTesting: true,
       _skipBranching: true,
       _branch: bestCandidate.branch ?? undefined,
       _seed: bestCandidate.seed,
       _alignmentSign: bestCandidate.alignmentSign,
       _perturbCameras: bestCandidate.perturbCameras,
+      _initStrategy: bestCandidate.initStrategy,
       _attempt: 1,
     });
 

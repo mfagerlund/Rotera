@@ -19,6 +19,7 @@
  */
 
 import { AnalyticalResidualProvider } from '../types';
+import { quatRotate } from '../quat-rotate';
 import { reprojection_u_dcam_grad } from '../../residuals/gradients/reprojection-u-dcam-gradient';
 import { reprojection_v_dcam_grad } from '../../residuals/gradients/reprojection-v-dcam-gradient';
 
@@ -64,41 +65,6 @@ export interface ReprojectionFlags {
    * Must match the autodiff behavior in camera-projection.ts.
    */
   isZReflected?: boolean;
-}
-
-/**
- * Rotate a vector by a quaternion: v' = q * v * q*
- *
- * This uses the GENERAL formula (works for non-unit quaternions):
- * v' = 2*(q_vec · v)*q_vec + (w² - |q_vec|²)*v + 2*w*(q_vec × v)
- *
- * The previous formula v' = v + 2*w*(q×v) + 2*(q×(q×v)) ONLY works for unit quaternions.
- * When the quaternion is not normalized (as happens during optimization),
- * the general formula must be used to match the autodiff's q * v * q* computation.
- */
-function quatRotate(q: Quaternion, v: Point3D): Point3D {
-  const { w, x: qx, y: qy, z: qz } = q;
-
-  // q_vec · v (dot product)
-  const dot = qx * v.x + qy * v.y + qz * v.z;
-
-  // |q_vec|² (squared magnitude of vector part)
-  const qVecSq = qx * qx + qy * qy + qz * qz;
-
-  // w² - |q_vec|²
-  const wSqMinusQVecSq = w * w - qVecSq;
-
-  // q_vec × v (cross product)
-  const cx = qy * v.z - qz * v.y;
-  const cy = qz * v.x - qx * v.z;
-  const cz = qx * v.y - qy * v.x;
-
-  // v' = 2*(q_vec · v)*q_vec + (w² - |q_vec|²)*v + 2*w*(q_vec × v)
-  return {
-    x: 2 * dot * qx + wSqMinusQVecSq * v.x + 2 * w * cx,
-    y: 2 * dot * qy + wSqMinusQVecSq * v.y + 2 * w * cy,
-    z: 2 * dot * qz + wSqMinusQVecSq * v.z + 2 * w * cz,
-  };
 }
 
 /**

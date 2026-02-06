@@ -6,6 +6,7 @@ import type { SolverResult, SolverOptions } from '../constraint-system';
 import type { OutlierInfo } from '../outlier-detection';
 import type { InferenceBranch } from '../inference-branching';
 import type { SolveQuality, QualityLevel } from '../quality-thresholds';
+import type { InitStrategyId } from '../camera-initialization/init-strategy';
 
 // Re-export quality types and functions from centralized module
 export type { SolveQuality, QualityLevel };
@@ -69,6 +70,8 @@ export interface OptimizeProjectOptions extends Omit<SolverOptions, 'optimizeCam
   _skipCandidateTesting?: boolean;
   /** @internal Force specific alignment sign (used during candidate testing) */
   _alignmentSign?: 'positive' | 'negative';
+  /** @internal Initialization strategy (from candidate testing) */
+  _initStrategy?: InitStrategyId;
 }
 
 export interface OptimizeProjectResult extends SolverResult {

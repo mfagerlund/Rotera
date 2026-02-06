@@ -18,6 +18,7 @@ import {
   matrixToQuaternion,
   quaternionToMatrix
 } from './math-utils';
+import { createRng } from '../seeded-random';
 
 /**
  * Solve P3P (Perspective-3-Point) problem using Kneip's method.
@@ -198,7 +199,7 @@ export function computePoseFrom3Points(
     }
   }
 
-  const svd = computeSVD3x3(H);
+  const svd = computeSVD3x3(H, createRng(600));
   if (!svd) return null;
 
   let R = matrixMultiply3x3(svd.V, transpose3x3(svd.U));

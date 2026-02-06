@@ -25,7 +25,7 @@ export function svd3x3(A: number[][]): { U: number[][], S: number[], V: number[]
   }
 
   // Eigendecompose A^T * A to get V and eigenvalues
-  const eigResult = jacobiEigenDecomposition(AtA);
+  const eigResult = jacobiEigenDecomposition3x3(AtA);
 
   const singularValues: number[] = [
     Math.sqrt(Math.max(0, eigResult.eigenvalues[0])),
@@ -100,79 +100,10 @@ export function svd3x3(A: number[][]): { U: number[][], S: number[], V: number[]
   return { U, S, V: Vsorted };
 }
 
-export function jacobiEigenDecomposition(A: number[][]): { eigenvalues: number[], eigenvectors: number[][] } {
-  const n = 3;
-  const V: number[][] = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
-  const M: number[][] = [
-    [A[0][0], A[0][1], A[0][2]],
-    [A[1][0], A[1][1], A[1][2]],
-    [A[2][0], A[2][1], A[2][2]]
-  ];
-
-  const maxIterations = 100;
-  const tolerance = 1e-10;
-
-  for (let iter = 0; iter < maxIterations; iter++) {
-    let maxOffDiag = 0;
-    let p = 0, q = 1;
-
-    for (let i = 0; i < n; i++) {
-      for (let j = i + 1; j < n; j++) {
-        if (Math.abs(M[i][j]) > maxOffDiag) {
-          maxOffDiag = Math.abs(M[i][j]);
-          p = i;
-          q = j;
-        }
-      }
-    }
-
-    if (maxOffDiag < tolerance) break;
-
-    const theta = 0.5 * Math.atan2(2 * M[p][q], M[q][q] - M[p][p]);
-    const c = Math.cos(theta);
-    const s = Math.sin(theta);
-
-    const Mpp = M[p][p];
-    const Mqq = M[q][q];
-    const Mpq = M[p][q];
-
-    M[p][p] = c * c * Mpp - 2 * s * c * Mpq + s * s * Mqq;
-    M[q][q] = s * s * Mpp + 2 * s * c * Mpq + c * c * Mqq;
-    M[p][q] = 0;
-    M[q][p] = 0;
-
-    for (let i = 0; i < n; i++) {
-      if (i !== p && i !== q) {
-        const Mip = M[i][p];
-        const Miq = M[i][q];
-        M[i][p] = c * Mip - s * Miq;
-        M[p][i] = M[i][p];
-        M[i][q] = s * Mip + c * Miq;
-        M[q][i] = M[i][q];
-      }
-    }
-
-    for (let i = 0; i < n; i++) {
-      const Vip = V[i][p];
-      const Viq = V[i][q];
-      V[i][p] = c * Vip - s * Viq;
-      V[i][q] = s * Vip + c * Viq;
-    }
-  }
-
-  return {
-    eigenvalues: [M[0][0], M[1][1], M[2][2]],
-    eigenvectors: V
-  };
-}
-
-export function jacobiEigenDecomposition9x9(A: number[][]): { eigenvalues: number[], eigenvectors: number[][] } {
-  const n = 9;
+export function jacobiEigenDecomposition(A: number[][], maxIterations: number, tolerance: number): { eigenvalues: number[], eigenvectors: number[][] } {
+  const n = A.length;
   const V: number[][] = Array(n).fill(0).map((_, i) => Array(n).fill(0).map((_, j) => i === j ? 1 : 0));
   const M: number[][] = A.map(row => [...row]);
-
-  const maxIterations = 200;
-  const tolerance = 1e-12;
 
   for (let iter = 0; iter < maxIterations; iter++) {
     let maxOffDiag = 0;
@@ -228,64 +159,14 @@ export function jacobiEigenDecomposition9x9(A: number[][]): { eigenvalues: numbe
   };
 }
 
-export function jacobiEigenDecomposition4x4(A: number[][]): { eigenvalues: number[], eigenvectors: number[][] } {
-  const n = 4;
-  const V: number[][] = Array(n).fill(0).map((_, i) => Array(n).fill(0).map((_, j) => i === j ? 1 : 0));
-  const M: number[][] = A.map(row => [...row]);
+export function jacobiEigenDecomposition3x3(A: number[][]): { eigenvalues: number[]; eigenvectors: number[][] } {
+  return jacobiEigenDecomposition(A, 100, 1e-10);
+}
 
-  const maxIterations = 100;
-  const tolerance = 1e-10;
+export function jacobiEigenDecomposition9x9(A: number[][]): { eigenvalues: number[]; eigenvectors: number[][] } {
+  return jacobiEigenDecomposition(A, 200, 1e-12);
+}
 
-  for (let iter = 0; iter < maxIterations; iter++) {
-    let maxOffDiag = 0;
-    let p = 0, q = 1;
-
-    for (let i = 0; i < n; i++) {
-      for (let j = i + 1; j < n; j++) {
-        if (Math.abs(M[i][j]) > maxOffDiag) {
-          maxOffDiag = Math.abs(M[i][j]);
-          p = i;
-          q = j;
-        }
-      }
-    }
-
-    if (maxOffDiag < tolerance) break;
-
-    const theta = 0.5 * Math.atan2(2 * M[p][q], M[q][q] - M[p][p]);
-    const c = Math.cos(theta);
-    const s = Math.sin(theta);
-
-    const Mpp = M[p][p];
-    const Mqq = M[q][q];
-    const Mpq = M[p][q];
-
-    M[p][p] = c * c * Mpp - 2 * s * c * Mpq + s * s * Mqq;
-    M[q][q] = s * s * Mpp + 2 * s * c * Mpq + c * c * Mqq;
-    M[p][q] = 0;
-    M[q][p] = 0;
-
-    for (let i = 0; i < n; i++) {
-      if (i !== p && i !== q) {
-        const Mip = M[i][p];
-        const Miq = M[i][q];
-        M[i][p] = c * Mip - s * Miq;
-        M[p][i] = M[i][p];
-        M[i][q] = s * Mip + c * Miq;
-        M[q][i] = M[i][q];
-      }
-    }
-
-    for (let i = 0; i < n; i++) {
-      const Vip = V[i][p];
-      const Viq = V[i][q];
-      V[i][p] = c * Vip - s * Viq;
-      V[i][q] = s * Vip + c * Viq;
-    }
-  }
-
-  return {
-    eigenvalues: Array(n).fill(0).map((_, i) => M[i][i]),
-    eigenvectors: V
-  };
+export function jacobiEigenDecomposition4x4(A: number[][]): { eigenvalues: number[]; eigenvectors: number[][] } {
+  return jacobiEigenDecomposition(A, 100, 1e-10);
 }

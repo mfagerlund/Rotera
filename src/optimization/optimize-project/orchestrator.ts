@@ -178,6 +178,7 @@ export async function optimizeProject(
         lockedPoints,
         canAnyUseVPStrict: canAnyUninitCameraUseVPStrict,
         canAnyUseVPRelaxed: canAnyUninitCameraUseVPRelaxed,
+        strategy: options._initStrategy,
       });
 
       camerasInitialized.push(...initResult.camerasInitialized);

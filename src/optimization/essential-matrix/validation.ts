@@ -5,7 +5,31 @@
 import type { Correspondence, RansacResult } from './types';
 import { estimateEssentialMatrix7Point } from './estimation';
 import { decomposeEssentialMatrix, checkCheirality, isTranslationDegenerate } from './decomposition';
-import { random } from '../seeded-random';
+import { createRng } from '../seeded-random';
+
+/**
+ * Compute the Sampson error for a single correspondence against an Essential Matrix.
+ * First-order approximation to geometric error: (x2^T E x1)^2 / (||Ex1||^2_2 + ||E^Tx2||^2_2)
+ */
+function computeSampsonError(E: number[][], c: Correspondence): number {
+  const x1 = [c.x1, c.y1, 1];
+  const x2 = [c.x2, c.y2, 1];
+
+  const Ex1 = [
+    E[0][0] * x1[0] + E[0][1] * x1[1] + E[0][2] * x1[2],
+    E[1][0] * x1[0] + E[1][1] * x1[1] + E[1][2] * x1[2],
+    E[2][0] * x1[0] + E[2][1] * x1[1] + E[2][2] * x1[2]
+  ];
+  const Etx2 = [
+    E[0][0] * x2[0] + E[1][0] * x2[1] + E[2][0] * x2[2],
+    E[0][1] * x2[0] + E[1][1] * x2[1] + E[2][1] * x2[2],
+    E[0][2] * x2[0] + E[1][2] * x2[1] + E[2][2] * x2[2]
+  ];
+  const x2tEx1 = x2[0] * Ex1[0] + x2[1] * Ex1[1] + x2[2] * Ex1[2];
+  const denom = Ex1[0] * Ex1[0] + Ex1[1] * Ex1[1] + Etx2[0] * Etx2[0] + Etx2[1] * Etx2[1];
+
+  return denom > 1e-10 ? (x2tEx1 * x2tEx1) / denom : Infinity;
+}
 
 /**
  * Compute reprojection-based inlier count for a given R, t solution.
@@ -17,39 +41,11 @@ export function countInliersWithSampsonError(
   threshold: number = 0.01
 ): number {
   let inliers = 0;
-
   for (const c of correspondences) {
-    const x1 = [c.x1, c.y1, 1];
-    const x2 = [c.x2, c.y2, 1];
-
-    // Compute Ex1
-    const Ex1 = [
-      E[0][0] * x1[0] + E[0][1] * x1[1] + E[0][2] * x1[2],
-      E[1][0] * x1[0] + E[1][1] * x1[1] + E[1][2] * x1[2],
-      E[2][0] * x1[0] + E[2][1] * x1[1] + E[2][2] * x1[2]
-    ];
-
-    // Compute E^T x2
-    const Etx2 = [
-      E[0][0] * x2[0] + E[1][0] * x2[1] + E[2][0] * x2[2],
-      E[0][1] * x2[0] + E[1][1] * x2[1] + E[2][1] * x2[2],
-      E[0][2] * x2[0] + E[1][2] * x2[1] + E[2][2] * x2[2]
-    ];
-
-    // x2^T * E * x1
-    const x2tEx1 = x2[0] * Ex1[0] + x2[1] * Ex1[1] + x2[2] * Ex1[2];
-
-    // Sampson error denominator
-    const denom = Ex1[0] * Ex1[0] + Ex1[1] * Ex1[1] + Etx2[0] * Etx2[0] + Etx2[1] * Etx2[1];
-
-    if (denom > 1e-10) {
-      const sampsonError = (x2tEx1 * x2tEx1) / denom;
-      if (sampsonError < threshold) {
-        inliers++;
-      }
+    if (computeSampsonError(E, c) < threshold) {
+      inliers++;
     }
   }
-
   return inliers;
 }
 
@@ -62,37 +58,12 @@ export function computeTotalSampsonError(
   correspondences: Correspondence[]
 ): number {
   let totalError = 0;
-
-  for (const corr of correspondences) {
-    const x1 = [corr.x1, corr.y1, 1];
-    const x2 = [corr.x2, corr.y2, 1];
-
-    // E * x1
-    const Ex1 = [
-      E[0][0] * x1[0] + E[0][1] * x1[1] + E[0][2] * x1[2],
-      E[1][0] * x1[0] + E[1][1] * x1[1] + E[1][2] * x1[2],
-      E[2][0] * x1[0] + E[2][1] * x1[1] + E[2][2] * x1[2]
-    ];
-
-    // E^T x2
-    const Etx2 = [
-      E[0][0] * x2[0] + E[1][0] * x2[1] + E[2][0] * x2[2],
-      E[0][1] * x2[0] + E[1][1] * x2[1] + E[2][1] * x2[2],
-      E[0][2] * x2[0] + E[1][2] * x2[1] + E[2][2] * x2[2]
-    ];
-
-    // x2^T * E * x1
-    const x2tEx1 = x2[0] * Ex1[0] + x2[1] * Ex1[1] + x2[2] * Ex1[2];
-
-    // Sampson error denominator
-    const denom = Ex1[0] * Ex1[0] + Ex1[1] * Ex1[1] + Etx2[0] * Etx2[0] + Etx2[1] * Etx2[1];
-
-    if (denom > 1e-10) {
-      const sampsonError = (x2tEx1 * x2tEx1) / denom;
-      totalError += sampsonError;
+  for (const c of correspondences) {
+    const error = computeSampsonError(E, c);
+    if (error !== Infinity) {
+      totalError += error;
     }
   }
-
   return totalError;
 }
 
@@ -116,14 +87,14 @@ export function ransacEssentialMatrix(
     return null;
   }
 
+  const rng = createRng(400);
   let bestResult: RansacResult | null = null;
   let bestScore = -1;
 
-  // Helper to get random sample of indices
   const getRandomSample = (size: number, max: number): number[] => {
     const indices: number[] = [];
     while (indices.length < size) {
-      const idx = Math.floor(random() * max);
+      const idx = Math.floor(rng.random() * max);
       if (!indices.includes(idx)) {
         indices.push(idx);
       }

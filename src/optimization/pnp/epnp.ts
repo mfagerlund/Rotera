@@ -18,6 +18,7 @@ import {
   matrixVectorMultiply,
   computeEigenVectors
 } from './math-utils';
+import { createRng } from '../seeded-random';
 
 /**
  * Estimate camera pose using Direct Linear Transform (DLT).
@@ -87,7 +88,7 @@ export function solveHomogeneousSystem(A: number[][]): number[] | null {
 function computeSVD(A: number[][]): { V: number[][] } | null {
   const AtA = multiplyTranspose(A, A);
 
-  const eigenVectors = computeEigenVectors(AtA);
+  const eigenVectors = computeEigenVectors(AtA, createRng(700));
   if (!eigenVectors) return null;
 
   return { V: eigenVectors };

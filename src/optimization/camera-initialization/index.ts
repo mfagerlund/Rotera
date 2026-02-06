@@ -15,6 +15,10 @@
 export { initializeCameras } from './orchestrator';
 export type { InitializeCamerasOptions } from './orchestrator';
 
+// Strategy types
+export { getViableStrategies, STRATEGIES } from './init-strategy';
+export type { InitStrategyId, InitStrategy, ViabilityInput } from './init-strategy';
+
 // Internal exports (used by other optimization modules)
 export { tryVPInitForCamera } from './vp-strategy';
 export { tryPnPInitForCamera } from './pnp-strategy';

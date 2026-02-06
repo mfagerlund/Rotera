@@ -5,7 +5,7 @@
  * quaternion conversions, and other geometric utilities.
  */
 
-import { random } from '../seeded-random';
+import { random, type SeededRng } from '../seeded-random';
 import {
   normalize as normalizeCommon,
   matrixToQuaternion as matrixToQuaternionCommon,
@@ -74,9 +74,9 @@ export function multiplyTranspose(A: number[][], B: number[][]): number[][] {
  * Compute SVD of 3x3 matrix using power iteration.
  * Returns U, S (singular values), and V.
  */
-export function computeSVD3x3(M: number[][]): { U: number[][]; S: number[]; V: number[][] } | null {
+export function computeSVD3x3(M: number[][], rng?: SeededRng): { U: number[][]; S: number[]; V: number[][] } | null {
   const MtM = matrixMultiply3x3(transpose3x3(M), M);
-  const eigenVectors = computeEigenVectors3x3(MtM);
+  const eigenVectors = computeEigenVectors3x3(MtM, rng);
   if (!eigenVectors) return null;
 
   const V = eigenVectors;
@@ -111,11 +111,12 @@ export function computeSVD3x3(M: number[][]): { U: number[][]; S: number[]; V: n
 /**
  * Compute eigenvectors of 3x3 matrix using power iteration.
  */
-export function computeEigenVectors3x3(M: number[][]): number[][] | null {
+export function computeEigenVectors3x3(M: number[][], rng?: SeededRng): number[][] | null {
+  const r = rng ? () => rng.random() : random;
   const vectors: number[][] = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
 
   for (let iter = 0; iter < 3; iter++) {
-    let v = [random(), random(), random()];
+    let v = [r(), r(), r()];
 
     for (let i = 0; i < iter; i++) {
       const proj = v[0] * vectors[i][0] + v[1] * vectors[i][1] + v[2] * vectors[i][2];
@@ -162,12 +163,13 @@ export function computeEigenVectors3x3(M: number[][]): number[][] | null {
 /**
  * Compute eigenvectors for arbitrary sized matrix using power iteration.
  */
-export function computeEigenVectors(A: number[][]): number[][] | null {
+export function computeEigenVectors(A: number[][], rng?: SeededRng): number[][] | null {
+  const r = rng ? () => rng.random() : random;
   const n = A.length;
   const vectors: number[][] = [];
 
   for (let iter = 0; iter < n; iter++) {
-    let v = Array(n).fill(0).map(() => random());
+    let v = Array(n).fill(0).map(() => r());
 
     for (let i = 0; i < vectors.length; i++) {
       const proj = dotProduct(v, vectors[i]);

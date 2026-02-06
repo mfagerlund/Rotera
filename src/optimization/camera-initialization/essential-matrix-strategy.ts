@@ -3,6 +3,7 @@
  */
 
 import type { Viewpoint } from '../../entities/viewpoint';
+import { quaternionMultiply, quaternionRotateVector } from '../../utils/quaternion';
 import { initializeCamerasWithEssentialMatrix } from '../essential-matrix';
 import {
   validateVanishingPoints,
@@ -88,36 +89,14 @@ export function runEssentialMatrixInitialization(
           // vp1 gets the VP rotation directly
           vp1.rotation = q_vp;
 
-          // Quaternion multiplication helper
-          const qMult = (a: number[], b: number[]): [number, number, number, number] => {
-            return [
-              a[0]*b[0] - a[1]*b[1] - a[2]*b[2] - a[3]*b[3],
-              a[0]*b[1] + a[1]*b[0] + a[2]*b[3] - a[3]*b[2],
-              a[0]*b[2] - a[1]*b[3] + a[2]*b[0] + a[3]*b[1],
-              a[0]*b[3] + a[1]*b[2] - a[2]*b[1] + a[3]*b[0]
-            ];
-          };
-
           // In EM frame: cam1 at identity, cam2 at q_em_2
           // We want cam1 at q_vp instead
           // This is a global rotation of the world by q_vp
           // In new frame: cam1 = q_vp, cam2 = q_vp * q_em_2 (quaternion multiply)
-          vp2.rotation = qMult(q_vp, q_em_2);
+          vp2.rotation = quaternionMultiply(q_vp, q_em_2);
 
           // Rotate vp2's position by q_vp (since we're rotating the world frame)
-          const rotateVec = (q: number[], v: number[]): [number, number, number] => {
-            const qw = q[0], qx = q[1], qy = q[2], qz = q[3];
-            const vx = v[0], vy = v[1], vz = v[2];
-            const tx = 2 * (qy * vz - qz * vy);
-            const ty = 2 * (qz * vx - qx * vz);
-            const tz = 2 * (qx * vy - qy * vx);
-            return [
-              vx + qw * tx + (qy * tz - qz * ty),
-              vy + qw * ty + (qz * tx - qx * tz),
-              vz + qw * tz + (qx * ty - qy * tx)
-            ];
-          };
-          vp2.position = rotateVec(q_vp, pos_2);
+          vp2.position = quaternionRotateVector(q_vp, pos_2);
 
           // Update focal length if VP-estimated was better
           if (vpFocalLength && vpFocalLength > 100) {

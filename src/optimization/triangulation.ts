@@ -1,6 +1,7 @@
 import type { IViewpoint, IImagePoint, IWorldPoint } from '../entities/interfaces';
 import type { Viewpoint } from '../entities/viewpoint';
 import type { WorldPoint } from '../entities/world-point';
+import { quaternionRotateVector, quaternionInverse } from '../utils/quaternion';
 import { log } from './optimization-logger';
 
 export interface TriangulationResult {
@@ -8,25 +9,6 @@ export interface TriangulationResult {
   depth1: number;
   depth2: number;
   reprojectionError?: number;
-}
-
-function quaternionRotateVector(q: number[], v: number[]): number[] {
-  const qw = q[0], qx = q[1], qy = q[2], qz = q[3];
-  const vx = v[0], vy = v[1], vz = v[2];
-
-  const tx = 2 * (qy * vz - qz * vy);
-  const ty = 2 * (qz * vx - qx * vz);
-  const tz = 2 * (qx * vy - qy * vx);
-
-  return [
-    vx + qw * tx + (qy * tz - qz * ty),
-    vy + qw * ty + (qz * tx - qx * tz),
-    vz + qw * tz + (qx * ty - qy * tx)
-  ];
-}
-
-function quaternionInverse(q: number[]): number[] {
-  return [q[0], -q[1], -q[2], -q[3]];
 }
 
 export function triangulateRayRay(

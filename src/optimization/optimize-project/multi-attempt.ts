@@ -6,7 +6,7 @@
 import { Project } from '../../entities/project';
 import { Viewpoint } from '../../entities/viewpoint';
 import { log } from '../optimization-logger';
-import { setSeed, random } from '../seeded-random';
+import { setSeed, createRng } from '../seeded-random';
 
 /**
  * Apply camera perturbation for retry attempts.
@@ -21,14 +21,14 @@ export function applyCameraPerturbation(
     return;
   }
 
+  const rng = createRng(100);
   const viewpointArray = Array.from(project.viewpoints) as Viewpoint[];
 
   for (const vp of viewpointArray) {
-    // Add random perturbation to camera position (seeded for reproducibility)
     vp.position = [
-      vp.position[0] + (random() - 0.5) * perturbScale,
-      vp.position[1] + (random() - 0.5) * perturbScale,
-      vp.position[2] + (random() - 0.5) * perturbScale,
+      vp.position[0] + (rng.random() - 0.5) * perturbScale,
+      vp.position[1] + (rng.random() - 0.5) * perturbScale,
+      vp.position[2] + (rng.random() - 0.5) * perturbScale,
     ];
   }
   log(`[Perturb] Applied camera position perturbation (scale=${perturbScale.toFixed(2)})`);

@@ -5,6 +5,7 @@ import type { ImagePoint } from '../../entities/imagePoint'
 import { log } from '../optimization-logger'
 import { randomUnitVector } from './helpers'
 import { quaternionRotateVector } from '../coordinate-alignment/quaternion-utils'
+import { createRng } from '../seeded-random'
 
 /**
  * Phase 4: Propagate positions through the line graph
@@ -20,11 +21,24 @@ export function step4_propagateThroughLineGraph(
   initializedViewpoints?: Set<Viewpoint>,
   vpInitializedViewpoints?: Set<Viewpoint>
 ): void {
+  const rng = createRng(500)
   const startSize = initialized.size
 
   if (initialized.size === 0 && points.length > 0) {
     points[0].optimizedXyz = [0, 0, 0]
     initialized.add(points[0])
+  }
+
+  // Build adjacency map: point -> [{line, neighbor}] for O(N+L) BFS
+  const adjacency = new Map<WorldPoint, { line: Line; neighbor: WorldPoint }[]>()
+  for (const line of lines) {
+    let listA = adjacency.get(line.pointA)
+    if (!listA) { listA = []; adjacency.set(line.pointA, listA) }
+    listA.push({ line, neighbor: line.pointB })
+
+    let listB = adjacency.get(line.pointB)
+    if (!listB) { listB = []; adjacency.set(line.pointB, listB) }
+    listB.push({ line, neighbor: line.pointA })
   }
 
   const queue = Array.from(initialized)
@@ -33,16 +47,13 @@ export function step4_propagateThroughLineGraph(
     const currentPoint = queue.shift()!
     if (!currentPoint.optimizedXyz) continue
 
-    for (const line of lines) {
-      let otherPoint: WorldPoint | null = null
+    const edges = adjacency.get(currentPoint)
+    if (!edges) continue
 
-      if (line.pointA === currentPoint && !initialized.has(line.pointB)) {
-        otherPoint = line.pointB
-      } else if (line.pointB === currentPoint && !initialized.has(line.pointA)) {
-        otherPoint = line.pointA
-      }
+    for (const { line, neighbor: otherPoint } of edges) {
+      if (initialized.has(otherPoint)) continue
 
-      if (otherPoint) {
+      {
         const distance = line.targetLength ?? sceneScale * 0.5
         const currentXyz = currentPoint.optimizedXyz!
         let newPos: [number, number, number]
@@ -69,8 +80,7 @@ export function step4_propagateThroughLineGraph(
             newPos = [currentXyz[0], currentXyz[1] + distance * 0.707, currentXyz[2] + distance * 0.707]
             break
           default: {
-            // Free direction - use random unit vector
-            const dir = randomUnitVector()
+            const dir = randomUnitVector(rng)
             newPos = [
               currentXyz[0] + dir[0] * distance,
               currentXyz[1] + dir[1] * distance,
@@ -85,7 +95,9 @@ export function step4_propagateThroughLineGraph(
           const rayIntersection = computeRayLineIntersection(otherPoint, currentXyz, line.direction as 'x' | 'y' | 'z', vpInitializedViewpoints)
           if (rayIntersection !== null) {
             newPos = rayIntersection
-            log(`[Step 4] Ray intersection: ${otherPoint.name} pos=[${newPos.map(p => p.toFixed(2)).join(',')}]`)
+            if (verbose) {
+              log(`[Step 4] Ray intersection: ${otherPoint.name} pos=[${newPos.map(p => p.toFixed(2)).join(',')}]`)
+            }
           }
         }
 
@@ -247,8 +259,6 @@ function computeRayLineIntersection(
     // For X-axis line: Y = startXyz[1], Z = startXyz[2]
     // Solve for t where ray intersects this line
 
-    const axisIndex = axis === 'x' ? 0 : axis === 'y' ? 1 : 2
-
     // For an X-direction line, the line is defined by Y = startY, Z = startZ
     // We need to find where the ray passes closest to this line
 
@@ -261,74 +271,22 @@ function computeRayLineIntersection(
 
     let result: [number, number, number] | null = null
 
-    if (axis === 'x') {
-      // Line: (startX + s, startY, startZ)
-      // Ray: camPos + t * ray
-      // Find t and s that minimize distance
-      // Closest point on ray to the line
-
-      // For Y and Z to match, we need:
-      // camY + t * rayY = startY -> t_y = (startY - camY) / rayY
-      // camZ + t * rayZ = startZ -> t_z = (startZ - camZ) / rayZ
-
-      // If rayY and rayZ are small, t goes to infinity (ray parallel to X axis)
-      // Use average of t_y and t_z if both are valid
-      const tValues: number[] = []
-      if (Math.abs(ray[1]) > 0.001) {
-        tValues.push((startXyz[1] - camPos[1]) / ray[1])
+    const axisIdx = axis === 'x' ? 0 : axis === 'y' ? 1 : 2
+    const otherIndices = [0, 1, 2].filter(i => i !== axisIdx)
+    const tValues: number[] = []
+    for (const idx of otherIndices) {
+      if (Math.abs(ray[idx]) > 0.001) {
+        tValues.push((startXyz[idx] - camPos[idx]) / ray[idx])
       }
-      if (Math.abs(ray[2]) > 0.001) {
-        tValues.push((startXyz[2] - camPos[2]) / ray[2])
-      }
-
-      if (tValues.length > 0) {
-        const t = tValues.reduce((a, b) => a + b) / tValues.length
-        // Require average t to be positive (point in front of camera)
-        // Also check that t values aren't wildly different (would indicate bad geometry)
-        const minT = Math.min(...tValues)
-        const maxT = Math.max(...tValues)
-        if (t > 0 && (tValues.length === 1 || maxT / Math.abs(minT + 0.001) < 10)) {
-          const x = camPos[0] + t * ray[0]
-          result = [x, startXyz[1], startXyz[2]]
-        }
-      }
-    } else if (axis === 'y') {
-      // Line: (startX, startY + s, startZ)
-      const tValues: number[] = []
-      if (Math.abs(ray[0]) > 0.001) {
-        tValues.push((startXyz[0] - camPos[0]) / ray[0])
-      }
-      if (Math.abs(ray[2]) > 0.001) {
-        tValues.push((startXyz[2] - camPos[2]) / ray[2])
-      }
-
-      if (tValues.length > 0) {
-        const t = tValues.reduce((a, b) => a + b) / tValues.length
-        const minT = Math.min(...tValues)
-        const maxT = Math.max(...tValues)
-        if (t > 0 && (tValues.length === 1 || maxT / Math.abs(minT + 0.001) < 10)) {
-          const y = camPos[1] + t * ray[1]
-          result = [startXyz[0], y, startXyz[2]]
-        }
-      }
-    } else {
-      // Line: (startX, startY, startZ + s)
-      const tValues: number[] = []
-      if (Math.abs(ray[0]) > 0.001) {
-        tValues.push((startXyz[0] - camPos[0]) / ray[0])
-      }
-      if (Math.abs(ray[1]) > 0.001) {
-        tValues.push((startXyz[1] - camPos[1]) / ray[1])
-      }
-
-      if (tValues.length > 0) {
-        const t = tValues.reduce((a, b) => a + b) / tValues.length
-        const minT = Math.min(...tValues)
-        const maxT = Math.max(...tValues)
-        if (t > 0 && (tValues.length === 1 || maxT / Math.abs(minT + 0.001) < 10)) {
-          const z = camPos[2] + t * ray[2]
-          result = [startXyz[0], startXyz[1], z]
-        }
+    }
+    if (tValues.length > 0) {
+      const t = tValues.reduce((a, b) => a + b) / tValues.length
+      const minT = Math.min(...tValues)
+      const maxT = Math.max(...tValues)
+      if (t > 0 && (tValues.length === 1 || maxT / Math.abs(minT + 0.001) < 10)) {
+        const r: [number, number, number] = [startXyz[0], startXyz[1], startXyz[2]]
+        r[axisIdx] = camPos[axisIdx] + t * ray[axisIdx]
+        result = r
       }
     }
 
@@ -338,73 +296,6 @@ function computeRayLineIntersection(
   }
 
   return null
-}
-
-/**
- * Use camera ray to determine the correct sign for an axis-aligned propagation.
- * Returns +1 or -1 for the direction, or null if we can't determine.
- */
-function determineSignFromCameraRay(
-  targetPoint: WorldPoint,
-  startXyz: [number, number, number],
-  axis: 'x' | 'y' | 'z',
-  distance: number,
-  initializedViewpoints: Set<Viewpoint>
-): number | null {
-  // Find an image point for the target on an initialized camera
-  const imagePoints = Array.from(targetPoint.imagePoints) as ImagePoint[]
-
-  for (const ip of imagePoints) {
-    const vp = ip.viewpoint as Viewpoint
-    if (!initializedViewpoints.has(vp)) continue
-
-    // Check camera has valid position (not at origin)
-    if (vp.position[0] === 0 && vp.position[1] === 0 && vp.position[2] === 0) {
-      log(`[Sign Debug] ${targetPoint.name}: Skipping ${vp.name} - at origin`)
-      continue
-    }
-
-    // Compute ray from camera through image point
-    const ray = computeCameraRay(vp, ip.u, ip.v)
-    if (!ray) continue
-
-    // Find where ray intersects the axis line from startXyz
-    // The axis line is startXyz + t * axisDir where axisDir is unit vector in x, y, or z
-    const axisIndex = axis === 'x' ? 0 : axis === 'y' ? 1 : 2
-
-    // Parametric ray: camPos + s * rayDir
-    // We want to find s where the ray comes closest to the axis line
-    // For axis-aligned lines, this simplifies to finding where the other two coords match
-
-    // Use ray to determine if point is in + or - direction from startXyz
-    // Project both candidate positions onto the ray and see which is closer
-    const posPlus: [number, number, number] = [...startXyz]
-    const posMinus: [number, number, number] = [...startXyz]
-    posPlus[axisIndex] += Math.abs(distance)
-    posMinus[axisIndex] -= Math.abs(distance)
-
-    // Compute reprojection error for each candidate
-    const errorPlus = computeReprojectionError(vp, posPlus, ip.u, ip.v)
-    const errorMinus = computeReprojectionError(vp, posMinus, ip.u, ip.v)
-
-    log(`[Sign Debug] ${targetPoint.name} axis=${axis}: cam=${vp.name} pos=[${vp.position.map(p => p.toFixed(2)).join(',')}]`)
-    log(`[Sign Debug]   start=[${startXyz.map(p => p.toFixed(2)).join(',')}] dist=${distance.toFixed(2)}`)
-    log(`[Sign Debug]   posPlus=[${posPlus.map(p => p.toFixed(2)).join(',')}] err=${errorPlus.toFixed(2)}`)
-    log(`[Sign Debug]   posMinus=[${posMinus.map(p => p.toFixed(2)).join(',')}] err=${errorMinus.toFixed(2)}`)
-
-    // If one is significantly better than the other, use it
-    if (errorPlus < errorMinus * 0.8) {
-      log(`[Sign Debug]   -> +1 (errorPlus < errorMinus * 0.8)`)
-      return 1
-    } else if (errorMinus < errorPlus * 0.8) {
-      log(`[Sign Debug]   -> -1 (errorMinus < errorPlus * 0.8)`)
-      return -1
-    }
-    log(`[Sign Debug]   -> null (ambiguous)`)
-    // If they're similar, try next camera
-  }
-
-  return null // Couldn't determine
 }
 
 /**
@@ -438,41 +329,3 @@ function computeCameraRay(vp: Viewpoint, u: number, v: number): [number, number,
   return dirWorld
 }
 
-/**
- * Compute reprojection error for a 3D point
- */
-function computeReprojectionError(
-  vp: Viewpoint,
-  worldPos: [number, number, number],
-  targetU: number,
-  targetV: number
-): number {
-  const f = vp.focalLength
-  const cx = vp.principalPointX
-  const cy = vp.principalPointY
-  const [qw, qx, qy, qz] = vp.rotation
-  const camPos = vp.position
-
-  // Transform world point to camera frame
-  // P_cam = R^T * (P_world - cam_pos)
-  const dx = worldPos[0] - camPos[0]
-  const dy = worldPos[1] - camPos[1]
-  const dz = worldPos[2] - camPos[2]
-
-  // Rotate by inverse quaternion (conjugate for unit quaternion)
-  const pCam = quaternionRotateVector([qw, -qx, -qy, -qz], [dx, dy, dz])
-
-  // Project to image plane
-  if (pCam[2] <= 0) {
-    return Infinity // Point behind camera
-  }
-
-  const projU = cx + f * pCam[0] / pCam[2]
-  const projV = cy + f * pCam[1] / pCam[2]
-
-  // Compute error
-  const errU = projU - targetU
-  const errV = projV - targetV
-
-  return Math.sqrt(errU * errU + errV * errV)
-}
