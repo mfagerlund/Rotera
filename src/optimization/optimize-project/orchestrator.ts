@@ -379,8 +379,11 @@ export async function optimizeProject(
   const excludedCameras = new Set<Viewpoint>();
   const excludedCameraNames: string[] = [];
 
+  // Save original isPoseLocked state before potentially overriding for lockVPCameras
+  const savedPoseLocks = new Map<Viewpoint, boolean>();
   if (lockVPCameras && camerasInitializedViaVP.size > 0) {
     for (const vp of camerasInitializedViaVP) {
+      savedPoseLocks.set(vp, vp.isPoseLocked);
       vp.isPoseLocked = true;
     }
     log(`[Lock] ${camerasInitializedViaVP.size} VP camera(s) pose-locked for final solve`);
@@ -444,7 +447,7 @@ export async function optimizeProject(
       converged: true,
       iterations: result.iterations,
       residual: stage1Snapshot.residual,
-      error: null,
+      error: 'Full solve diverged, restored Stage1 state (single-camera constraints may be violated)',
     };
     // Recalculate outliers with restored state
     if (shouldDetectOutliers && project.imagePoints.size > 0) {
@@ -479,6 +482,11 @@ export async function optimizeProject(
       rmsReprojectionError = rerunResult.rmsError;
       medianReprojectionError = rerunResult.medianError;
     }
+  }
+
+  // Restore isPoseLocked state that was overridden for lockVPCameras
+  for (const [vp, wasLocked] of savedPoseLocks) {
+    vp.isPoseLocked = wasLocked;
   }
 
   // PHASE 8: Post-solve Handedness Check
@@ -522,7 +530,7 @@ export async function optimizeProject(
 
   // Final summary
   const solveTimeMs = performance.now() - startTime;
-  const quality = getSolveQuality(rmsReprojectionError);
+  const quality = getSolveQuality(rmsReprojectionError, result.residual);
   const bestRes = getBestResidualSoFar();
   const isBest = Math.abs(result.residual - bestRes) < 0.01;
   const bestInfo = isBest ? '' : ` (best was ${bestRes.toFixed(1)})`;

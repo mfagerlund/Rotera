@@ -81,13 +81,22 @@ export function generateAllCandidates(
   const worldPointArray = Array.from(project.worldPoints) as WorldPoint[];
   const lockedPoints = worldPointArray.filter(wp => wp.isFullyConstrained());
 
-  const uninitializedCameras = viewpointArray.filter(vp =>
+  // When autoInitializeCameras is true, the orchestrator will reinitialize ALL cameras
+  // regardless of their current position. So for strategy selection, treat all cameras
+  // as uninitialized. Previously this checked position===[0,0,0], which caused the
+  // strategy system to not activate for post-solve files (cameras had non-zero positions),
+  // falling back to legacy VP-PnP only cascade.
+  const uninitializedCameras = autoInitializeCameras ? viewpointArray : viewpointArray.filter(vp =>
     vp.position[0] === 0 && vp.position[1] === 0 && vp.position[2] === 0
   );
 
   let viableStrategies: InitStrategyId[] = [];
 
-  if (autoInitializeCameras && uninitializedCameras.length >= 1) {
+  // Strategy selection only for multi-camera projects (2+ cameras).
+  // Single-camera projects don't have the multi-camera initialization ambiguity
+  // (VP vs stepped-VP vs essential matrix) that strategies are designed to resolve.
+  // The legacy cascade handles single-camera init well.
+  if (autoInitializeCameras && uninitializedCameras.length >= 2) {
     const canAnyUseVPStrict = uninitializedCameras.some(vp =>
       canInitializeWithVanishingPoints(vp, worldPointSet, { allowSinglePoint: false })
     );
@@ -240,6 +249,7 @@ interface SavedViewpointState {
   tangentialDistortion: [number, number];
   enabledInSolve: boolean;
   isZReflected: boolean;
+  isPoseLocked: boolean;
 }
 
 /**
@@ -274,6 +284,7 @@ export function saveProjectState(project: Project): {
       tangentialDistortion: [...viewpoint.tangentialDistortion] as [number, number],
       enabledInSolve: viewpoint.enabledInSolve,
       isZReflected: viewpoint.isZReflected,
+      isPoseLocked: viewpoint.isPoseLocked,
     });
   }
 
@@ -307,6 +318,7 @@ export function restoreProjectState(
     vp.tangentialDistortion = vpState.tangentialDistortion;
     vp.enabledInSolve = vpState.enabledInSolve;
     vp.isZReflected = vpState.isZReflected;
+    vp.isPoseLocked = vpState.isPoseLocked;
   }
 
   for (const [wp, inferred] of state.inferredXyz) {

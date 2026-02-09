@@ -104,9 +104,14 @@ const QUALITY_LEVELS: Record<QualityLevel, Omit<SolveQuality, 'label'> & { label
  * @param rmsReprojError - RMS reprojection error in pixels (required)
  * @returns Quality assessment with stars, colors, and label
  */
-export function getSolveQuality(rmsReprojError: number | undefined): SolveQuality {
+export function getSolveQuality(rmsReprojError: number | undefined, residual?: number): SolveQuality {
   if (rmsReprojError === undefined || !isFinite(rmsReprojError)) {
     return { ...QUALITY_LEVELS['Unknown'] };
+  }
+
+  // Sanity check: rms ≈ 0 but high residual means degenerate solution (e.g., no points projected)
+  if (residual !== undefined && rmsReprojError < 0.01 && residual > 100) {
+    return { ...QUALITY_LEVELS['Poor'] };
   }
 
   if (rmsReprojError < QUALITY_THRESHOLDS.SURVEY_GRADE) {

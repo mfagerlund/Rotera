@@ -127,38 +127,40 @@ export function runFreeSolve(
     wp.inferredXyz = [null, null, null];
   }
 
-  const freeSystem = new ConstraintSystem({
-    tolerance,
-    maxIterations: 200,
-    damping,
-    verbose: false,
-    optimizeCameraIntrinsics: false,
-  });
+  try {
+    const freeSystem = new ConstraintSystem({
+      tolerance,
+      maxIterations: 200,
+      damping,
+      verbose: false,
+      optimizeCameraIntrinsics: false,
+    });
 
-  pointArray.forEach(p => freeSystem.addPoint(p));
-  lineArray.forEach(l => freeSystem.addLine(l));
-  // Only add enabled viewpoints
-  const vpArray = (Array.from(project.viewpoints) as Viewpoint[]).filter(vp => vp.enabledInSolve);
-  vpArray.forEach(v => freeSystem.addCamera(v));
-  for (const ip of project.imagePoints) {
-    const ipConcrete = ip as ImagePoint;
-    if (ipConcrete.viewpoint.enabledInSolve) {
-      freeSystem.addImagePoint(ipConcrete);
+    pointArray.forEach(p => freeSystem.addPoint(p));
+    lineArray.forEach(l => freeSystem.addLine(l));
+    // Only add enabled viewpoints
+    const vpArray = (Array.from(project.viewpoints) as Viewpoint[]).filter(vp => vp.enabledInSolve);
+    vpArray.forEach(v => freeSystem.addCamera(v));
+    for (const ip of project.imagePoints) {
+      const ipConcrete = ip as ImagePoint;
+      if (ipConcrete.viewpoint.enabledInSolve) {
+        freeSystem.addImagePoint(ipConcrete);
+      }
     }
-  }
-  for (const c of constraintArray) {
-    freeSystem.addConstraint(c);
-  }
+    for (const c of constraintArray) {
+      freeSystem.addConstraint(c);
+    }
 
-  const freeResult = freeSystem.solve();
-  logProgress('FreeSolve', freeResult.residual, `conv=${freeResult.converged} iter=${freeResult.iterations}`);
-
-  for (const [wp, lockedXyz] of savedLockedXyz) {
-    wp.lockedXyz = lockedXyz;
-    const savedInferred = worldPointSavedInferredXyz.get(wp);
-    if (savedInferred) {
-      wp.inferredXyz = savedInferred;
-      worldPointSavedInferredXyz.delete(wp);
+    const freeResult = freeSystem.solve();
+    logProgress('FreeSolve', freeResult.residual, `conv=${freeResult.converged} iter=${freeResult.iterations}`);
+  } finally {
+    for (const [wp, lockedXyz] of savedLockedXyz) {
+      wp.lockedXyz = lockedXyz;
+      const savedInferred = worldPointSavedInferredXyz.get(wp);
+      if (savedInferred) {
+        wp.inferredXyz = savedInferred;
+        worldPointSavedInferredXyz.delete(wp);
+      }
     }
   }
 }
@@ -209,7 +211,7 @@ export function runLatePnPInitialization(
 
   if (camerasInitialized.length > 0 && camerasNeedingLatePnP.length > 0 && !latePnPCamerasCanSelfConstrain) {
     log(`[Prelim] ${camerasInitialized.length} init camera(s), ${camerasNeedingLatePnP.length} need late PnP`);
-    // Force dense mode for preliminary optimization - needs reliability for triangulation
+    // Preliminary optimization with initialized cameras only - triangulate shared points
     const prelimSystem = new ConstraintSystem({
       tolerance,
       maxIterations: 500,
@@ -340,7 +342,7 @@ export function runStage1Optimization(
   damping: number,
   verbose: boolean
 ): number {
-  // Force dense mode for stage1 - needs reliability for multi-camera point optimization
+  // Stage1: optimize multi-camera points only (single-camera points handled in stage2)
   const stage1System = new ConstraintSystem({
     tolerance,
     maxIterations,

@@ -35,6 +35,8 @@ export function resetOptimizationState(project: Project): void {
   for (const vp of project.viewpoints) {
     const viewpoint = vp as Viewpoint;
     viewpoint.lastResiduals = [];
+    // NOTE: Do NOT reset isPoseLocked here - it's user-facing state (set explicitly),
+    // not stale optimization state. The orchestrator saves/restores it when lockVPCameras is used.
     // Clear hidden VP cache
     viewpointInitialVps.delete(viewpoint);
   }

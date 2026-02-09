@@ -91,12 +91,11 @@ export function initializeCameraWithPnP(
     return false;
   };
 
-  // For centroid/geometry calculation:
-  // - Default mode (useTriangulatedPoints=false): Only use constrained points (locked or inferred coordinates)
-  //   Unconstrained points may have garbage optimizedXyz from previous failed optimizations.
-  // - Late PnP mode (useTriangulatedPoints=true): Use points with optimizedXyz.
-  //   If initializedCameraNames provided, only use truly triangulated points (visible in 2+ initialized cameras).
+  // Filter to only use reliably-known world points for PnP.
+  // CRITICAL: The solver must ONLY use these points, not all points with optimizedXyz.
+  // Points from single-camera initialization have unreliable depth and will poison PnP.
   const constrainedPoints: [number, number, number][] = [];
+  const reliableWorldPoints = new Set<WorldPoint>();
 
   for (const ip of vpConcrete.imagePoints) {
     const wp = ip.worldPoint as WorldPoint;
@@ -114,6 +113,7 @@ export function initializeCameraWithPnP(
 
     if (canUsePoint && wp.optimizedXyz) {
       constrainedPoints.push(wp.optimizedXyz);
+      reliableWorldPoints.add(wp);
     }
   }
 
@@ -122,10 +122,12 @@ export function initializeCameraWithPnP(
   // but other points are visible in the initialized camera and have optimizedXyz.
   if (constrainedPoints.length < 3 && useTriangulatedPoints && initializedCameraNames) {
     constrainedPoints.length = 0;
+    reliableWorldPoints.clear();
     for (const ip of vpConcrete.imagePoints) {
       const wp = ip.worldPoint as WorldPoint;
       if (wp.optimizedXyz && isVisibleInInitializedCamera(wp)) {
         constrainedPoints.push(wp.optimizedXyz);
+        reliableWorldPoints.add(wp);
       }
     }
   }
@@ -161,7 +163,9 @@ export function initializeCameraWithPnP(
   // Compact: centroid, maxDist, camDist on one line
   log(`  ${constrainedPoints.length} pts, centroid=[${centroid.map(x => x.toFixed(2)).join(',')}], maxD=${maxDist.toFixed(2)}, camD=${cameraDistance.toFixed(2)}`);
 
-  // Helper to run PnP optimization with given initial position/rotation
+  // Helper to run PnP optimization with given initial position/rotation.
+  // ONLY uses reliableWorldPoints to prevent unreliable single-camera positions from
+  // corrupting the pose estimation.
   function runPnPFromDirection(
     position: [number, number, number],
     rotation: [number, number, number, number]
@@ -176,16 +180,16 @@ export function initializeCameraWithPnP(
       verbose: false,
     });
 
-    for (const ip of vpConcrete.imagePoints) {
-      const wp = ip.worldPoint as WorldPoint;
-      if (wp.optimizedXyz) {
-        system.addPoint(wp);
-      }
+    for (const wp of reliableWorldPoints) {
+      system.addPoint(wp);
     }
     system.addCamera(vpConcrete);
 
     for (const ip of vpConcrete.imagePoints) {
-      system.addImagePoint(ip);
+      const wp = ip.worldPoint as WorldPoint;
+      if (reliableWorldPoints.has(wp)) {
+        system.addImagePoint(ip);
+      }
     }
 
     const result = system.solve();
@@ -198,7 +202,7 @@ export function initializeCameraWithPnP(
       vpConcrete.rotation = [w * invMag, x * invMag, y * invMag, z * invMag];
     }
 
-    const error = computeReprojectionError(vpConcrete);
+    const error = computeReprojectionError(vpConcrete, reliableWorldPoints);
 
     return {
       error,
@@ -307,6 +311,17 @@ export function initializeCameraWithPnP(
   const finalDistFromCentroid = Math.sqrt(finalDx * finalDx + finalDy * finalDy + finalDz * finalDz);
   const distanceRatio = finalDistFromCentroid / cameraDistance;
 
+  // Check: camera too close to centroid (inside the point cloud).
+  // PnP can converge to centroid where no points project validly, giving 0px error.
+  const minDistanceRatio = 0.1;
+  if (distanceRatio < minDistanceRatio && reliable) {
+    reliable = false;
+    reason = `Camera inside point cloud (dist=${finalDistFromCentroid.toFixed(1)} vs scene=${cameraDistance.toFixed(1)})`;
+    log(`  WARN: ${reason} - resetting to initial`);
+    vpConcrete.position = [centroid[0], centroid[1], centroid[2] - cameraDistance];
+    vpConcrete.rotation = [1, 0, 0, 0];
+  }
+
   const maxDistanceRatio = 15.0; // Allow up to 15x the initial estimate (generous because heuristic is rough)
   if (distanceRatio > maxDistanceRatio) {
     reliable = false;
@@ -376,8 +391,8 @@ export function initializeCameraWithPnP(
       vpConcrete.rotation = flippedRotation;
       pointsInFront = flippedPointsInFront;
 
-      // Recompute error with flipped orientation
-      finalError = computeReprojectionError(vpConcrete);
+      // Recompute error with flipped orientation (only using reliable points)
+      finalError = computeReprojectionError(vpConcrete, reliableWorldPoints);
       log(`  Applied flip - now ${pointsInFront}/${constrainedPoints.length} points in front, error=${finalError.toFixed(2)} px`);
     }
   }
@@ -396,7 +411,7 @@ export function initializeCameraWithPnP(
   };
 }
 
-function computeReprojectionError(vp: Viewpoint): number {
+function computeReprojectionError(vp: Viewpoint, reliablePoints?: Set<WorldPoint>): number {
   let totalError = 0;
   let count = 0;
 
@@ -415,6 +430,7 @@ function computeReprojectionError(vp: Viewpoint): number {
   for (const ip of vp.imagePoints) {
     const wp = ip.worldPoint as WorldPoint;
     if (!wp.optimizedXyz) continue;
+    if (reliablePoints && !reliablePoints.has(wp)) continue;
 
     try {
       const projected = projectPointToPixel(
@@ -436,5 +452,5 @@ function computeReprojectionError(vp: Viewpoint): number {
     }
   }
 
-  return count > 0 ? totalError / count : 0;
+  return count > 0 ? totalError / count : Infinity;
 }

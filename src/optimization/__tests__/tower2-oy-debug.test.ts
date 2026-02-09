@@ -25,8 +25,9 @@ describe('Tower 2 O-Y Debug', () => {
     const errorBefore = result.medianReprojectionError!;
     fineTuneProject(project, { verbose: false, lockCameraPoses: true });
     const { medianError } = detectOutliers(project, 3.0);
-    log(`Fine-tune: before=${errorBefore.toFixed(2)}px, after=${medianError.toFixed(2)}px`);
+    log(`Fine-tune: before=${errorBefore.toFixed(2)}px, after=${medianError?.toFixed(2) ?? '?'}px`);
 
-    expect(medianError).toBeLessThanOrEqual(errorBefore + 0.5);
+    expect(medianError).toBeDefined();
+    expect(medianError!).toBeLessThanOrEqual(errorBefore + 0.5);
   });
 });

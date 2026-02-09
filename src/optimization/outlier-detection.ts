@@ -25,7 +25,7 @@ export function detectOutliers(
   project: Project,
   threshold: number,
   viewpoints?: import('../entities/viewpoint').Viewpoint[]
-): { outliers: OutlierInfo[]; medianError: number; meanError: number; rmsError: number; actualThreshold: number } {
+): { outliers: OutlierInfo[]; medianError: number | undefined; meanError: number | undefined; rmsError: number | undefined; actualThreshold: number } {
   const errors: number[] = [];
   const imagePointErrors: Array<{ imagePoint: ImagePoint; error: number }> = [];
 
@@ -44,18 +44,18 @@ export function detectOutliers(
   }
 
   errors.sort((a, b) => a - b);
-  const medianError = errors.length > 0 ? errors[Math.floor(errors.length / 2)] : 0;
 
-  // Compute mean and RMS (more sensitive to outliers than median)
+  // Return undefined when no data — 0 would falsely indicate "perfect"
+  const medianError = errors.length > 0 ? errors[Math.floor(errors.length / 2)] : undefined;
   const sumError = errors.reduce((sum, e) => sum + e, 0);
   const sumSquaredError = errors.reduce((sum, e) => sum + e * e, 0);
-  const meanError = errors.length > 0 ? sumError / errors.length : 0;
-  const rmsError = errors.length > 0 ? Math.sqrt(sumSquaredError / errors.length) : 0;
+  const meanError = errors.length > 0 ? sumError / errors.length : undefined;
+  const rmsError = errors.length > 0 ? Math.sqrt(sumSquaredError / errors.length) : undefined;
 
   // Clamp outlier threshold to [50, 80] range:
   // - Floor at 50px: avoid flagging good points when median is low
   // - Ceiling at 80px: always flag really bad points even when median is high
-  const outlierThreshold = Math.max(50, Math.min(threshold * medianError, 80));
+  const outlierThreshold = Math.max(50, Math.min(threshold * (medianError ?? 0), 80));
 
   const outliers: OutlierInfo[] = [];
   for (const { imagePoint, error } of imagePointErrors) {

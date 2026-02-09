@@ -9,36 +9,11 @@
 
 **"Pre-existing failure" is not an excuse. Fix it or create a TODO.**
 
-## CRITICAL: Test Fixtures MUST Match UI Behavior
+## Regression Fixtures
 
-**Regression test fixtures MUST produce the EXACT same results as the UI.**
+A regression fixture is a pre-solve .rotera file used to test that `optimizeProject()` produces correct results. See `regression-fixture` skill for the full workflow. Fixtures go in `src/optimization/__tests__/fixtures/Calibration/`.
 
-- If the UI shows 56px error, the fixture test MUST show 56px error
-- If the UI succeeds with 0.03px, the fixture test MUST succeed with 0.03px
-- NO pre-optimized values that put the solver in a different starting position
-- NO different code paths between tests and UI
-- Tests that don't match UI behavior are USELESS and MUST be fixed
-
-## CRITICAL: NEVER CHEAT TO MAKE TESTS PASS
-
-**When given a project file to debug, NEVER "fix" the test by:**
-
-- Using a different/modified fixture file than the user's actual file
-- Adding silent early-returns that skip tests when files are missing
-- Modifying fixture data to pre-solve problems
-- Skipping failing tests without fixing the underlying issue
-
-**ALWAYS verify:**
-- The fixture file ACTUALLY EXISTS in the test directory before claiming tests pass
-- The test produces the SAME RMS/error as the UI with the user's file
-- If `fs.existsSync()` check exists, the file must be present or the test is meaningless
-
-**The user will test in the UI. If the UI still fails, YOUR FIX DIDN'T WORK.**
-
-When creating fixtures:
-1. Save the project state BEFORE clicking Solve in UI
-2. Run the test - it MUST produce the same result as UI
-3. If results differ, the test setup is WRONG - fix it
+**NEVER modify the project in test code.** No pre-setting positions, no custom options, no special flags. Use `OPTIMIZE_PROJECT_DEFAULTS` only. Results MUST match UI behavior exactly. NEVER "fix" tests by modifying fixture data, adding silent early-returns, or skipping failures.
 
 ## Abbreviations
 

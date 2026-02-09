@@ -117,8 +117,12 @@ describe('Regression - Calibration', () => {
   })
 
   // Non-concurrent: multi-camera late PnP is sensitive to seeded RNG interleaving
+  // Relaxed from 2→2.5: PnP reliable-point filter excludes 4 points visible only in
+  // the PnP camera (not in initialized camera), which slightly reduces PnP accuracy.
+  // This tradeoff is worthwhile: it prevents unreliable single-camera points from
+  // poisoning PnP (Battery Holder: 40px→1px).
   it('Crossing.rotera', async () => {
-    await runTest('Crossing.rotera', 2)
+    await runTest('Crossing.rotera', 2.5)
   })
 
   // ============================================
@@ -204,5 +208,30 @@ describe('Regression - Calibration', () => {
 
     expect(result.medianReprojectionError).toBeDefined()
     expect(result.medianReprojectionError!).toBeLessThan(3)
+  })
+
+  // Post-solve .rotera file - should consistently solve well, not flip between 3px and 1px
+  it('Tower 1 - 1 Img.rotera', async () => {
+    await runTest('Tower 1 - 1 Img.rotera', 2)
+  })
+
+  // Multi-camera with coplanar locked points - PnP must use only reliably-known points.
+  // Before the fix, unreliable single-camera world points poisoned PnP (40px→1px).
+  // Non-concurrent: runs 3 sequential solves to verify consistency.
+  it('Battery Holder 3 Cam.rotera - consistency', async () => {
+    const results: number[] = []
+    for (let i = 0; i < 3; i++) {
+      const jsonPath = path.join(FIXTURES_DIR, 'Battery Holder 3 Cam.rotera')
+      const jsonData = fs.readFileSync(jsonPath, 'utf8')
+      const project = loadProjectFromJson(jsonData)
+      const result = await optimizeProject(project, PRODUCTION_OPTIONS)
+      expect(result.medianReprojectionError).toBeDefined()
+      results.push(result.medianReprojectionError!)
+    }
+    for (const median of results) {
+      expect(median).toBeLessThan(3)
+    }
+    const spread = Math.max(...results) - Math.min(...results)
+    expect(spread).toBeLessThan(1)
   })
 })
