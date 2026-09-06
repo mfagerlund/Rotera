@@ -168,3 +168,9 @@ See architectural-rules.md for complete details.
 ## Confirm Dialog
 
 Use `useConfirm` from `ConfirmDialog.tsx`, NOT `window.confirm()`. It auto-positions near the clicked button. Remember to render `{dialog}` in JSX.
+
+## Project card
+
+`project-card/` holds this project's one-liner, tags and image for the cross-project index.
+When the purpose or the look of the project changes materially, regenerate it with
+`/project-index Rotera`.
