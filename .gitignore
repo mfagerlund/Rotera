@@ -45,3 +45,6 @@ src/optimization/__tests__/*-debug*.txt
 src/optimization/__tests__/*-output*.txt
 blender-addon/__pycache__/
 /coverage/
+
+# Per-machine Claude launcher, not shared
+cl.bat
